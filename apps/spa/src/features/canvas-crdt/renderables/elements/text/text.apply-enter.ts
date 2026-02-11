@@ -14,6 +14,11 @@ import { TTextData } from "@vibecanvas/shell"
 export function applyEnter(ctx: TApplyContext<TTextData>, text: Text): null {
   ctx.transformBox?.hide()
 
+  const textColor = ctx.element.style.strokeColor && ctx.element.style.strokeColor !== 'transparent'
+    ? ctx.element.style.strokeColor
+    : '#1f1f22'
+  const textOpacity = ctx.element.style.opacity ?? 1
+
   const MIN_WIDTH = 100
   const textInput = document.createElement('input')
   textInput.style.position = 'fixed'
@@ -24,7 +29,8 @@ export function applyEnter(ctx: TApplyContext<TTextData>, text: Text): null {
   textInput.style.outline = 'none'
   textInput.style.boxSizing = 'border-box'
   textInput.style.backgroundColor = 'transparent'
-  textInput.style.color = 'black'
+  textInput.style.color = textColor
+  textInput.style.opacity = `${textOpacity}`
   textInput.style.fontFamily = ctx.element.data.fontFamily
   textInput.style.lineHeight = '1'
   textInput.style.transformOrigin = 'top left'

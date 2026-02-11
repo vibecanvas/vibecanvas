@@ -197,12 +197,17 @@ export class TextElement extends AElement<'text'> {
 
   public redraw(): void {
     const { data } = this.element
+    const textColor = this.element.style.strokeColor && this.element.style.strokeColor !== 'transparent'
+      ? this.element.style.strokeColor
+      : '#1f1f22'
+    const textOpacity = this.element.style.opacity ?? 1
 
     // Update text content and style
     this.text.text = data.text
     this.text.style.fontSize = data.fontSize
     this.text.style.fontFamily = data.fontFamily
-    this.text.style.fill = 'black'
+    this.text.style.fill = textColor
+    this.text.alpha = textOpacity
 
     // Text positioned at origin within container
     this.text.x = 0

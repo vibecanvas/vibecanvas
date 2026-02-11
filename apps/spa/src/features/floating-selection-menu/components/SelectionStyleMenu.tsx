@@ -5,6 +5,7 @@ import { StrokeWidthPicker } from './StrokeWidthPicker'
 import { LineTypePicker } from './LineTypePicker'
 import { CapPicker } from './CapPicker'
 import { FontFamilyPicker } from './FontFamilyPicker'
+import { OpacityPicker } from './OpacityPicker'
 import type { Canvas } from '@/features/canvas-crdt/canvas/canvas'
 import type { TLineType, TCapStyle, TFontFamily } from '../types'
 
@@ -38,6 +39,11 @@ type TLineData = {
 type TTextData = {
   type: string
   fontFamily?: TFontFamily
+}
+
+type TTextStyle = {
+  strokeColor?: string
+  opacity?: number
 }
 
 type TVisibleSections = {
@@ -98,6 +104,26 @@ function getVisibleSections(canvas: Canvas, selectedIds: string[]): TVisibleSect
   }
 }
 
+function getSelectedTextElementIds(canvas: Canvas, selectedIds: string[]): string[] {
+  const textIds = new Set<string>()
+
+  for (const id of selectedIds) {
+    const group = canvas.groupManager.groups.get(id)
+    if (group) {
+      const nested = getSelectedTextElementIds(canvas, group.members.map(m => m.id))
+      nested.forEach(textId => textIds.add(textId))
+      continue
+    }
+
+    const element = canvas.elements.get(id)
+    if (element?.element.data.type === 'text') {
+      textIds.add(id)
+    }
+  }
+
+  return [...textIds]
+}
+
 export function SelectionStyleMenu() {
   // Refresh signal to force memos to re-run after CRDT updates
   const [refreshKey, setRefreshKey] = createSignal(0)
@@ -151,6 +177,13 @@ export function SelectionStyleMenu() {
 
   const activeCanvasId = createMemo(() => store.canvasSlice.backendCanvasActive?.id ?? null)
 
+  const selectedTextIds = createMemo(() => {
+    const canvas = store.canvasSlice.canvas
+    const selectedIds = store.canvasSlice.selectedIds
+    if (!canvas || selectedIds.length === 0) return []
+    return getSelectedTextElementIds(canvas, selectedIds)
+  })
+
   const updateSelectedStyles = (styleUpdates: Partial<TDrawingStyle>) => {
     const canvas = store.canvasSlice.canvas
     if (!canvas) return
@@ -172,8 +205,27 @@ export function SelectionStyleMenu() {
   const updateSelectedTextData = (dataUpdates: Partial<{ fontFamily: TFontFamily }>) => {
     const canvas = store.canvasSlice.canvas
     if (!canvas) return
-    for (const id of store.canvasSlice.selectedIds) {
+    for (const id of selectedTextIds()) {
       canvas.updateElementTextData(id, dataUpdates)
+    }
+    triggerRefresh()
+  }
+
+  const currentTextStyle = createMemo((): TTextStyle => {
+    refreshKey()
+    const canvas = store.canvasSlice.canvas
+    const textId = selectedTextIds()[0]
+    if (!canvas || !textId) return {}
+
+    const style = canvas.getElementStyle(textId)
+    return style ? { strokeColor: style.strokeColor, opacity: style.opacity } : {}
+  })
+
+  const updateSelectedTextStyles = (styleUpdates: Partial<TTextStyle>) => {
+    const canvas = store.canvasSlice.canvas
+    if (!canvas) return
+    for (const id of selectedTextIds()) {
+      canvas.updateElementStyle(id, styleUpdates)
     }
     triggerRefresh()
   }
@@ -249,6 +301,24 @@ export function SelectionStyleMenu() {
         </Show>
 
         <Show when={visibility().showTextPickers}>
+          <div class="flex flex-col gap-1">
+            <span class="text-[10px] text-muted-foreground font-mono">COLOR</span>
+            <ColorPicker
+              value={currentTextStyle().strokeColor}
+              onChange={(color) => updateSelectedTextStyles({ strokeColor: color })}
+              mode="stroke"
+              canvasId={activeCanvasId()}
+            />
+          </div>
+
+          <div class="flex flex-col gap-1">
+            <span class="text-[10px] text-muted-foreground font-mono">OPACITY</span>
+            <OpacityPicker
+              value={currentTextStyle().opacity}
+              onChange={(opacity) => updateSelectedTextStyles({ opacity })}
+            />
+          </div>
+
           <div class="flex flex-col gap-1">
             <span class="text-[10px] text-muted-foreground font-mono">FONT</span>
             <FontFamilyPicker

@@ -313,7 +313,8 @@ function handleUp(ctx: Parameters<InputCommand>[0]): boolean {
     }
   } else if (!wasDragging && tool === 'text') {
     // Text: create on single click (no drag)
-    const { data, style } = createTextElementDataAndStyle()
+    const drawingDefaults = getDrawingStyleDefaults(ctx.canvas.canvasId)
+    const { data, style } = createTextElementDataAndStyle(drawingDefaults)
     const element = createElement(
       crypto.randomUUID(),
       dragStartWorld.x,
@@ -451,7 +452,7 @@ function createEllipseElementDataAndStyle(rx: number, ry: number, defaults: TDra
   }
 }
 
-function createTextElementDataAndStyle(): {data: ExtractElementData<'text'>, style: TElementStyle} {
+function createTextElementDataAndStyle(defaults: TDrawingStyleDefaults): {data: ExtractElementData<'text'>, style: TElementStyle} {
   return {
     data: {
       type: 'text',
@@ -470,7 +471,7 @@ function createTextElementDataAndStyle(): {data: ExtractElementData<'text'>, sty
     },
     style: {
       backgroundColor: 'transparent',
-      strokeColor: 'transparent',
+      strokeColor: defaults.strokeColor,
       strokeWidth: 0,
       opacity: 1,
     },
