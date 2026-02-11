@@ -194,6 +194,47 @@ export function getSpaFallbackAsset(): string | null {
   console.log(`   Generated embedded-assets.ts (${bundledFiles.length} files)`)
 }
 
+async function collectMigrationFiles(): Promise<string[]> {
+  const migrationFiles: string[] = []
+  const migrationGlob = new Glob("**/*")
+
+  for await (const file of migrationGlob.scan(shellMigrationsDir)) {
+    const filePath = path.join(shellMigrationsDir, file)
+    const stat = await Bun.file(filePath).stat()
+    if (stat.isFile()) {
+      migrationFiles.push(file)
+    }
+  }
+
+  migrationFiles.sort()
+  return migrationFiles
+}
+
+async function generateEmbeddedMigrations(migrationFiles: string[]): Promise<void> {
+  const embeddedMigrationsCode = `// Auto-generated file - do not edit
+const embeddedMigrationContents = new Map<string, string>([
+${(await Promise.all(
+    migrationFiles.map(async (f) => {
+      const filePath = path.join(shellMigrationsDir, f)
+      const content = await Bun.file(filePath).text()
+      return `  [${JSON.stringify(f)}, ${JSON.stringify(content)}],`
+    }),
+  )).join("\n")}
+]);
+
+export function listEmbeddedMigrationFiles(): string[] {
+  return [...embeddedMigrationContents.keys()];
+}
+
+export function getEmbeddedMigrationContent(relativePath: string): string | null {
+  return embeddedMigrationContents.get(relativePath) ?? null;
+}
+`
+
+  await Bun.write(path.join(rootDir, "packages/imperative-shell/src/database/embedded-migrations.ts"), embeddedMigrationsCode)
+  console.log(`   Generated embedded-migrations.ts (${migrationFiles.length} files)`)
+}
+
 // ============================================================
 // Main Build Process
 // ============================================================
@@ -232,15 +273,20 @@ async function main() {
   await Bun.$`mkdir -p ${rootDir}/dist`
 
   // Phase 1: Bundle SPA assets
-  console.log("[1/3] Bundling SPA assets...")
+  console.log("[1/4] Bundling SPA assets...")
   const bundledFiles = await bundleSpaAssets()
 
   // Phase 2: Generate embedded assets module
-  console.log("\n[2/3] Generating embedded assets...")
+  console.log("\n[2/4] Generating embedded assets...")
   await generateEmbeddedAssets(bundledFiles)
 
-  // Phase 3: Build each target
-  console.log("\n[3/3] Compiling executables...")
+  // Phase 3: Generate embedded migrations module
+  console.log("\n[3/4] Generating embedded migrations...")
+  const migrationFiles = await collectMigrationFiles()
+  await generateEmbeddedMigrations(migrationFiles)
+
+  // Phase 4: Build each target
+  console.log("\n[4/4] Compiling executables...")
   const manifestTargets: Record<string, ReleaseManifestTarget> = {}
   for (const target of filteredTargets) {
     const name = buildPackageName(target)
@@ -248,7 +294,6 @@ async function main() {
 
     const distDir = `${rootDir}/dist/${name}`
     await Bun.$`mkdir -p ${distDir}/bin`
-    await Bun.$`cp -r ${shellMigrationsDir} ${distDir}/database-migrations`
 
     const bunTarget = buildBunTarget(target)
 

@@ -1,6 +1,7 @@
 import { dirname, join, resolve } from "path";
-import { existsSync } from "fs";
+import { existsSync, mkdirSync, writeFileSync } from "fs";
 import { migrate } from "drizzle-orm/bun-sqlite/migrator";
+import { getEmbeddedMigrationContent, listEmbeddedMigrationFiles } from "./embedded-migrations";
 
 type TArgs = {
   configDir: string;
@@ -12,13 +13,42 @@ function hasMigrationJournal(pathname: string): boolean {
   return existsSync(join(pathname, "meta", "_journal.json"));
 }
 
+function hasEmbeddedMigrationAssets(): boolean {
+  const files = listEmbeddedMigrationFiles();
+  return files.length > 0 && files.includes("meta/_journal.json");
+}
+
+function fxExtractEmbeddedMigrations(configDir: string): string | null {
+  if (!hasEmbeddedMigrationAssets()) {
+    return null;
+  }
+
+  const outputDir = join(configDir, "database-migrations-embedded");
+  const migrationFiles = listEmbeddedMigrationFiles();
+
+  for (const relativePath of migrationFiles) {
+    const sourceContent = getEmbeddedMigrationContent(relativePath);
+    if (sourceContent === null) {
+      continue;
+    }
+
+    const destinationPath = join(outputDir, relativePath);
+    mkdirSync(dirname(destinationPath), { recursive: true });
+    writeFileSync(destinationPath, sourceContent);
+  }
+
+  return hasMigrationJournal(outputDir) ? outputDir : null;
+}
+
 function resolveMigrationsFolder(configDir: string): string {
   const envOverride = process.env.VIBECANVAS_MIGRATIONS_DIR;
+  const embeddedFolder = fxExtractEmbeddedMigrations(configDir);
   const candidates = [
     envOverride,
     join(configDir, "database-migrations"),
     resolve(dirname(process.execPath), "..", "database-migrations"),
     resolve(import.meta.dir, "..", "..", "database-migrations"),
+    embeddedFolder,
   ].filter(Boolean) as string[];
 
   for (const candidate of candidates) {

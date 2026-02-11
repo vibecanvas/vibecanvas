@@ -1,4 +1,5 @@
 // Initialize global functions (tExternal, tInternal, executeRollbacks)
+import './preload/patch-negative-timeout';
 import { txConfigPath } from '@vibecanvas/core/vibecanvas-config/index';
 import { setupAutomergeServer } from '@vibecanvas/shell';
 import { ClaudeAgent } from '@vibecanvas/shell/claude-agent/srv.claude-agent';
@@ -203,10 +204,12 @@ Bun.serve({
         return new Response('Not Found', { status: 404 })
       }
 
-      const record = db.query.files.findFirst({ where: (table, { eq, and }) => and(
-        eq(table.hash, fileMeta.hash),
-        eq(table.format, fileMeta.format),
-      ) }).sync()
+      const record = db.query.files.findFirst({
+        where: (table, { eq, and }) => and(
+          eq(table.hash, fileMeta.hash),
+          eq(table.format, fileMeta.format),
+        )
+      }).sync()
       if (!record) {
         return new Response('Not Found', { status: 404 })
       }
@@ -263,7 +266,7 @@ Bun.serve({
         const wrapper = {
           data: { isAlive: true },
           get readyState() { return ws.readyState; },
-          ping()  { ws.ping(); },
+          ping() { ws.ping(); },
           close() { ws.close(); },
           send(data: ArrayBuffer) { ws.send(data); },
           terminate() { ws.terminate(); },
@@ -314,12 +317,12 @@ Bun.serve({
       wsAdapter.pong(wrapper, pongData);
     },
     close(ws, code, reason) {
-      if(ws.data.path === '/automerge') {
+      if (ws.data.path === '/automerge') {
         const wrapper = automergeConnections.get(ws);
         if (!wrapper) return;
         wsAdapter.close(wrapper, code ?? 1000, reason ?? '');
         automergeConnections.delete(ws);
-      } else if(ws.data.path === '/api') {
+      } else if (ws.data.path === '/api') {
         handler.close(ws)
       }
     },
@@ -342,5 +345,5 @@ setTimeout(() => {
         console.log(`[Update] Updated to v${result.version}`);
       }
     })
-    .catch(() => {});
+    .catch(() => { });
 }, 1000);
