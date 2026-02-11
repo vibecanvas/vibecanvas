@@ -59,5 +59,12 @@ export const CAP_STYLES = [
   { name: 'Diamond', value: 'diamond' },
 ] as const
 
+export const FONT_FAMILIES = [
+  { name: 'Typewriter', value: 'Gabriele' },
+  { name: 'Mono', value: 'JetBrains Mono Variable' },
+  { name: 'Normal', value: 'system-ui, sans-serif' },
+] as const
+
 export type TLineType = typeof LINE_TYPES[number]['value']
 export type TCapStyle = typeof CAP_STYLES[number]['value']
+export type TFontFamily = typeof FONT_FAMILIES[number]['value']

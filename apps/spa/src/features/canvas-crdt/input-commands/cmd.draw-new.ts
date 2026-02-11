@@ -460,7 +460,7 @@ function createTextElementDataAndStyle(): {data: ExtractElementData<'text'>, sty
       text: 'Text',
       originalText: 'Text',
       fontSize: 16,
-      fontFamily: 'JetBrains Mono',
+      fontFamily: 'Gabriele',
       textAlign: 'left',
       verticalAlign: 'top',
       lineHeight: 1.2,

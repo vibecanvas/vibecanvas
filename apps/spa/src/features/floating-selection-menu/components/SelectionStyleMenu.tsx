@@ -4,8 +4,9 @@ import { ColorPicker } from './ColorPicker'
 import { StrokeWidthPicker } from './StrokeWidthPicker'
 import { LineTypePicker } from './LineTypePicker'
 import { CapPicker } from './CapPicker'
+import { FontFamilyPicker } from './FontFamilyPicker'
 import type { Canvas } from '@/features/canvas-crdt/canvas/canvas'
-import type { TLineType, TCapStyle } from '../types'
+import type { TLineType, TCapStyle, TFontFamily } from '../types'
 
 /** Element types that support fill/stroke/width style menu */
 const SHAPE_TYPES = new Set(['rect', 'ellipse', 'diamond'])
@@ -15,6 +16,9 @@ const LINE_TYPES_SET = new Set(['line', 'arrow'])
 
 /** Element types that support startCap/endCap (arrows only) */
 const ARROW_TYPES = new Set(['arrow'])
+
+/** Element types that support text data formatting */
+const TEXT_TYPES = new Set(['text'])
 
 type TDrawingStyle = {
   backgroundColor?: string
@@ -31,11 +35,17 @@ type TLineData = {
   endCap?: TCapStyle
 }
 
+type TTextData = {
+  type: string
+  fontFamily?: TFontFamily
+}
+
 type TVisibleSections = {
   showFillPicker: boolean
   showStrokePickers: boolean
   showLinePickers: boolean
   showCapPickers: boolean
+  showTextPickers: boolean
 }
 
 /** Get element types from selected IDs (resolves groups to their members) */
@@ -66,12 +76,13 @@ function getSelectedElementTypes(canvas: Canvas, selectedIds: string[]): Set<str
 function getVisibleSections(canvas: Canvas, selectedIds: string[]): TVisibleSections {
   const types = getSelectedElementTypes(canvas, selectedIds)
   if (types.size === 0) {
-    return { showFillPicker: false, showStrokePickers: false, showLinePickers: false, showCapPickers: false }
+    return { showFillPicker: false, showStrokePickers: false, showLinePickers: false, showCapPickers: false, showTextPickers: false }
   }
 
   const hasShapeTypes = [...types].some(t => SHAPE_TYPES.has(t))
   const hasLineTypes = [...types].some(t => LINE_TYPES_SET.has(t))
   const hasArrowTypes = [...types].some(t => ARROW_TYPES.has(t))
+  const hasTextTypes = [...types].some(t => TEXT_TYPES.has(t))
 
   return {
     // Fill picker: only for shapes (rect/ellipse/diamond) - lines don't have fill
@@ -82,6 +93,8 @@ function getVisibleSections(canvas: Canvas, selectedIds: string[]): TVisibleSect
     showLinePickers: hasLineTypes,
     // Cap pickers: only when arrow types are selected
     showCapPickers: hasArrowTypes,
+    // Text pickers: when text types are selected
+    showTextPickers: hasTextTypes,
   }
 }
 
@@ -94,14 +107,14 @@ export function SelectionStyleMenu() {
     const canvas = store.canvasSlice.canvas
     const selectedIds = store.canvasSlice.selectedIds
     if (!canvas || selectedIds.length === 0) {
-      return { showFillPicker: false, showStrokePickers: false, showLinePickers: false, showCapPickers: false }
+      return { showFillPicker: false, showStrokePickers: false, showLinePickers: false, showCapPickers: false, showTextPickers: false }
     }
     return getVisibleSections(canvas, selectedIds)
   })
 
   const shouldShow = createMemo(() => {
     const v = visibility()
-    return v.showFillPicker || v.showStrokePickers || v.showLinePickers || v.showCapPickers
+    return v.showFillPicker || v.showStrokePickers || v.showLinePickers || v.showCapPickers || v.showTextPickers
   })
 
   const currentStyle = createMemo((): TDrawingStyle => {
@@ -120,6 +133,22 @@ export function SelectionStyleMenu() {
     return canvas.getElementData(selectedIds[0]) ?? { type: '' }
   })
 
+  const currentTextData = createMemo((): TTextData => {
+    refreshKey()
+    const canvas = store.canvasSlice.canvas
+    const selectedIds = store.canvasSlice.selectedIds
+    if (!canvas || selectedIds.length === 0) return { type: '' }
+
+    for (const id of selectedIds) {
+      const textData = canvas.getElementTextData(id)
+      if (textData) {
+        return { type: textData.type, fontFamily: textData.fontFamily as TFontFamily | undefined }
+      }
+    }
+
+    return { type: '' }
+  })
+
   const activeCanvasId = createMemo(() => store.canvasSlice.backendCanvasActive?.id ?? null)
 
   const updateSelectedStyles = (styleUpdates: Partial<TDrawingStyle>) => {
@@ -136,6 +165,15 @@ export function SelectionStyleMenu() {
     if (!canvas) return
     for (const id of store.canvasSlice.selectedIds) {
       canvas.updateElementData(id, dataUpdates)
+    }
+    triggerRefresh()
+  }
+
+  const updateSelectedTextData = (dataUpdates: Partial<{ fontFamily: TFontFamily }>) => {
+    const canvas = store.canvasSlice.canvas
+    if (!canvas) return
+    for (const id of store.canvasSlice.selectedIds) {
+      canvas.updateElementTextData(id, dataUpdates)
     }
     triggerRefresh()
   }
@@ -206,6 +244,16 @@ export function SelectionStyleMenu() {
               value={currentLineData().endCap}
               onChange={(endCap) => updateSelectedData({ endCap })}
               label="END"
+            />
+          </div>
+        </Show>
+
+        <Show when={visibility().showTextPickers}>
+          <div class="flex flex-col gap-1">
+            <span class="text-[10px] text-muted-foreground font-mono">FONT</span>
+            <FontFamilyPicker
+              value={currentTextData().fontFamily}
+              onChange={(fontFamily) => updateSelectedTextData({ fontFamily })}
             />
           </div>
         </Show>

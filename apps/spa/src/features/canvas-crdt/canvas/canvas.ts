@@ -479,6 +479,101 @@ export class Canvas {
     }
   }
 
+  updateElementTextData(selectedId: string, dataUpdates: Partial<{
+    fontFamily: 'Gabriele' | 'JetBrains Mono Variable' | 'system-ui, sans-serif'
+  }>): void {
+    const elementIds = this.resolveElementIds(selectedId)
+    if (elementIds.length === 0) return
+
+    const doc = this.handle.doc()
+    if (!doc) return
+
+    const oldTextData = new Map<string, { fontFamily?: string }>()
+    for (const id of elementIds) {
+      const element = doc.elements[id]
+      if (!element || element.data.type !== 'text') continue
+
+      oldTextData.set(id, {
+        fontFamily: (element.data as any).fontFamily,
+      })
+    }
+
+    if (oldTextData.size === 0) return
+
+    this.handle.change(doc => {
+      for (const id of elementIds) {
+        const element = doc.elements[id]
+        if (!element || element.data.type !== 'text') continue
+
+        if ('fontFamily' in dataUpdates) {
+          ;(element.data as any).fontFamily = dataUpdates.fontFamily
+        }
+        element.updatedAt = Date.now()
+      }
+    })
+
+    const newData = { ...dataUpdates }
+    this.undoManager.record({
+      label: 'Change text data',
+      undo: () => {
+        this.handle.change(doc => {
+          for (const [id, oldData] of oldTextData) {
+            const element = doc.elements[id]
+            if (!element || element.data.type !== 'text') continue
+
+            if ('fontFamily' in oldData) {
+              ;(element.data as any).fontFamily = oldData.fontFamily
+            }
+            element.updatedAt = Date.now()
+          }
+        })
+      },
+      redo: () => {
+        this.handle.change(doc => {
+          for (const id of elementIds) {
+            const element = doc.elements[id]
+            if (!element || element.data.type !== 'text') continue
+
+            if ('fontFamily' in newData) {
+              ;(element.data as any).fontFamily = newData.fontFamily
+            }
+            element.updatedAt = Date.now()
+          }
+        })
+      },
+    })
+  }
+
+  getElementTextData(selectedId: string): {
+    type: string
+    fontFamily?: string
+  } | null {
+    const doc = this.handle.doc()
+    if (!doc) return null
+
+    const virtualGroup = this.groupManager?.groups.get(selectedId)
+    if (virtualGroup && virtualGroup.members.length > 0) {
+      for (const member of virtualGroup.members) {
+        const element = doc.elements[member.id]
+        if (!element || element.data.type !== 'text') continue
+
+        return {
+          type: element.data.type,
+          fontFamily: (element.data as any).fontFamily,
+        }
+      }
+      return null
+    }
+
+    const element = doc.elements[selectedId]
+    if (!element || element.data.type !== 'text') return null
+
+    return {
+      type: element.data.type,
+      fontFamily: (element.data as any).fontFamily,
+    }
+  }
+
   /**
    * Resolve a selected ID to element IDs.
    * If the ID is a group, returns all member element IDs.
