@@ -120,6 +120,8 @@ export function SelectionStyleMenu() {
     return canvas.getElementData(selectedIds[0]) ?? { type: '' }
   })
 
+  const activeCanvasId = createMemo(() => store.canvasSlice.backendCanvasActive?.id ?? null)
+
   const updateSelectedStyles = (styleUpdates: Partial<TDrawingStyle>) => {
     const canvas = store.canvasSlice.canvas
     if (!canvas) return
@@ -149,6 +151,8 @@ export function SelectionStyleMenu() {
               value={currentStyle().backgroundColor}
               onChange={(color) => updateSelectedStyles({ backgroundColor: color })}
               showTransparent
+              mode="fill"
+              canvasId={activeCanvasId()}
             />
           </div>
         </Show>
@@ -160,6 +164,8 @@ export function SelectionStyleMenu() {
             <ColorPicker
               value={currentStyle().strokeColor}
               onChange={(color) => updateSelectedStyles({ strokeColor: color })}
+              mode="stroke"
+              canvasId={activeCanvasId()}
             />
           </div>
 
