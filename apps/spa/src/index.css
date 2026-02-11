@@ -1,0 +1,193 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "@fontsource-variable/jetbrains-mono";
+
+@font-face {
+  font-family: 'Gabriele';
+  src: url('/gabriele-d.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+}
+
+@custom-variant dark (&:is(.dark *));
+
+/* ============================================
+   VIBECANVAS DESIGN SYSTEM
+   Terminal-like, rough, no border radius
+   Base: Stone | Primary: Amber
+   ============================================ */
+
+@theme {
+  /* Typography */
+  --font-mono: 'JetBrains Mono Variable', monospace;
+  --font-display: 'Gabriele', monospace;
+
+  /* Border Radius - Terminal aesthetic (none) */
+  --radius-*: initial;
+  --radius-none: 0px;
+  --radius-sm: 0px;
+  --radius-md: 0px;
+  --radius-lg: 0px;
+  --radius-xl: 0px;
+  --radius-2xl: 0px;
+  --radius-full: 0px;
+}
+
+/* ========================================
+   SEMANTIC TOKENS
+   Light/dark mode switching
+   ======================================== */
+:root {
+  --background: var(--color-stone-50);
+  --foreground: var(--color-stone-900);
+
+  --card: var(--color-stone-100);
+  --card-foreground: var(--color-stone-900);
+
+  --popover: white;
+  --popover-foreground: var(--color-stone-900);
+
+  --muted: var(--color-stone-200);
+  --muted-foreground: var(--color-stone-600);
+
+  --primary: var(--color-amber-500);
+  --primary-foreground: var(--color-stone-950);
+
+  --secondary: var(--color-stone-200);
+  --secondary-foreground: var(--color-stone-900);
+
+  --accent: var(--color-amber-100);
+  --accent-foreground: var(--color-amber-900);
+
+  --destructive: var(--color-red-600);
+  --destructive-foreground: var(--color-stone-50);
+
+  --success: var(--color-green-600);
+  --success-foreground: var(--color-stone-50);
+
+  --warning: var(--color-amber-600);
+  --warning-foreground: var(--color-stone-950);
+
+  --border: var(--color-stone-300);
+  --input: var(--color-stone-300);
+  --ring: var(--color-amber-500);
+}
+
+.dark {
+  --background: var(--color-stone-950);
+  --foreground: var(--color-stone-50);
+
+  --card: var(--color-stone-900);
+  --card-foreground: var(--color-stone-50);
+
+  --popover: var(--color-stone-900);
+  --popover-foreground: var(--color-stone-50);
+
+  --muted: var(--color-stone-800);
+  --muted-foreground: var(--color-stone-400);
+
+  --primary: var(--color-amber-500);
+  --primary-foreground: var(--color-stone-950);
+
+  --secondary: var(--color-stone-800);
+  --secondary-foreground: var(--color-stone-50);
+
+  --accent: var(--color-stone-700);
+  --accent-foreground: var(--color-amber-300);
+
+  --destructive: var(--color-red-500);
+  --destructive-foreground: var(--color-stone-50);
+
+  --success: var(--color-green-500);
+  --success-foreground: var(--color-stone-950);
+
+  --warning: var(--color-amber-400);
+  --warning-foreground: var(--color-stone-950);
+
+  --border: var(--color-stone-800);
+  --input: var(--color-stone-800);
+  --ring: var(--color-amber-500);
+}
+
+/* ========================================
+   SEMANTIC UTILITIES
+   Maps CSS variables → Tailwind classes
+   ======================================== */
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
+  --color-warning: var(--warning);
+  --color-warning-foreground: var(--warning-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+}
+
+/* ========================================
+   BASE STYLES
+   ======================================== */
+* {
+  touch-action: none;
+  overscroll-behavior: none;
+}
+body {
+  font-family: var(--font-mono);
+  background-color: var(--background);
+  color: var(--foreground);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+@layer base {
+  * {
+    border-color: var(--border);
+  }
+}
+
+/* ========================================
+   SHIKI SYNTAX HIGHLIGHTING
+   ======================================== */
+.shiki {
+  background: transparent !important;
+  font-size: 13px !important;
+  line-height: 1.5 !important;
+  white-space: pre-wrap !important;
+  word-break: break-word !important;
+}
+
+.shiki code {
+  background: transparent !important;
+  font-family: var(--font-mono) !important;
+  font-size: 13px !important;
+  line-height: 1.5 !important;
+  color: var(--color-stone-300) !important;
+  white-space: pre-wrap !important;
+  word-break: break-word !important;
+}
+
+.shiki pre {
+  white-space: pre-wrap !important;
+  word-break: break-word !important;
+}
+
+pre {
+  background: transparent !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}

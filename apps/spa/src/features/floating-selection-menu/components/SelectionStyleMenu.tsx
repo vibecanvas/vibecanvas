@@ -1,0 +1,209 @@
+import { Show, createMemo, createSignal } from 'solid-js'
+import { store } from '@/store'
+import { ColorPicker } from './ColorPicker'
+import { StrokeWidthPicker } from './StrokeWidthPicker'
+import { LineTypePicker } from './LineTypePicker'
+import { CapPicker } from './CapPicker'
+import type { Canvas } from '@/features/canvas-crdt/canvas/canvas'
+import type { TLineType, TCapStyle } from '../types'
+
+/** Element types that support fill/stroke/width style menu */
+const SHAPE_TYPES = new Set(['rect', 'ellipse', 'diamond'])
+
+/** Element types that support lineType (line-like elements) */
+const LINE_TYPES_SET = new Set(['line', 'arrow'])
+
+/** Element types that support startCap/endCap (arrows only) */
+const ARROW_TYPES = new Set(['arrow'])
+
+type TDrawingStyle = {
+  backgroundColor?: string
+  strokeColor?: string
+  strokeWidth?: number
+  opacity?: number
+  cornerRadius?: number
+}
+
+type TLineData = {
+  type: string
+  lineType?: TLineType
+  startCap?: TCapStyle
+  endCap?: TCapStyle
+}
+
+type TVisibleSections = {
+  showFillPicker: boolean
+  showStrokePickers: boolean
+  showLinePickers: boolean
+  showCapPickers: boolean
+}
+
+/** Get element types from selected IDs (resolves groups to their members) */
+function getSelectedElementTypes(canvas: Canvas, selectedIds: string[]): Set<string> {
+  const types = new Set<string>()
+
+  for (const id of selectedIds) {
+    // Check if it's a group
+    const group = canvas.groupManager.groups.get(id)
+    if (group) {
+      // Recursively get types from group members
+      const memberIds = group.members.map(m => m.id)
+      const memberTypes = getSelectedElementTypes(canvas, memberIds)
+      memberTypes.forEach(t => types.add(t))
+    } else {
+      // It's an element
+      const element = canvas.elements.get(id)
+      if (element) {
+        types.add(element.element.data.type)
+      }
+    }
+  }
+
+  return types
+}
+
+/** Determine which picker sections to show based on selected element types */
+function getVisibleSections(canvas: Canvas, selectedIds: string[]): TVisibleSections {
+  const types = getSelectedElementTypes(canvas, selectedIds)
+  if (types.size === 0) {
+    return { showFillPicker: false, showStrokePickers: false, showLinePickers: false, showCapPickers: false }
+  }
+
+  const hasShapeTypes = [...types].some(t => SHAPE_TYPES.has(t))
+  const hasLineTypes = [...types].some(t => LINE_TYPES_SET.has(t))
+  const hasArrowTypes = [...types].some(t => ARROW_TYPES.has(t))
+
+  return {
+    // Fill picker: only for shapes (rect/ellipse/diamond) - lines don't have fill
+    showFillPicker: hasShapeTypes,
+    // Stroke pickers: for shapes and lines/arrows
+    showStrokePickers: hasShapeTypes || hasLineTypes,
+    // Line pickers: only when line/arrow types are selected
+    showLinePickers: hasLineTypes,
+    // Cap pickers: only when arrow types are selected
+    showCapPickers: hasArrowTypes,
+  }
+}
+
+export function SelectionStyleMenu() {
+  // Refresh signal to force memos to re-run after CRDT updates
+  const [refreshKey, setRefreshKey] = createSignal(0)
+  const triggerRefresh = () => setRefreshKey(k => k + 1)
+
+  const visibility = createMemo((): TVisibleSections => {
+    const canvas = store.canvasSlice.canvas
+    const selectedIds = store.canvasSlice.selectedIds
+    if (!canvas || selectedIds.length === 0) {
+      return { showFillPicker: false, showStrokePickers: false, showLinePickers: false, showCapPickers: false }
+    }
+    return getVisibleSections(canvas, selectedIds)
+  })
+
+  const shouldShow = createMemo(() => {
+    const v = visibility()
+    return v.showFillPicker || v.showStrokePickers || v.showLinePickers || v.showCapPickers
+  })
+
+  const currentStyle = createMemo((): TDrawingStyle => {
+    refreshKey() // Track refresh signal
+    const canvas = store.canvasSlice.canvas
+    const selectedIds = store.canvasSlice.selectedIds
+    if (!canvas || selectedIds.length === 0) return {}
+    return canvas.getElementStyle(selectedIds[0]) ?? {}
+  })
+
+  const currentLineData = createMemo((): TLineData => {
+    refreshKey() // Track refresh signal
+    const canvas = store.canvasSlice.canvas
+    const selectedIds = store.canvasSlice.selectedIds
+    if (!canvas || selectedIds.length === 0) return { type: '' }
+    return canvas.getElementData(selectedIds[0]) ?? { type: '' }
+  })
+
+  const updateSelectedStyles = (styleUpdates: Partial<TDrawingStyle>) => {
+    const canvas = store.canvasSlice.canvas
+    if (!canvas) return
+    for (const id of store.canvasSlice.selectedIds) {
+      canvas.updateElementStyle(id, styleUpdates)
+    }
+    triggerRefresh()
+  }
+
+  const updateSelectedData = (dataUpdates: Partial<{ lineType: TLineType; startCap: TCapStyle; endCap: TCapStyle }>) => {
+    const canvas = store.canvasSlice.canvas
+    if (!canvas) return
+    for (const id of store.canvasSlice.selectedIds) {
+      canvas.updateElementData(id, dataUpdates)
+    }
+    triggerRefresh()
+  }
+
+  return (
+    <Show when={shouldShow()}>
+      <div class="absolute left-3 top-1/2 -translate-y-1/2 z-40 bg-card border border-border shadow-md p-2 flex flex-col gap-3">
+        {/* Fill Picker - only for shapes */}
+        <Show when={visibility().showFillPicker}>
+          <div class="flex flex-col gap-1">
+            <span class="text-[10px] text-muted-foreground font-mono">FILL</span>
+            <ColorPicker
+              value={currentStyle().backgroundColor}
+              onChange={(color) => updateSelectedStyles({ backgroundColor: color })}
+              showTransparent
+            />
+          </div>
+        </Show>
+
+        {/* Stroke Pickers - for shapes and lines */}
+        <Show when={visibility().showStrokePickers}>
+          <div class="flex flex-col gap-1">
+            <span class="text-[10px] text-muted-foreground font-mono">STROKE</span>
+            <ColorPicker
+              value={currentStyle().strokeColor}
+              onChange={(color) => updateSelectedStyles({ strokeColor: color })}
+            />
+          </div>
+
+          <div class="flex flex-col gap-1">
+            <span class="text-[10px] text-muted-foreground font-mono">WIDTH</span>
+            <StrokeWidthPicker
+              value={currentStyle().strokeWidth ?? 2}
+              onChange={(width) => updateSelectedStyles({ strokeWidth: width })}
+            />
+          </div>
+        </Show>
+
+        {/* Line Type Picker - only for lines/arrows */}
+        <Show when={visibility().showLinePickers}>
+          <div class="flex flex-col gap-1">
+            <span class="text-[10px] text-muted-foreground font-mono">LINE</span>
+            <LineTypePicker
+              value={currentLineData().lineType}
+              onChange={(lineType) => updateSelectedData({ lineType })}
+            />
+          </div>
+        </Show>
+
+        {/* Cap Pickers - only for arrows */}
+        <Show when={visibility().showCapPickers}>
+          <div class="flex flex-col gap-1">
+            <span class="text-[10px] text-muted-foreground font-mono">START</span>
+            <CapPicker
+              value={currentLineData().startCap}
+              onChange={(startCap) => updateSelectedData({ startCap })}
+              label="START"
+            />
+          </div>
+
+          <div class="flex flex-col gap-1">
+            <span class="text-[10px] text-muted-foreground font-mono">END</span>
+            <CapPicker
+              value={currentLineData().endCap}
+              onChange={(endCap) => updateSelectedData({ endCap })}
+              label="END"
+            />
+          </div>
+        </Show>
+      </div>
+    </Show>
+  )
+}

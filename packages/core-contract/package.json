@@ -1,0 +1,17 @@
+{
+  "name": "@vibecanvas/core-contract",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./*": "./src/*"
+  },
+  "dependencies": {
+    "@anthropic-ai/claude-agent-sdk": "catalog:",
+    "@vibecanvas/shell": "workspace:*",
+    "@orpc/contract": "catalog:",
+    "drizzle-zod": "catalog:",
+    "zod": "catalog:"
+  }
+}

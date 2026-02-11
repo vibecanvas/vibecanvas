@@ -1,0 +1,12 @@
+{
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    "rootDir": "src",
+    "outDir": "dist",
+    "composite": true,
+    "paths": {
+      "@vibecanvas/core/*": ["./src/*"]
+    }
+  },
+  "include": ["src", "../../global.d.ts"]
+}

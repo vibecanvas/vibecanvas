@@ -1,0 +1,9 @@
+node_modules/
+dist/
+*.log
+dist/
+
+public/
+
+.build-cache/
+embedded-assets.ts

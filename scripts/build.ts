@@ -1,0 +1,368 @@
+#!/usr/bin/env bun
+/**
+ * Distribution build script for vibecanvas
+ *
+ * Creates standalone executables for all platforms:
+ * - macOS (arm64, x64)
+ * - Linux (arm64, x64, musl variants, baseline)
+ * - Windows (x64, baseline)
+ *
+ * Usage:
+ *   bun scripts/build.ts              # Build all platforms
+ *   bun scripts/build.ts --single     # Build current platform only
+ *   bun scripts/build.ts --channel beta
+ */
+
+import path from "path"
+import { rmSync } from "fs"
+import { Glob } from "bun"
+import { createHash } from "crypto"
+
+// ============================================================
+// Configuration
+// ============================================================
+
+const __dirname = path.dirname(new URL(import.meta.url).pathname)
+const rootDir = path.join(__dirname, "..")
+const serverDir = path.join(rootDir, "apps/server")
+const spaDir = path.join(rootDir, "apps/spa")
+const shellMigrationsDir = path.join(rootDir, "packages/imperative-shell/database-migrations")
+
+// Platform targets
+const targets = [
+  { os: "darwin", arch: "arm64" },
+  { os: "darwin", arch: "x64" },
+  { os: "linux", arch: "arm64" },
+  { os: "linux", arch: "x64" },
+  { os: "linux", arch: "x64", avx2: false },
+  { os: "linux", arch: "arm64", abi: "musl" },
+  { os: "linux", arch: "x64", abi: "musl" },
+  { os: "win32", arch: "x64" },
+  { os: "win32", arch: "x64", avx2: false },
+] as const
+
+type Target = (typeof targets)[number]
+type Channel = "stable" | "beta" | "nightly"
+
+type ReleaseManifestTarget = {
+  packageName: string
+  version: string
+  channel: Channel
+  os: string
+  arch: string
+  abi: string | null
+  baseline: boolean
+  binaryPath: string
+  checksumPath: string
+  checksumSha256: string
+}
+
+// ============================================================
+// Helper Functions
+// ============================================================
+
+function buildPackageName(target: Target): string {
+  return [
+    "vibecanvas",
+    target.os === "win32" ? "windows" : target.os,
+    target.arch,
+    "avx2" in target && !target.avx2 ? "baseline" : undefined,
+    "abi" in target ? target.abi : undefined,
+  ]
+    .filter(Boolean)
+    .join("-")
+}
+
+function buildBunTarget(target: Target): string {
+  return [
+    "bun",
+    target.os,
+    target.arch,
+    "avx2" in target && !target.avx2 ? "baseline" : undefined,
+    "abi" in target ? target.abi : undefined,
+  ]
+    .filter(Boolean)
+    .join("-")
+}
+
+function parseChannelArg(argv: string[]): Channel {
+  const inlineArg = argv.find((arg) => arg.startsWith("--channel="))
+  if (inlineArg) {
+    const value = inlineArg.slice("--channel=".length)
+    if (value === "stable" || value === "beta" || value === "nightly") {
+      return value
+    }
+    console.error(`Invalid --channel value: ${value}`)
+    console.error("Allowed values: stable, beta, nightly")
+    process.exit(1)
+  }
+
+  const channelIdx = argv.indexOf("--channel")
+  if (channelIdx >= 0) {
+    const value = argv[channelIdx + 1]
+    if (value === "stable" || value === "beta" || value === "nightly") {
+      return value
+    }
+    console.error(`Invalid --channel value: ${value ?? "<missing>"}`)
+    console.error("Allowed values: stable, beta, nightly")
+    process.exit(1)
+  }
+
+  return "stable"
+}
+
+async function writeChecksumFile(binaryPath: string): Promise<{ checksumPath: string; checksumSha256: string }> {
+  const buffer = await Bun.file(binaryPath).arrayBuffer()
+  const checksumSha256 = createHash("sha256").update(Buffer.from(buffer)).digest("hex")
+  const binaryName = path.basename(binaryPath)
+  const checksumPath = `${binaryPath}.sha256`
+  await Bun.write(checksumPath, `${checksumSha256}  ${binaryName}\n`)
+  return { checksumPath, checksumSha256 }
+}
+
+// ============================================================
+// SPA Bundling
+// ============================================================
+
+async function bundleSpaAssets(): Promise<string[]> {
+  const spaDistDir = path.join(spaDir, "dist")
+  const publicDir = path.join(serverDir, "public")
+
+  // Build SPA using Vite (SolidJS needs Vite's plugin system)
+  console.log("   Running Vite build...")
+  const viteBuild = await Bun.$`bun run --filter @vibecanvas/spa build`.quiet()
+  if (viteBuild.exitCode !== 0) {
+    console.error("SPA build failed:")
+    console.error(viteBuild.stderr.toString())
+    process.exit(1)
+  }
+
+  // Clean old assets and copy fresh SPA build to public/
+  rmSync(path.join(publicDir, "assets"), { recursive: true, force: true })
+  await Bun.$`mkdir -p ${publicDir}`
+  await Bun.$`cp -r ${spaDistDir}/* ${publicDir}/`.quiet()
+
+  // Collect bundled files
+  const bundledFiles: string[] = []
+  const publicGlob = new Glob("**/*")
+  for await (const file of publicGlob.scan(publicDir)) {
+    const filePath = path.join(publicDir, file)
+    const stat = await Bun.file(filePath).stat()
+    if (stat.isFile()) {
+      bundledFiles.push(file)
+      console.log(`   ${file} (${(stat.size / 1024).toFixed(1)} KB)`)
+    }
+  }
+
+  return bundledFiles
+}
+
+async function generateEmbeddedAssets(bundledFiles: string[]): Promise<void> {
+  const indexFileIdx = bundledFiles.indexOf("index.html")
+
+  const imports = bundledFiles
+    .map((f, i) => `import asset${i} from './public/${f}' with { type: "file" };`)
+    .join("\n")
+
+  const embeddedAssetsCode = `// Auto-generated file - do not edit
+${imports}
+
+const embeddedAssets = new Map<string, string>([
+${bundledFiles
+      .map((f, i) => {
+        const route = `/${f}`
+        if (f === "index.html") {
+          return `  ["/", asset${i}],\n  ["${route}", asset${i}],`
+        }
+        return `  ["${route}", asset${i}],`
+      })
+      .join("\n")}
+]);
+
+const spaFallbackAsset = ${indexFileIdx >= 0 ? `asset${indexFileIdx}` : "null"};
+
+export function getEmbeddedAsset(pathname: string): string | null {
+  return embeddedAssets.get(pathname) ?? null;
+}
+
+export function getSpaFallbackAsset(): string | null {
+  return spaFallbackAsset;
+}
+`
+
+  await Bun.write(path.join(serverDir, "embedded-assets.ts"), embeddedAssetsCode)
+  console.log(`   Generated embedded-assets.ts (${bundledFiles.length} files)`)
+}
+
+// ============================================================
+// Main Build Process
+// ============================================================
+
+async function main() {
+  // Read version from root package.json
+  const rootPkg = await Bun.file(`${rootDir}/package.json`).json()
+  const version = rootPkg.version
+
+  // Parse flags
+  const singleFlag = process.argv.includes("--single")
+  const skipWrapperFlag = process.argv.includes("--skip-wrapper")
+  const channel = parseChannelArg(process.argv)
+
+  // Filter targets
+  const filteredTargets = singleFlag
+    ? targets.filter(
+      (t) =>
+        t.os === process.platform &&
+        t.arch === process.arch &&
+        !("avx2" in t && !t.avx2)
+    )
+    : targets
+
+  if (filteredTargets.length === 0) {
+    console.error(`No matching target for ${process.platform}-${process.arch}`)
+    process.exit(1)
+  }
+
+  console.log(`\nBuilding vibecanvas v${version}`)
+  console.log(`Channel: ${channel}`)
+  console.log(`Targets: ${filteredTargets.length}\n`)
+
+  // Clean and create dist directory
+  await Bun.$`rm -rf ${rootDir}/dist`
+  await Bun.$`mkdir -p ${rootDir}/dist`
+
+  // Phase 1: Bundle SPA assets
+  console.log("[1/3] Bundling SPA assets...")
+  const bundledFiles = await bundleSpaAssets()
+
+  // Phase 2: Generate embedded assets module
+  console.log("\n[2/3] Generating embedded assets...")
+  await generateEmbeddedAssets(bundledFiles)
+
+  // Phase 3: Build each target
+  console.log("\n[3/3] Compiling executables...")
+  const manifestTargets: Record<string, ReleaseManifestTarget> = {}
+  for (const target of filteredTargets) {
+    const name = buildPackageName(target)
+    console.log(`   Building ${name}...`)
+
+    const distDir = `${rootDir}/dist/${name}`
+    await Bun.$`mkdir -p ${distDir}/bin`
+    await Bun.$`cp -r ${shellMigrationsDir} ${distDir}/database-migrations`
+
+    const bunTarget = buildBunTarget(target)
+
+    try {
+      const outputPath = `${distDir}/bin/vibecanvas${target.os === "win32" ? ".exe" : ""}`
+
+      // Compile server with Bun
+      const result = await Bun.build({
+        entrypoints: [`${rootDir}/apps/server/src/server.ts`],
+        compile: {
+          target: bunTarget as any,
+          outfile: outputPath,
+        },
+        minify: true,
+        define: {
+          "process.env.VIBECANVAS_VERSION": JSON.stringify(version),
+          "process.env.VIBECANVAS_COMPILED": JSON.stringify("true"),
+          "process.env.VIBECANVAS_CHANNEL": JSON.stringify(channel),
+        },
+      })
+
+      if (!result.success) {
+        console.error(`   ✗ ${name}:`, result.logs)
+        continue
+      }
+
+      // Create platform package.json
+      await Bun.write(
+        `${distDir}/package.json`,
+        JSON.stringify(
+          {
+            name,
+            version,
+            os: [target.os],
+            cpu: [target.arch],
+            bin: {
+              vibecanvas: `./bin/vibecanvas${target.os === "win32" ? ".exe" : ""}`,
+            },
+            description: `Vibecanvas binary for ${target.os} ${target.arch}`,
+            author: "Omar Ezzat",
+            license: "ISC",
+          },
+          null,
+          2
+        )
+      )
+
+      const { checksumPath, checksumSha256 } = await writeChecksumFile(outputPath)
+      manifestTargets[name] = {
+        packageName: name,
+        version,
+        channel,
+        os: target.os,
+        arch: target.arch,
+        abi: "abi" in target ? target.abi : null,
+        baseline: "avx2" in target && !target.avx2,
+        binaryPath: path.relative(rootDir, outputPath),
+        checksumPath: path.relative(rootDir, checksumPath),
+        checksumSha256,
+      }
+
+      console.log(`   ✓ ${name}`)
+    } catch (error) {
+      console.error(`   ✗ ${name}:`, error)
+    }
+  }
+
+  await Bun.write(
+    `${rootDir}/dist/release-manifest.json`,
+    JSON.stringify(
+      {
+        version,
+        channel,
+        generatedAt: new Date().toISOString(),
+        targets: manifestTargets,
+      },
+      null,
+      2
+    )
+  )
+  console.log("   ✓ release-manifest.json")
+
+  // Copy wrapper package to dist
+  if (!skipWrapperFlag) {
+    console.log(`\nCopying wrapper package...`)
+    await Bun.$`cp -r ${rootDir}/apps/vibecanvas ${rootDir}/dist/vibecanvas`
+
+    // Update version in wrapper package.json
+    const wrapperPkgPath = `${rootDir}/dist/vibecanvas/package.json`
+    const wrapperPkg = await Bun.file(wrapperPkgPath).json()
+    wrapperPkg.version = version
+
+    // Update optionalDependencies versions
+    if (wrapperPkg.optionalDependencies) {
+      for (const dep of Object.keys(wrapperPkg.optionalDependencies)) {
+        wrapperPkg.optionalDependencies[dep] = version
+      }
+    }
+
+    await Bun.write(wrapperPkgPath, JSON.stringify(wrapperPkg, null, 2))
+    console.log(`   ✓ vibecanvas (wrapper)`)
+  }
+
+  console.log(`\n✓ Build complete! Packages in dist/\n`)
+  console.log(`To test locally:`)
+  if (singleFlag && filteredTargets.length > 0) {
+    const name = buildPackageName(filteredTargets[0])
+    console.log(`  ./dist/${name}/bin/vibecanvas`)
+  } else {
+    console.log(`  ./dist/vibecanvas-darwin-arm64/bin/vibecanvas`)
+  }
+}
+
+main().catch((err) => {
+  console.error(err)
+  process.exit(1)
+})

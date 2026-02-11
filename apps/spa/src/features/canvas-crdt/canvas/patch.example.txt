@@ -1,0 +1,383 @@
+move:
+
+[
+    {
+        "action": "put",
+        "path": [
+            "elements",
+            "4eda6ce2-21c4-4922-9d7c-8b017d120dea",
+            "x"
+        ],
+        "value": 862.5275695690665
+    }
+]
+
+rotate:
+
+[
+    {
+        "action": "put",
+        "path": [
+            "elements",
+            "4eda6ce2-21c4-4922-9d7c-8b017d120dea",
+            "angle"
+        ],
+        "value": 0.9586814628718552
+    }
+]
+
+resize:
+
+[
+    {
+        "action": "put",
+        "path": [
+            "elements",
+            "4eda6ce2-21c4-4922-9d7c-8b017d120dea",
+            "x"
+        ],
+        "value": 940.2083129414804
+    },
+    {
+        "action": "put",
+        "path": [
+            "elements",
+            "4eda6ce2-21c4-4922-9d7c-8b017d120dea",
+            "y"
+        ],
+        "value": -474.76330070825054
+    },
+    {
+        "action": "put",
+        "path": [
+            "elements",
+            "4eda6ce2-21c4-4922-9d7c-8b017d120dea",
+            "data"
+        ],
+        "value": {}
+    },
+    {
+        "action": "put",
+        "path": [
+            "elements",
+            "4eda6ce2-21c4-4922-9d7c-8b017d120dea",
+            "data",
+            "h"
+        ],
+        "value": 456.0068857788664
+    },
+    {
+        "action": "put",
+        "path": [
+            "elements",
+            "4eda6ce2-21c4-4922-9d7c-8b017d120dea",
+            "data",
+            "radius"
+        ],
+        "value": 0
+    },
+    {
+        "action": "put",
+        "path": [
+            "elements",
+            "4eda6ce2-21c4-4922-9d7c-8b017d120dea",
+            "data",
+            "type"
+        ],
+        "value": ""
+    },
+    {
+        "action": "put",
+        "path": [
+            "elements",
+            "4eda6ce2-21c4-4922-9d7c-8b017d120dea",
+            "data",
+            "w"
+        ],
+        "value": 527.1618795551019
+    },
+    {
+        "action": "splice",
+        "path": [
+            "elements",
+            "4eda6ce2-21c4-4922-9d7c-8b017d120dea",
+            "data",
+            "type",
+            0
+        ],
+        "value": "rect"
+    }
+]
+
+delete:
+
+[
+    {
+        "action": "del",
+        "path": [
+            "elements",
+            "4eda6ce2-21c4-4922-9d7c-8b017d120dea"
+        ]
+    },
+    {
+        "action": "del",
+        "path": [
+            "elements",
+            "10299d32-3a99-4d78-9b8f-4ad456d755c0"
+        ]
+    }
+]
+
+create:
+
+[
+    {
+        "action": "put",
+        "path": [
+            "elements",
+            "69663e65-23eb-4ba7-ad94-04b1e382e586"
+        ],
+        "value": {}
+    },
+    {
+        "action": "put",
+        "path": [
+            "elements",
+            "69663e65-23eb-4ba7-ad94-04b1e382e586",
+            "id"
+        ],
+        "value": ""
+    },
+    {
+        "action": "put",
+        "path": [
+            "elements",
+            "69663e65-23eb-4ba7-ad94-04b1e382e586",
+            "x"
+        ],
+        "value": 522.331456058969
+    },
+    {
+        "action": "put",
+        "path": [
+            "elements",
+            "69663e65-23eb-4ba7-ad94-04b1e382e586",
+            "y"
+        ],
+        "value": -130.56298188820477
+    },
+    {
+        "action": "put",
+        "path": [
+            "elements",
+            "69663e65-23eb-4ba7-ad94-04b1e382e586",
+            "angle"
+        ],
+        "value": 0
+    },
+    {
+        "action": "put",
+        "path": [
+            "elements",
+            "69663e65-23eb-4ba7-ad94-04b1e382e586",
+            "zIndex"
+        ],
+        "value": ""
+    },
+    {
+        "action": "put",
+        "path": [
+            "elements",
+            "69663e65-23eb-4ba7-ad94-04b1e382e586",
+            "groupId"
+        ],
+        "value": null
+    },
+    {
+        "action": "put",
+        "path": [
+            "elements",
+            "69663e65-23eb-4ba7-ad94-04b1e382e586",
+            "bindings"
+        ],
+        "value": []
+    },
+    {
+        "action": "put",
+        "path": [
+            "elements",
+            "69663e65-23eb-4ba7-ad94-04b1e382e586",
+            "locked"
+        ],
+        "value": false
+    },
+    {
+        "action": "put",
+        "path": [
+            "elements",
+            "69663e65-23eb-4ba7-ad94-04b1e382e586",
+            "createdAt"
+        ],
+        "value": 1768138353884
+    },
+    {
+        "action": "put",
+        "path": [
+            "elements",
+            "69663e65-23eb-4ba7-ad94-04b1e382e586",
+            "updatedAt"
+        ],
+        "value": 1768138353884
+    },
+    {
+        "action": "put",
+        "path": [
+            "elements",
+            "69663e65-23eb-4ba7-ad94-04b1e382e586",
+            "data"
+        ],
+        "value": {}
+    },
+    {
+        "action": "put",
+        "path": [
+            "elements",
+            "69663e65-23eb-4ba7-ad94-04b1e382e586",
+            "style"
+        ],
+        "value": {}
+    },
+    {
+        "action": "splice",
+        "path": [
+            "elements",
+            "69663e65-23eb-4ba7-ad94-04b1e382e586",
+            "id",
+            0
+        ],
+        "value": "69663e65-23eb-4ba7-ad94-04b1e382e586"
+    },
+    {
+        "action": "splice",
+        "path": [
+            "elements",
+            "69663e65-23eb-4ba7-ad94-04b1e382e586",
+            "zIndex",
+            0
+        ],
+        "value": "a"
+    },
+    {
+        "action": "put",
+        "path": [
+            "elements",
+            "69663e65-23eb-4ba7-ad94-04b1e382e586",
+            "data",
+            "type"
+        ],
+        "value": ""
+    },
+    {
+        "action": "put",
+        "path": [
+            "elements",
+            "69663e65-23eb-4ba7-ad94-04b1e382e586",
+            "data",
+            "w"
+        ],
+        "value": 231.63007196133526
+    },
+    {
+        "action": "put",
+        "path": [
+            "elements",
+            "69663e65-23eb-4ba7-ad94-04b1e382e586",
+            "data",
+            "h"
+        ],
+        "value": 245.47640292969066
+    },
+    {
+        "action": "put",
+        "path": [
+            "elements",
+            "69663e65-23eb-4ba7-ad94-04b1e382e586",
+            "data",
+            "radius"
+        ],
+        "value": 0
+    },
+    {
+        "action": "splice",
+        "path": [
+            "elements",
+            "69663e65-23eb-4ba7-ad94-04b1e382e586",
+            "data",
+            "type",
+            0
+        ],
+        "value": "rect"
+    },
+    {
+        "action": "put",
+        "path": [
+            "elements",
+            "69663e65-23eb-4ba7-ad94-04b1e382e586",
+            "style",
+            "backgroundColor"
+        ],
+        "value": ""
+    },
+    {
+        "action": "put",
+        "path": [
+            "elements",
+            "69663e65-23eb-4ba7-ad94-04b1e382e586",
+            "style",
+            "strokeColor"
+        ],
+        "value": ""
+    },
+    {
+        "action": "put",
+        "path": [
+            "elements",
+            "69663e65-23eb-4ba7-ad94-04b1e382e586",
+            "style",
+            "strokeWidth"
+        ],
+        "value": 2
+    },
+    {
+        "action": "put",
+        "path": [
+            "elements",
+            "69663e65-23eb-4ba7-ad94-04b1e382e586",
+            "style",
+            "opacity"
+        ],
+        "value": 1
+    },
+    {
+        "action": "splice",
+        "path": [
+            "elements",
+            "69663e65-23eb-4ba7-ad94-04b1e382e586",
+            "style",
+            "backgroundColor",
+            0
+        ],
+        "value": "#1971c2"
+    },
+    {
+        "action": "splice",
+        "path": [
+            "elements",
+            "69663e65-23eb-4ba7-ad94-04b1e382e586",
+            "style",
+            "strokeColor",
+            0
+        ],
+        "value": "#1864ab"
+    }
+]

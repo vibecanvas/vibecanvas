@@ -1,0 +1,28 @@
+{
+  "name": "@vibecanvas/shell",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "main": "src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./*": "./src/*.ts"
+  },
+  "scripts": {
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "bun src/database/migrate.ts"
+  },
+  "dependencies": {
+    "@anthropic-ai/claude-agent-sdk": "catalog:",
+    "@automerge/automerge": "catalog:",
+    "@automerge/automerge-repo": "catalog:",
+    "@automerge/automerge-repo-network-websocket": "catalog:",
+    "@vibecanvas/core": "workspace:*",
+    "drizzle-orm": "catalog:",
+    "drizzle-zod": "catalog:",
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "drizzle-kit": "catalog:"
+  }
+}

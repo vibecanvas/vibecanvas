@@ -1,0 +1,43 @@
+{
+  "name": "vibecanvas",
+  "version": "0.0.1",
+  "description": "Visual devtool for Bun.js codebases",
+  "author": "Omar Ezzat",
+  "license": "ISC",
+  "bin": {
+    "vibecanvas": "./bin/vibecanvas"
+  },
+  "files": [
+    "bin",
+    "postinstall.mjs"
+  ],
+  "scripts": {
+    "postinstall": "node postinstall.mjs"
+  },
+  "optionalDependencies": {
+    "vibecanvas-darwin-arm64": "0.0.1",
+    "vibecanvas-darwin-x64": "0.0.1",
+    "vibecanvas-linux-arm64": "0.0.1",
+    "vibecanvas-linux-x64": "0.0.1",
+    "vibecanvas-linux-x64-baseline": "0.0.1",
+    "vibecanvas-linux-arm64-musl": "0.0.1",
+    "vibecanvas-linux-x64-musl": "0.0.1",
+    "vibecanvas-windows-x64": "0.0.1",
+    "vibecanvas-windows-x64-baseline": "0.0.1"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/vibecanvas/vibecanvas"
+  },
+  "homepage": "https://vibecanvas.net",
+  "keywords": [
+    "bun",
+    "devtools",
+    "visual",
+    "canvas",
+    "cli"
+  ]
+}
