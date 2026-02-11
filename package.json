@@ -28,7 +28,6 @@
     "build": "bun run scripts/build.ts",
     "build:single": "bun run scripts/build.ts --single",
     "publish:npm": "bun run scripts/publish-npm.ts",
-    "publish:brew": "bun run scripts/publish-brew.ts",
     "version:update": "bun run scripts/update-version.ts",
     "dev": "bun run --parallel --filter '*' dev",
     "client:dev": "cd apps/spa && bun run dev",
