@@ -14,7 +14,7 @@
  */
 
 import path from "path"
-import { rmSync } from "fs"
+import { chmodSync, existsSync, rmSync } from "fs"
 import { Glob } from "bun"
 import { createHash } from "crypto"
 
@@ -26,6 +26,8 @@ const __dirname = path.dirname(new URL(import.meta.url).pathname)
 const rootDir = path.join(__dirname, "..")
 const serverDir = path.join(rootDir, "apps/server")
 const spaDir = path.join(rootDir, "apps/spa")
+const wrapperDir = path.join(rootDir, "apps/vibecanvas")
+const wrapperBinPath = path.join(wrapperDir, "bin/vibecanvas")
 const shellMigrationsDir = path.join(rootDir, "packages/imperative-shell/database-migrations")
 
 // Platform targets
@@ -240,9 +242,15 @@ export function getEmbeddedMigrationContent(relativePath: string): string | null
 // ============================================================
 
 async function main() {
-  // Read version from root package.json
-  const rootPkg = await Bun.file(`${rootDir}/package.json`).json()
-  const version = rootPkg.version
+  // Read release metadata from wrapper package.json
+  const wrapperSourcePkg = await Bun.file(path.join(wrapperDir, "package.json")).json() as {
+    version?: string
+    description?: string
+    license?: string
+  }
+  const version = wrapperSourcePkg.version ?? "0.0.1"
+  const description = wrapperSourcePkg.description ?? "Vibecanvas binary package"
+  const license = wrapperSourcePkg.license ?? "ISC"
 
   // Parse flags
   const singleFlag = process.argv.includes("--single")
@@ -332,9 +340,9 @@ async function main() {
             bin: {
               vibecanvas: `./bin/vibecanvas${target.os === "win32" ? ".exe" : ""}`,
             },
-            description: `Vibecanvas binary for ${target.os} ${target.arch}`,
+            description: `${description} (${target.os} ${target.arch})`,
             author: "Omar Ezzat",
-            license: "ISC",
+            license,
           },
           null,
           2
@@ -379,7 +387,11 @@ async function main() {
   // Copy wrapper package to dist
   if (!skipWrapperFlag) {
     console.log(`\nCopying wrapper package...`)
-    await Bun.$`cp -r ${rootDir}/apps/vibecanvas ${rootDir}/dist/vibecanvas`
+    if (!existsSync(wrapperBinPath)) {
+      throw new Error(`Wrapper launcher not found at ${wrapperBinPath}`)
+    }
+
+    await Bun.$`cp -r ${wrapperDir} ${rootDir}/dist/vibecanvas`
 
     // Update version in wrapper package.json
     const wrapperPkgPath = `${rootDir}/dist/vibecanvas/package.json`
@@ -394,6 +406,7 @@ async function main() {
     }
 
     await Bun.write(wrapperPkgPath, JSON.stringify(wrapperPkg, null, 2))
+    chmodSync(path.join(rootDir, "dist/vibecanvas/bin/vibecanvas"), 0o755)
     console.log(`   ✓ vibecanvas (wrapper)`)
   }
 

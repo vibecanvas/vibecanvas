@@ -9,9 +9,9 @@ Deployable applications live in `apps/`. Each app is a thin layer that wires tog
 
 ```
 apps/
-├── cli/       # Command-line interface
+├── vibecanvas/  # Command-line interface
 ├── server/    # HTTP API server (Elysia)
-└── web/       # React SPA frontend
+└── spa/       # React SPA frontend
 ```
 
 ## Architecture Overview
@@ -20,7 +20,7 @@ apps/
 ┌─────────────────────────────────────────────────────────────────┐
 │                            APPS                                 │
 │  ┌───────────┐     ┌───────────┐     ┌───────────┐             │
-│  │    CLI    │     │   SERVER  │     │    WEB    │             │
+│  │VIBECANVAS │     │   SERVER  │     │    SPA    │             │
 │  └─────┬─────┘     └─────┬─────┘     └─────┬─────┘             │
 └────────┼─────────────────┼─────────────────┼────────────────────┘
          │                 │                 │
@@ -47,14 +47,14 @@ Apps are responsible for:
 
 ---
 
-## CLI (`apps/cli/`)
+## CLI (`apps/vibecanvas/`)
 
 Command-line interface for terminal interactions.
 
 ### Structure
 
 ```
-apps/cli/
+apps/vibecanvas/
 ├── src/
 │   ├── index.ts              # Entry point, command routing
 │   └── commands/
@@ -65,7 +65,7 @@ apps/cli/
 ### Command Pattern
 
 ```ts
-// apps/cli/src/commands/cmd.init.ts
+// apps/vibecanvas/src/commands/cmd.init.ts
 import { mkdir, writeFile, rm } from "fs/promises";
 import { ctrlProjectInit } from "@vibecanvas/core";
 
@@ -94,7 +94,7 @@ export async function init(targetPath: string) {
 ### Entry Point
 
 ```ts
-// apps/cli/src/index.ts
+// apps/vibecanvas/src/index.ts
 #!/usr/bin/env bun
 import { parseArgs } from "util";
 import { init } from "./commands/cmd.init";
@@ -208,19 +208,19 @@ export default new Elysia({ prefix: '/api/project' })
 **DON'T:**
 - Contain business logic (use controllers)
 - Perform database operations directly (use functions)
-- Export business types (use `@vibecanvas/structs`)
+- Export business types (use `@vibecanvas/core-contract`)
 - Expose internal error details to clients (use `externalMessage`)
 
 ---
 
-## Web (`apps/web/`)
+## Web (`apps/spa/`)
 
 React SPA with file-based routing.
 
 ### Structure
 
 ```
-apps/web/
+apps/spa/
 ├── pages/                 # Auto-discovered page components
 │   ├── index.tsx          # /
 │   ├── about.tsx          # /about
@@ -235,8 +235,8 @@ apps/web/
 ### Page Pattern
 
 ```tsx
-// apps/web/pages/about.tsx
-import type { PageMeta } from "@vibecanvas/structs";
+// apps/spa/pages/about.tsx
+import type { PageMeta } from "@vibecanvas/core-contract";
 
 export const meta: PageMeta = {
   title: "About - App",
@@ -290,8 +290,8 @@ async function createProject(targetPath: string) {
 
 ```bash
 # CLI
-bun run apps/cli/src/index.ts --help
-bun run apps/cli/src/index.ts init /tmp/test
+bun run apps/vibecanvas/src/index.ts --help
+bun run apps/vibecanvas/src/index.ts init /tmp/test
 
 # Server
 bun apps/server/server.ts
@@ -305,11 +305,11 @@ open http://localhost:3000
 
 ## Adding New Features
 
-1. **Define data structures** in `@vibecanvas/structs`
+1. **Define data structures** in `@vibecanvas/core-contract`
 2. **Add infrastructure** in `@vibecanvas/shell` (db schemas, services, cache)
 3. **Implement functions** in `@vibecanvas/core` (fn/fx/tx)
 4. **Create controller** in `@vibecanvas/core` (ctrl)
 5. **Wire up in app:**
-   - CLI: Add command in `apps/cli/src/commands/`
+   - CLI: Add command in `apps/vibecanvas/src/commands/`
    - Server: Add API handler in `apps/server/src/api/`
-   - Web: Add page/feature in `apps/web/`
+   - Web: Add page/feature in `apps/spa/`

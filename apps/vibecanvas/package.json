@@ -1,9 +1,8 @@
 {
   "name": "vibecanvas",
-  "version": "0.0.1",
-  "description": "Visual devtool for Bun.js codebases",
-  "author": "Omar Ezzat",
-  "license": "ISC",
+  "version": "0.0.2",
+  "description": "Run your agents in an infinite canvas",
+  "license": "MIT",
   "bin": {
     "vibecanvas": "./bin/vibecanvas"
   },

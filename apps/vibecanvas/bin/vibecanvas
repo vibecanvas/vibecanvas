@@ -1,0 +1,38 @@
+#!/usr/bin/env node
+
+const { spawn } = require("child_process");
+const { arch, platform } = require("os");
+
+const os = platform();
+const cpu = arch();
+const pkgBase = ["vibecanvas", os === "win32" ? "windows" : os, cpu].join("-");
+const attempts = [pkgBase, `${pkgBase}-baseline`, `${pkgBase}-musl`];
+
+let binaryPath;
+
+for (const pkgName of attempts) {
+  try {
+    binaryPath = require.resolve(`${pkgName}/bin/vibecanvas`);
+    break;
+  } catch {
+    // Try next package variant.
+  }
+}
+
+if (!binaryPath) {
+  console.error(`vibecanvas: no binary found for ${os}-${cpu}`);
+  console.error(`vibecanvas: tried ${attempts.join(", ")}`);
+  process.exit(1);
+}
+
+const child = spawn(binaryPath, process.argv.slice(2), {
+  stdio: "inherit",
+  env: process.env,
+});
+
+child.on("error", (error) => {
+  console.error(`vibecanvas: failed to start binary (${error.message})`);
+  process.exit(1);
+});
+
+child.on("exit", (code) => process.exit(code ?? 0));
