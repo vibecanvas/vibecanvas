@@ -4,7 +4,7 @@ import { parseColor } from '@kobalte/core/colors'
 import { ColorSwatch } from '@kobalte/core/color-swatch'
 import { Menubar } from '@kobalte/core/menubar'
 import { For, Show, createEffect, createMemo, createSignal } from 'solid-js'
-import { COLOR_PANEL_COLORS, FILL_QUICK_COLORS, STROKE_QUICK_COLORS } from '../types'
+import { COLOR_PANEL_COLORS, FILL_QUICK_COLORS, STROKE_QUICK_COLORS, getRecentColorStorageKey } from '../types'
 
 interface Props {
   value: string | undefined
@@ -35,10 +35,6 @@ function normalizeColorValue(value: string | undefined): string {
 function toKobalteColor(value: string | undefined) {
   const normalized = normalizeColorValue(value)
   return parseColor(normalized === 'transparent' ? FALLBACK_COLOR : normalized)
-}
-
-function storageKey(mode: 'fill' | 'stroke', canvasId: string | null | undefined) {
-  return `vibecanvas-recent-colors:${canvasId ?? 'global'}:${mode}`
 }
 
 export function ColorPicker(props: Props) {
@@ -87,7 +83,7 @@ export function ColorPicker(props: Props) {
 
     const next = [color, ...recentColors().filter((item) => item !== color)].slice(0, MAX_RECENT_COLORS)
     setRecentColors(next)
-    localStorage.setItem(storageKey(props.mode, props.canvasId), JSON.stringify(next))
+    localStorage.setItem(getRecentColorStorageKey(props.mode, props.canvasId), JSON.stringify(next))
   }
 
   const applyColor = (value: string) => {
@@ -135,7 +131,7 @@ export function ColorPicker(props: Props) {
   })
 
   createEffect(() => {
-    const persisted = localStorage.getItem(storageKey(props.mode, props.canvasId))
+    const persisted = localStorage.getItem(getRecentColorStorageKey(props.mode, props.canvasId))
     if (!persisted) {
       setRecentColors([])
       return

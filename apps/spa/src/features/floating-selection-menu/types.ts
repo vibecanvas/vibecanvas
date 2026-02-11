@@ -14,6 +14,15 @@ export const FILL_QUICK_COLORS = [
   { name: 'Yellow', value: '#fff3bf' },
 ] as const
 
+export const DEFAULT_STROKE_COLOR = STROKE_QUICK_COLORS[3].value
+export const DEFAULT_FILL_COLOR = FILL_QUICK_COLORS[3].value
+
+export type TRecentColorMode = 'fill' | 'stroke'
+
+export function getRecentColorStorageKey(mode: TRecentColorMode, canvasId: string | null | undefined) {
+  return `vibecanvas-recent-colors:${canvasId ?? 'global'}:${mode}`
+}
+
 export const COLOR_PANEL_COLORS = [
   { name: 'Transparent', value: 'transparent' },
   { name: 'Light Gray', value: '#e0e2e6' },
