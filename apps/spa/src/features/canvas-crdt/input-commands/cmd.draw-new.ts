@@ -305,10 +305,12 @@ function handleUp(ctx: Parameters<InputCommand>[0]): boolean {
       }
     })
 
-    // TODO: Enter edit mode immediately
-    // renderable.enterEditMode()
-
     setStore('toolbarSlice', 'activeTool', 'select')
+
+    // Enter edit mode after tool switch side-effects settle (focus can change)
+    requestAnimationFrame(() => {
+      renderable.dispatch({ type: 'enter' })
+    })
   } else if (!wasDragging && tool === 'chat') {
     // Chat: create on single click (no drag)
     const { data, style } = createChatElementDataAndStyle()
