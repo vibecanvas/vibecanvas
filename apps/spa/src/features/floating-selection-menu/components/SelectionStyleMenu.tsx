@@ -5,7 +5,7 @@ import { StrokeWidthPicker } from './StrokeWidthPicker'
 import { LineTypePicker } from './LineTypePicker'
 import { CapPicker } from './CapPicker'
 import { FontFamilyPicker } from './FontFamilyPicker'
-import { OpacityPicker } from './OpacityPicker'
+import { OpacitySlider } from './OpacitySlider'
 import type { Canvas } from '@/features/canvas-crdt/canvas/canvas'
 import type { TLineType, TCapStyle, TFontFamily } from '../types'
 
@@ -41,17 +41,13 @@ type TTextData = {
   fontFamily?: TFontFamily
 }
 
-type TTextStyle = {
-  strokeColor?: string
-  opacity?: number
-}
-
 type TVisibleSections = {
   showFillPicker: boolean
   showStrokePickers: boolean
   showLinePickers: boolean
   showCapPickers: boolean
   showTextPickers: boolean
+  showOpacityPicker: boolean
 }
 
 /** Get element types from selected IDs (resolves groups to their members) */
@@ -82,13 +78,14 @@ function getSelectedElementTypes(canvas: Canvas, selectedIds: string[]): Set<str
 function getVisibleSections(canvas: Canvas, selectedIds: string[]): TVisibleSections {
   const types = getSelectedElementTypes(canvas, selectedIds)
   if (types.size === 0) {
-    return { showFillPicker: false, showStrokePickers: false, showLinePickers: false, showCapPickers: false, showTextPickers: false }
+    return { showFillPicker: false, showStrokePickers: false, showLinePickers: false, showCapPickers: false, showTextPickers: false, showOpacityPicker: false }
   }
 
   const hasShapeTypes = [...types].some(t => SHAPE_TYPES.has(t))
   const hasLineTypes = [...types].some(t => LINE_TYPES_SET.has(t))
   const hasArrowTypes = [...types].some(t => ARROW_TYPES.has(t))
   const hasTextTypes = [...types].some(t => TEXT_TYPES.has(t))
+  const hasOpacityTypes = [...types].some(t => t !== 'chat')
 
   return {
     // Fill picker: only for shapes (rect/ellipse/diamond) - lines don't have fill
@@ -101,6 +98,8 @@ function getVisibleSections(canvas: Canvas, selectedIds: string[]): TVisibleSect
     showCapPickers: hasArrowTypes,
     // Text pickers: when text types are selected
     showTextPickers: hasTextTypes,
+    // Opacity picker: all non-chat element types
+    showOpacityPicker: hasOpacityTypes,
   }
 }
 
@@ -124,6 +123,26 @@ function getSelectedTextElementIds(canvas: Canvas, selectedIds: string[]): strin
   return [...textIds]
 }
 
+function getSelectedNonChatElementIds(canvas: Canvas, selectedIds: string[]): string[] {
+  const elementIds = new Set<string>()
+
+  for (const id of selectedIds) {
+    const group = canvas.groupManager.groups.get(id)
+    if (group) {
+      const nested = getSelectedNonChatElementIds(canvas, group.members.map(m => m.id))
+      nested.forEach(memberId => elementIds.add(memberId))
+      continue
+    }
+
+    const element = canvas.elements.get(id)
+    if (!element) continue
+    if (element.element.data.type === 'chat') continue
+    elementIds.add(id)
+  }
+
+  return [...elementIds]
+}
+
 export function SelectionStyleMenu() {
   // Refresh signal to force memos to re-run after CRDT updates
   const [refreshKey, setRefreshKey] = createSignal(0)
@@ -133,14 +152,14 @@ export function SelectionStyleMenu() {
     const canvas = store.canvasSlice.canvas
     const selectedIds = store.canvasSlice.selectedIds
     if (!canvas || selectedIds.length === 0) {
-      return { showFillPicker: false, showStrokePickers: false, showLinePickers: false, showCapPickers: false, showTextPickers: false }
+      return { showFillPicker: false, showStrokePickers: false, showLinePickers: false, showCapPickers: false, showTextPickers: false, showOpacityPicker: false }
     }
     return getVisibleSections(canvas, selectedIds)
   })
 
   const shouldShow = createMemo(() => {
     const v = visibility()
-    return v.showFillPicker || v.showStrokePickers || v.showLinePickers || v.showCapPickers || v.showTextPickers
+    return v.showFillPicker || v.showStrokePickers || v.showLinePickers || v.showCapPickers || v.showTextPickers || v.showOpacityPicker
   })
 
   const currentStyle = createMemo((): TDrawingStyle => {
@@ -184,6 +203,13 @@ export function SelectionStyleMenu() {
     return getSelectedTextElementIds(canvas, selectedIds)
   })
 
+  const selectedNonChatIds = createMemo(() => {
+    const canvas = store.canvasSlice.canvas
+    const selectedIds = store.canvasSlice.selectedIds
+    if (!canvas || selectedIds.length === 0) return []
+    return getSelectedNonChatElementIds(canvas, selectedIds)
+  })
+
   const updateSelectedStyles = (styleUpdates: Partial<TDrawingStyle>) => {
     const canvas = store.canvasSlice.canvas
     if (!canvas) return
@@ -211,21 +237,38 @@ export function SelectionStyleMenu() {
     triggerRefresh()
   }
 
-  const currentTextStyle = createMemo((): TTextStyle => {
+  const currentTextStyle = createMemo((): { strokeColor?: string } => {
     refreshKey()
     const canvas = store.canvasSlice.canvas
     const textId = selectedTextIds()[0]
     if (!canvas || !textId) return {}
 
     const style = canvas.getElementStyle(textId)
-    return style ? { strokeColor: style.strokeColor, opacity: style.opacity } : {}
+    return style ? { strokeColor: style.strokeColor } : {}
   })
 
-  const updateSelectedTextStyles = (styleUpdates: Partial<TTextStyle>) => {
+  const updateSelectedTextStyles = (styleUpdates: Partial<{ strokeColor?: string }>) => {
     const canvas = store.canvasSlice.canvas
     if (!canvas) return
     for (const id of selectedTextIds()) {
       canvas.updateElementStyle(id, styleUpdates)
+    }
+    triggerRefresh()
+  }
+
+  const currentOpacity = createMemo(() => {
+    refreshKey()
+    const canvas = store.canvasSlice.canvas
+    const firstId = selectedNonChatIds()[0]
+    if (!canvas || !firstId) return 1
+    return canvas.getElementStyle(firstId)?.opacity ?? 1
+  })
+
+  const updateSelectedOpacity = (opacity: number) => {
+    const canvas = store.canvasSlice.canvas
+    if (!canvas) return
+    for (const id of selectedNonChatIds()) {
+      canvas.updateElementStyle(id, { opacity })
     }
     triggerRefresh()
   }
@@ -312,18 +355,20 @@ export function SelectionStyleMenu() {
           </div>
 
           <div class="flex flex-col gap-1">
-            <span class="text-[10px] text-muted-foreground font-mono">OPACITY</span>
-            <OpacityPicker
-              value={currentTextStyle().opacity}
-              onChange={(opacity) => updateSelectedTextStyles({ opacity })}
-            />
-          </div>
-
-          <div class="flex flex-col gap-1">
             <span class="text-[10px] text-muted-foreground font-mono">FONT</span>
             <FontFamilyPicker
               value={currentTextData().fontFamily}
               onChange={(fontFamily) => updateSelectedTextData({ fontFamily })}
+            />
+          </div>
+        </Show>
+
+        <Show when={visibility().showOpacityPicker}>
+          <div class="flex flex-col gap-1">
+            <span class="text-[10px] text-muted-foreground font-mono">OPACITY</span>
+            <OpacitySlider
+              value={currentOpacity()}
+              onChange={updateSelectedOpacity}
             />
           </div>
         </Show>
