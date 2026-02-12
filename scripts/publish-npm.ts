@@ -4,7 +4,9 @@
  * Publish all built dist packages to npm using npm CLI.
  *
  * Behavior:
- * - Requires `NPM_TOKEN` to be set in env.
+ * - Auth supports either:
+ *   - npm trusted publishing in GitHub Actions (OIDC)
+ *   - classic `NPM_TOKEN` in env
  * - Uses `bun pm view <name>@<version>` to detect already-published versions.
  * - Packs each package with `npm pack` then publishes tarballs with npm.
  * - For each package, always runs `npm publish --dry-run` before real publish.
@@ -52,6 +54,8 @@ type TCmdResult = {
   stdout: string
   stderr: string
 }
+
+type TPublishAuthMode = "trusted-publisher" | "token"
 
 function parseArgs(argv: string[]): TArgs {
   const get = (flag: string): string | undefined => {
@@ -117,11 +121,24 @@ function shortMessage(result: TPackageResult): string {
   return first.length > 120 ? `${first.slice(0, 117)}...` : first
 }
 
-function assertNpmToken(): void {
+function resolvePublishAuthMode(): TPublishAuthMode {
   const token = process.env.NPM_TOKEN?.trim()
-  if (!token) {
-    throw new Error("Missing required NPM_TOKEN environment variable. Set NPM_TOKEN before running publish.")
+  if (token) {
+    return "token"
   }
+
+  const hasGithubOidc =
+    process.env.GITHUB_ACTIONS === "true" &&
+    Boolean(process.env.ACTIONS_ID_TOKEN_REQUEST_URL) &&
+    Boolean(process.env.ACTIONS_ID_TOKEN_REQUEST_TOKEN)
+
+  if (hasGithubOidc) {
+    return "trusted-publisher"
+  }
+
+  throw new Error(
+    "No npm auth available. Use NPM_TOKEN, or run in GitHub Actions with npm trusted publishing and id-token: write.",
+  )
 }
 
 async function isPublished(task: TPackageTask, rootDir: string): Promise<boolean> {
@@ -192,7 +209,7 @@ async function publishOne(task: TPackageTask, args: TArgs, rootDir: string): Pro
     }
 
     const publish = await runCommand(
-      ["npm", "publish", packed.tarball, "--access", "public", "--tag", args.tag],
+      ["npm", "publish", packed.tarball, "--access", "public", "--tag", args.tag, "--provenance"],
       task.dir,
     )
     if (publish.exitCode !== 0) {
@@ -279,9 +296,8 @@ async function main() {
   const args = parseArgs(process.argv.slice(2))
   const rootDir = path.join(path.dirname(new URL(import.meta.url).pathname), "..")
 
-  console.log("[publish] Checking NPM_TOKEN...")
-  assertNpmToken()
-  console.log("[publish] NPM_TOKEN is set")
+  const authMode = resolvePublishAuthMode()
+  console.log(`[publish] auth mode=${authMode}`)
 
   const tasks = await loadTasks(rootDir, args.includeWrapper)
   if (tasks.length === 0) {

@@ -90,8 +90,6 @@ jobs:
     if: needs.check-version.outputs.is_new_version == 'true'
     env:
       GH_TOKEN: ${{ github.token }}
-      NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
-      NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
     steps:
       - name: Checkout
         uses: actions/checkout@v5
@@ -106,13 +104,6 @@ jobs:
         with:
           node-version: "22"
           registry-url: "https://registry.npmjs.org"
-
-      - name: Assert npm token is configured
-        run: |
-          if [ -z "$NPM_TOKEN" ]; then
-            echo "NPM_TOKEN secret is missing. Configure repository secret NPM_TOKEN." >&2
-            exit 1
-          fi
 
       - name: Install dependencies
         run: bun install --frozen-lockfile
