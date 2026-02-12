@@ -4,9 +4,6 @@ on:
   push:
     branches:
       - main
-    paths:
-      - "apps/web/**"
-      - ".github/workflows/deploy-web.yml"
   workflow_dispatch:
 
 permissions:
@@ -20,31 +17,21 @@ concurrency:
 
 jobs:
   build:
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
-      - name: Setup Bun
-        uses: oven-sh/setup-bun@v2
+      - name: Install, build, and upload site
+        uses: withastro/action@v5
         with:
-          bun-version: latest
-
-      - name: Setup Pages
-        uses: actions/configure-pages@v5
-
-      - name: Install dependencies
-        run: bun install --frozen-lockfile
-
-      - name: Build web app
-        run: bun --filter @vibecanvas/web build
-
-      - name: Upload Pages artifact
-        uses: actions/upload-pages-artifact@v3
-        with:
-          path: apps/web/dist
+          path: apps/web
+          package-manager: bun
+          build-cmd: bun run build
 
   deploy:
+    if: github.ref == 'refs/heads/main'
     needs: build
     runs-on: ubuntu-latest
     environment:

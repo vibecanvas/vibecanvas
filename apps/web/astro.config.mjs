@@ -5,6 +5,5 @@ import solid from "@astrojs/solid-js";
 export default defineConfig({
   output: "static",
   site: "https://vibecanvas.dev",
-  base: "/",
   integrations: [mdx(), solid()],
 });
