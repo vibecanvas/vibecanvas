@@ -59,6 +59,31 @@ Then run:
 vibecanvas
 ```
 
+### Uninstall
+
+```bash
+# bun
+bun remove -g vibecanvas
+
+# npm
+npm uninstall -g vibecanvas
+
+# pnpm
+pnpm remove -g vibecanvas
+
+# yarn
+yarn global remove vibecanvas
+```
+
+If you installed using the install script (`curl ... | bash`) instead of a package manager, remove the installed files manually:
+
+```bash
+rm -f ~/.vibecanvas/bin/vibecanvas
+rm -rf ~/.vibecanvas/database-migrations
+```
+
+Also remove any PATH line you added for `~/.vibecanvas/bin` in your shell profile (`~/.zshrc`, `~/.bashrc`, `~/.profile`, or fish config).
+
 ### 1) Install dependencies
 
 ```bash
