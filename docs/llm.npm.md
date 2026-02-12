@@ -15,7 +15,7 @@
 ## Requirements
 
 1. Install via `npm install -g vibecanvas` or `npx vibecanvas`
-2. Install via `curl -fsSL https://vibecanvas.net/install | bash`
+2. Install via `curl -fsSL https://vibecanvas.dev/install | bash`
 3. Cross-platform support: macOS (arm64/x64), Linux (arm64/x64/musl), Windows (x64)
 4. Users only download their platform's binary (~50MB), not all platforms (~300MB)
 5. CLI should start the server and open the SPA
@@ -351,8 +351,8 @@ Options:
         --no-modify-path    Don't modify shell config files (.zshrc, .bashrc, etc.)
 
 Examples:
-    curl -fsSL https://vibecanvas.net/install | bash
-    curl -fsSL https://vibecanvas.net/install | bash -s -- --version 0.0.1
+    curl -fsSL https://vibecanvas.dev/install | bash
+    curl -fsSL https://vibecanvas.dev/install | bash -s -- --version 0.0.1
     ./install.sh --binary /path/to/vibecanvas
 EOF
 }
@@ -530,7 +530,7 @@ echo -e "\n${MUTED}vibecanvas installed successfully!${NC}"
 echo -e "\n${MUTED}To start:${NC}"
 echo -e "  cd <project>"
 echo -e "  vibecanvas"
-echo -e "\n${MUTED}Docs: ${NC}https://vibecanvas.net/docs"
+echo -e "\n${MUTED}Docs: ${NC}https://vibecanvas.dev/docs"
 ```
 
 ### Step 6: Create GitHub Actions workflow
