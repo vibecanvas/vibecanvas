@@ -7,6 +7,9 @@ type TProps = {
 };
 
 const { title, description } = Astro.props;
+const siteUrl = Astro.site ?? new URL("https://vibecanvas.dev");
+const canonicalUrl = new URL(Astro.url.pathname, siteUrl).toString();
+const seoImageUrl = new URL("seo.png", siteUrl).toString();
 ---
 
 <!doctype html>
@@ -15,6 +18,27 @@ const { title, description } = Astro.props;
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width" />
     <meta name="description" content={description} />
+    <meta name="robots" content="index,follow" />
+    <meta name="image" content={seoImageUrl} />
+    <link rel="canonical" href={canonicalUrl} />
+
+    <meta property="og:site_name" content="Vibecanvas" />
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta property="og:url" content={canonicalUrl} />
+    <meta property="og:image" content={seoImageUrl} />
+    <meta property="og:image:alt" content="Vibecanvas preview" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:site" content="@vibecanvas" />
+    <meta name="twitter:url" content={canonicalUrl} />
+    <meta name="twitter:title" content={title} />
+    <meta name="twitter:description" content={description} />
+    <meta name="twitter:image" content={seoImageUrl} />
+    <meta name="twitter:image:alt" content="Vibecanvas preview" />
     <title>{title}</title>
   </head>
   <body>
