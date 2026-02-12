@@ -146,6 +146,28 @@ async function isPublished(task: TPackageTask, rootDir: string): Promise<boolean
   return result.exitCode === 0
 }
 
+async function assertNpmPublishAuth(rootDir: string, authMode: TPublishAuthMode): Promise<void> {
+  const registry = await runCommand(["npm", "config", "get", "registry"], rootDir)
+  const whoami = await runCommand(["npm", "whoami"], rootDir)
+
+  if (registry.exitCode === 0) {
+    console.log(`[publish] npm registry=${registry.stdout.trim()}`)
+  }
+
+  if (whoami.exitCode !== 0) {
+    const details = (whoami.stderr || whoami.stdout).trim()
+    throw new Error(
+      [
+        `[publish] npm auth preflight failed (mode=${authMode})`,
+        "npm whoami failed before publishing.",
+        details,
+      ].join("\n"),
+    )
+  }
+
+  console.log(`[publish] npm authenticated as ${whoami.stdout.trim()}`)
+}
+
 async function npmPack(task: TPackageTask): Promise<{ tarball: string | null; error: string | null }> {
   const pack = await runCommand(["npm", "pack", "--json"], task.dir)
   if (pack.exitCode !== 0) {
@@ -298,6 +320,7 @@ async function main() {
 
   const authMode = resolvePublishAuthMode()
   console.log(`[publish] auth mode=${authMode}`)
+  await assertNpmPublishAuth(rootDir, authMode)
 
   const tasks = await loadTasks(rootDir, args.includeWrapper)
   if (tasks.length === 0) {

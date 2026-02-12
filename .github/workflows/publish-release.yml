@@ -90,6 +90,10 @@ jobs:
     if: needs.check-version.outputs.is_new_version == 'true'
     env:
       GH_TOKEN: ${{ github.token }}
+      NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+    permissions:
+      contents: write
+      id-token: write
     steps:
       - name: Checkout
         uses: actions/checkout@v5
@@ -103,12 +107,28 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: "22"
+          registry-url: "https://registry.npmjs.org"
 
-      - name: Prepare npm config for trusted publishing
+      - name: Assert npm token is configured
         run: |
-          NPMRC_PATH="$RUNNER_TEMP/npmrc-trusted"
-          : > "$NPMRC_PATH"
-          echo "NPM_CONFIG_USERCONFIG=$NPMRC_PATH" >> "$GITHUB_ENV"
+          if [ -z "${NPM_TOKEN}" ]; then
+            echo "NPM_TOKEN is missing for publish-release job" >&2
+            exit 1
+          fi
+
+      - name: Debug publish context
+        run: |
+          echo "github.ref=${GITHUB_REF}"
+          echo "github.workflow=${GITHUB_WORKFLOW}"
+          echo "github.run_id=${GITHUB_RUN_ID}"
+          echo "NPM_TOKEN configured=yes"
+
+      - name: Verify npm authentication
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          npm config get registry
+          npm whoami
 
       - name: Install dependencies
         run: bun install --frozen-lockfile
@@ -121,8 +141,8 @@ jobs:
 
       - name: Publish npm packages
         env:
-          NODE_AUTH_TOKEN: ""
-          NPM_TOKEN: ""
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: bun run scripts/publish-npm.ts --tag latest
 
       - name: Publish GitHub release
