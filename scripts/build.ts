@@ -342,6 +342,11 @@ async function main() {
             },
             description: `${description} (${target.os} ${target.arch})`,
             author: "Omar Ezzat",
+            repository: {
+              type: "git",
+              url: "https://github.com/vibecanvas/vibecanvas",
+            },
+            homepage: "https://vibecanvas.dev",
             license,
           },
           null,

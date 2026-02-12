@@ -19,7 +19,6 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       version: ${{ steps.version.outputs.version }}
-      is_new_version: ${{ steps.check.outputs.is_new_version }}
     steps:
       - name: Checkout
         uses: actions/checkout@v5
@@ -40,24 +39,10 @@ jobs:
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
           echo "version=$VERSION"
 
-      - name: Check npm for existing version
-        id: check
-        env:
-          VERSION: ${{ steps.version.outputs.version }}
-        run: |
-          if npm view "vibecanvas@$VERSION" version >/dev/null 2>&1; then
-            echo "is_new_version=false" >> "$GITHUB_OUTPUT"
-            echo "Version $VERSION already exists on npm. Skipping publish job."
-          else
-            echo "is_new_version=true" >> "$GITHUB_OUTPUT"
-            echo "Version $VERSION is new. Publish job will run."
-          fi
-
   build-release-artifacts:
     runs-on: ubuntu-latest
     needs:
       - check-version
-    if: needs.check-version.outputs.is_new_version == 'true'
     steps:
       - name: Checkout
         uses: actions/checkout@v5
@@ -86,7 +71,6 @@ jobs:
     needs:
       - check-version
       - build-release-artifacts
-    if: needs.check-version.outputs.is_new_version == 'true'
     environment:
       name: production
     env:
