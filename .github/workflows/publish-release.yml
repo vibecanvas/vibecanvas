@@ -1,0 +1,136 @@
+name: Publish Release
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  id-token: write
+
+concurrency:
+  group: release-main
+  cancel-in-progress: false
+
+jobs:
+  check-version:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      is_new_version: ${{ steps.check.outputs.is_new_version }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: "1.3.9"
+
+      - name: Read release version
+        id: version
+        run: |
+          VERSION=$(bun -e 'const pkg = await Bun.file("apps/vibecanvas/package.json").json(); process.stdout.write(pkg.version)')
+          if [ -z "$VERSION" ]; then
+            echo "Failed to read apps/vibecanvas/package.json version" >&2
+            exit 1
+          fi
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "version=$VERSION"
+
+      - name: Check npm for existing version
+        id: check
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          if npm view "vibecanvas@$VERSION" version >/dev/null 2>&1; then
+            echo "is_new_version=false" >> "$GITHUB_OUTPUT"
+            echo "Version $VERSION already exists on npm. Skipping publish job."
+          else
+            echo "is_new_version=true" >> "$GITHUB_OUTPUT"
+            echo "Version $VERSION is new. Publish job will run."
+          fi
+
+  build-release-artifacts:
+    runs-on: ubuntu-latest
+    needs:
+      - check-version
+    if: needs.check-version.outputs.is_new_version == 'true'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: "1.3.9"
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Build release artifacts
+        run: bun run scripts/build.ts --channel stable
+
+      - name: Upload dist artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-dist
+          path: dist
+          if-no-files-found: error
+          retention-days: 7
+
+  publish-release:
+    runs-on: ubuntu-latest
+    needs:
+      - check-version
+      - build-release-artifacts
+    if: needs.check-version.outputs.is_new_version == 'true'
+    env:
+      GH_TOKEN: ${{ github.token }}
+      NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+      NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: "1.3.9"
+
+      - name: Setup Node for npm publish
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          registry-url: "https://registry.npmjs.org"
+
+      - name: Assert npm token is configured
+        run: |
+          if [ -z "$NPM_TOKEN" ]; then
+            echo "NPM_TOKEN secret is missing. Configure repository secret NPM_TOKEN." >&2
+            exit 1
+          fi
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Download dist artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: release-dist
+          path: dist
+
+      - name: Publish npm packages
+        run: bun run scripts/publish-npm.ts --tag latest
+
+      - name: Publish GitHub release
+        env:
+          VERSION: ${{ needs.check-version.outputs.version }}
+        run: bun run scripts/release.ts --tag "v$VERSION"
+
+      - name: Print release summary
+        env:
+          VERSION: ${{ needs.check-version.outputs.version }}
+        run: echo "Published release v$VERSION"

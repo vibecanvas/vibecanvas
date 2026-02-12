@@ -1,12 +1,13 @@
 #!/usr/bin/env bun
 
 /**
- * Publish all built dist packages to npm using Bun CLI.
+ * Publish all built dist packages to npm using npm CLI.
  *
  * Behavior:
  * - Requires `NPM_TOKEN` to be set in env.
  * - Uses `bun pm view <name>@<version>` to detect already-published versions.
- * - For each package, always runs `bun publish --dry-run` before real publish.
+ * - Packs each package with `npm pack` then publishes tarballs with npm.
+ * - For each package, always runs `npm publish --dry-run` before real publish.
  * - Publishes in parallel (configurable with --concurrency).
  * - Safe to retry: already-published versions are skipped.
  *
@@ -22,6 +23,7 @@
  */
 
 import path from "path"
+import { unlinkSync } from "fs"
 
 type TReleaseManifest = {
   targets: Record<string, { packageName: string }>
@@ -43,7 +45,6 @@ type TArgs = {
   tag: string
   concurrency: number
   includeWrapper: boolean
-  networkConcurrency?: number
 }
 
 type TCmdResult = {
@@ -76,17 +77,13 @@ function parseArgs(argv: string[]): TArgs {
   const networkConcurrencyRaw = inlineNetworkConcurrency ?? get("--network-concurrency")
 
   if (networkConcurrencyRaw !== undefined) {
-    const value = Number(networkConcurrencyRaw)
-    if (!Number.isInteger(value) || value < 1) {
-      throw new Error(`Invalid --network-concurrency value: ${networkConcurrencyRaw}`)
-    }
+    console.warn("[publish] --network-concurrency is deprecated and ignored")
   }
 
   return {
     tag,
     concurrency: concurrencyNum,
     includeWrapper: !argv.includes("--no-wrapper"),
-    networkConcurrency: networkConcurrencyRaw ? Number(networkConcurrencyRaw) : undefined,
   }
 }
 
@@ -132,13 +129,34 @@ async function isPublished(task: TPackageTask, rootDir: string): Promise<boolean
   return result.exitCode === 0
 }
 
-function bunPublishArgs(publishArgs: TArgs, dryRun: boolean): string[] {
-  const command = ["bun", "publish", "--access", "public", "--tag", publishArgs.tag]
-  if (dryRun) command.push("--dry-run")
-  if (publishArgs.networkConcurrency !== undefined) {
-    command.push("--network-concurrency", String(publishArgs.networkConcurrency))
+async function npmPack(task: TPackageTask): Promise<{ tarball: string | null; error: string | null }> {
+  const pack = await runCommand(["npm", "pack", "--json"], task.dir)
+  if (pack.exitCode !== 0) {
+    return {
+      tarball: null,
+      error: `npm pack failed\n${pack.stderr || pack.stdout}`,
+    }
   }
-  return command
+
+  try {
+    const output = JSON.parse(pack.stdout) as Array<{ filename?: string }>
+    const filename = output[0]?.filename
+    if (!filename) {
+      return {
+        tarball: null,
+        error: `npm pack output missing filename\n${pack.stdout}`,
+      }
+    }
+    return {
+      tarball: path.join(task.dir, filename),
+      error: null,
+    }
+  } catch {
+    return {
+      tarball: null,
+      error: `failed parsing npm pack output\n${pack.stdout}`,
+    }
+  }
 }
 
 async function publishOne(task: TPackageTask, args: TArgs, rootDir: string): Promise<TPackageResult> {
@@ -151,28 +169,51 @@ async function publishOne(task: TPackageTask, args: TArgs, rootDir: string): Pro
     }
   }
 
-  const dryRun = await runCommand(bunPublishArgs(args, true), task.dir)
-  if (dryRun.exitCode !== 0) {
+  const packed = await npmPack(task)
+  if (!packed.tarball) {
     return {
       task,
       status: "failed",
-      message: `dry-run failed\n${dryRun.stderr || dryRun.stdout}`,
+      message: packed.error ?? "pack failed",
     }
   }
 
-  const publish = await runCommand(bunPublishArgs(args, false), task.dir)
-  if (publish.exitCode !== 0) {
+  try {
+    const dryRun = await runCommand(
+      ["npm", "publish", packed.tarball, "--access", "public", "--tag", args.tag, "--dry-run"],
+      task.dir,
+    )
+    if (dryRun.exitCode !== 0) {
+      return {
+        task,
+        status: "failed",
+        message: `dry-run failed\n${dryRun.stderr || dryRun.stdout}`,
+      }
+    }
+
+    const publish = await runCommand(
+      ["npm", "publish", packed.tarball, "--access", "public", "--tag", args.tag],
+      task.dir,
+    )
+    if (publish.exitCode !== 0) {
+      return {
+        task,
+        status: "failed",
+        message: `publish failed\n${publish.stderr || publish.stdout}`,
+      }
+    }
+
     return {
       task,
-      status: "failed",
-      message: `publish failed\n${publish.stderr || publish.stdout}`,
+      status: "published",
+      message: "published successfully",
     }
-  }
-
-  return {
-    task,
-    status: "published",
-    message: "published successfully",
+  } finally {
+    try {
+      unlinkSync(packed.tarball)
+    } catch {
+      // ignore cleanup errors
+    }
   }
 }
 
@@ -249,7 +290,7 @@ async function main() {
   }
 
   console.log(`[publish] Found ${tasks.length} package(s)`)
-  console.log(`[publish] tag=${args.tag} concurrency=${args.concurrency}${args.networkConcurrency ? ` networkConcurrency=${args.networkConcurrency}` : ""}`)
+  console.log(`[publish] tag=${args.tag} concurrency=${args.concurrency}`)
   for (const task of tasks) {
     console.log(`  - ${task.name}@${task.version}`)
   }
