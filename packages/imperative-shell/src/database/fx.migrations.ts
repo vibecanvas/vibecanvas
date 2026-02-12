@@ -9,6 +9,14 @@ type TArgs = {
   silent?: boolean;
 };
 
+type TBuildCandidateArgs = {
+  envOverride?: string;
+  isCompiled?: boolean;
+  embeddedFolder?: string | null;
+  execPath?: string;
+  sourceDir?: string;
+};
+
 function hasMigrationJournal(pathname: string): boolean {
   return existsSync(join(pathname, "meta", "_journal.json"));
 }
@@ -40,16 +48,25 @@ function fxExtractEmbeddedMigrations(configDir: string): string | null {
   return hasMigrationJournal(outputDir) ? outputDir : null;
 }
 
-function resolveMigrationsFolder(configDir: string): string {
-  const envOverride = process.env.VIBECANVAS_MIGRATIONS_DIR;
-  const embeddedFolder = fxExtractEmbeddedMigrations(configDir);
-  const candidates = [
+function buildMigrationsFolderCandidates(configDir: string, args: TBuildCandidateArgs = {}): string[] {
+  const envOverride = args.envOverride ?? process.env.VIBECANVAS_MIGRATIONS_DIR;
+  const isCompiled = args.isCompiled ?? process.env.VIBECANVAS_COMPILED === "true";
+  const embeddedFolder = args.embeddedFolder ?? fxExtractEmbeddedMigrations(configDir);
+  const execPath = args.execPath ?? process.execPath;
+  const sourceDir = args.sourceDir ?? resolve(import.meta.dir, "..", "..", "database-migrations");
+  const sourceTreeFolder = isCompiled ? null : sourceDir;
+
+  return [
     envOverride,
     join(configDir, "database-migrations"),
-    resolve(dirname(process.execPath), "..", "database-migrations"),
-    resolve(import.meta.dir, "..", "..", "database-migrations"),
+    resolve(dirname(execPath), "..", "database-migrations"),
     embeddedFolder,
+    sourceTreeFolder,
   ].filter(Boolean) as string[];
+}
+
+function resolveMigrationsFolder(configDir: string): string {
+  const candidates = buildMigrationsFolderCandidates(configDir);
 
   for (const candidate of candidates) {
     if (hasMigrationJournal(candidate)) {
@@ -77,4 +94,4 @@ function fxRunDatabaseMigrations(args: TArgs): void {
 }
 
 export default fxRunDatabaseMigrations;
-export { resolveMigrationsFolder };
+export { buildMigrationsFolderCandidates, resolveMigrationsFolder };

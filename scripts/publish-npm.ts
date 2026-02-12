@@ -63,7 +63,7 @@ function parseArgs(argv: string[]): TArgs {
   const tag = inlineTag ?? get("--tag") ?? "latest"
 
   const inlineConcurrency = argv.find((arg) => arg.startsWith("--concurrency="))?.slice("--concurrency=".length)
-  const concurrencyRaw = inlineConcurrency ?? get("--concurrency") ?? "4"
+  const concurrencyRaw = inlineConcurrency ?? get("--concurrency") ?? "10"
   const concurrencyNum = Number(concurrencyRaw)
 
   if (!Number.isInteger(concurrencyNum) || concurrencyNum < 1) {
