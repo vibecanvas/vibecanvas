@@ -86,7 +86,7 @@ export function buildKeyboardContext(
     canvas,
     commandTarget,
     listenerId,
-    eventType: 'keydown',
+    eventType: e.type as KeyboardEventType,
     event: e,
     modifiers: getModifiers(e),
     _bubbleRequested: false,

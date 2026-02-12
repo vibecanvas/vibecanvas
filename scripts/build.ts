@@ -14,7 +14,7 @@
  */
 
 import path from "path"
-import { rmSync } from "fs"
+import { chmodSync, existsSync, rmSync } from "fs"
 import { Glob } from "bun"
 import { createHash } from "crypto"
 
@@ -26,6 +26,8 @@ const __dirname = path.dirname(new URL(import.meta.url).pathname)
 const rootDir = path.join(__dirname, "..")
 const serverDir = path.join(rootDir, "apps/server")
 const spaDir = path.join(rootDir, "apps/spa")
+const wrapperDir = path.join(rootDir, "apps/vibecanvas")
+const wrapperBinPath = path.join(wrapperDir, "bin/vibecanvas")
 const shellMigrationsDir = path.join(rootDir, "packages/imperative-shell/database-migrations")
 
 // Platform targets
@@ -194,14 +196,61 @@ export function getSpaFallbackAsset(): string | null {
   console.log(`   Generated embedded-assets.ts (${bundledFiles.length} files)`)
 }
 
+async function collectMigrationFiles(): Promise<string[]> {
+  const migrationFiles: string[] = []
+  const migrationGlob = new Glob("**/*")
+
+  for await (const file of migrationGlob.scan(shellMigrationsDir)) {
+    const filePath = path.join(shellMigrationsDir, file)
+    const stat = await Bun.file(filePath).stat()
+    if (stat.isFile()) {
+      migrationFiles.push(file)
+    }
+  }
+
+  migrationFiles.sort()
+  return migrationFiles
+}
+
+async function generateEmbeddedMigrations(migrationFiles: string[]): Promise<void> {
+  const embeddedMigrationsCode = `// Auto-generated file - do not edit
+const embeddedMigrationContents = new Map<string, string>([
+${(await Promise.all(
+    migrationFiles.map(async (f) => {
+      const filePath = path.join(shellMigrationsDir, f)
+      const content = await Bun.file(filePath).text()
+      return `  [${JSON.stringify(f)}, ${JSON.stringify(content)}],`
+    }),
+  )).join("\n")}
+]);
+
+export function listEmbeddedMigrationFiles(): string[] {
+  return [...embeddedMigrationContents.keys()];
+}
+
+export function getEmbeddedMigrationContent(relativePath: string): string | null {
+  return embeddedMigrationContents.get(relativePath) ?? null;
+}
+`
+
+  await Bun.write(path.join(rootDir, "packages/imperative-shell/src/database/embedded-migrations.ts"), embeddedMigrationsCode)
+  console.log(`   Generated embedded-migrations.ts (${migrationFiles.length} files)`)
+}
+
 // ============================================================
 // Main Build Process
 // ============================================================
 
 async function main() {
-  // Read version from root package.json
-  const rootPkg = await Bun.file(`${rootDir}/package.json`).json()
-  const version = rootPkg.version
+  // Read release metadata from wrapper package.json
+  const wrapperSourcePkg = await Bun.file(path.join(wrapperDir, "package.json")).json() as {
+    version?: string
+    description?: string
+    license?: string
+  }
+  const version = wrapperSourcePkg.version ?? "0.0.1"
+  const description = wrapperSourcePkg.description ?? "Vibecanvas binary package"
+  const license = wrapperSourcePkg.license ?? "ISC"
 
   // Parse flags
   const singleFlag = process.argv.includes("--single")
@@ -232,15 +281,20 @@ async function main() {
   await Bun.$`mkdir -p ${rootDir}/dist`
 
   // Phase 1: Bundle SPA assets
-  console.log("[1/3] Bundling SPA assets...")
+  console.log("[1/4] Bundling SPA assets...")
   const bundledFiles = await bundleSpaAssets()
 
   // Phase 2: Generate embedded assets module
-  console.log("\n[2/3] Generating embedded assets...")
+  console.log("\n[2/4] Generating embedded assets...")
   await generateEmbeddedAssets(bundledFiles)
 
-  // Phase 3: Build each target
-  console.log("\n[3/3] Compiling executables...")
+  // Phase 3: Generate embedded migrations module
+  console.log("\n[3/4] Generating embedded migrations...")
+  const migrationFiles = await collectMigrationFiles()
+  await generateEmbeddedMigrations(migrationFiles)
+
+  // Phase 4: Build each target
+  console.log("\n[4/4] Compiling executables...")
   const manifestTargets: Record<string, ReleaseManifestTarget> = {}
   for (const target of filteredTargets) {
     const name = buildPackageName(target)
@@ -248,7 +302,6 @@ async function main() {
 
     const distDir = `${rootDir}/dist/${name}`
     await Bun.$`mkdir -p ${distDir}/bin`
-    await Bun.$`cp -r ${shellMigrationsDir} ${distDir}/database-migrations`
 
     const bunTarget = buildBunTarget(target)
 
@@ -287,9 +340,9 @@ async function main() {
             bin: {
               vibecanvas: `./bin/vibecanvas${target.os === "win32" ? ".exe" : ""}`,
             },
-            description: `Vibecanvas binary for ${target.os} ${target.arch}`,
+            description: `${description} (${target.os} ${target.arch})`,
             author: "Omar Ezzat",
-            license: "ISC",
+            license,
           },
           null,
           2
@@ -334,7 +387,11 @@ async function main() {
   // Copy wrapper package to dist
   if (!skipWrapperFlag) {
     console.log(`\nCopying wrapper package...`)
-    await Bun.$`cp -r ${rootDir}/apps/vibecanvas ${rootDir}/dist/vibecanvas`
+    if (!existsSync(wrapperBinPath)) {
+      throw new Error(`Wrapper launcher not found at ${wrapperBinPath}`)
+    }
+
+    await Bun.$`cp -r ${wrapperDir} ${rootDir}/dist/vibecanvas`
 
     // Update version in wrapper package.json
     const wrapperPkgPath = `${rootDir}/dist/vibecanvas/package.json`
@@ -349,6 +406,7 @@ async function main() {
     }
 
     await Bun.write(wrapperPkgPath, JSON.stringify(wrapperPkg, null, 2))
+    chmodSync(path.join(rootDir, "dist/vibecanvas/bin/vibecanvas"), 0o755)
     console.log(`   ✓ vibecanvas (wrapper)`)
   }
 

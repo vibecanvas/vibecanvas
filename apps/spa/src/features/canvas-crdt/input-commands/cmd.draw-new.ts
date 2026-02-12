@@ -1,4 +1,5 @@
 import { setStore, store } from "@/store"
+import { DEFAULT_FILL_COLOR, DEFAULT_STROKE_COLOR, getRecentColorStorageKey } from "@/features/floating-selection-menu/types"
 import type { TElement, TElementData, TElementStyle } from "@vibecanvas/shell/automerge/index"
 import { Point } from "pixi.js"
 import type { ExtractElementData, TBackendElementOf } from "../renderables/element.abstract"
@@ -86,6 +87,7 @@ function handleMove(ctx: PointerInputContext): boolean {
   if (!isDragging) return false
 
   const tool = store.toolbarSlice.activeTool
+  const drawingDefaults = getDrawingStyleDefaults(ctx.canvas.canvasId)
 
   // Calculate bounds (shared for all shape tools)
   const x = Math.min(dragStartWorld.x, ctx.worldPos.x)
@@ -97,7 +99,7 @@ function handleMove(ctx: PointerInputContext): boolean {
 
   if (tool === 'rectangle') {
     if (!preview) {
-      const {data, style} = createRectElementDataAndStyle(w, h, 0)
+      const {data, style} = createRectElementDataAndStyle(w, h, 0, drawingDefaults)
       // TODO: use smaller ids
       const element = createElement(crypto.randomUUID(), x, y, data, style)
       const renderable = new RectElement(element as TBackendElementOf<'rect'>, ctx.canvas)
@@ -113,7 +115,7 @@ function handleMove(ctx: PointerInputContext): boolean {
 
   if (tool === 'diamond') {
     if (!preview) {
-      const {data, style} = createDiamondElementDataAndStyle(w, h)
+      const {data, style} = createDiamondElementDataAndStyle(w, h, drawingDefaults)
       const element = createElement(crypto.randomUUID(), x, y, data, style)
       const renderable = new DiamondElement(element as TBackendElementOf<'diamond'>, ctx.canvas)
       ctx.canvas.setPreviewElement(renderable)
@@ -131,7 +133,7 @@ function handleMove(ctx: PointerInputContext): boolean {
     const rx = w / 2
     const ry = h / 2
     if (!preview) {
-      const {data, style} = createEllipseElementDataAndStyle(rx, ry)
+      const {data, style} = createEllipseElementDataAndStyle(rx, ry, drawingDefaults)
       const element = createElement(crypto.randomUUID(), x, y, data, style)
       const renderable = new EllipseElement(element as TBackendElementOf<'ellipse'>, ctx.canvas)
       ctx.canvas.setPreviewElement(renderable)
@@ -152,7 +154,7 @@ function handleMove(ctx: PointerInputContext): boolean {
     const endY = ctx.worldPos.y
 
     if (!preview) {
-      const { data, style } = createLineElementDataAndStyle(endX - startX, endY - startY)
+      const { data, style } = createLineElementDataAndStyle(endX - startX, endY - startY, drawingDefaults)
       // Element position IS the start point (anchor-based, not bbox-based)
       const element = createElement(crypto.randomUUID(), startX, startY, data, style)
       const renderable = new LineElement(element as TBackendElementOf<'line'>, ctx.canvas)
@@ -175,7 +177,7 @@ function handleMove(ctx: PointerInputContext): boolean {
     const endY = ctx.worldPos.y
 
     if (!preview) {
-      const { data, style } = createArrowElementDataAndStyle(endX - startX, endY - startY)
+      const { data, style } = createArrowElementDataAndStyle(endX - startX, endY - startY, drawingDefaults)
       // Element position IS the start point (anchor-based, not bbox-based)
       const element = createElement(crypto.randomUUID(), startX, startY, data, style)
       const renderable = new ArrowElement(element as TBackendElementOf<'arrow'>, ctx.canvas)
@@ -198,7 +200,7 @@ function handleMove(ctx: PointerInputContext): boolean {
     if (!preview) {
       // First point - create element at current position
       const hasPressure = getPressureSupported(ctx.event)
-      const { data, style } = createPenElementDataAndStyle(hasPressure)
+      const { data, style } = createPenElementDataAndStyle(hasPressure, drawingDefaults)
       // First point at origin relative to element position
       data.points = [[0, 0]]
       data.pressures = [getPressure(ctx.event)]
@@ -226,6 +228,48 @@ function handleMove(ctx: PointerInputContext): boolean {
   }
 
   return true
+}
+
+type TDrawingStyleDefaults = {
+  fillColor: string
+  strokeColor: string
+}
+
+function readRecentColor(mode: 'fill' | 'stroke', canvasId: string | null | undefined): string | null {
+  if (typeof localStorage === 'undefined') return null
+
+  const key = getRecentColorStorageKey(mode, canvasId)
+  const raw = localStorage.getItem(key)
+  if (!raw) return null
+
+  try {
+    const parsed = JSON.parse(raw)
+    if (!Array.isArray(parsed)) return null
+    const value = parsed[0]
+    if (typeof value !== 'string') return null
+    return value
+  } catch {
+    return null
+  }
+}
+
+function isValidHexColor(value: string): boolean {
+  return /^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/.test(value)
+}
+
+function getDrawingStyleDefaults(canvasId: string): TDrawingStyleDefaults {
+  const recentFill = readRecentColor('fill', canvasId)
+  const recentStroke = readRecentColor('stroke', canvasId)
+
+  const fillColor = recentFill === 'transparent'
+    ? 'transparent'
+    : (recentFill && isValidHexColor(recentFill) ? recentFill : DEFAULT_FILL_COLOR)
+
+  const strokeColor = recentStroke && isValidHexColor(recentStroke)
+    ? recentStroke
+    : DEFAULT_STROKE_COLOR
+
+  return { fillColor, strokeColor }
 }
 
 function handleUp(ctx: Parameters<InputCommand>[0]): boolean {
@@ -269,7 +313,8 @@ function handleUp(ctx: Parameters<InputCommand>[0]): boolean {
     }
   } else if (!wasDragging && tool === 'text') {
     // Text: create on single click (no drag)
-    const { data, style } = createTextElementDataAndStyle()
+    const drawingDefaults = getDrawingStyleDefaults(ctx.canvas.canvasId)
+    const { data, style } = createTextElementDataAndStyle(drawingDefaults)
     const element = createElement(
       crypto.randomUUID(),
       dragStartWorld.x,
@@ -305,10 +350,12 @@ function handleUp(ctx: Parameters<InputCommand>[0]): boolean {
       }
     })
 
-    // TODO: Enter edit mode immediately
-    // renderable.enterEditMode()
-
     setStore('toolbarSlice', 'activeTool', 'select')
+
+    // Enter edit mode after tool switch side-effects settle (focus can change)
+    requestAnimationFrame(() => {
+      renderable.dispatch({ type: 'enter' })
+    })
   } else if (!wasDragging && tool === 'chat') {
     // Chat: create on single click (no drag)
     const { data, style } = createChatElementDataAndStyle()
@@ -364,43 +411,48 @@ function handleUp(ctx: Parameters<InputCommand>[0]): boolean {
 // Drawing Data Factories
 // ─────────────────────────────────────────────────────────────
 
-function createRectElementDataAndStyle(w: number, h: number, radius: number): {data: ExtractElementData<'rect'>, style: TElementStyle} {
+function createRectElementDataAndStyle(
+  w: number,
+  h: number,
+  radius: number,
+  defaults: TDrawingStyleDefaults,
+): {data: ExtractElementData<'rect'>, style: TElementStyle} {
   return {
     data: { type: 'rect', w, h, radius },
     style: {
-      backgroundColor: '#1971c2',
-      strokeColor: '#1864ab',
+      backgroundColor: defaults.fillColor,
+      strokeColor: defaults.strokeColor,
       strokeWidth: 2,
       opacity: 1,
     },
   }
 }
 
-function createDiamondElementDataAndStyle(w: number, h: number): {data: ExtractElementData<'diamond'>, style: TElementStyle} {
+function createDiamondElementDataAndStyle(w: number, h: number, defaults: TDrawingStyleDefaults): {data: ExtractElementData<'diamond'>, style: TElementStyle} {
   return {
     data: { type: 'diamond', w, h },
     style: {
-      backgroundColor: '#1971c2',
-      strokeColor: '#1864ab',
+      backgroundColor: defaults.fillColor,
+      strokeColor: defaults.strokeColor,
       strokeWidth: 2,
       opacity: 1,
     },
   }
 }
 
-function createEllipseElementDataAndStyle(rx: number, ry: number): {data: ExtractElementData<'ellipse'>, style: TElementStyle} {
+function createEllipseElementDataAndStyle(rx: number, ry: number, defaults: TDrawingStyleDefaults): {data: ExtractElementData<'ellipse'>, style: TElementStyle} {
   return {
     data: { type: 'ellipse', rx, ry },
     style: {
-      backgroundColor: '#1971c2',
-      strokeColor: '#1864ab',
+      backgroundColor: defaults.fillColor,
+      strokeColor: defaults.strokeColor,
       strokeWidth: 2,
       opacity: 1,
     },
   }
 }
 
-function createTextElementDataAndStyle(): {data: ExtractElementData<'text'>, style: TElementStyle} {
+function createTextElementDataAndStyle(defaults: TDrawingStyleDefaults): {data: ExtractElementData<'text'>, style: TElementStyle} {
   return {
     data: {
       type: 'text',
@@ -409,7 +461,7 @@ function createTextElementDataAndStyle(): {data: ExtractElementData<'text'>, sty
       text: 'Text',
       originalText: 'Text',
       fontSize: 16,
-      fontFamily: 'JetBrains Mono',
+      fontFamily: 'Gabriele',
       textAlign: 'left',
       verticalAlign: 'top',
       lineHeight: 1.2,
@@ -419,7 +471,7 @@ function createTextElementDataAndStyle(): {data: ExtractElementData<'text'>, sty
     },
     style: {
       backgroundColor: 'transparent',
-      strokeColor: 'transparent',
+      strokeColor: defaults.strokeColor,
       strokeWidth: 0,
       opacity: 1,
     },
@@ -428,7 +480,8 @@ function createTextElementDataAndStyle(): {data: ExtractElementData<'text'>, sty
 
 function createLineElementDataAndStyle(
   deltaX: number,
-  deltaY: number
+  deltaY: number,
+  defaults: TDrawingStyleDefaults,
 ): { data: ExtractElementData<'line'>, style: TElementStyle } {
   // Points are relative to element position (first point at origin)
   // Points array: [[0, 0], [x1, y1], ...] - curves auto-computed at render time
@@ -444,7 +497,7 @@ function createLineElementDataAndStyle(
       endBinding: null,
     },
     style: {
-      strokeColor: '#1864ab',
+      strokeColor: defaults.strokeColor,
       strokeWidth: 2,
       opacity: 1,
     },
@@ -453,7 +506,8 @@ function createLineElementDataAndStyle(
 
 function createArrowElementDataAndStyle(
   deltaX: number,
-  deltaY: number
+  deltaY: number,
+  defaults: TDrawingStyleDefaults,
 ): { data: ExtractElementData<'arrow'>, style: TElementStyle } {
   // Arrow inherits line structure with caps at endpoints
   // Points array: [[0, 0], [x1, y1], ...] - curves auto-computed at render time
@@ -472,14 +526,14 @@ function createArrowElementDataAndStyle(
       endCap: 'arrow',  // Default: arrow head at end
     },
     style: {
-      strokeColor: '#1864ab',
+      strokeColor: defaults.strokeColor,
       strokeWidth: 2,
       opacity: 1,
     },
   }
 }
 
-function createPenElementDataAndStyle(hasPressure: boolean = false): {
+function createPenElementDataAndStyle(hasPressure: boolean = false, defaults: TDrawingStyleDefaults): {
   data: ExtractElementData<'pen'>
   style: TElementStyle
 } {
@@ -491,7 +545,7 @@ function createPenElementDataAndStyle(hasPressure: boolean = false): {
       simulatePressure: !hasPressure, // Only simulate if no real pressure
     },
     style: {
-      strokeColor: '#1864ab',
+      strokeColor: defaults.strokeColor,
       strokeWidth: 4,
       opacity: 1,
     },

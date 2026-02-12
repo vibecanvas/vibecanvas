@@ -14,15 +14,23 @@ import { TTextData } from "@vibecanvas/shell"
 export function applyEnter(ctx: TApplyContext<TTextData>, text: Text): null {
   ctx.transformBox?.hide()
 
+  const textColor = ctx.element.style.strokeColor && ctx.element.style.strokeColor !== 'transparent'
+    ? ctx.element.style.strokeColor
+    : '#1f1f22'
+  const textOpacity = ctx.element.style.opacity ?? 1
+
+  const MIN_WIDTH = 100
   const textInput = document.createElement('input')
   textInput.style.position = 'fixed'
-  textInput.style.minWidth = '100px'
+  textInput.style.minWidth = `${MIN_WIDTH}px`
   textInput.style.padding = '0'
   textInput.style.margin = '0'
   textInput.style.border = '1px solid #0066ff'
   textInput.style.outline = 'none'
+  textInput.style.boxSizing = 'border-box'
   textInput.style.backgroundColor = 'transparent'
-  textInput.style.color = 'black'
+  textInput.style.color = textColor
+  textInput.style.opacity = `${textOpacity}`
   textInput.style.fontFamily = ctx.element.data.fontFamily
   textInput.style.lineHeight = '1'
   textInput.style.transformOrigin = 'top left'
@@ -30,19 +38,39 @@ export function applyEnter(ctx: TApplyContext<TTextData>, text: Text): null {
   textInput.type = 'text'
   textInput.value = text.text
 
+  let liveWidth = Math.max(ctx.element.data.w, MIN_WIDTH)
+
+  const getScale = () => ctx.canvas.app.stage.scale.x
+
+  const updateLiveWidthFromInput = () => {
+    const scale = getScale()
+
+    // Let the browser measure natural content width, then store as world width
+    const previousWidth = textInput.style.width
+    textInput.style.width = '0px'
+    const contentWidthPx = textInput.scrollWidth + 2
+    textInput.style.width = previousWidth
+
+    const minWidthPx = MIN_WIDTH * scale
+    liveWidth = Math.max(contentWidthPx, minWidthPx) / scale
+  }
+
   // Update input position/size to match canvas text (handles pan/zoom)
   const updateInputTransform = () => {
     const canvasRect = ctx.canvas.app.canvas.getBoundingClientRect()
     const globalPos = text.toGlobal({ x: 0, y: 0 })
-    const scale = ctx.canvas.app.stage.scale.x
+    const scale = getScale()
 
     textInput.style.left = `${globalPos.x + canvasRect.left}px`
     textInput.style.top = `${globalPos.y + canvasRect.top}px`
-    textInput.style.width = `${ctx.element.data.w * scale}px`
+    textInput.style.width = `${liveWidth * scale}px`
     textInput.style.height = `${ctx.element.data.h * scale}px`
     textInput.style.fontSize = `${ctx.element.data.fontSize * scale}px`
     textInput.style.transform = `rotate(${ctx.element.angle}rad)`
   }
+
+  textInput.addEventListener('input', updateLiveWidthFromInput)
+  updateLiveWidthFromInput()
 
   // Initial position
   updateInputTransform()
@@ -81,6 +109,10 @@ export function applyEnter(ctx: TApplyContext<TTextData>, text: Text): null {
     const newW = text.width
     const newH = text.height
 
+    // Keep element dimensions in sync with rendered text immediately
+    ctx.element.data.w = newW
+    ctx.element.data.h = newH
+
     // Adjust position to maintain center (prevents shift when rotated)
     ctx.element.x = oldCenterX - newW / 2
     ctx.element.y = oldCenterY - newH / 2
@@ -88,8 +120,25 @@ export function applyEnter(ctx: TApplyContext<TTextData>, text: Text): null {
     text.visible = true
     ctx.redraw()
     textInput.remove()
+
+    const nextX = ctx.element.x
+    const nextY = ctx.element.y
+    const nextW = ctx.element.data.w
+    const nextH = ctx.element.data.h
+    const nextText = ctx.element.data.text
+
     ctx.canvas.handle.change(doc => {
-      (doc.elements[ctx.id].data as TTextData).text = ctx.element.data.text
+      const element = doc.elements[ctx.id]
+      if (!element) return
+
+      element.x = nextX
+      element.y = nextY
+      element.updatedAt = Date.now()
+
+      const data = element.data as TTextData
+      data.text = nextText
+      data.w = nextW
+      data.h = nextH
     })
   })
 

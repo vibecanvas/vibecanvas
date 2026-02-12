@@ -88,8 +88,8 @@ export default async function* ctrlAiPrompt(portal: TPortal, args: TArgs): Async
     session_id: chat.session_id ?? undefined,
     parent_tool_use_id: null,
     message: {
-        role: "user" as const,
-        content: args.data,
+      role: "user" as const,
+      content: args.data,
     },
     isSynthetic: true,
   }
@@ -114,14 +114,8 @@ export default async function* ctrlAiPrompt(portal: TPortal, args: TArgs): Async
 
       }
 
-
-      // Skip user messages - already stored above on system:init and client has optimistic copy
-      if (message.type === 'user') {
-        console.log('insert user message', JSON.stringify(message, null, 2));
-      }
-
       // NOTE: only save assistant messages to the database
-      if(message.type === 'assistant') portal.db.insert(schema.agent_logs).values({ id: message.uuid ?? crypto.randomUUID(), canvas_id: chat.canvas_id, session_id: message.session_id, timestamp: new Date(), type: 'CLAUDE_CODE', data: message }).run()
+      if (message.type === 'assistant') portal.db.insert(schema.agent_logs).values({ id: message.uuid ?? crypto.randomUUID(), canvas_id: chat.canvas_id, session_id: message.session_id, timestamp: new Date(), type: 'CLAUDE_CODE', data: message }).run()
       yield [message, null];
     }
   } catch (error) {

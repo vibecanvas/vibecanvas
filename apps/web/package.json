@@ -1,0 +1,17 @@
+{
+  "name": "@vibecanvas/web",
+  "version": "0.0.3",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "astro dev",
+    "build": "astro build && bun run scripts/copy-install.mjs",
+    "preview": "astro preview"
+  },
+  "dependencies": {
+    "astro": "^5.4.2",
+    "@astrojs/mdx": "^4.2.2",
+    "@astrojs/solid-js": "^5.0.6",
+    "solid-js": "^1.9.9"
+  }
+}

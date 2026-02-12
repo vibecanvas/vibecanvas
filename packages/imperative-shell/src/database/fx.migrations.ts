@@ -1,6 +1,7 @@
 import { dirname, join, resolve } from "path";
-import { existsSync } from "fs";
+import { existsSync, mkdirSync, writeFileSync } from "fs";
 import { migrate } from "drizzle-orm/bun-sqlite/migrator";
+import { getEmbeddedMigrationContent, listEmbeddedMigrationFiles } from "./embedded-migrations";
 
 type TArgs = {
   configDir: string;
@@ -8,18 +9,64 @@ type TArgs = {
   silent?: boolean;
 };
 
+type TBuildCandidateArgs = {
+  envOverride?: string;
+  isCompiled?: boolean;
+  embeddedFolder?: string | null;
+  execPath?: string;
+  sourceDir?: string;
+};
+
 function hasMigrationJournal(pathname: string): boolean {
   return existsSync(join(pathname, "meta", "_journal.json"));
 }
 
-function resolveMigrationsFolder(configDir: string): string {
-  const envOverride = process.env.VIBECANVAS_MIGRATIONS_DIR;
-  const candidates = [
+function hasEmbeddedMigrationAssets(): boolean {
+  const files = listEmbeddedMigrationFiles();
+  return files.length > 0 && files.includes("meta/_journal.json");
+}
+
+function fxExtractEmbeddedMigrations(configDir: string): string | null {
+  if (!hasEmbeddedMigrationAssets()) {
+    return null;
+  }
+
+  const outputDir = join(configDir, "database-migrations-embedded");
+  const migrationFiles = listEmbeddedMigrationFiles();
+
+  for (const relativePath of migrationFiles) {
+    const sourceContent = getEmbeddedMigrationContent(relativePath);
+    if (sourceContent === null) {
+      continue;
+    }
+
+    const destinationPath = join(outputDir, relativePath);
+    mkdirSync(dirname(destinationPath), { recursive: true });
+    writeFileSync(destinationPath, sourceContent);
+  }
+
+  return hasMigrationJournal(outputDir) ? outputDir : null;
+}
+
+function buildMigrationsFolderCandidates(configDir: string, args: TBuildCandidateArgs = {}): string[] {
+  const envOverride = args.envOverride ?? process.env.VIBECANVAS_MIGRATIONS_DIR;
+  const isCompiled = args.isCompiled ?? process.env.VIBECANVAS_COMPILED === "true";
+  const embeddedFolder = args.embeddedFolder ?? fxExtractEmbeddedMigrations(configDir);
+  const execPath = args.execPath ?? process.execPath;
+  const sourceDir = args.sourceDir ?? resolve(import.meta.dir, "..", "..", "database-migrations");
+  const sourceTreeFolder = isCompiled ? null : sourceDir;
+
+  return [
     envOverride,
     join(configDir, "database-migrations"),
-    resolve(dirname(process.execPath), "..", "database-migrations"),
-    resolve(import.meta.dir, "..", "..", "database-migrations"),
+    resolve(dirname(execPath), "..", "database-migrations"),
+    embeddedFolder,
+    sourceTreeFolder,
   ].filter(Boolean) as string[];
+}
+
+function resolveMigrationsFolder(configDir: string): string {
+  const candidates = buildMigrationsFolderCandidates(configDir);
 
   for (const candidate of candidates) {
     if (hasMigrationJournal(candidate)) {
@@ -47,4 +94,4 @@ function fxRunDatabaseMigrations(args: TArgs): void {
 }
 
 export default fxRunDatabaseMigrations;
-export { resolveMigrationsFolder };
+export { buildMigrationsFolderCandidates, resolveMigrationsFolder };

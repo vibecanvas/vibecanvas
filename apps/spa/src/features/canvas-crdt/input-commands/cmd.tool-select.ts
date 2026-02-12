@@ -43,6 +43,13 @@ function handleKeyDown(ctx: KeyboardInputContext): boolean {
     return true
   }
 
+  // Cmd/Ctrl+B = toggle sidebar
+  if ((e.metaKey || e.ctrlKey) && !e.altKey && !e.shiftKey && e.key.toLowerCase() === 'b') {
+    e.preventDefault()
+    setStore('sidebarVisible', v => !v)
+    return true
+  }
+
   // Check for tool shortcut (ignore if modifier keys are pressed for browser shortcuts)
   if (e.ctrlKey || e.metaKey || e.altKey) {
     return false
