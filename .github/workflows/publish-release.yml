@@ -103,7 +103,12 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: "22"
-          registry-url: "https://registry.npmjs.org"
+
+      - name: Prepare npm config for trusted publishing
+        run: |
+          NPMRC_PATH="$RUNNER_TEMP/npmrc-trusted"
+          : > "$NPMRC_PATH"
+          echo "NPM_CONFIG_USERCONFIG=$NPMRC_PATH" >> "$GITHUB_ENV"
 
       - name: Install dependencies
         run: bun install --frozen-lockfile
@@ -115,6 +120,9 @@ jobs:
           path: dist
 
       - name: Publish npm packages
+        env:
+          NODE_AUTH_TOKEN: ""
+          NPM_TOKEN: ""
         run: bun run scripts/publish-npm.ts --tag latest
 
       - name: Publish GitHub release
