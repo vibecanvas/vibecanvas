@@ -5,6 +5,7 @@ import { setupAutomergeServer } from '@vibecanvas/shell';
 import { ClaudeAgent } from '@vibecanvas/shell/claude-agent/srv.claude-agent';
 import db from "@vibecanvas/shell/database/db";
 import { existsSync, mkdirSync } from 'fs';
+import { createServer } from 'net';
 import { join, normalize } from 'path';
 import { parseArgs } from 'util';
 import { fileMetaFromPathname } from './files/file-storage';
@@ -102,9 +103,41 @@ if (commandOrPort === 'upgrade') {
   process.exit(1);
 }
 
-const cliPort = commandOrPort ? parseInt(commandOrPort, 10) : undefined;
-const httpPort = cliPort || 3000;
+const parsedCliPort = commandOrPort ? parseInt(commandOrPort, 10) : undefined;
+const cliPort = Number.isFinite(parsedCliPort) ? parsedCliPort : undefined;
+const preferredPort = cliPort || 3000;
+const isCompiledBinary = process.env.VIBECANVAS_COMPILED === 'true';
 const publicDir = normalize(join(import.meta.dir, '..', 'public'));
+
+async function isPortAvailable(port: number): Promise<boolean> {
+  return new Promise((resolve) => {
+    const server = createServer();
+
+    server.once('error', () => {
+      resolve(false);
+    });
+
+    server.once('listening', () => {
+      server.close(() => resolve(true));
+    });
+
+    server.listen({ port, exclusive: true });
+  });
+}
+
+async function resolveServerPort(startPort: number): Promise<number> {
+  if (!isCompiledBinary) {
+    return startPort;
+  }
+
+  for (let port = startPort; port <= 65535; port += 1) {
+    if (await isPortAvailable(port)) {
+      return port;
+    }
+  }
+
+  throw new Error(`[Server] No available port found starting from ${startPort}`);
+}
 
 type EmbeddedAssetsModule = {
   getEmbeddedAsset(pathname: string): string | null;
@@ -183,6 +216,11 @@ const handler = new RPCHandler(baseOs.router(router), {
 type WebSocketData = {
   path: string;
 };
+
+const httpPort = await resolveServerPort(preferredPort);
+if (httpPort !== preferredPort) {
+  console.warn(`[Server] Port ${preferredPort} is busy, using ${httpPort}`);
+}
 
 Bun.serve({
   port: httpPort,

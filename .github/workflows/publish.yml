@@ -4,7 +4,7 @@ on:
   push:
     branches:
       - main
-      - v0.1.0/prepare-build
+      - v0.1.0/fix-ci
   workflow_dispatch:
 
 permissions:
