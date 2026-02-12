@@ -8,8 +8,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write
-  id-token: write
+  contents: read
 
 concurrency:
   group: release-main
@@ -90,7 +89,6 @@ jobs:
     if: needs.check-version.outputs.is_new_version == 'true'
     env:
       GH_TOKEN: ${{ github.token }}
-      NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
     permissions:
       contents: write
       id-token: write
@@ -109,27 +107,6 @@ jobs:
           node-version: "22"
           registry-url: "https://registry.npmjs.org"
 
-      - name: Assert npm token is configured
-        run: |
-          if [ -z "${NPM_TOKEN}" ]; then
-            echo "NPM_TOKEN is missing for publish-release job" >&2
-            exit 1
-          fi
-
-      - name: Debug publish context
-        run: |
-          echo "github.ref=${GITHUB_REF}"
-          echo "github.workflow=${GITHUB_WORKFLOW}"
-          echo "github.run_id=${GITHUB_RUN_ID}"
-          echo "NPM_TOKEN configured=yes"
-
-      - name: Verify npm authentication
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-        run: |
-          npm config get registry
-          npm whoami
-
       - name: Install dependencies
         run: bun install --frozen-lockfile
 
@@ -140,9 +117,6 @@ jobs:
           path: dist
 
       - name: Publish npm packages
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: bun run scripts/publish-npm.ts --tag latest
 
       - name: Publish GitHub release

@@ -148,11 +148,17 @@ async function isPublished(task: TPackageTask, rootDir: string): Promise<boolean
 
 async function assertNpmPublishAuth(rootDir: string, authMode: TPublishAuthMode): Promise<void> {
   const registry = await runCommand(["npm", "config", "get", "registry"], rootDir)
-  const whoami = await runCommand(["npm", "whoami"], rootDir)
 
   if (registry.exitCode === 0) {
     console.log(`[publish] npm registry=${registry.stdout.trim()}`)
   }
+
+  if (authMode === "trusted-publisher") {
+    console.log("[publish] using npm trusted publishing (OIDC); skipping npm whoami preflight")
+    return
+  }
+
+  const whoami = await runCommand(["npm", "whoami"], rootDir)
 
   if (whoami.exitCode !== 0) {
     const details = (whoami.stderr || whoami.stdout).trim()
