@@ -27,6 +27,8 @@
     "test:binary": "bun run scripts/test-binary.ts",
     "build": "bun run scripts/build.ts",
     "build:single": "bun run scripts/build.ts --single",
+    "web:dev": "bun --filter @vibecanvas/web dev",
+    "web:build": "bun --filter @vibecanvas/web build",
     "publish:npm": "bun run scripts/publish-npm.ts",
     "release:github": "bun run scripts/release.ts",
     "version:update": "bun run scripts/update-version.ts",

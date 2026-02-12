@@ -1,0 +1,49 @@
+---
+title: Installation and Setup
+description: Prepare your environment and launch Vibecanvas locally.
+order: 2
+---
+
+This guide helps you get Vibecanvas running reliably on a new machine.
+
+## 1) Install Bun
+
+Follow the Bun install guide, then verify:
+
+```bash
+bun --version
+```
+
+## 2) Log in to Claude Code
+
+```bash
+claude
+/login
+```
+
+Vibecanvas uses Claude Code and the Claude Agent SDK, so you should complete login before launching Vibecanvas.
+
+## 3) Install Vibecanvas globally
+
+```bash
+pnpm add -g vibecanvas
+```
+
+Any package manager is fine; use the one your team already uses.
+
+## 4) Launch from your project
+
+```bash
+cd your-project
+vibecanvas
+```
+
+## 5) Verify core behavior
+
+- App opens with canvas and side panels.
+- Chat can start a new conversation.
+- Project files appear in the workspace tree.
+
+If one of these fails, ask in Discussions:
+
+- https://github.com/vibecanvas/vibecanvas/discussions
