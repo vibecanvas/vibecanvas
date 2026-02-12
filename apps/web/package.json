@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "astro dev",
-    "build": "astro build && bun run scripts/copy-install.mjs",
+    "build": "astro build",
     "preview": "astro preview"
   },
   "dependencies": {
