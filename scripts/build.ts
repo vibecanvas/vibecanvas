@@ -29,6 +29,10 @@ const spaDir = path.join(rootDir, "apps/spa")
 const wrapperDir = path.join(rootDir, "apps/vibecanvas")
 const wrapperBinPath = path.join(wrapperDir, "bin/vibecanvas")
 const shellMigrationsDir = path.join(rootDir, "packages/imperative-shell/database-migrations")
+const forbiddenBinaryMarkers = [
+  "wasm_bindgen_output/nodejs/automerge_wasm_bg.wasm",
+] as const
+const suspiciousBinaryMarkers = ["/home/runner/work/"] as const
 
 // Platform targets
 const targets = [
@@ -120,6 +124,25 @@ async function writeChecksumFile(binaryPath: string): Promise<{ checksumPath: st
   const checksumPath = `${binaryPath}.sha256`
   await Bun.write(checksumPath, `${checksumSha256}  ${binaryName}\n`)
   return { checksumPath, checksumSha256 }
+}
+
+async function assertPortableBinary(binaryPath: string): Promise<void> {
+  const fileBuffer = await Bun.file(binaryPath).arrayBuffer()
+  const binaryText = Buffer.from(fileBuffer).toString("latin1")
+  const matchedMarkers = forbiddenBinaryMarkers.filter((marker) => binaryText.includes(marker))
+  const matchedSuspiciousMarkers = suspiciousBinaryMarkers.filter((marker) => binaryText.includes(marker))
+
+  if (matchedMarkers.length > 0) {
+    throw new Error(
+      `Binary portability guard failed for ${binaryPath}. Found forbidden markers: ${matchedMarkers.join(", ")}`,
+    )
+  }
+
+  if (matchedSuspiciousMarkers.length > 0) {
+    console.warn(
+      `   ! portability warning: found suspicious markers in ${path.basename(binaryPath)}: ${matchedSuspiciousMarkers.join(", ")}`,
+    )
+  }
 }
 
 // ============================================================
@@ -242,6 +265,12 @@ export function getEmbeddedMigrationContent(relativePath: string): string | null
 // ============================================================
 
 async function main() {
+  const automergeResolvedEntrypoint = Bun.resolveSync("@automerge/automerge", path.join(serverDir, "src/server.ts"))
+  const automergeBase64Entrypoint = path.join(path.dirname(automergeResolvedEntrypoint), "fullfat_base64.js")
+  if (!existsSync(automergeBase64Entrypoint)) {
+    throw new Error(`Automerge base64 entrypoint not found: ${automergeBase64Entrypoint}`)
+  }
+
   // Read release metadata from wrapper package.json
   const wrapperSourcePkg = await Bun.file(path.join(wrapperDir, "package.json")).json() as {
     version?: string
@@ -316,6 +345,16 @@ async function main() {
           outfile: outputPath,
         },
         minify: true,
+        plugins: [
+          {
+            name: "alias-automerge-base64-entrypoint",
+            setup(build) {
+              build.onResolve({ filter: /^@automerge\/automerge$/ }, () => {
+                return { path: automergeBase64Entrypoint }
+              })
+            },
+          },
+        ],
         define: {
           "process.env.VIBECANVAS_VERSION": JSON.stringify(version),
           "process.env.VIBECANVAS_COMPILED": JSON.stringify("true"),
@@ -327,6 +366,8 @@ async function main() {
         console.error(`   ✗ ${name}:`, result.logs)
         continue
       }
+
+      await assertPortableBinary(outputPath)
 
       // Create platform package.json
       await Bun.write(
@@ -342,6 +383,11 @@ async function main() {
             },
             description: `${description} (${target.os} ${target.arch})`,
             author: "Omar Ezzat",
+            repository: {
+              type: "git",
+              url: "https://github.com/vibecanvas/vibecanvas",
+            },
+            homepage: "https://vibecanvas.dev",
             license,
           },
           null,

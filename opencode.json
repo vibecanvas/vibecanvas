@@ -6,6 +6,16 @@
   "plugin": [
     "@mohak34/opencode-notifier@latest",
   ],
+  "mcp": {
+    "chrome-devtools": {
+      "type": "local",
+      "command": [
+        "npx",
+        "-y",
+        "chrome-devtools-mcp@latest"
+      ]
+    }
+  },
   "tools": {
     "write": true,
     "bash": true,
