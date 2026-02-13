@@ -270,7 +270,6 @@ export const [store, setStore] = createStore<TStore>({
 
   canvasSlice: {
     canvasViewport: { [canvasId]: { x, y, scale } },
-    canvasViewportActive: TCanvasViewData | null,      // Computed getter
     backendCanvas: { [canvasId]: TBackendCanvas },
     backendCanvasActive: TBackendCanvas | null,        // Computed getter
   },
