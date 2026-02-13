@@ -1,5 +1,5 @@
 import { homedir } from "os";
-import { join } from "path";
+import { join, dirname } from "path";
 import type { existsSync, mkdirSync } from "fs";
 import { ConfigErr } from "./err.codes";
 
@@ -17,6 +17,24 @@ type TConfigPath = {
   created: boolean;
 };
 
+/**
+ * Find the monorepo root by walking up from cwd until we find bun.lock
+ */
+function findMonorepoRoot(fs: TPortal["fs"], startDir: string): string | null {
+  let current = startDir;
+  while (current !== dirname(current)) {
+    if (fs.existsSync(join(current, "bun.lock"))) {
+      return current;
+    }
+    current = dirname(current);
+  }
+  // Check root directory as well
+  if (fs.existsSync(join(current, "bun.lock"))) {
+    return current;
+  }
+  return null;
+}
+
 function txConfigPath(portal: TPortal, args: TArgs = {}): TErrTriple<TConfigPath> {
   const rollbacks: TExternalRollback[] = [];
 
@@ -24,7 +42,30 @@ function txConfigPath(portal: TPortal, args: TArgs = {}): TErrTriple<TConfigPath
     const env = args.env ?? process.env;
     const envPath = env.VIBECANVAS_CONFIG;
 
-    const configDir = envPath || join(homedir(), ".vibecanvas");
+    // Priority: 1) VIBECANVAS_CONFIG env, 2) Dev mode → ./local-volume/, 3) Production → ~/.vibecanvas/
+    let configDir: string;
+    if (envPath) {
+      configDir = envPath;
+    } else if (env.VIBECANVAS_COMPILED !== 'true') {
+      // Dev mode: use local directory at monorepo root
+      const monorepoRoot = findMonorepoRoot(portal.fs, process.cwd());
+      if (!monorepoRoot) {
+        return [
+          null,
+          {
+            code: ConfigErr.CONFIG_PATH_CREATE_FAILED,
+            statusCode: 500,
+            externalMessage: { en: "Failed to find monorepo root" },
+            internalMessage: "Could not locate bun.lock from " + process.cwd(),
+          },
+          rollbacks,
+        ];
+      }
+      configDir = join(monorepoRoot, "local-volume");
+    } else {
+      // Production: use home directory
+      configDir = join(homedir(), ".vibecanvas");
+    }
     const databasePath = join(configDir, "vibecanvas.sqlite");
 
     if (!portal.fs.existsSync(configDir)) {
