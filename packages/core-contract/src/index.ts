@@ -6,6 +6,7 @@ import chatContract from "./chat.contract";
 import dbContract from "./db.contract";
 import fileContract from "./file.contract";
 import filetreeContract from "./filetree.contract";
+import notificationContract from "./notification.contract";
 import projectDirContract from "./project-dir.contract";
 
 export * from "./agent-logs.contract";
@@ -15,6 +16,7 @@ export * from "./file.contract";
 export * from "./filetree.contract";
 export * from "./project-dir.contract";
 export * from "./db.contract";
+export * from "./notification.contract";
 
 export const contract = oc.router({
   canvas: canvasContract,
@@ -26,7 +28,8 @@ export const contract = oc.router({
   },
   "agent-logs": agentLogsContract,
   ai: aiContract,
-  db: dbContract
+  db: dbContract,
+  notification: notificationContract,
 });
 
 export default contract;

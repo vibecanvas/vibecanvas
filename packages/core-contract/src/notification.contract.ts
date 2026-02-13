@@ -1,0 +1,14 @@
+import { eventIterator, oc } from "@orpc/contract";
+import { z } from "zod";
+
+export const ZNotificationEvent = z.object({
+  type: z.enum(["info", "success", "error"]),
+  title: z.string(),
+  description: z.string().optional(),
+});
+
+export default oc.router({
+  events: oc
+    .input(z.object({}))
+    .output(eventIterator(ZNotificationEvent)),
+});

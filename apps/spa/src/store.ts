@@ -1,6 +1,6 @@
 import { createEffect, createRoot, createSignal } from "solid-js";
 import { createStore, unwrap } from "solid-js/store";
-import { showErrorToast } from "./components/ui/Toast";
+import { showToast, showErrorToast, showSuccessToast } from "./components/ui/Toast";
 import type { TCanvasSlice, TCanvasViewData } from "./features/canvas-crdt/store/canvas.slice";
 import type { TChatSlice } from "./features/chat/store/chat.slice";
 import { type TContextMenuSlice, defaultContextMenuSlice } from "./features/context-menu/store/context-menu.slice";
@@ -138,6 +138,16 @@ const root = createRoot((dispose) => {
     .catch(() => {
       showErrorToast("Sync Error", "Failed to sync canvases from server")
     })
+
+  orpcWebsocketService.safeClient.api.notification.events({})
+    .then(async ([err, it]) => {
+      if (err) return;
+      for await (const event of it) {
+        if (event.type === "error") showErrorToast(event.title, event.description);
+        else if (event.type === "success") showSuccessToast(event.title, event.description);
+        else showToast(event.title, event.description);
+      }
+    });
 
   createEffect((prev) => {
     const canvasId = activeCanvasId()

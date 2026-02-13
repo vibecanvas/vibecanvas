@@ -204,6 +204,7 @@ export type App = any;
 import { onError } from '@orpc/server';
 import { RPCHandler } from '@orpc/server/bun-ws';
 import { router } from './api-router';
+import { publishNotification } from './apis/api.notification';
 
 const handler = new RPCHandler(baseOs.router(router), {
   interceptors: [
@@ -300,7 +301,6 @@ Bun.serve({
     data: {} as WebSocketData,
     open(ws) {
       if (ws.data.path === '/automerge') {
-        // TODO: this is not needed
         const wrapper = {
           data: { isAlive: true },
           get readyState() { return ws.readyState; },
@@ -311,6 +311,20 @@ Bun.serve({
         };
         automergeConnections.set(ws, wrapper);
         wsAdapter.open(wrapper);
+      } else if (ws.data.path === '/api') {
+        const currentVersion = getServerVersion();
+        fetch('https://registry.npmjs.org/vibecanvas/latest')
+          .then(res => res.json())
+          .then((data: { version?: string }) => {
+            if (data.version && data.version !== currentVersion) {
+              publishNotification({
+                type: 'info',
+                title: 'Update Available',
+                description: `v${data.version} is available (current: v${currentVersion})`,
+              });
+            }
+          })
+          .catch(() => {});
       }
     },
     message(ws, message) {
