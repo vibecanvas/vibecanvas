@@ -108,7 +108,7 @@ bun server:dev
 ### 3) Open the app
 
 - SPA dev server: `http://localhost:3001`
-- Server default port in runtime: `3000` (or `3333` in `server:prod` script)
+- Server default port in runtime: `3000` (or `7496` in `server:prod` script)
 
 ## Monorepo Layout
 

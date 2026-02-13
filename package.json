@@ -35,7 +35,7 @@
     "dev": "bun run --parallel --filter '*' dev",
     "client:dev": "cd apps/spa && bun run dev",
     "server:dev": "cd apps/server && bun run --watch --preload src/preload/patch-negative-timeout.ts src/server.ts --",
-    "server:prod": "NODE_ENV=production cd apps/server && bun run --watch --preload src/preload/patch-negative-timeout.ts src/server.ts 3333"
+    "server:prod": "NODE_ENV=production cd apps/server && bun run --watch --preload src/preload/patch-negative-timeout.ts src/server.ts 7496"
   },
   "keywords": [],
   "license": "MIT",

@@ -105,8 +105,8 @@ if (commandOrPort === 'upgrade') {
 
 const parsedCliPort = commandOrPort ? parseInt(commandOrPort, 10) : undefined;
 const cliPort = Number.isFinite(parsedCliPort) ? parsedCliPort : undefined;
-const preferredPort = cliPort || 3000;
 const isCompiledBinary = process.env.VIBECANVAS_COMPILED === 'true';
+const preferredPort = cliPort || (isCompiledBinary ? 7496 : 3000);
 const publicDir = normalize(join(import.meta.dir, '..', 'public'));
 
 async function isPortAvailable(port: number): Promise<boolean> {

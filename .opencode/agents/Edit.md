@@ -1,5 +1,5 @@
 ---
-description: Default builder agent. Implements and acts as user requested.
+description: Default edit agent. Implements and acts as user requested.
 mode: all
 tools:
   write: true
