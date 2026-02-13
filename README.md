@@ -59,6 +59,8 @@ Then run:
 vibecanvas
 ```
 
+Open [http://localhost:7496](http://localhost:7496) to use the app.
+
 ### Uninstall
 
 ```bash

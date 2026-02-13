@@ -265,7 +265,7 @@ export function getEmbeddedMigrationContent(relativePath: string): string | null
 // ============================================================
 
 async function main() {
-  const automergeResolvedEntrypoint = Bun.resolveSync("@automerge/automerge", path.join(serverDir, "src/server.ts"))
+  const automergeResolvedEntrypoint = Bun.resolveSync("@automerge/automerge", path.join(serverDir, "src/main.ts"))
   const automergeBase64Entrypoint = path.join(path.dirname(automergeResolvedEntrypoint), "fullfat_base64.js")
   if (!existsSync(automergeBase64Entrypoint)) {
     throw new Error(`Automerge base64 entrypoint not found: ${automergeBase64Entrypoint}`)
@@ -339,7 +339,7 @@ async function main() {
 
       // Compile server with Bun
       const result = await Bun.build({
-        entrypoints: [`${rootDir}/apps/server/src/server.ts`],
+        entrypoints: [`${rootDir}/apps/server/src/main.ts`],
         compile: {
           target: bunTarget as any,
           outfile: outputPath,
