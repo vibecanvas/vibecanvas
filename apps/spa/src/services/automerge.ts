@@ -2,12 +2,11 @@
  * Automerge Client Service
  *
  * Provides CRDT sync capabilities for the SPA via WebSocket connection to the server.
- * Uses IndexedDB for local persistence and BroadcastChannel for cross-tab sync.
+ * Uses IndexedDB for local persistence.
  */
 import { Repo, type DocHandle, type AutomergeUrl, type PeerId } from "@automerge/automerge-repo"
 import { BrowserWebSocketClientAdapter } from "@automerge/automerge-repo-network-websocket"
 import { IndexedDBStorageAdapter } from "@automerge/automerge-repo-storage-indexeddb"
-import { BroadcastChannelNetworkAdapter } from "@automerge/automerge-repo-network-broadcastchannel"
 import type { TCanvasDoc } from "@vibecanvas/shell/automerge/index"
 import { showErrorToast } from "@/components/ui/Toast"
 import { setActiveCanvasId, setStore } from "@/store"
@@ -46,13 +45,10 @@ export function getOrCreateRepo(): Repo {
   const wsUrl = getWebSocketUrl()
 
   const wsAdapter = new BrowserWebSocketClientAdapter(wsUrl)
-  const bcAdapter = new BroadcastChannelNetworkAdapter()
 
   repo = new Repo({
-    // Browser persistence
     storage: new IndexedDBStorageAdapter(),
-    // Network adapters
-    network: [bcAdapter, wsAdapter],
+    network: [wsAdapter],
     peerId: `client-${Date.now()}` as PeerId,
   })
 

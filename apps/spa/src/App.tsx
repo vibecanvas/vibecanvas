@@ -6,7 +6,7 @@ import { FloatingDrawingToolbar } from "./features/floating-drawing-toolbar/comp
 import { SelectionStyleMenu } from "./features/floating-selection-menu";
 import { InfoCard } from "./features/info-card/components/InfoCard";
 import { Sidebar } from "./features/sidebar";
-import { setActiveCanvasId, store } from "./store";
+import { activeCanvasId, setActiveCanvasId, store } from "./store";
 import { onMount } from "solid-js";
 
 
@@ -21,8 +21,10 @@ const App: Component = () => {
   })
 
   const selectedCanvas = () => {
+    const canvasId = activeCanvasId()
+    if (!canvasId) return null
     const canvasData = store.canvasSlice.backendCanvasActive;
-    const viewData = store.canvasSlice.canvasViewportActive;
+    const viewData = store.canvasSlice.canvasViewport[canvasId]
     if (!canvasData || !viewData) return null;
     return { canvasData, viewData };
   }
