@@ -3,6 +3,8 @@ import { join, dirname } from "path";
 import type { existsSync, mkdirSync } from "fs";
 import { ConfigErr } from "./err.codes";
 
+declare const VIBECANVAS_COMPILED: boolean;
+
 type TPortal = {
   fs: { existsSync: typeof existsSync, mkdirSync: typeof mkdirSync };
 };
@@ -42,7 +44,7 @@ function txConfigPath(portal: TPortal, args: TArgs = {}): TErrTriple<TConfigPath
   try {
     const env = args.env ?? process.env;
     const envPath = env.VIBECANVAS_CONFIG;
-    const isCompiled = args.isCompiled ?? false;
+    const isCompiled = args.isCompiled ?? (typeof VIBECANVAS_COMPILED !== "undefined" && VIBECANVAS_COMPILED);
 
     // Priority: 1) VIBECANVAS_CONFIG env, 2) Dev mode → ./local-volume/, 3) Production → ~/.vibecanvas/
     let configDir: string;
