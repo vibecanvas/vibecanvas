@@ -77,7 +77,7 @@ const Sidebar: Component<SidebarProps> = (props) => {
 
         {/* Canvas List */}
         <div class="flex-1 overflow-y-auto">
-          <For each={canvases()}>
+          <For each={canvases().filter(canvas => !!canvas)}>
             {(canvas) => (
               <SidebarItem
                 name={canvas.name}

@@ -8,6 +8,7 @@ import type { TToolbarSlice } from "./features/floating-drawing-toolbar/store/to
 import type { Tool } from "./features/floating-drawing-toolbar/types/toolbar.types";
 import { orpcWebsocketService } from "./services/orpc-websocket";
 import type { TBackendCanvas, TBackendChat } from "./types/backend.types";
+import { createDocument } from "./services/automerge";
 
 type TGlobalSlice = {
   theme: "light" | "dark"
@@ -133,6 +134,9 @@ const root = createRoot((dispose) => {
       setStore('canvasSlice', 'backendCanvas', backendCanvas)
       if (activeCanvasId() === null) {
         setActiveCanvasId(Object.keys(backendCanvas).at(-1) ?? null)
+      }
+      if (canvases.length === 0) {
+        createDocument({ name: "Welcome to Vibecanvas" })
       }
     })
     .catch(() => {
