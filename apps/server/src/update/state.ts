@@ -1,7 +1,6 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "fs";
 import { join } from "path";
 import { txConfigPath } from "@vibecanvas/core/vibecanvas-config/index";
-import { VIBECANVAS_COMPILED } from "../version-generated";
 
 const CHECK_INTERVAL_MS = 24 * 60 * 60 * 1000;
 

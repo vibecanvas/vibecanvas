@@ -4,7 +4,6 @@
 import './preload/patch-negative-timeout';
 import { parseArgs } from 'util';
 import { getServerVersion } from './runtime';
-import { VIBECANVAS_COMPILED } from './version-generated';
 
 function printHelp(): void {
   console.log(`vibecanvas - Run your agents in an infinite canvas

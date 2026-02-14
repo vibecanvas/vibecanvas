@@ -10,8 +10,8 @@ type TServerEnv = {
   VIBECANVAS_CONFIG?: string;
 };
 
-// Generated at build time - see scripts/build.ts
-import { VIBECANVAS_VERSION, VIBECANVAS_CHANNEL } from "./version-generated";
+// Build-time constants - replaced by Bun's --define at compile time
+// See apps/server/src/build-constants.d.ts for type declarations
 
 function readEnv<K extends keyof TServerEnv>(key: K): TServerEnv[K] {
   return process.env[key];

@@ -4,7 +4,6 @@ import { fnCliUpdateResolvePolicy } from "@vibecanvas/core/cli-update/index";
 import { txConfigPath } from "@vibecanvas/core/vibecanvas-config/index";
 import type { TInstallMethod, TUpdatePolicy } from "./types";
 import { readEnv } from "../runtime";
-import { VIBECANVAS_COMPILED } from "../version-generated";
 
 type TConfigFile = {
   autoupdate?: boolean | "notify";

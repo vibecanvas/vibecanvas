@@ -325,14 +325,6 @@ async function main() {
   // Phase 4: Build each target
   console.log("\n[4/4] Compiling executables...")
 
-  // Generate version file for compile target (env/define don't work reliably with compile)
-  const versionFileContent = `// Auto-generated file - do not edit
-export const VIBECANVAS_VERSION = ${JSON.stringify(version)};
-export const VIBECANVAS_COMPILED = true;
-export const VIBECANVAS_CHANNEL = ${JSON.stringify(channel)};
-`
-  await Bun.write(path.join(serverDir, "src/version-generated.ts"), versionFileContent)
-
   const manifestTargets: Record<string, ReleaseManifestTarget> = {}
   for (const target of filteredTargets) {
     const name = buildPackageName(target)
@@ -346,8 +338,7 @@ export const VIBECANVAS_CHANNEL = ${JSON.stringify(channel)};
     try {
       const outputPath = `${distDir}/bin/vibecanvas${target.os === "win32" ? ".exe" : ""}`
 
-      // Compile server with Bun
-      // Note: Using generated version file instead of env/define (don't work reliably with compile target)
+      // Compile server with Bun using build-time constants via --define
       const result = await Bun.build({
         entrypoints: [`${rootDir}/apps/server/src/main.ts`],
         compile: {
@@ -355,6 +346,11 @@ export const VIBECANVAS_CHANNEL = ${JSON.stringify(channel)};
           outfile: outputPath,
         },
         minify: true,
+        define: {
+          VIBECANVAS_VERSION: JSON.stringify(version),
+          VIBECANVAS_COMPILED: "true",
+          VIBECANVAS_CHANNEL: JSON.stringify(channel),
+        },
       })
 
       if (!result.success) {

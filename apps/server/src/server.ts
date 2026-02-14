@@ -15,7 +15,6 @@ import { baseOs } from './orpc.base';
 import { publishNotification } from './apis/api.notification';
 import checkForUpgrade from './update';
 import { getServerVersion } from './runtime';
-import { VIBECANVAS_COMPILED } from './version-generated';
 
 // Export API type for Eden client
 export type App = any;
