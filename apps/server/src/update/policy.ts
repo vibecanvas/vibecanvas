@@ -4,13 +4,14 @@ import { fnCliUpdateResolvePolicy } from "@vibecanvas/core/cli-update/index";
 import { txConfigPath } from "@vibecanvas/core/vibecanvas-config/index";
 import type { TInstallMethod, TUpdatePolicy } from "./types";
 import { readEnv } from "../runtime";
+import { VIBECANVAS_COMPILED } from "../version-generated";
 
 type TConfigFile = {
   autoupdate?: boolean | "notify";
 };
 
 function readConfigAutoupdate(): boolean | "notify" | undefined {
-  const [configPathData] = txConfigPath({ fs: { existsSync, mkdirSync } });
+  const [configPathData] = txConfigPath({ fs: { existsSync, mkdirSync } }, { isCompiled: VIBECANVAS_COMPILED });
   if (!configPathData) return undefined;
 
   const configFilePath = join(configPathData.configDir, "config.json");

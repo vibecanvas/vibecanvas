@@ -10,16 +10,19 @@ type TServerEnv = {
   VIBECANVAS_CONFIG?: string;
 };
 
+// Generated at build time - see scripts/build.ts
+import { VIBECANVAS_VERSION, VIBECANVAS_CHANNEL } from "./version-generated";
+
 function readEnv<K extends keyof TServerEnv>(key: K): TServerEnv[K] {
   return process.env[key];
 }
 
 function getServerVersion(): string {
-  return readEnv("VIBECANVAS_VERSION") || "0.0.0";
+  return VIBECANVAS_VERSION || "0.0.0";
 }
 
 function getUpdateChannel(): TUpdateChannel {
-  const channel = readEnv("VIBECANVAS_CHANNEL");
+  const channel = VIBECANVAS_CHANNEL;
   if (channel === "stable" || channel === "beta" || channel === "nightly") {
     return channel;
   }

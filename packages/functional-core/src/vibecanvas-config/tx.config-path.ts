@@ -9,6 +9,7 @@ type TPortal = {
 
 type TArgs = {
   env?: NodeJS.ProcessEnv;
+  isCompiled?: boolean;
 };
 
 type TConfigPath = {
@@ -41,12 +42,13 @@ function txConfigPath(portal: TPortal, args: TArgs = {}): TErrTriple<TConfigPath
   try {
     const env = args.env ?? process.env;
     const envPath = env.VIBECANVAS_CONFIG;
+    const isCompiled = args.isCompiled ?? false;
 
     // Priority: 1) VIBECANVAS_CONFIG env, 2) Dev mode → ./local-volume/, 3) Production → ~/.vibecanvas/
     let configDir: string;
     if (envPath) {
       configDir = envPath;
-    } else if (env.VIBECANVAS_COMPILED !== 'true') {
+    } else if (!isCompiled) {
       // Dev mode: use local directory at monorepo root
       const monorepoRoot = findMonorepoRoot(portal.fs, process.cwd());
       if (!monorepoRoot) {

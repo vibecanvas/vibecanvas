@@ -15,6 +15,7 @@ import { baseOs } from './orpc.base';
 import { publishNotification } from './apis/api.notification';
 import checkForUpgrade from './update';
 import { getServerVersion } from './runtime';
+import { VIBECANVAS_COMPILED } from './version-generated';
 
 // Export API type for Eden client
 export type App = any;
@@ -40,8 +41,7 @@ async function isPortAvailable(port: number): Promise<boolean> {
 }
 
 async function resolveServerPort(startPort: number): Promise<number> {
-  const isCompiledBinary = process.env.VIBECANVAS_COMPILED === 'true';
-  if (!isCompiledBinary) {
+  if (!VIBECANVAS_COMPILED) {
     return startPort;
   }
 
@@ -90,7 +90,7 @@ export async function startServer(options: StartServerOptions): Promise<void> {
   const { port: preferredPort } = options;
 
   // Get database path from config
-  const [config, configError] = txConfigPath({ fs: { existsSync, mkdirSync } });
+  const [config, configError] = txConfigPath({ fs: { existsSync, mkdirSync } }, { isCompiled: true });
   if (configError) {
     console.error('[Config Error]', configError);
     process.exit(1);

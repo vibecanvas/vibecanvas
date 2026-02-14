@@ -4,6 +4,7 @@
 import './preload/patch-negative-timeout';
 import { parseArgs } from 'util';
 import { getServerVersion } from './runtime';
+import { VIBECANVAS_COMPILED } from './version-generated';
 
 function printHelp(): void {
   console.log(`vibecanvas - Run your agents in an infinite canvas
@@ -110,8 +111,7 @@ async function main() {
 }
 
 function getDefaultPort(): number {
-  const isCompiledBinary = process.env.VIBECANVAS_COMPILED === 'true';
-  return isCompiledBinary ? 7496 : 3000;
+  return VIBECANVAS_COMPILED ? 7496 : 3000;
 }
 
 main().catch((error) => {
