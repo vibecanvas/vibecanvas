@@ -110,8 +110,7 @@ async function main() {
 }
 
 function getDefaultPort(): number {
-  const isCompiledBinary = process.env.VIBECANVAS_COMPILED === 'true';
-  return isCompiledBinary ? 7496 : 3000;
+  return VIBECANVAS_COMPILED ? 7496 : 3000;
 }
 
 main().catch((error) => {

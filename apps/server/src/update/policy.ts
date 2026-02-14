@@ -10,7 +10,7 @@ type TConfigFile = {
 };
 
 function readConfigAutoupdate(): boolean | "notify" | undefined {
-  const [configPathData] = txConfigPath({ fs: { existsSync, mkdirSync } });
+  const [configPathData] = txConfigPath({ fs: { existsSync, mkdirSync } }, { isCompiled: VIBECANVAS_COMPILED });
   if (!configPathData) return undefined;
 
   const configFilePath = join(configPathData.configDir, "config.json");

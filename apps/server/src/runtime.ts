@@ -10,16 +10,19 @@ type TServerEnv = {
   VIBECANVAS_CONFIG?: string;
 };
 
+// Build-time constants - replaced by Bun's --define at compile time
+// See apps/server/src/build-constants.d.ts for type declarations
+
 function readEnv<K extends keyof TServerEnv>(key: K): TServerEnv[K] {
   return process.env[key];
 }
 
 function getServerVersion(): string {
-  return readEnv("VIBECANVAS_VERSION") || "0.0.0";
+  return VIBECANVAS_VERSION || "0.0.0";
 }
 
 function getUpdateChannel(): TUpdateChannel {
-  const channel = readEnv("VIBECANVAS_CHANNEL");
+  const channel = VIBECANVAS_CHANNEL;
   if (channel === "stable" || channel === "beta" || channel === "nightly") {
     return channel;
   }

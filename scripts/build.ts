@@ -324,6 +324,7 @@ async function main() {
 
   // Phase 4: Build each target
   console.log("\n[4/4] Compiling executables...")
+
   const manifestTargets: Record<string, ReleaseManifestTarget> = {}
   for (const target of filteredTargets) {
     const name = buildPackageName(target)
@@ -337,7 +338,7 @@ async function main() {
     try {
       const outputPath = `${distDir}/bin/vibecanvas${target.os === "win32" ? ".exe" : ""}`
 
-      // Compile server with Bun
+      // Compile server with Bun using build-time constants via --define
       const result = await Bun.build({
         entrypoints: [`${rootDir}/apps/server/src/main.ts`],
         compile: {
@@ -345,20 +346,10 @@ async function main() {
           outfile: outputPath,
         },
         minify: true,
-        plugins: [
-          {
-            name: "alias-automerge-base64-entrypoint",
-            setup(build) {
-              build.onResolve({ filter: /^@automerge\/automerge$/ }, () => {
-                return { path: automergeBase64Entrypoint }
-              })
-            },
-          },
-        ],
         define: {
-          "process.env.VIBECANVAS_VERSION": JSON.stringify(version),
-          "process.env.VIBECANVAS_COMPILED": JSON.stringify("true"),
-          "process.env.VIBECANVAS_CHANNEL": JSON.stringify(channel),
+          VIBECANVAS_VERSION: JSON.stringify(version),
+          VIBECANVAS_COMPILED: "true",
+          VIBECANVAS_CHANNEL: JSON.stringify(channel),
         },
       })
 

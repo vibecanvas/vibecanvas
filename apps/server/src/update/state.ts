@@ -9,7 +9,7 @@ type TState = {
 };
 
 function stateFilePath(): string | null {
-  const [configPathData] = txConfigPath({ fs: { existsSync, mkdirSync } });
+  const [configPathData] = txConfigPath({ fs: { existsSync, mkdirSync } }, { isCompiled: VIBECANVAS_COMPILED });
   if (!configPathData) return null;
   return join(configPathData.configDir, "autoupdate-state.json");
 }

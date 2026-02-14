@@ -1,13 +1,13 @@
 {
   "name": "@vibecanvas/server",
-  "version": "0.0.5",
+  "version": "0.0.6",
   "private": true,
   "type": "module",
   "exports": {
     "./*": "./src/*.ts"
   },
   "scripts": {
-    "dev": "NODE_ENV=development bun run --watch ./src/server.ts --",
+    "dev": "NODE_ENV=development bun run --watch ./src/main.ts",
     "start": "rm -f public/index.html && rm -rf public/assets/ && cp -r ../spa/dist/* ./public &&  bun run ./src/server.ts --",
     "test": "bun test"
   },
