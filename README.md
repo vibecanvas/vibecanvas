@@ -59,6 +59,8 @@ Then run:
 vibecanvas
 ```
 
+Open [http://localhost:7496](http://localhost:7496) to use the app.
+
 ### Uninstall
 
 ```bash
@@ -108,7 +110,7 @@ bun server:dev
 ### 3) Open the app
 
 - SPA dev server: `http://localhost:3001`
-- Server default port in runtime: `3000` (or `3333` in `server:prod` script)
+- Server default port in runtime: `3000` (or `7496` in `server:prod` script)
 
 ## Monorepo Layout
 

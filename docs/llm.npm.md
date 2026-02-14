@@ -794,8 +794,8 @@ git push --tags
                             ▼
 ┌─────────────────────────────────────────────────────────────────┐
 │                      User runs vibecanvas                        │
-│  1. Starts HTTP server on port 3333                             │
-│  2. Opens browser to localhost:3333                             │
+│  1. Starts HTTP server on port 7496                             │
+│  2. Opens browser to localhost:7496                             │
 │  3. Creates ~/.vibecanvas/vibecanvas.sqlite                     │
 └─────────────────────────────────────────────────────────────────┘
 ```

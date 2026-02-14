@@ -7,7 +7,7 @@
 - `bun --filter @vibecanvas/shell test` - Run tests for imperative-shell package
 - `bun client:dev` - Start SPA dev server on port 3001
 - `bun server:dev` - Start server dev mode with HMR
-- `bun server:prod` - Start server in production mode on port 3333
+- `bun server:prod` - Start server in production mode on port 7496
 - `bun run scripts/test-binary.ts` - Validate compiled binary serves embedded assets and WS endpoints
 
 **Final build requirement:**

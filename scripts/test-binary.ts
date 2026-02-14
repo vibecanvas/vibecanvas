@@ -157,7 +157,7 @@ async function main() {
   console.log(`[test-binary] Base URL: ${baseUrl}`)
 
   const proc = Bun.spawn({
-    cmd: [binaryPath, String(args.port)],
+    cmd: [binaryPath, "serve", "--port", String(args.port)],
     stdout: "pipe",
     stderr: "pipe",
     env: {

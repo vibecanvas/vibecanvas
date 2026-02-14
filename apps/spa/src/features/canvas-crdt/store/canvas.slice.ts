@@ -21,10 +21,9 @@ export type TDocState =
 
 export interface TCanvasSlice {
   canvasSlice: {
-    canvasViewport: {[canvasId: string]: TCanvasViewData}
-    canvasViewportActive: TCanvasViewData | null
+    canvasViewport: { [canvasId: string]: TCanvasViewData | undefined }
 
-    backendCanvas: {[canvasId: string]: TBackendCanvas}
+    backendCanvas: { [canvasId: string]: TBackendCanvas | undefined }
     backendCanvasActive: TBackendCanvas | null
 
     selectedIds: string[]  // Can contain element IDs or group IDs (all unique)
