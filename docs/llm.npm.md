@@ -528,7 +528,6 @@ fi
 
 echo -e "\n${MUTED}vibecanvas installed successfully!${NC}"
 echo -e "\n${MUTED}To start:${NC}"
-echo -e "  cd <project>"
 echo -e "  vibecanvas"
 echo -e "\n${MUTED}Docs: ${NC}https://vibecanvas.dev/docs"
 ```
