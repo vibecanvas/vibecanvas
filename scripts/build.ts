@@ -351,6 +351,16 @@ async function main() {
           VIBECANVAS_COMPILED: "true",
           VIBECANVAS_CHANNEL: JSON.stringify(channel),
         },
+        plugins: [
+          {
+            name: "alias-automerge-base64-entrypoint",
+            setup(build) {
+              build.onResolve({ filter: /^@automerge\/automerge$/ }, () => {
+                return { path: automergeBase64Entrypoint }
+              })
+            },
+          },
+        ],
       })
 
       if (!result.success) {
