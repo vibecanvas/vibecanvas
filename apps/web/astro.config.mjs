@@ -6,8 +6,4 @@ export default defineConfig({
   output: "static",
   site: "https://vibecanvas.dev",
   integrations: [mdx(), solid()],
-  redirects: {
-    "/install":
-      "https://raw.githubusercontent.com/vibecanvas/vibecanvas/refs/heads/main/scripts/install.sh",
-  },
 });
