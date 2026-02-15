@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "astro dev",
-    "build": "astro build",
+    "build": "cp ../../scripts/install.sh public/install.sh && cp ../../scripts/install.sh public/install && astro build",
     "preview": "astro preview"
   },
   "dependencies": {
