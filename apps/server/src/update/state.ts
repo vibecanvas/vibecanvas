@@ -1,3 +1,4 @@
+/// <reference path="../build-constants.d.ts" />
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "fs";
 import { join } from "path";
 import { txConfigPath } from "@vibecanvas/core/vibecanvas-config/index";

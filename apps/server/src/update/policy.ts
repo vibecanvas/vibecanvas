@@ -1,3 +1,4 @@
+/// <reference path="../build-constants.d.ts" />
 import { readFileSync, existsSync, mkdirSync } from "fs";
 import { join } from "path";
 import { fnCliUpdateResolvePolicy } from "@vibecanvas/core/cli-update/index";

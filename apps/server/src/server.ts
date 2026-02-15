@@ -1,3 +1,4 @@
+/// <reference path="./build-constants.d.ts" />
 // Initialize global functions (tExternal, tInternal, executeRollbacks)
 import './preload/patch-negative-timeout';
 import { onError } from '@orpc/server';

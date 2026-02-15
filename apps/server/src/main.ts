@@ -1,4 +1,5 @@
 #!/usr/bin/env bun
+/// <reference path="./build-constants.d.ts" />
 // CLI entry point for vibecanvas
 // Supports subcommands: serve (default), upgrade
 import './preload/patch-negative-timeout';
