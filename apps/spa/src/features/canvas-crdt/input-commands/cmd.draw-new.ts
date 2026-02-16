@@ -11,6 +11,7 @@ import { ArrowElement } from "../renderables/elements/arrow/arrow.class"
 import { RectElement } from "../renderables/elements/rect/rect.class"
 import { TextElement } from "../renderables/elements/text/text.class"
 import { PenElement } from "../renderables/elements/pen/pen.class"
+import { FiletreeElement } from "../renderables/elements/filetree/filetree.class"
 import type { InputCommand, PointerInputContext } from "./types"
 import { isElementTarget } from "./types"
 
@@ -40,7 +41,7 @@ export function createElement(
 }
 
 
-const DRAWING_TOOLS = ['rectangle', 'diamond', 'ellipse', 'arrow', 'line', 'pen', 'text', 'image', 'chat'] as const
+const DRAWING_TOOLS = ['rectangle', 'diamond', 'ellipse', 'arrow', 'line', 'pen', 'text', 'image', 'chat', 'filesystem'] as const
 const DRAG_THRESHOLD = 5
 
 let isDragging = false
@@ -395,6 +396,41 @@ function handleUp(ctx: Parameters<InputCommand>[0]): boolean {
     })
 
     setStore('toolbarSlice', 'activeTool', 'select')
+  } else if (!wasDragging && tool === 'filesystem') {
+    const { data, style } = createFiletreeElementDataAndStyle()
+    const element = createElement(
+      crypto.randomUUID(),
+      dragStartWorld.x,
+      dragStartWorld.y,
+      data,
+      style
+    )
+    const renderable = new FiletreeElement(element as TBackendElementOf<'filetree'>, ctx.canvas)
+
+    ctx.canvas.addElement(renderable)
+
+    const elementId = renderable.id
+    const elementData = { ...renderable.element }
+
+    ctx.canvas.handle.change(doc => {
+      doc.elements[elementId] = renderable.element
+    })
+
+    ctx.canvas.undoManager.record({
+      label: 'Create File Tree',
+      undo: () => {
+        ctx.canvas.handle.change(doc => {
+          delete doc.elements[elementId]
+        })
+      },
+      redo: () => {
+        ctx.canvas.handle.change(doc => {
+          doc.elements[elementId] = { ...elementData }
+        })
+      }
+    })
+
+    setStore('toolbarSlice', 'activeTool', 'select')
   } else {
     // Cancel preview if not dragging
     ctx.canvas.clearPreviewElement()
@@ -569,6 +605,28 @@ function createChatElementDataAndStyle(): {
       backgroundColor: '#9775fa',
       strokeColor: '#7950f2',
       strokeWidth: 2,
+      opacity: 1,
+    },
+  }
+}
+
+function createFiletreeElementDataAndStyle(): {
+  data: ExtractElementData<'filetree'>
+  style: TElementStyle
+} {
+  return {
+    data: {
+      type: 'filetree',
+      title: 'File Tree',
+      w: 360,
+      h: 460,
+      isCollapsed: false,
+      globPattern: null,
+    },
+    style: {
+      backgroundColor: '#f8f9fa',
+      strokeColor: '#ced4da',
+      strokeWidth: 1,
       opacity: 1,
     },
   }

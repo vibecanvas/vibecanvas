@@ -120,6 +120,7 @@ function createElementClassMock() {
 vi.mock("../renderables/elements/arrow/arrow.class", () => ({ ArrowElement: createElementClassMock() }))
 vi.mock("../renderables/elements/diamond/diamond.class", () => ({ DiamondElement: createElementClassMock() }))
 vi.mock("../renderables/elements/ellipse/ellipse.class", () => ({ EllipseElement: createElementClassMock() }))
+vi.mock("../renderables/elements/filetree/filetree.class", () => ({ FiletreeElement: createElementClassMock() }))
 vi.mock("../renderables/elements/image/image.class", () => ({ ImageElement: createElementClassMock() }))
 vi.mock("../renderables/elements/line/line.class", () => ({ LineElement: createElementClassMock() }))
 vi.mock("../renderables/elements/pen/pen.class", () => ({ PenElement: createElementClassMock() }))

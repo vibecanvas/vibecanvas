@@ -3,6 +3,7 @@ import { tExternal } from "@vibecanvas/server/error-fn";
 import { baseOs } from "../orpc.base";
 import type * as _DrizzleZod from "drizzle-zod";
 import { dbUpdatePublisher } from "./api.db";
+import { ORPCError } from "@orpc/contract";
 
 const create = baseOs.api.filetree.create.handler(async ({ input, context: { db } }) => {
   const [result, error] = ctrlCreateFiletree({ db }, {
@@ -15,12 +16,12 @@ const create = baseOs.api.filetree.create.handler(async ({ input, context: { db 
   });
 
   if (error || !result) {
-    throw new Error(tExternal(error));
+    throw new ORPCError(error.code, { message: tExternal(error) })
   }
 
   const filetree = db.query.filetrees.findFirst({ where: (table, { eq }) => eq(table.id, result.id) }).sync();
   if (!filetree) {
-    throw new Error("Filetree not found after creation");
+    throw new ORPCError('NOT_FOUND', { message: 'Filetree not found after creation' })
   }
 
   dbUpdatePublisher.publish(filetree.canvas_id, {
@@ -37,12 +38,12 @@ const update = baseOs.api.filetree.update.handler(async ({ input, context: { db 
   });
 
   if (error) {
-    throw new Error(tExternal(error));
+    throw new ORPCError(error.code, { message: tExternal(error) })
   }
 
   const filetree = db.query.filetrees.findFirst({ where: (table, { eq }) => eq(table.id, input.params.id) }).sync();
   if (!filetree) {
-    throw new Error("Filetree not found");
+    throw new ORPCError('NOT_FOUND', { message: 'Filetree not found' })
   }
 
   dbUpdatePublisher.publish(filetree.canvas_id, {
@@ -55,18 +56,18 @@ const update = baseOs.api.filetree.update.handler(async ({ input, context: { db 
 const remove = baseOs.api.filetree.remove.handler(async ({ input, context: { db } }) => {
   const filetree = db.query.filetrees.findFirst({ where: (table, { eq }) => eq(table.id, input.params.id) }).sync();
   const [, error] = ctrlDeleteFiletree({ db }, { filetreeId: input.params.id });
-  if (error) {
-    throw new Error(tExternal(error));
+  if (error && error.code !== "CTRL.FILETREE.DELETE_FILETREE.NOT_FOUND") {
+    throw new ORPCError(error.code, { message: tExternal(error) })
   }
 
   if (filetree) {
     dbUpdatePublisher.publish(filetree.canvas_id, {
-      data: { change: 'delete', id: filetree.id, table: 'filetrees', record: filetree },
+      data: { change: 'delete', id: filetree.id, table: 'filetrees' },
     });
   }
 });
 
-export const filetree: any = {
+export const filetree = {
   create,
   update,
   remove,

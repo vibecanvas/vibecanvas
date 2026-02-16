@@ -85,7 +85,7 @@ function getVisibleSections(canvas: Canvas, selectedIds: string[]): TVisibleSect
   const hasLineTypes = [...types].some(t => LINE_TYPES_SET.has(t))
   const hasArrowTypes = [...types].some(t => ARROW_TYPES.has(t))
   const hasTextTypes = [...types].some(t => TEXT_TYPES.has(t))
-  const hasOpacityTypes = [...types].some(t => t !== 'chat')
+  const hasOpacityTypes = [...types].some(t => t !== 'chat' && t !== 'filetree')
 
   return {
     // Fill picker: only for shapes (rect/ellipse/diamond) - lines don't have fill
@@ -123,13 +123,13 @@ function getSelectedTextElementIds(canvas: Canvas, selectedIds: string[]): strin
   return [...textIds]
 }
 
-function getSelectedNonChatElementIds(canvas: Canvas, selectedIds: string[]): string[] {
+function getSelectedNonWidgetElementIds(canvas: Canvas, selectedIds: string[]): string[] {
   const elementIds = new Set<string>()
 
   for (const id of selectedIds) {
     const group = canvas.groupManager.groups.get(id)
     if (group) {
-      const nested = getSelectedNonChatElementIds(canvas, group.members.map(m => m.id))
+      const nested = getSelectedNonWidgetElementIds(canvas, group.members.map(m => m.id))
       nested.forEach(memberId => elementIds.add(memberId))
       continue
     }
@@ -137,6 +137,7 @@ function getSelectedNonChatElementIds(canvas: Canvas, selectedIds: string[]): st
     const element = canvas.elements.get(id)
     if (!element) continue
     if (element.element.data.type === 'chat') continue
+    if (element.element.data.type === 'filetree') continue
     elementIds.add(id)
   }
 
@@ -203,11 +204,11 @@ export function SelectionStyleMenu() {
     return getSelectedTextElementIds(canvas, selectedIds)
   })
 
-  const selectedNonChatIds = createMemo(() => {
+  const selectedNonWidgetIds = createMemo(() => {
     const canvas = store.canvasSlice.canvas
     const selectedIds = store.canvasSlice.selectedIds
     if (!canvas || selectedIds.length === 0) return []
-    return getSelectedNonChatElementIds(canvas, selectedIds)
+    return getSelectedNonWidgetElementIds(canvas, selectedIds)
   })
 
   const updateSelectedStyles = (styleUpdates: Partial<TDrawingStyle>) => {
@@ -259,7 +260,7 @@ export function SelectionStyleMenu() {
   const currentOpacity = createMemo(() => {
     refreshKey()
     const canvas = store.canvasSlice.canvas
-    const firstId = selectedNonChatIds()[0]
+    const firstId = selectedNonWidgetIds()[0]
     if (!canvas || !firstId) return 1
     return canvas.getElementStyle(firstId)?.opacity ?? 1
   })
@@ -267,7 +268,7 @@ export function SelectionStyleMenu() {
   const updateSelectedOpacity = (opacity: number) => {
     const canvas = store.canvasSlice.canvas
     if (!canvas) return
-    for (const id of selectedNonChatIds()) {
+    for (const id of selectedNonWidgetIds()) {
       canvas.updateElementStyle(id, { opacity })
     }
     triggerRefresh()
