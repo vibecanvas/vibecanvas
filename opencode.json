@@ -6,6 +6,11 @@
   "plugin": [
     "@mohak34/opencode-notifier@latest",
   ],
+  "agent": {
+    "build": {
+      "disable": true
+    },
+  },
   "mcp": {
     "chrome-devtools": {
       "type": "local",

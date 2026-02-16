@@ -1,0 +1,2 @@
+# Allow opencode to read llm/ directory even when ignored by git
+!llm/

@@ -413,6 +413,7 @@ if [[ "$no_modify_path" != "true" ]] && [[ ":$PATH:" != *":$INSTALL_DIR:"* ]]; t
         echo -e "${MUTED}Add vibecanvas to your PATH:${NC}"
         echo ""
         echo "  export PATH=\"$INSTALL_DIR:\$PATH\""
+        echo "" Reload your shell and call vibecanvas
         echo ""
     fi
 fi

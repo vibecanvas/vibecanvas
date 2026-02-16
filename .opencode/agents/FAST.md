@@ -1,5 +1,5 @@
 ---
-description: Fast code-building agent using Cerebras GLM-4.7
+description: Fast code-building agent
 mode: all
 model: cerebras/zai-glm-4.7
 tools:
