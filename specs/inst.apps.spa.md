@@ -52,3 +52,11 @@ Vibecanvas uses a "DOM Overlay" strategy:
 - **Tree-shaking Icons**: Import icons directly from `lucide-solid/icons/icon-name`.
 - **Throttling**: Throttle store updates during continuous interactions (like dragging) to prevent excessive SolidJS re-renders.
 - **Coordinate Systems**: Distinguish between **Screen Space** (DOM pixels) and **World Space** (Canvas units). Use `canvas.app.stage.toLocal()` and `toGlobal()` to convert between them.
+
+## Code Quirks (Project-Specific)
+
+- **Widget data ownership**: Canvas widgets like `filetree` should fetch their own backend row data at component level via Solid resources (`createResource`), instead of adding long-lived widget slices to global `src/store.ts`.
+- **DB event sync scope**: Global canvas event listeners should keep syncing canonical shared slices (e.g. canvas/chats). Widget-local state should not be mirrored globally unless truly shared across UI surfaces.
+- **Overlay renderables**: Complex widgets are rendered in DOM overlays anchored by Pixi coordinates; update overlay bounds from stage transforms continuously (ticker/effect), not only on initial mount.
+- **`project.dir.files` response shape**: The SPA should consume nested tree nodes directly (`children[]`) from server output; do not rebuild topology client-side from flat lists.
+- **Field naming quirk**: Directory node fields are snake_case from contracts (`is_dir`), even inside SPA components that otherwise prefer camelCase.

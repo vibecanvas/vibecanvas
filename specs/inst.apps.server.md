@@ -52,3 +52,11 @@ In compiled mode, the server:
 - **Context Injection**: Every oRPC request has access to the Drizzle database instance via the `context` object.
 - **Functional Core**: Handlers should avoid complex logic; they should build a `TPortal` and call a controller from `@vibecanvas/core`.
 - **WebSocket Multiplexing**: Both oRPC and Automerge use specific paths (`/api` and `/automerge`) over the same server instance.
+
+## Code Quirks (Project-Specific)
+
+- **Filesystem tree endpoint contract**: `project.dir.files` returns a nested tree (`{ root, children[] }`) rather than flat rows. Each node uses `{ name, path, is_dir, children }`.
+- **Depth safety guard**: `ctrlDirFiles` enforces bounded recursion via `max_depth` (default `5`) to avoid OOM on large roots like home directories containing heavy dependency trees.
+- **Server-side filtering behavior**: `ctrlDirFiles` applies dotfile filtering and glob filtering during traversal; matching is done against reconstructed relative paths while walking.
+- **Error transport style**: Directory handlers (`project.dir.home/list/files`) return contract-safe error objects (`{ type, message }`) instead of throwing, because outputs are modeled as success/error unions.
+- **Realtime DB event usage**: When APIs mutate DB rows intended for live SPA sync (e.g. `filetrees`), publish through `dbUpdatePublisher` so clients can react without polling.
