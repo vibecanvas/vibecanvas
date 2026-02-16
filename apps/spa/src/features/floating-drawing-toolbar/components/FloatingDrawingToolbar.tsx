@@ -15,6 +15,7 @@ import Pencil from "lucide-solid/icons/pencil";
 import Type from "lucide-solid/icons/type";
 import Image from "lucide-solid/icons/image";
 import MessageCircle from "lucide-solid/icons/message-circle";
+import FolderTree from "lucide-solid/icons/folder-tree";
 import PanelLeft from "lucide-solid/icons/panel-left";
 import { Tooltip } from "@kobalte/core/tooltip";
 import { For, Show, createMemo } from "solid-js";
@@ -35,6 +36,7 @@ const TOOL_ICONS: Record<Tool, () => JSX.Element> = {
   text: () => <Type size={14} />,
   image: () => <Image size={14} />,
   chat: () => <MessageCircle size={14} />,
+  filesystem: () => <FolderTree size={14} />,
 };
 
 const TOOL_CONFIG: { tool: Tool; shortcut?: string; letterShortcut?: string }[] = [
@@ -49,6 +51,7 @@ const TOOL_CONFIG: { tool: Tool; shortcut?: string; letterShortcut?: string }[] 
   { tool: "text", shortcut: "8", letterShortcut: "t" },
   { tool: "image", shortcut: "9" },
   { tool: "chat", letterShortcut: "c" },
+  { tool: "filesystem", letterShortcut: "f" },
 ];
 
 // Detect Mac for keyboard shortcut display
@@ -112,16 +115,7 @@ export function FloatingDrawingToolbar() {
         {/* Tool buttons - hidden when collapsed */}
         <Show when={!isCollapsed()}>
           <div class="flex flex-col">
-            {/* Hand tool (no shortcut) - when selected, drag = pan canvas */}
-            <ToolButton
-              icon={TOOL_ICONS.hand()}
-              isActive={activeTool() === "hand"}
-              onClick={() => setActiveTool("hand")}
-              letterShortcut="h"
-            />
-
-            {/* Main tools with shortcuts */}
-            <For each={TOOL_CONFIG.slice(1)}>
+            <For each={TOOL_CONFIG}>
               {({ tool, shortcut, letterShortcut }) => (
                 <ToolButton
                   icon={TOOL_ICONS[tool]()}
@@ -146,11 +140,10 @@ export function FloatingDrawingToolbar() {
         >
           <PanelLeft size={14} />
           <span
-            class={`absolute bottom-0 left-px text-[7px] font-mono font-medium ${
-              !store.sidebarVisible
-                ? "text-amber-600 dark:text-amber-500"
-                : "text-stone-400 dark:text-stone-500"
-            }`}
+            class={`absolute bottom-0 left-px text-[7px] font-mono font-medium ${!store.sidebarVisible
+              ? "text-amber-600 dark:text-amber-500"
+              : "text-stone-400 dark:text-stone-500"
+              }`}
           >
             {isMac ? "⌘b" : "^b"}
           </span>
