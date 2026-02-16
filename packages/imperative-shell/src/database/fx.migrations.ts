@@ -58,10 +58,10 @@ function buildMigrationsFolderCandidates(configDir: string, args: TBuildCandidat
 
   return [
     envOverride,
+    sourceTreeFolder,
     join(configDir, "database-migrations"),
     resolve(dirname(execPath), "..", "database-migrations"),
     embeddedFolder,
-    sourceTreeFolder,
   ].filter(Boolean) as string[];
 }
 
