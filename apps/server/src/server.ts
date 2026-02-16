@@ -293,7 +293,7 @@ export async function startServer(options: StartServerOptions): Promise<void> {
     },
   })
 
-  console.log(`Server listening on http://localhost:${httpPort}`);
+  console.log(`Server verion ${VIBECANVAS_VERSION} listening on http://localhost:${httpPort}`);
 
   setTimeout(() => {
     checkForUpgrade()
