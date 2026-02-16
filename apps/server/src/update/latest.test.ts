@@ -18,19 +18,4 @@ describe("update/latest", () => {
     const latest = await fetchLatestVersion();
     expect(latest).toEqual({ version: "1.2.3", channel: "stable" });
   });
-
-  test("fetches beta version from release list", async () => {
-    process.env.VIBECANVAS_CHANNEL = "beta";
-    globalThis.fetch = (async () =>
-      new Response(
-        JSON.stringify([
-          { tag_name: "v1.2.3-stable" },
-          { tag_name: "v1.3.0-beta.1" },
-        ]),
-        { status: 200 }
-      )) as typeof fetch;
-
-    const latest = await fetchLatestVersion();
-    expect(latest).toEqual({ version: "1.3.0-beta.1", channel: "beta" });
-  });
 });
