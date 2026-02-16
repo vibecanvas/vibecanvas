@@ -22,6 +22,13 @@ type TDirList = {
   children: TDirEntry[];
 };
 
+/**
+ * Lists immediate subdirectories (children only, not recursive) of a given directory path.
+ * Filters out hidden directories (starting with ".").
+ * @param portal - File system access portal
+ * @param args - Arguments containing the directory path
+ * @returns Current directory, parent path, and list of immediate subdirectory children
+ */
 function ctrlDirList(portal: TPortal, args: TArgs): TErrTuple<TDirList> {
   const { path: dirPath } = args;
 

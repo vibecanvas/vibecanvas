@@ -6,43 +6,26 @@ type TPortal = {
 };
 
 type TArgs = {
-  canvas_id: string;
-  title: string;
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-  is_collapsed?: boolean;
-  glob_pattern?: string | null;
-};
-
-type TFiletree = {
   id: string;
   canvas_id: string;
   title: string;
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-  is_collapsed: boolean;
-  glob_pattern: string | null;
-  created_at: Date;
+  path: string;
+  locked?: boolean;
+  glob_pattern?: string | null;
 };
+
+type TFiletree = typeof schema.filetrees.$inferSelect;
 
 function ctrlCreateFiletree(portal: TPortal, args: TArgs): TErrTuple<TFiletree> {
   try {
     const filetree = {
-      id: crypto.randomUUID(),
+      id: args.id,
       canvas_id: args.canvas_id,
+      path: args.path,
       title: args.title,
-      x: args.x,
-      y: args.y,
-      width: args.width,
-      height: args.height,
-      is_collapsed: args.is_collapsed ?? false,
+      locked: args.locked ?? false,
       glob_pattern: args.glob_pattern ?? null,
-      created_at: new Date(),
-    };
+    } as const;
     const result = portal.db.insert(schema.filetrees).values(filetree).returning().all();
     return [result[0] as TFiletree, null];
   } catch (error) {

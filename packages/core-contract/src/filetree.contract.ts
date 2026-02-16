@@ -4,26 +4,19 @@ import type * as _DrizzleZod from "drizzle-zod";
 import { z } from "zod";
 
 const createFiletreeInputSchema = z.object({
+  id: z.string(),
   canvas_id: z.string(),
   title: z.string(),
-  x: z.number(),
-  y: z.number(),
-  width: z.number(),
-  height: z.number(),
-  is_collapsed: z.boolean().optional(),
+  path: z.string(),
+  locked: z.boolean().optional(),
   glob_pattern: z.string().optional(),
 });
 
 const updateFiletreeBodySchema = z.object({
   title: z.string().optional(),
-  x: z.number().optional(),
-  y: z.number().optional(),
-  width: z.number().optional(),
-  height: z.number().optional(),
-  is_collapsed: z.boolean().optional(),
+  path: z.string().optional(),
+  locked: z.boolean().optional(),
   glob_pattern: z.string().nullable().optional(),
-  group_ids: z.array(z.string()).optional(),
-  bound_ids: z.array(z.string()).optional(),
 });
 
 export default oc.router({

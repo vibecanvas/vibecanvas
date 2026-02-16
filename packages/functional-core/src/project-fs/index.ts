@@ -4,6 +4,8 @@ export { default as ctrlDirHome } from "./ctrl.dir-home";
 export type { TDirHome } from "./ctrl.dir-home";
 export { default as ctrlDirList } from "./ctrl.dir-list";
 export type { TDirList, TDirEntry } from "./ctrl.dir-list";
+export { default as ctrlDirFiles } from "./ctrl.dir-files";
+export type { TDirFiles, TDirNode } from "./ctrl.dir-files";
 export { default as fxProjectFsFileTree } from "./fx.file-tree";
 export { default as fxProjectFsProjectRoot } from "./fx.project-root";
 export type { TProjectRoot } from "./fx.project-root";

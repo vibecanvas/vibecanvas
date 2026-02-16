@@ -10,6 +10,12 @@ type TPortal = {
 
 type TArgs = Record<string, never>;
 
+/**
+ * Lists all files in the project by first resolving the project root and then building a file tree.
+ * @param portal - Bun, filesystem, and process access portal
+ * @param args - Empty arguments (no input required)
+ * @returns File tree containing all project files
+ */
 async function ctrlProjectFsListFiles(
   portal: TPortal,
   _args: TArgs

@@ -2,16 +2,15 @@ import { ctrlCreateFiletree, ctrlDeleteFiletree, ctrlUpdateFiletree } from "@vib
 import { tExternal } from "@vibecanvas/server/error-fn";
 import { baseOs } from "../orpc.base";
 import type * as _DrizzleZod from "drizzle-zod";
+import { dbUpdatePublisher } from "./api.db";
 
 const create = baseOs.api.filetree.create.handler(async ({ input, context: { db } }) => {
   const [result, error] = ctrlCreateFiletree({ db }, {
+    id: input.id,
     canvas_id: input.canvas_id,
     title: input.title,
-    x: input.x,
-    y: input.y,
-    width: input.width,
-    height: input.height,
-    is_collapsed: input.is_collapsed,
+    path: input.path,
+    locked: input.locked,
     glob_pattern: input.glob_pattern,
   });
 
@@ -23,6 +22,10 @@ const create = baseOs.api.filetree.create.handler(async ({ input, context: { db 
   if (!filetree) {
     throw new Error("Filetree not found after creation");
   }
+
+  dbUpdatePublisher.publish(filetree.canvas_id, {
+    data: { change: 'insert', id: filetree.id, table: 'filetrees', record: filetree },
+  });
 
   return filetree;
 });
@@ -42,13 +45,24 @@ const update = baseOs.api.filetree.update.handler(async ({ input, context: { db 
     throw new Error("Filetree not found");
   }
 
+  dbUpdatePublisher.publish(filetree.canvas_id, {
+    data: { change: 'update', id: filetree.id, table: 'filetrees', record: filetree },
+  });
+
   return filetree;
 });
 
 const remove = baseOs.api.filetree.remove.handler(async ({ input, context: { db } }) => {
+  const filetree = db.query.filetrees.findFirst({ where: (table, { eq }) => eq(table.id, input.params.id) }).sync();
   const [, error] = ctrlDeleteFiletree({ db }, { filetreeId: input.params.id });
   if (error) {
     throw new Error(tExternal(error));
+  }
+
+  if (filetree) {
+    dbUpdatePublisher.publish(filetree.canvas_id, {
+      data: { change: 'delete', id: filetree.id, table: 'filetrees', record: filetree },
+    });
   }
 });
 
