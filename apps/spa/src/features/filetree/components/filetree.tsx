@@ -82,7 +82,7 @@ export function Filetree(props: TFiletreeProps) {
   );
 
   const fetchTreeData = async (path: string, globPattern: string | null) => {
-    const [listError, listResult] = await orpcWebsocketService.safeClient.api.project.dir.files({
+    const [listError, listResult] = await orpcWebsocketService.safeClient.api.file.files({
       query: {
         path,
         glob_pattern: globPattern ?? undefined,
@@ -162,7 +162,7 @@ export function Filetree(props: TFiletreeProps) {
   const ensureRowExists = async () => {
     if (filetree()) return;
 
-    const [homeError, homeResult] = await orpcWebsocketService.safeClient.api.project.dir.home();
+    const [homeError, homeResult] = await orpcWebsocketService.safeClient.api.file.home();
     if (homeError || !homeResult || "type" in homeResult) {
       setErrorMessage(homeError?.message ?? "Failed to resolve home directory");
       return;
@@ -208,7 +208,7 @@ export function Filetree(props: TFiletreeProps) {
   };
 
   const handleSetHome = async () => {
-    const [homeError, homeResult] = await orpcWebsocketService.safeClient.api.project.dir.home();
+    const [homeError, homeResult] = await orpcWebsocketService.safeClient.api.file.home();
     if (homeError || !homeResult || "type" in homeResult) {
       setErrorMessage(homeError?.message ?? "Failed to resolve home directory");
       return;
@@ -219,7 +219,7 @@ export function Filetree(props: TFiletreeProps) {
 
   const handleSetParentPath = async () => {
     if (!currentPath()) return;
-    const [listError, listResult] = await orpcWebsocketService.safeClient.api.project.dir.list({
+    const [listError, listResult] = await orpcWebsocketService.safeClient.api.file.list({
       query: { path: currentPath() },
     });
 
@@ -358,16 +358,16 @@ export function Filetree(props: TFiletreeProps) {
           class="w-full text-left px-2 py-1 text-xs flex items-center gap-1 border-b border-border/60 hover:bg-accent"
           classList={{ "bg-accent": isSelected() }}
           style={{ "padding-left": `${depth * 12 + 8}px` }}
-            onClick={() => {
-              setSelectedRowPath(node.path);
-              if (!node.is_dir) return;
-              const isCurrentlyOpen = openFolders().has(node.path);
-              toggleFolder(node.path);
-              if (!isCurrentlyOpen && node.children.length === 0) {
-                void loadSubdirectoryChildren(node.path);
-              }
-            }}
-          >
+          onClick={() => {
+            setSelectedRowPath(node.path);
+            if (!node.is_dir) return;
+            const isCurrentlyOpen = openFolders().has(node.path);
+            toggleFolder(node.path);
+            if (!isCurrentlyOpen && node.children.length === 0) {
+              void loadSubdirectoryChildren(node.path);
+            }
+          }}
+        >
           <Show when={node.is_dir} fallback={<span class="w-3" />}>
             <Show when={isOpen()} fallback={<ChevronRight size={12} class="text-muted-foreground" />}>
               <ChevronDown size={12} class="text-muted-foreground" />

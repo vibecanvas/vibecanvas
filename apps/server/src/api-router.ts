@@ -6,7 +6,6 @@ import { db } from './apis/api.db';
 import { file } from './apis/api.file';
 import { filetree } from './apis/api.filetree';
 import { notification } from './apis/api.notification';
-import { project } from './apis/api.project';
 
 export const router = {
   api: {
@@ -14,7 +13,6 @@ export const router = {
     chat,
     file,
     filetree,
-    project,
     "agent-logs": agentLogs,
     ai,
     db,

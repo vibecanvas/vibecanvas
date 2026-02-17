@@ -128,9 +128,9 @@ type TDirFilesResponse = {
 
 ### Server API
 
-#### `apps/server/src/apis/api.project.ts`
+#### `apps/server/src/apis/api.file.ts`
 
-- Exposes `project.dir.files` endpoint.
+- Exposes `file.files` endpoint.
 - Passes `path`, `glob_pattern`, `max_depth` into `ctrlDirFiles`.
 - Returns contract-safe error object (`{ type, message }`) when controller fails.
 
@@ -215,7 +215,7 @@ Overlay behavior:
 ### Server
 
 - `apps/server/src/apis/api.filetree.ts`
-- `apps/server/src/apis/api.project.ts`
+- `apps/server/src/apis/api.file.ts`
 
 ### SPA
 
@@ -237,9 +237,9 @@ flowchart TD
   R1 --> Q1[Component resource fetches filetree row via canvas.get]
   Q1 -->|missing| M1[api.filetree.create]
   Q1 -->|present| L1
-  M1 --> L1[api.project.dir.files query path/glob/max_depth]
+  M1 --> L1[api.file.files query path/glob/max_depth]
 
-  L1 --> S1[api.project.ts handler]
+  L1 --> S1[api.file.ts handler]
   S1 --> F1[ctrlDirFiles walk with dotfile filter + glob + depth cap]
   F1 --> S1
   S1 --> L1

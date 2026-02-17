@@ -34,7 +34,7 @@ export function PathPickerDialog(props: TPathPickerDialogProps) {
     setIsLoading(true);
     setErrorMessage(null);
 
-    const [listError, listResult] = await orpcWebsocketService.safeClient.api.project.dir.list({
+    const [listError, listResult] = await orpcWebsocketService.safeClient.api.file.list({
       query: { path },
     });
 
@@ -55,7 +55,7 @@ export function PathPickerDialog(props: TPathPickerDialogProps) {
     setIsLoading(true);
     setErrorMessage(null);
 
-    const [homeError, homeResult] = await orpcWebsocketService.safeClient.api.project.dir.home();
+    const [homeError, homeResult] = await orpcWebsocketService.safeClient.api.file.home();
 
     if (homeError || !homeResult || "type" in homeResult) {
       setIsLoading(false);
