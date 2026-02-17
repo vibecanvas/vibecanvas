@@ -1,7 +1,7 @@
 import { setStore, store } from "@/store"
 import { DEFAULT_FILL_COLOR, DEFAULT_STROKE_COLOR, getRecentColorStorageKey } from "@/features/floating-selection-menu/types"
 import type { TElement, TElementData, TElementStyle } from "@vibecanvas/shell/automerge/index"
-import { Point } from "pixi.js"
+import { Point, type FederatedPointerEvent } from "pixi.js"
 import type { ExtractElementData, TBackendElementOf } from "../renderables/element.abstract"
 import { ChatElement } from "../renderables/elements/chat/chat.class"
 import { DiamondElement } from "../renderables/elements/diamond/diamond.class"
@@ -312,7 +312,7 @@ function handleUp(ctx: Parameters<InputCommand>[0]): boolean {
     if (tool !== 'pen') {
       setStore('toolbarSlice', 'activeTool', 'select')
     }
-  } else if (!wasDragging && tool === 'text') {
+  } else if (tool === 'text') {
     // Text: create on single click (no drag)
     const drawingDefaults = getDrawingStyleDefaults(ctx.canvas.canvasId)
     const { data, style } = createTextElementDataAndStyle(drawingDefaults)
@@ -357,7 +357,7 @@ function handleUp(ctx: Parameters<InputCommand>[0]): boolean {
     requestAnimationFrame(() => {
       renderable.dispatch({ type: 'enter' })
     })
-  } else if (!wasDragging && tool === 'chat') {
+  } else if (tool === 'chat') {
     // Chat: create on single click (no drag)
     const { data, style } = createChatElementDataAndStyle()
     const element = createElement(
@@ -396,7 +396,7 @@ function handleUp(ctx: Parameters<InputCommand>[0]): boolean {
     })
 
     setStore('toolbarSlice', 'activeTool', 'select')
-  } else if (!wasDragging && tool === 'filesystem') {
+  } else if (tool === 'filesystem') {
     const { data, style } = createFiletreeElementDataAndStyle()
     const element = createElement(
       crypto.randomUUID(),
@@ -637,8 +637,8 @@ function createFiletreeElementDataAndStyle(): {
 /**
  * Get pressure from PointerEvent if available, otherwise return default.
  */
-function getPressure(event: Event): number {
-  if (event instanceof PointerEvent && event.pressure > 0) {
+function getPressure(event: FederatedPointerEvent): number {
+  if (event.pressure > 0) {
     return event.pressure
   }
   return 0.5 // Default for mouse without pressure
@@ -648,6 +648,6 @@ function getPressure(event: Event): number {
  * Detect if device supports pressure (e.g., tablet/stylus).
  * Returns true if pressure is between 0 and 1 (exclusive).
  */
-function getPressureSupported(event: Event): boolean {
-  return event instanceof PointerEvent && event.pressure > 0 && event.pressure < 1
+function getPressureSupported(event: FederatedPointerEvent): boolean {
+  return event.pressure > 0 && event.pressure < 1
 }
