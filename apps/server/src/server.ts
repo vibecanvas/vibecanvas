@@ -3,7 +3,7 @@
 import './preload/patch-negative-timeout';
 import { onError } from '@orpc/server';
 import { RPCHandler } from '@orpc/server/bun-ws';
-import { txConfigPath } from '@vibecanvas/core/vibecanvas-config/index';
+import { txConfigPath } from '@vibecanvas/core/vibecanvas-config/tx.config-path';
 import { setupAutomergeServer } from '@vibecanvas/shell';
 import { ClaudeAgent } from '@vibecanvas/shell/claude-agent/srv.claude-agent';
 import db from "@vibecanvas/shell/database/db";

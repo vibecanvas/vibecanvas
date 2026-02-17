@@ -1,7 +1,7 @@
 /// <reference path="../build-constants.d.ts" />
+import { txConfigPath } from "@vibecanvas/core/vibecanvas-config/tx.config-path";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "fs";
 import { join } from "path";
-import { txConfigPath } from "@vibecanvas/core/vibecanvas-config/index";
 
 const CHECK_INTERVAL_MS = 24 * 60 * 60 * 1000;
 
@@ -41,4 +41,5 @@ function shouldCheckNow(now = Date.now()): boolean {
   return now - lastCheckedAt >= CHECK_INTERVAL_MS;
 }
 
-export { shouldCheckNow, setLastCheckedAt, getLastCheckedAt, CHECK_INTERVAL_MS };
+export { CHECK_INTERVAL_MS, getLastCheckedAt, setLastCheckedAt, shouldCheckNow };
+

@@ -1,9 +1,11 @@
+import { ctrlCreateCanvas } from "@vibecanvas/core/canvas/ctrl.create-canvas";
+import { ctrlDeleteCanvas } from "@vibecanvas/core/canvas/ctrl.delete-canvas";
 import { ctrlGetFullCanvas } from "@vibecanvas/core/canvas/ctrl.get-full-canvas";
-import { ctrlCreateCanvas, ctrlDeleteCanvas, ctrlUpdateCanvas } from "@vibecanvas/core/canvas/index";
+import { ctrlUpdateCanvas } from "@vibecanvas/core/canvas/ctrl.update-canvas";
 import { tExternal } from "@vibecanvas/server/error-fn";
 import { baseOs } from "../orpc.base";
 
-const list = baseOs.api.canvas.list.handler(async ({ context: { db }}) => {
+const list = baseOs.api.canvas.list.handler(async ({ context: { db } }) => {
   return db.query.canvas.findMany().sync()
 })
 

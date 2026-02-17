@@ -2,15 +2,15 @@ import type db from "@vibecanvas/shell/database/db"
 import * as schema from "@vibecanvas/shell/database/schema"
 import { SQLiteError } from "bun:sqlite";
 
-type TPortal = {
+export type TPortal = {
   db: typeof db;
 };
 
-type TArgs = { name: string; automerge_url: string };
+export type TArgs = { name: string; automerge_url: string };
 
-type TCanvas = typeof schema.canvas.$inferSelect;
+export type TCanvas = typeof schema.canvas.$inferSelect;
 
-function ctrlCreateCanvas(portal: TPortal, args: TArgs): TErrTuple<TCanvas> {
+export function ctrlCreateCanvas(portal: TPortal, args: TArgs): TErrTuple<TCanvas> {
   try {
     const canvas = { id: crypto.randomUUID(), name: args.name, created_at: new Date(), automerge_url: args.automerge_url };
     const result = portal.db.insert(schema.canvas).values(canvas).returning().all()
@@ -23,6 +23,3 @@ function ctrlCreateCanvas(portal: TPortal, args: TArgs): TErrTuple<TCanvas> {
     return [null, { code: "CTRL.CANVAS.CREATE_CANVAS.FAILED", statusCode: 500, externalMessage: { en: "Failed to create canvas" } }];
   }
 }
-
-export default ctrlCreateCanvas;
-export type { TPortal, TArgs, TCanvas };

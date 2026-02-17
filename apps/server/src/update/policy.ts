@@ -1,10 +1,10 @@
 /// <reference path="../build-constants.d.ts" />
-import { readFileSync, existsSync, mkdirSync } from "fs";
-import { join } from "path";
 import { fnCliUpdateResolvePolicy } from "@vibecanvas/core/cli-update/index";
-import { txConfigPath } from "@vibecanvas/core/vibecanvas-config/index";
-import type { TInstallMethod, TUpdatePolicy } from "./types";
+import { txConfigPath } from "@vibecanvas/core/vibecanvas-config/tx.config-path";
+import { existsSync, mkdirSync, readFileSync } from "fs";
+import { join } from "path";
 import { readEnv } from "../runtime";
+import type { TInstallMethod, TUpdatePolicy } from "./types";
 
 type TConfigFile = {
   autoupdate?: boolean | "notify";
