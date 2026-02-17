@@ -46,10 +46,12 @@ export function Filetree(props: TFiletreeProps) {
   let lastPos = { x: 0, y: 0 };
   let globDebounceTimer: ReturnType<typeof setTimeout> | null = null;
   let didEnsureFiletreeRow = false;
+  let didHydrateGlobInput = false;
   const lazyLoadedFolderPaths = new Set<string>();
 
   const [currentPath, setCurrentPath] = createSignal("");
   const [globInput, setGlobInput] = createSignal("");
+  const [isGlobDirty, setIsGlobDirty] = createSignal(false);
   const [appliedGlob, setAppliedGlob] = createSignal<string | null>(null);
   const [isLoading, setIsLoading] = createSignal(false);
   const [errorMessage, setErrorMessage] = createSignal<string | null>(null);
@@ -108,6 +110,11 @@ export function Filetree(props: TFiletreeProps) {
       return result;
     }
   );
+
+  const normalizeGlob = (value: string | null | undefined): string | null => {
+    const normalized = (value ?? "").trim();
+    return normalized === "" ? null : normalized;
+  };
 
   const replaceNodeChildren = (nodes: TTreeNode[], targetPath: string, nextChildren: TTreeNode[]): TTreeNode[] => {
     let changed = false;
@@ -281,9 +288,23 @@ export function Filetree(props: TFiletreeProps) {
   createEffect(on(filetree, (row) => {
     if (!row) return;
     setCurrentPath(row.path);
-    const nextGlob = row.glob_pattern ?? "";
-    setGlobInput(nextGlob);
-    setAppliedGlob(nextGlob || null);
+
+    const persistedGlob = normalizeGlob(row.glob_pattern);
+    if (!isGlobDirty()) {
+      setAppliedGlob(persistedGlob);
+    }
+
+    if (!didHydrateGlobInput) {
+      setGlobInput(row.glob_pattern ?? "");
+      setIsGlobDirty(false);
+      didHydrateGlobInput = true;
+      return;
+    }
+
+    const draftGlob = normalizeGlob(globInput());
+    if (persistedGlob === draftGlob) {
+      setIsGlobDirty(false);
+    }
   }));
 
   createEffect(on(
@@ -307,13 +328,14 @@ export function Filetree(props: TFiletreeProps) {
   createEffect(on(globInput, (globValue) => {
     if (globDebounceTimer) clearTimeout(globDebounceTimer);
     globDebounceTimer = setTimeout(() => {
-      const normalized = globValue.trim();
-      const normalizedNullable = normalized === "" ? null : normalized;
+      const normalizedNullable = normalizeGlob(globValue);
       setAppliedGlob(normalizedNullable);
 
       const existingGlob = filetree()?.glob_pattern ?? null;
       if (existingGlob !== normalizedNullable) {
         void updateFiletree({ glob_pattern: normalizedNullable });
+      } else {
+        setIsGlobDirty(false);
       }
     }, 300);
   }));
@@ -440,7 +462,10 @@ export function Filetree(props: TFiletreeProps) {
         <input
           class="h-7 px-2 border border-border bg-background text-xs"
           value={globInput()}
-          onInput={(event) => setGlobInput(event.currentTarget.value)}
+          onInput={(event) => {
+            setIsGlobDirty(true);
+            setGlobInput(event.currentTarget.value);
+          }}
           placeholder="Glob pattern (optional)"
         />
       </div>
