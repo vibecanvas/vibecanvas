@@ -100,7 +100,7 @@ function handleMove(ctx: PointerInputContext): boolean {
 
   if (tool === 'rectangle') {
     if (!preview) {
-      const {data, style} = createRectElementDataAndStyle(w, h, 0, drawingDefaults)
+      const { data, style } = createRectElementDataAndStyle(w, h, 0, drawingDefaults)
       // TODO: use smaller ids
       const element = createElement(crypto.randomUUID(), x, y, data, style)
       const renderable = new RectElement(element as TBackendElementOf<'rect'>, ctx.canvas)
@@ -116,7 +116,7 @@ function handleMove(ctx: PointerInputContext): boolean {
 
   if (tool === 'diamond') {
     if (!preview) {
-      const {data, style} = createDiamondElementDataAndStyle(w, h, drawingDefaults)
+      const { data, style } = createDiamondElementDataAndStyle(w, h, drawingDefaults)
       const element = createElement(crypto.randomUUID(), x, y, data, style)
       const renderable = new DiamondElement(element as TBackendElementOf<'diamond'>, ctx.canvas)
       ctx.canvas.setPreviewElement(renderable)
@@ -134,7 +134,7 @@ function handleMove(ctx: PointerInputContext): boolean {
     const rx = w / 2
     const ry = h / 2
     if (!preview) {
-      const {data, style} = createEllipseElementDataAndStyle(rx, ry, drawingDefaults)
+      const { data, style } = createEllipseElementDataAndStyle(rx, ry, drawingDefaults)
       const element = createElement(crypto.randomUUID(), x, y, data, style)
       const renderable = new EllipseElement(element as TBackendElementOf<'ellipse'>, ctx.canvas)
       ctx.canvas.setPreviewElement(renderable)
@@ -452,7 +452,7 @@ function createRectElementDataAndStyle(
   h: number,
   radius: number,
   defaults: TDrawingStyleDefaults,
-): {data: ExtractElementData<'rect'>, style: TElementStyle} {
+): { data: ExtractElementData<'rect'>, style: TElementStyle } {
   return {
     data: { type: 'rect', w, h, radius },
     style: {
@@ -464,7 +464,7 @@ function createRectElementDataAndStyle(
   }
 }
 
-function createDiamondElementDataAndStyle(w: number, h: number, defaults: TDrawingStyleDefaults): {data: ExtractElementData<'diamond'>, style: TElementStyle} {
+function createDiamondElementDataAndStyle(w: number, h: number, defaults: TDrawingStyleDefaults): { data: ExtractElementData<'diamond'>, style: TElementStyle } {
   return {
     data: { type: 'diamond', w, h },
     style: {
@@ -476,7 +476,7 @@ function createDiamondElementDataAndStyle(w: number, h: number, defaults: TDrawi
   }
 }
 
-function createEllipseElementDataAndStyle(rx: number, ry: number, defaults: TDrawingStyleDefaults): {data: ExtractElementData<'ellipse'>, style: TElementStyle} {
+function createEllipseElementDataAndStyle(rx: number, ry: number, defaults: TDrawingStyleDefaults): { data: ExtractElementData<'ellipse'>, style: TElementStyle } {
   return {
     data: { type: 'ellipse', rx, ry },
     style: {
@@ -488,7 +488,7 @@ function createEllipseElementDataAndStyle(rx: number, ry: number, defaults: TDra
   }
 }
 
-function createTextElementDataAndStyle(defaults: TDrawingStyleDefaults): {data: ExtractElementData<'text'>, style: TElementStyle} {
+function createTextElementDataAndStyle(defaults: TDrawingStyleDefaults): { data: ExtractElementData<'text'>, style: TElementStyle } {
   return {
     data: {
       type: 'text',
@@ -595,7 +595,6 @@ function createChatElementDataAndStyle(): {
   return {
     data: {
       type: 'chat',
-      title: 'Chat',
       sessionId: null,
       w: 300,
       h: 500,
@@ -617,7 +616,6 @@ function createFiletreeElementDataAndStyle(): {
   return {
     data: {
       type: 'filetree',
-      title: 'File Tree',
       w: 360,
       h: 460,
       isCollapsed: false,
