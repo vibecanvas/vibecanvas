@@ -27,6 +27,7 @@ export type TFileFormat = z.infer<typeof fileFormatSchema>;
 const dirChildSchema = z.object({
   name: z.string(),
   path: z.string(),
+  isDir: z.boolean(),
 });
 
 const dirHomeSchema = z.object({
@@ -74,7 +75,7 @@ export default oc.router({
     .output(z.union([dirHomeSchema, projectDirErrorSchema])),
 
   list: oc
-    .input(z.object({ query: z.object({ path: z.string() }) }))
+    .input(z.object({ query: z.object({ path: z.string(), omitFiles: z.boolean().optional() }) }))
     .output(z.union([dirListSchema, projectDirErrorSchema])),
 
   files: oc

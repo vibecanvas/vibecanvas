@@ -57,7 +57,7 @@ const home = baseOs.api.file.home.handler(async ({ }) => {
 });
 
 const list = baseOs.api.file.list.handler(async ({ input }) => {
-  const [result, error] = ctrlDirList(dirPortal, { path: input.query.path });
+  const [result, error] = ctrlDirList(dirPortal, { ...input.query });
   if (error || !result) {
     return { type: error?.code ?? "ERROR", message: error?.externalMessage?.en ?? "Failed to list directory" };
   }

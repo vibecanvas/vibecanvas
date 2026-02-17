@@ -12,15 +12,16 @@ type TPortal = {
   };
 };
 
-type TArgs = { path: string };
+type TArgs = { path: string, omitFiles?: boolean };
 
-type TDirEntry = { name: string; path: string };
+type TDirEntry = { name: string; path: string, isDir: boolean };
 
 type TDirList = {
   current: string;
   parent: string | null;
   children: TDirEntry[];
 };
+
 
 /**
  * Lists immediate subdirectories (children only, not recursive) of a given directory path.
@@ -40,11 +41,13 @@ function ctrlDirList(portal: TPortal, args: TArgs): TErrTuple<TDirList> {
 
   try {
     const entries = portal.fs.readdirSync(dirPath, { withFileTypes: true }) as Dirent[];
+    console.log(args.omitFiles)
     const children = entries
-      .filter((entry) => entry.isDirectory() && !entry.name.startsWith("."))
+      .filter((entry) => !entry.name.startsWith(".") && (args.omitFiles ? entry.isDirectory() === true : false))
       .map((entry) => ({
         name: entry.name,
         path: portal.path.join(dirPath, entry.name),
+        isDir: entry.isDirectory(),
       }))
       .sort((a, b) => a.name.localeCompare(b.name));
 
