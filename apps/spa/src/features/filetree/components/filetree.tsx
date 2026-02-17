@@ -46,11 +46,11 @@ export function Filetree(props: TFiletreeProps) {
   let lastPos = { x: 0, y: 0 };
   let globDebounceTimer: ReturnType<typeof setTimeout> | null = null;
   let didEnsureFiletreeRow = false;
+  const lazyLoadedFolderPaths = new Set<string>();
 
   const [currentPath, setCurrentPath] = createSignal("");
   const [globInput, setGlobInput] = createSignal("");
   const [appliedGlob, setAppliedGlob] = createSignal<string | null>(null);
-  const [children, setChildren] = createSignal<TTreeNode[]>([]);
   const [isLoading, setIsLoading] = createSignal(false);
   const [errorMessage, setErrorMessage] = createSignal<string | null>(null);
   const [openFolders, setOpenFolders] = createSignal<Set<string>>(new Set());
@@ -75,6 +75,79 @@ export function Filetree(props: TFiletreeProps) {
       };
     }
   );
+
+  const fetchTreeData = async (path: string, globPattern: string | null) => {
+    const [listError, listResult] = await orpcWebsocketService.safeClient.api.project.dir.files({
+      query: {
+        path,
+        glob_pattern: globPattern ?? undefined,
+        max_depth: 5,
+      },
+    });
+
+    if (listError || !listResult || "type" in listResult) {
+      setErrorMessage(listError?.message ?? (listResult && "message" in listResult ? listResult.message : "Failed to load files"));
+      return null;
+    }
+
+    return listResult;
+  };
+
+  const [treeData, { mutate: mutateTreeData, refetch: refetchTreeData }] = createResource(
+    () => {
+      const path = currentPath();
+      if (!path) return null;
+      return { path, globPattern: appliedGlob() };
+    },
+    async (source) => {
+      if (!source) return null;
+      setIsLoading(true);
+      setErrorMessage(null);
+      const result = await fetchTreeData(source.path, source.globPattern);
+      setIsLoading(false);
+      return result;
+    }
+  );
+
+  const replaceNodeChildren = (nodes: TTreeNode[], targetPath: string, nextChildren: TTreeNode[]): TTreeNode[] => {
+    let changed = false;
+    const mapped = nodes.map((node) => {
+      if (node.path === targetPath && node.is_dir) {
+        changed = true;
+        return { ...node, children: nextChildren };
+      }
+
+      if (!node.is_dir || node.children.length === 0) {
+        return node;
+      }
+
+      const replacedChildren = replaceNodeChildren(node.children, targetPath, nextChildren);
+      if (replacedChildren !== node.children) {
+        changed = true;
+        return { ...node, children: replacedChildren };
+      }
+
+      return node;
+    });
+
+    return changed ? mapped : nodes;
+  };
+
+  const loadSubdirectoryChildren = async (folderPath: string) => {
+    if (lazyLoadedFolderPaths.has(folderPath)) return;
+
+    const result = await fetchTreeData(folderPath, appliedGlob());
+    if (!result) return;
+
+    lazyLoadedFolderPaths.add(folderPath);
+    mutateTreeData((prev) => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        children: replaceNodeChildren(prev.children, folderPath, result.children),
+      };
+    });
+  };
 
   const ensureRowExists = async () => {
     if (filetree()) return;
@@ -121,33 +194,6 @@ export function Filetree(props: TFiletreeProps) {
       ...updated,
       created_at: new Date(updated.created_at),
       updated_at: new Date(updated.updated_at),
-    });
-  };
-
-  const loadFiles = async (path: string, globPattern: string | null) => {
-    setIsLoading(true);
-    setErrorMessage(null);
-
-    const [listError, listResult] = await orpcWebsocketService.safeClient.api.project.dir.files({
-      query: {
-        path,
-        glob_pattern: globPattern ?? undefined,
-        max_depth: 5,
-      },
-    });
-
-    setIsLoading(false);
-
-    if (listError || !listResult || "type" in listResult) {
-      setErrorMessage(listError?.message ?? (listResult && "message" in listResult ? listResult.message : "Failed to load files"));
-      return;
-    }
-
-    setChildren(listResult.children);
-    setOpenFolders((prev) => {
-      const next = new Set(prev);
-      next.add(listResult.root);
-      return next;
     });
   };
 
@@ -240,10 +286,22 @@ export function Filetree(props: TFiletreeProps) {
     setAppliedGlob(nextGlob || null);
   }));
 
+  createEffect(on(
+    () => `${currentPath()}::${appliedGlob() ?? ""}`,
+    () => {
+      lazyLoadedFolderPaths.clear();
+    }
+  ));
+
   createEffect(() => {
-    const path = currentPath();
-    if (!path) return;
-    void loadFiles(path, appliedGlob());
+    const tree = treeData();
+    if (!tree) return;
+
+    setOpenFolders((prev) => {
+      const next = new Set(prev);
+      next.add(tree.root);
+      return next;
+    });
   });
 
   createEffect(on(globInput, (globValue) => {
@@ -275,11 +333,16 @@ export function Filetree(props: TFiletreeProps) {
           class="w-full text-left px-2 py-1 text-xs flex items-center gap-1 border-b border-border/60 hover:bg-accent"
           classList={{ "bg-accent": isSelected() }}
           style={{ "padding-left": `${depth * 12 + 8}px` }}
-          onClick={() => {
-            setSelectedRowPath(node.path);
-            if (node.is_dir) toggleFolder(node.path);
-          }}
-        >
+            onClick={() => {
+              setSelectedRowPath(node.path);
+              if (!node.is_dir) return;
+              const isCurrentlyOpen = openFolders().has(node.path);
+              toggleFolder(node.path);
+              if (!isCurrentlyOpen && node.children.length === 0) {
+                void loadSubdirectoryChildren(node.path);
+              }
+            }}
+          >
           <Show when={node.is_dir} fallback={<span class="w-3" />}>
             <Show when={isOpen()} fallback={<ChevronRight size={12} class="text-muted-foreground" />}>
               <ChevronDown size={12} class="text-muted-foreground" />
@@ -365,7 +428,10 @@ export function Filetree(props: TFiletreeProps) {
           <button
             type="button"
             class="h-6 px-2 border border-border bg-secondary text-secondary-foreground hover:bg-accent text-xs inline-flex items-center gap-1"
-            onClick={() => void loadFiles(currentPath(), appliedGlob())}
+            onClick={() => {
+              lazyLoadedFolderPaths.clear();
+              void refetchTreeData();
+            }}
             title="Refresh"
           >
             <RefreshCw size={11} /> Refresh
@@ -382,8 +448,8 @@ export function Filetree(props: TFiletreeProps) {
       <div class="flex-1 overflow-auto">
         <Show when={!isLoading()} fallback={<div class="p-3 text-xs text-muted-foreground">Loading files...</div>}>
           <Show when={!errorMessage()} fallback={<div class="p-3 text-xs text-destructive">{errorMessage()}</div>}>
-            <Show when={children().length > 0} fallback={<div class="p-3 text-xs text-muted-foreground">No files found</div>}>
-              <For each={children()}>{(node) => renderTree(node, 0)}</For>
+            <Show when={(treeData()?.children.length ?? 0) > 0} fallback={<div class="p-3 text-xs text-muted-foreground">No files found</div>}>
+              <For each={treeData()?.children ?? []}>{(node) => renderTree(node, 0)}</For>
             </Show>
           </Show>
         </Show>
