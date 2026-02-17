@@ -1,9 +1,10 @@
-import { ctrlCreateFiletree, ctrlDeleteFiletree, ctrlUpdateFiletree } from "@vibecanvas/core/filetree/index";
+import { ORPCError } from "@orpc/contract";
+import { ctrlCreateFiletree } from "@vibecanvas/core/filetree/ctrl.create-filetree";
+import { ctrlDeleteFiletree } from "@vibecanvas/core/filetree/ctrl.delete-filetree";
+import { ctrlUpdateFiletree } from "@vibecanvas/core/filetree/ctrl.update-filetree";
 import { tExternal } from "@vibecanvas/server/error-fn";
 import { baseOs } from "../orpc.base";
-import type * as _DrizzleZod from "drizzle-zod";
 import { dbUpdatePublisher } from "./api.db";
-import { ORPCError } from "@orpc/contract";
 
 const create = baseOs.api.filetree.create.handler(async ({ input, context: { db } }) => {
   const [result, error] = ctrlCreateFiletree({ db }, {

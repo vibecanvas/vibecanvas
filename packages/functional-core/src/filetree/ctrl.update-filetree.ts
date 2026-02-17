@@ -16,7 +16,7 @@ export type TUpdateArgs = {
 
 type TFiletree = typeof schema.filetrees.$inferSelect;
 
-function ctrlUpdateFiletree(portal: TPortal, args: TUpdateArgs): TErrTuple<TFiletree> {
+export function ctrlUpdateFiletree(portal: TPortal, args: TUpdateArgs): TErrTuple<TFiletree> {
   try {
     const updateData: Partial<typeof schema.filetrees.$inferInsert> = {};
 
@@ -51,5 +51,3 @@ function ctrlUpdateFiletree(portal: TPortal, args: TUpdateArgs): TErrTuple<TFile
     }];
   }
 }
-
-export default ctrlUpdateFiletree;

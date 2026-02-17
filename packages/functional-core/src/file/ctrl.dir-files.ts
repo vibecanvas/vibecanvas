@@ -1,7 +1,7 @@
 import { readdirSync, existsSync, statSync, type Dirent } from "fs";
 import { join } from "path";
 
-type TPortal = {
+export type TPortal = {
   fs: {
     readdirSync: typeof readdirSync;
     existsSync: typeof existsSync;
@@ -12,7 +12,7 @@ type TPortal = {
   };
 };
 
-type TArgs = {
+export type TArgs = {
   path: string;
   glob_pattern?: string;
   max_depth?: number;
@@ -62,7 +62,7 @@ function createMatcher(globPattern: string | undefined): ((relativePath: string,
  * @param args - Arguments containing path and optional glob_pattern
  * @returns Directory contents with root path and list of files/directories
  */
-function ctrlDirFiles(portal: TPortal, args: TArgs): TErrTuple<TDirFiles> {
+export function ctrlDirFiles(portal: TPortal, args: TArgs): TErrTuple<TDirFiles> {
   const rootPath = args.path;
 
   if (!portal.fs.existsSync(rootPath)) {
@@ -132,6 +132,3 @@ function ctrlDirFiles(portal: TPortal, args: TArgs): TErrTuple<TDirFiles> {
   const children = walk(rootPath, "", 0);
   return [{ root: rootPath, children }, null];
 }
-
-export default ctrlDirFiles;
-export type { TPortal, TArgs, TDirFiles, TDirNode };

@@ -10,7 +10,7 @@ type TArgs = { id: string } & Partial<Pick<TChat, 'title' | 'local_path'>>;
 
 type TChat = typeof schema.chats.$inferSelect;
 
-function ctrlUpdateChat(portal: TPortal, args: TArgs): TErrTuple<TChat> {
+export function ctrlUpdateChat(portal: TPortal, args: TArgs): TErrTuple<TChat> {
   try {
     const updateData: Partial<typeof schema.chats.$inferInsert> = {};
 
@@ -43,5 +43,3 @@ function ctrlUpdateChat(portal: TPortal, args: TArgs): TErrTuple<TChat> {
     }];
   }
 }
-
-export default ctrlUpdateChat;

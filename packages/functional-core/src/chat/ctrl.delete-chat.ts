@@ -12,15 +12,15 @@ type TArgs = {
   id: string;
 };
 
-function ctrlDeleteChat(portal: TPortal, args: TArgs): TErrTuple<boolean> {
+export function ctrlDeleteChat(portal: TPortal, args: TArgs): TErrTuple<boolean> {
   try {
 
     const result = portal.db.delete(schema.chats).where(eq(schema.chats.id, args.id)).returning().all()
     const deletedChat = result.at(0)
     if (!deletedChat) return [false, null];
-    if(deletedChat.session_id) {
+    if (deletedChat.session_id) {
       const agent = portal.claudeAgent.instances.get(deletedChat.session_id)
-      if(agent) agent[Symbol.dispose]()
+      if (agent) agent[Symbol.dispose]()
     }
 
     return [true, null];
@@ -29,6 +29,3 @@ function ctrlDeleteChat(portal: TPortal, args: TArgs): TErrTuple<boolean> {
     return [null, { code: "CTRL.CHAT.DELETE_CHAT.FAILED", statusCode: 500, externalMessage: { en: "Failed to delete chat" } }];
   }
 }
-
-export default ctrlDeleteChat;
-export type { TPortal, TArgs };

@@ -1,11 +1,11 @@
 import type db from "@vibecanvas/shell/database/db"
 import * as schema from "@vibecanvas/shell/database/schema"
 
-type TPortal = {
+export type TPortal = {
   db: typeof db;
 };
 
-type TArgs = {
+export type TArgs = {
   id: string;
   canvas_id: string;
   title: string;
@@ -16,7 +16,7 @@ type TArgs = {
 
 type TFiletree = typeof schema.filetrees.$inferSelect;
 
-function ctrlCreateFiletree(portal: TPortal, args: TArgs): TErrTuple<TFiletree> {
+export function ctrlCreateFiletree(portal: TPortal, args: TArgs): TErrTuple<TFiletree> {
   try {
     const filetree = {
       id: args.id,
@@ -33,6 +33,3 @@ function ctrlCreateFiletree(portal: TPortal, args: TArgs): TErrTuple<TFiletree> 
     return [null, { code: "CTRL.FILETREE.CREATE_FILETREE.FAILED", statusCode: 500, externalMessage: { en: "Failed to create filetree" } }];
   }
 }
-
-export default ctrlCreateFiletree;
-export type { TPortal, TArgs, TFiletree };

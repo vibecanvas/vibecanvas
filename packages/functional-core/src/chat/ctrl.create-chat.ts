@@ -10,10 +10,10 @@ type TArgs = Pick<TChat, 'canvas_id' | 'title' | 'harness' | 'local_path'>;
 
 type TChat = typeof schema.chats.$inferSelect;
 
-function ctrlCreateChat(portal: TPortal, args: TArgs): TErrTuple<TChat> {
+export function ctrlCreateChat(portal: TPortal, args: TArgs): TErrTuple<TChat> {
   try {
 
-    const chat:typeof schema.chats.$inferInsert = {
+    const chat: typeof schema.chats.$inferInsert = {
       id: crypto.randomUUID(),
       canvas_id: args.canvas_id,
       title: args.title,
@@ -27,6 +27,3 @@ function ctrlCreateChat(portal: TPortal, args: TArgs): TErrTuple<TChat> {
     return [null, { code: "CTRL.CHAT.CREATE_CHAT.FAILED", statusCode: 500, externalMessage: { en: "Failed to create chat" } }];
   }
 }
-
-export default ctrlCreateChat;
-export type { TArgs, TChat, TPortal };

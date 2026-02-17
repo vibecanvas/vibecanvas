@@ -15,7 +15,7 @@ type TDeleteResult = {
   deleted: boolean;
 };
 
-function ctrlDeleteFiletree(portal: TPortal, args: TDeleteArgs): TErrTuple<TDeleteResult> {
+export function ctrlDeleteFiletree(portal: TPortal, args: TDeleteArgs): TErrTuple<TDeleteResult> {
   try {
     const result = portal.db
       .delete(schema.filetrees)
@@ -41,5 +41,3 @@ function ctrlDeleteFiletree(portal: TPortal, args: TDeleteArgs): TErrTuple<TDele
     }];
   }
 }
-
-export default ctrlDeleteFiletree;

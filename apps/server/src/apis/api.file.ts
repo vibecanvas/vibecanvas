@@ -1,4 +1,6 @@
-import { ctrlDirFiles, ctrlDirHome, ctrlDirList } from "@vibecanvas/core/project-fs/index";
+import { ctrlDirFiles } from "@vibecanvas/core/file/ctrl.dir-files";
+import { ctrlDirHome } from "@vibecanvas/core/file/ctrl.dir-home";
+import { ctrlDirList } from "@vibecanvas/core/file/ctrl.dir-list";
 import { files as dbFiles } from "@vibecanvas/shell/database/schema";
 import { createHash } from "crypto";
 import { existsSync, readdirSync, statSync } from "fs";

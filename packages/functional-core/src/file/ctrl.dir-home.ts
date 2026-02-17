@@ -4,9 +4,9 @@ type TPortal = {
   os: { homedir: typeof homedir };
 };
 
-type TArgs = Record<string, never>;
+export type TArgs = Record<string, never>;
 
-type TDirHome = { path: string };
+export type TDirHome = { path: string };
 
 /**
  * Retrieves the current user's home directory path from the operating system.
@@ -14,7 +14,7 @@ type TDirHome = { path: string };
  * @param args - Empty arguments (no input required)
  * @returns Home directory path
  */
-function ctrlDirHome(portal: TPortal, _args: TArgs): TErrTuple<TDirHome> {
+export function ctrlDirHome(portal: TPortal, _args: TArgs): TErrTuple<TDirHome> {
   try {
     const home = portal.os.homedir();
     return [{ path: home }, null];
@@ -22,6 +22,3 @@ function ctrlDirHome(portal: TPortal, _args: TArgs): TErrTuple<TDirHome> {
     return [null, { code: "CTRL.PROJECT_FS.DIR_HOME.FAILED", statusCode: 500, externalMessage: { en: "Failed to get home directory" } }];
   }
 }
-
-export default ctrlDirHome;
-export type { TPortal, TArgs, TDirHome };
