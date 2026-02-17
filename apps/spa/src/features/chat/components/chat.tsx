@@ -11,7 +11,7 @@ import * as schema from "@vibecanvas/shell/database/schema"
 import { orpcWebsocketService } from "@/services/orpc-websocket"
 import { AElement } from "@/features/canvas-crdt/renderables/element.abstract"
 import { ChatHeader } from "./chat-header"
-import { ChatPathPickerDialog } from "./chat-path-picker-dialog"
+import { PathPickerDialog } from "@/components/path-picker-dialog"
 import { setStore, store } from "@/store"
 import { TBackendChat } from "@/types/backend.types"
 import { applyChangesToCRDT } from "@/features/canvas-crdt/changes"
@@ -299,7 +299,7 @@ export function Chat(props: TChatProps) {
         onSend={sendMessage}
       />
       <StatusLine state={props.state} />
-      <ChatPathPickerDialog
+      <PathPickerDialog
         open={isPathDialogOpen()}
         onOpenChange={setIsPathDialogOpen}
         initialPath={chat()?.local_path ?? null}
@@ -307,6 +307,8 @@ export function Chat(props: TChatProps) {
           await updateLocalPath(path)
           setIsPathDialogOpen(false)
         }}
+        title="Select Chat Folder"
+        description="Path change starts a new session."
       />
     </div>
   )

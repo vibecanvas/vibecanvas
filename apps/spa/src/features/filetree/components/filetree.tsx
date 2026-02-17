@@ -2,6 +2,7 @@ import { applyChangesToCRDT } from "@/features/canvas-crdt/changes";
 import type { AElement } from "@/features/canvas-crdt/renderables/element.abstract";
 import { orpcWebsocketService } from "@/services/orpc-websocket";
 import type { TBackendFileTree } from "@/types/backend.types";
+import { PathPickerDialog } from "@/components/path-picker-dialog";
 import type { Accessor } from "solid-js";
 import { For, Show, createEffect, createResource, createSignal, on, onCleanup, onMount } from "solid-js";
 import ChevronDown from "lucide-solid/icons/chevron-down";
@@ -12,6 +13,7 @@ import FolderOpen from "lucide-solid/icons/folder-open";
 import House from "lucide-solid/icons/house";
 import RefreshCw from "lucide-solid/icons/refresh-cw";
 import ArrowUp from "lucide-solid/icons/arrow-up";
+import FolderSearch from "lucide-solid/icons/folder-search";
 import { FiletreeHeader } from "./filetree-header";
 
 export type TFiletreeBounds = {
@@ -57,6 +59,7 @@ export function Filetree(props: TFiletreeProps) {
   const [errorMessage, setErrorMessage] = createSignal<string | null>(null);
   const [openFolders, setOpenFolders] = createSignal<Set<string>>(new Set());
   const [selectedRowPath, setSelectedRowPath] = createSignal<string | null>(null);
+  const [isPathDialogOpen, setIsPathDialogOpen] = createSignal(false);
 
   const [filetree, { mutate: mutateFiletree, refetch: refetchFiletree }] = createResource(
     () => ({ canvasId: props.canvasId, filetreeId: props.filetreeId }),
@@ -458,6 +461,14 @@ export function Filetree(props: TFiletreeProps) {
           >
             <RefreshCw size={11} /> Refresh
           </button>
+          <button
+            type="button"
+            class="h-6 px-2 border border-border bg-secondary text-secondary-foreground hover:bg-accent text-xs inline-flex items-center gap-1"
+            onClick={() => setIsPathDialogOpen(true)}
+            title="Pick folder"
+          >
+            <FolderSearch size={11} /> Path
+          </button>
         </div>
         <input
           class="h-7 px-2 border border-border bg-background text-xs"
@@ -479,6 +490,18 @@ export function Filetree(props: TFiletreeProps) {
           </Show>
         </Show>
       </div>
+
+      <PathPickerDialog
+        open={isPathDialogOpen()}
+        onOpenChange={setIsPathDialogOpen}
+        initialPath={currentPath() || null}
+        onPathSelected={async (path) => {
+          setCurrentPath(path);
+          await updateFiletree({ path });
+          setIsPathDialogOpen(false);
+        }}
+        title="Select Filetree Folder"
+      />
     </div>
   );
 }
