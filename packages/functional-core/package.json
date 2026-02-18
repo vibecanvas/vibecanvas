@@ -12,6 +12,8 @@
   "dependencies": {
     "@anthropic-ai/claude-agent-sdk": "catalog:",
     "@vibecanvas/shell": "workspace:*",
+    "@automerge/automerge": "catalog:",
+    "@automerge/automerge-repo": "catalog:",
     "drizzle-orm": "catalog:",
     "typescript": "catalog:"
   }

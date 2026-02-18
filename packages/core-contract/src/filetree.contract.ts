@@ -4,12 +4,10 @@ import type * as _DrizzleZod from "drizzle-zod";
 import { z } from "zod";
 
 const createFiletreeInputSchema = z.object({
-  id: z.string(),
   canvas_id: z.string(),
-  title: z.string(),
-  path: z.string(),
-  locked: z.boolean().optional(),
-  glob_pattern: z.string().optional(),
+  path: z.string().optional(),
+  x: z.number(),
+  y: z.number()
 });
 
 const updateFiletreeBodySchema = z.object({

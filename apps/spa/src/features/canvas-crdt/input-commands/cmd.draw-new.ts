@@ -1,44 +1,22 @@
-import { setStore, store } from "@/store"
 import { DEFAULT_FILL_COLOR, DEFAULT_STROKE_COLOR, getRecentColorStorageKey } from "@/features/floating-selection-menu/types"
-import type { TElement, TElementData, TElementStyle } from "@vibecanvas/shell/automerge/index"
+import { setStore, store } from "@/store"
+import { createElement } from "@vibecanvas/core/automerge/fn.create-element"
+import type { TElementStyle } from "@vibecanvas/shell/automerge/index"
 import { Point, type FederatedPointerEvent } from "pixi.js"
 import type { ExtractElementData, TBackendElementOf } from "../renderables/element.abstract"
+import { ArrowElement } from "../renderables/elements/arrow/arrow.class"
 import { ChatElement } from "../renderables/elements/chat/chat.class"
 import { DiamondElement } from "../renderables/elements/diamond/diamond.class"
 import { EllipseElement } from "../renderables/elements/ellipse/ellipse.class"
+import { FiletreeElement } from "../renderables/elements/filetree/filetree.class"
 import { LineElement } from "../renderables/elements/line/line.class"
-import { ArrowElement } from "../renderables/elements/arrow/arrow.class"
+import { PenElement } from "../renderables/elements/pen/pen.class"
 import { RectElement } from "../renderables/elements/rect/rect.class"
 import { TextElement } from "../renderables/elements/text/text.class"
-import { PenElement } from "../renderables/elements/pen/pen.class"
-import { FiletreeElement } from "../renderables/elements/filetree/filetree.class"
 import type { InputCommand, PointerInputContext } from "./types"
 import { isElementTarget } from "./types"
+import { orpcWebsocketService } from "@/services/orpc-websocket"
 
-export function createElement(
-  id: string,
-  x: number,
-  y: number,
-  data: TElementData,
-  style: TElementStyle,
-  zIndex: string = 'a'
-): TElement {
-  const now = Date.now()
-  return {
-    id,
-    x,
-    y,
-    angle: 0,
-    zIndex,
-    parentGroupId: null,
-    bindings: [],
-    locked: false,
-    createdAt: now,
-    updatedAt: now,
-    data,
-    style,
-  }
-}
 
 
 const DRAWING_TOOLS = ['rectangle', 'diamond', 'ellipse', 'arrow', 'line', 'pen', 'text', 'image', 'chat', 'filesystem'] as const
@@ -397,38 +375,45 @@ function handleUp(ctx: Parameters<InputCommand>[0]): boolean {
 
     setStore('toolbarSlice', 'activeTool', 'select')
   } else if (tool === 'filesystem') {
-    const { data, style } = createFiletreeElementDataAndStyle()
-    const element = createElement(
-      crypto.randomUUID(),
-      dragStartWorld.x,
-      dragStartWorld.y,
-      data,
-      style
-    )
-    const renderable = new FiletreeElement(element as TBackendElementOf<'filetree'>, ctx.canvas)
+    // const { data, style } = createFiletreeElementDataAndStyle()
+    // const element = createElement(
+    //   crypto.randomUUID(),
+    //   dragStartWorld.x,
+    //   dragStartWorld.y,
+    //   data,
+    //   style
+    // )
+    // const renderable = new FiletreeElement(element as TBackendElementOf<'filetree'>, ctx.canvas)
 
-    ctx.canvas.addElement(renderable)
+    // ctx.canvas.addElement(renderable)
 
-    const elementId = renderable.id
-    const elementData = { ...renderable.element }
+    // const elementId = renderable.id
+    // const elementData = { ...renderable.element }
 
-    ctx.canvas.handle.change(doc => {
-      doc.elements[elementId] = renderable.element
+    // ctx.canvas.handle.change(doc => {
+    //   doc.elements[elementId] = renderable.element
+    // })
+    orpcWebsocketService.safeClient.api.filetree.create({
+      canvas_id: ctx.canvas.canvasId,
+      x: dragStartWorld.x,
+      y: dragStartWorld.y,
+    }).then(([err, filetree]) => {
+      console.log(err, filetree)
+      // ctx.canvas.undoManager.record({
+      //   label: 'Create File Tree',
+      //   undo: () => {
+      //     ctx.canvas.handle.change(doc => {
+      //       delete doc.elements[elementId]
+      //     })
+      //   },
+      //   redo: () => {
+      //     ctx.canvas.handle.change(doc => {
+      //       doc.elements[elementId] = { ...elementData }
+      //     })
+      //   }
+      // })
     })
 
-    ctx.canvas.undoManager.record({
-      label: 'Create File Tree',
-      undo: () => {
-        ctx.canvas.handle.change(doc => {
-          delete doc.elements[elementId]
-        })
-      },
-      redo: () => {
-        ctx.canvas.handle.change(doc => {
-          doc.elements[elementId] = { ...elementData }
-        })
-      }
-    })
 
     setStore('toolbarSlice', 'activeTool', 'select')
   } else {
@@ -604,27 +589,6 @@ function createChatElementDataAndStyle(): {
       backgroundColor: '#9775fa',
       strokeColor: '#7950f2',
       strokeWidth: 2,
-      opacity: 1,
-    },
-  }
-}
-
-function createFiletreeElementDataAndStyle(): {
-  data: ExtractElementData<'filetree'>
-  style: TElementStyle
-} {
-  return {
-    data: {
-      type: 'filetree',
-      w: 360,
-      h: 460,
-      isCollapsed: false,
-      globPattern: null,
-    },
-    style: {
-      backgroundColor: '#f8f9fa',
-      strokeColor: '#ced4da',
-      strokeWidth: 1,
       opacity: 1,
     },
   }

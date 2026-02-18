@@ -1,21 +1,20 @@
 /// <reference path="./build-constants.d.ts" />
 // Initialize global functions (tExternal, tInternal, executeRollbacks)
-import './preload/patch-negative-timeout';
 import { onError } from '@orpc/server';
 import { RPCHandler } from '@orpc/server/bun-ws';
-import { txConfigPath } from '@vibecanvas/core/vibecanvas-config/tx.config-path';
-import { setupAutomergeServer } from '@vibecanvas/shell';
 import { ClaudeAgent } from '@vibecanvas/shell/claude-agent/srv.claude-agent';
 import db from "@vibecanvas/shell/database/db";
-import { existsSync, mkdirSync } from 'fs';
+import { existsSync } from 'fs';
 import { createServer } from 'net';
 import { join, normalize } from 'path';
-import { fileMetaFromPathname } from './files/file-storage';
 import { router } from './api-router';
-import { baseOs } from './orpc.base';
 import { publishNotification } from './apis/api.notification';
-import checkForUpgrade from './update';
+import { fileMetaFromPathname } from './files/file-storage';
+import { baseOs } from './orpc.base';
+import './preload/patch-negative-timeout';
 import { getServerVersion } from './runtime';
+import checkForUpgrade from './update';
+import { wsAdapter } from './automerge-repo';
 
 // Export API type for Eden client
 export type App = any;
@@ -89,12 +88,6 @@ function getPublicAssetPath(pathname: string): string | null {
 export async function startServer(options: StartServerOptions): Promise<void> {
   const { port: preferredPort } = options;
 
-  // Get database path from config
-  const [config, configError] = txConfigPath({ fs: { existsSync, mkdirSync } }, { isCompiled: true });
-  if (configError) {
-    console.error('[Config Error]', configError);
-    process.exit(1);
-  }
 
   const claudeRuntime = ClaudeAgent.bootstrapRuntime();
   if (claudeRuntime.available) {
@@ -103,8 +96,6 @@ export async function startServer(options: StartServerOptions): Promise<void> {
     console.warn(`[Claude] Runtime unavailable: ${claudeRuntime.reason}`);
   }
 
-  // Initialize Automerge repo with SQLite storage and WebSocket adapter
-  const { wsAdapter } = setupAutomergeServer(config.databasePath);
 
   // Stable wrapper per connection.
   // We keep a separate wrapper object to avoid mutating websocket internals.
