@@ -18,11 +18,11 @@ function readEnv<K extends keyof TServerEnv>(key: K): TServerEnv[K] {
 }
 
 function getServerVersion(): string {
-  return VIBECANVAS_VERSION || "0.0.0";
+  return typeof VIBECANVAS_VERSION !== "undefined" ? VIBECANVAS_VERSION : "0.0.0";
 }
 
 function getUpdateChannel(): TUpdateChannel {
-  const channel = VIBECANVAS_CHANNEL;
+  const channel = typeof VIBECANVAS_CHANNEL !== "undefined" ? VIBECANVAS_CHANNEL : undefined;
   if (channel === "stable" || channel === "beta" || channel === "nightly") {
     return channel;
   }

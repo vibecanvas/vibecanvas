@@ -1,7 +1,7 @@
 import { describe, test, expect } from "bun:test";
 import { resolve } from "path";
 import { exists } from "fs/promises";
-import fxProjectFsFileTree from "./fx.file-tree";
+import { fxProjectFsFileTree } from "./fx.file-tree";
 import { ProjectFsErr } from "./err.codes";
 
 function createMockSpawn(
@@ -287,7 +287,7 @@ describe("fxProjectFsFileTree", () => {
       // Should include this test file
       expect(
         result!.files.some((f) =>
-          f.includes("project-fs/fx.file-tree.test.ts")
+          f.includes("file/fx.file-tree.test.ts")
         )
       ).toBe(true);
 
