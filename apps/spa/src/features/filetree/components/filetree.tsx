@@ -205,12 +205,10 @@ export function Filetree(props: TFiletreeProps) {
     }
 
     const [createError, created] = await orpcWebsocketService.safeClient.api.filetree.create({
-      id: props.filetreeId,
       canvas_id: props.canvasId,
-      title: "File Tree",
       path: homeResult.path,
-      glob_pattern: undefined,
-      locked: false,
+      x: 0,
+      y: 0,
     });
 
     if (createError || !created) {
