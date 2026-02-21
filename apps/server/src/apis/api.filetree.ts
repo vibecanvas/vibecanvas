@@ -6,6 +6,8 @@ import { repo } from "@vibecanvas/server/automerge-repo";
 import { tExternal } from "@vibecanvas/server/error-fn";
 import { baseOs } from "../orpc.base";
 import { dbUpdatePublisher } from "./api.db";
+import { EventPublisher } from "@orpc/server";
+import { FileSystemWatcher } from "@vibecanvas/shell/filesystem-watcher/srv.filesystem-watcher";
 
 const create = baseOs.api.filetree.create.handler(async ({ input, context: { db } }) => {
   const [result, error] = await ctrlCreateFiletree({ db, repo }, {
@@ -70,8 +72,28 @@ const remove = baseOs.api.filetree.remove.handler(async ({ input, context: { db 
   }
 });
 
+const fsPublisher = new EventPublisher<{ [path: string]: { eventType: 'rename' | 'change', fileName: string } }>()
+const fileSystemWatcher = new FileSystemWatcher(fsPublisher);
+
+const watch = baseOs.api.filetree.watch.handler(async function* ({ input: { params: { uuid, path } } }) {
+  fileSystemWatcher.registerPath(uuid, path);
+  try {
+    for await (const event of fsPublisher.subscribe(path)) {
+      yield event;
+    }
+  } finally {
+    fileSystemWatcher.unregisterPath(uuid);
+  }
+});
+
+const unwatch = baseOs.api.filetree.unwatch.handler(async ({ input: { params: { uuid } }, context: { db } }) => {
+  fileSystemWatcher.unregisterPath(uuid);
+});
+
 export const filetree = {
   create,
   update,
   remove,
+  watch,
+  unwatch,
 };

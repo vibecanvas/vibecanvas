@@ -144,6 +144,7 @@
         "@automerge/automerge": "catalog:",
         "@automerge/automerge-repo": "catalog:",
         "@automerge/automerge-repo-network-websocket": "catalog:",
+        "@orpc/server": "catalog:",
         "@vibecanvas/core": "workspace:*",
         "drizzle-orm": "catalog:",
         "drizzle-zod": "catalog:",

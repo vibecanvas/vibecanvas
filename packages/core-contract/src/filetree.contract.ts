@@ -1,4 +1,4 @@
-import { oc } from "@orpc/contract";
+import { eventIterator, oc } from "@orpc/contract";
 import { ZFileTreeSelect } from "@vibecanvas/shell/database/schema";
 import type * as _DrizzleZod from "drizzle-zod";
 import { z } from "zod";
@@ -29,4 +29,13 @@ export default oc.router({
   remove: oc
     .input(z.object({ params: z.object({ id: z.string() }) }))
     .output(z.void()),
+
+  watch: oc
+    .input(z.object({ params: z.object({ uuid: z.string(), path: z.string() }) }))
+    .output(eventIterator(z.object({ eventType: z.enum(['rename', 'change']), fileName: z.string() }))),
+
+  unwatch: oc
+    .input(z.object({ params: z.object({ uuid: z.string() }) }))
+    .output(z.void()),
+
 });
