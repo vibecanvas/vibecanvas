@@ -51,6 +51,18 @@ export function Filetree(props: TFiletreeProps) {
   let didHydrateGlobInput = false;
   const lazyLoadedFolderPaths = new Set<string>();
 
+  let watchAbort: AbortController | null = null;
+  let currentWatchUuid: string | null = null;
+
+  const stopWatching = () => {
+    watchAbort?.abort();
+    watchAbort = null;
+    if (currentWatchUuid) {
+      void orpcWebsocketService.safeClient.api.filetree.unwatch({ params: { uuid: currentWatchUuid } });
+      currentWatchUuid = null;
+    }
+  };
+
   const [currentPath, setCurrentPath] = createSignal("");
   const [globInput, setGlobInput] = createSignal("");
   const [isGlobDirty, setIsGlobDirty] = createSignal(false);
@@ -113,6 +125,30 @@ export function Filetree(props: TFiletreeProps) {
       return result;
     }
   );
+
+  const startWatching = async (path: string) => {
+    stopWatching();
+
+    const uuid = crypto.randomUUID();
+    currentWatchUuid = uuid;
+    const abort = new AbortController();
+    watchAbort = abort;
+
+    const [err, iterator] = await orpcWebsocketService.safeClient.api.filetree.watch({
+      params: { uuid, path },
+    });
+    if (err || !iterator || abort.signal.aborted) return;
+
+    try {
+      for await (const _event of iterator) {
+        if (abort.signal.aborted) break;
+        lazyLoadedFolderPaths.clear();
+        void refetchTreeData();
+      }
+    } catch {
+      // stream ended or aborted
+    }
+  };
 
   const normalizeGlob = (value: string | null | undefined): string | null => {
     const normalized = (value ?? "").trim();
@@ -343,8 +379,14 @@ export function Filetree(props: TFiletreeProps) {
     }, 300);
   }));
 
+  createEffect(on(currentPath, (path) => {
+    if (!path) return;
+    void startWatching(path);
+  }));
+
   onCleanup(() => {
     if (globDebounceTimer) clearTimeout(globDebounceTimer);
+    stopWatching();
   });
 
   const renderTree = (node: TTreeNode, depth: number) => {

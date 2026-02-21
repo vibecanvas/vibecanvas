@@ -86,7 +86,7 @@ const watch = baseOs.api.filetree.watch.handler(async function* ({ input: { para
   }
 });
 
-const unwatch = baseOs.api.filetree.unwatch.handler(async ({ input: { params: { uuid } }, context: { db } }) => {
+const unwatch = baseOs.api.filetree.unwatch.handler(async ({ input: { params: { uuid } } }) => {
   fileSystemWatcher.unregisterPath(uuid);
 });
 
