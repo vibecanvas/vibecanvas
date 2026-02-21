@@ -1,7 +1,7 @@
 import { dirname, join, resolve } from "path";
-import { existsSync, mkdirSync, writeFileSync } from "fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "fs";
 import { migrate } from "drizzle-orm/bun-sqlite/migrator";
-import { getEmbeddedMigrationContent, listEmbeddedMigrationFiles } from "./embedded-migrations";
+import { getEmbeddedMigrationPath, listEmbeddedMigrationFiles } from "./embedded-migrations";
 
 type TArgs = {
   configDir: string;
@@ -35,14 +35,14 @@ function fxExtractEmbeddedMigrations(configDir: string): string | null {
   const migrationFiles = listEmbeddedMigrationFiles();
 
   for (const relativePath of migrationFiles) {
-    const sourceContent = getEmbeddedMigrationContent(relativePath);
-    if (sourceContent === null) {
+    const sourcePath = getEmbeddedMigrationPath(relativePath);
+    if (sourcePath === null) {
       continue;
     }
 
     const destinationPath = join(outputDir, relativePath);
     mkdirSync(dirname(destinationPath), { recursive: true });
-    writeFileSync(destinationPath, sourceContent);
+    writeFileSync(destinationPath, readFileSync(sourcePath));
   }
 
   return hasMigrationJournal(outputDir) ? outputDir : null;
