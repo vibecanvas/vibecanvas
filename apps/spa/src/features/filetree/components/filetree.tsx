@@ -198,15 +198,19 @@ export function Filetree(props: TFiletreeProps) {
   const ensureRowExists = async () => {
     if (filetree()) return;
 
-    const [homeError, homeResult] = await orpcWebsocketService.safeClient.api.file.home();
-    if (homeError || !homeResult || "type" in homeResult) {
-      setErrorMessage(homeError?.message ?? "Failed to resolve home directory");
-      return;
+    let initialPath = localStorage.getItem('vibecanvas-filetree-last-path');
+    if (!initialPath) {
+      const [homeError, homeResult] = await orpcWebsocketService.safeClient.api.file.home();
+      if (homeError || !homeResult || "type" in homeResult) {
+        setErrorMessage(homeError?.message ?? "Failed to resolve home directory");
+        return;
+      }
+      initialPath = homeResult.path;
     }
 
     const [createError, created] = await orpcWebsocketService.safeClient.api.filetree.create({
       canvas_id: props.canvasId,
-      path: homeResult.path,
+      path: initialPath,
       x: 0,
       y: 0,
     });
@@ -224,6 +228,7 @@ export function Filetree(props: TFiletreeProps) {
   };
 
   const updateFiletree = async (updates: { path?: string; glob_pattern?: string | null; title?: string }) => {
+    if (updates.path) localStorage.setItem('vibecanvas-filetree-last-path', updates.path);
     const [updateError, updated] = await orpcWebsocketService.safeClient.api.filetree.update({
       params: { id: props.filetreeId },
       body: updates,

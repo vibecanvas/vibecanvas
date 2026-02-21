@@ -393,10 +393,12 @@ function handleUp(ctx: Parameters<InputCommand>[0]): boolean {
     // ctx.canvas.handle.change(doc => {
     //   doc.elements[elementId] = renderable.element
     // })
+    const lastFiletreePath = localStorage.getItem('vibecanvas-filetree-last-path');
     orpcWebsocketService.safeClient.api.filetree.create({
       canvas_id: ctx.canvas.canvasId,
       x: dragStartWorld.x,
       y: dragStartWorld.y,
+      ...(lastFiletreePath ? { path: lastFiletreePath } : {}),
     }).then(([err, filetree]) => {
       console.log(err, filetree)
       // ctx.canvas.undoManager.record({
