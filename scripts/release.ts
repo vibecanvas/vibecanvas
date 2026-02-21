@@ -8,7 +8,7 @@
  * - Creates platform archives in dist/ (*.tar.gz and *.zip)
  * - Copies per-platform checksum files into dist/checksums/*.sha256
  * - Creates release if missing; otherwise uploads assets to existing release
- * - Uses --generate-notes on create
+ * - Generates release notes via API and strips author attribution
  */
 
 import path from "path"
@@ -156,6 +156,40 @@ async function releaseExists(rootDir: string, tag: string): Promise<boolean> {
   return result.exitCode === 0
 }
 
+async function generateReleaseNotes(rootDir: string, tag: string): Promise<string> {
+  const args = [
+    "gh", "api",
+    "repos/{owner}/{repo}/releases/generate-notes",
+    "--method", "POST",
+    "--field", `tag_name=${tag}`,
+    "--jq", ".body",
+  ]
+
+  const result = await runCommand(args, rootDir)
+  if (result.exitCode !== 0) {
+    throw new Error(`Failed to generate release notes: ${result.stderr || result.stdout}`)
+  }
+  return result.stdout
+}
+
+export function stripAuthorAttribution(notes: string): string {
+  const lines = notes.split("\n")
+  const newContributorsIndex = lines.findIndex((line) =>
+    /^##\s+New Contributors/i.test(line),
+  )
+
+  const changelogLines =
+    newContributorsIndex >= 0 ? lines.slice(0, newContributorsIndex) : lines
+  const preservedLines =
+    newContributorsIndex >= 0 ? lines.slice(newContributorsIndex) : []
+
+  const cleaned = changelogLines.map((line) =>
+    line.replace(/ by @[\w-]+ in (https:\/\/)/g, " in $1"),
+  )
+
+  return [...cleaned, ...preservedLines].join("\n")
+}
+
 async function main() {
   const args = parseArgs(process.argv.slice(2))
   const rootDir = path.join(path.dirname(new URL(import.meta.url).pathname), "..")
@@ -188,8 +222,12 @@ async function main() {
       throw new Error(`Failed to upload assets: ${upload.stderr || upload.stdout}`)
     }
   } else {
+    console.log(`[release] Generating release notes for ${tag}...`)
+    const rawNotes = await generateReleaseNotes(rootDir, tag)
+    const cleanedNotes = stripAuthorAttribution(rawNotes)
+
     console.log(`[release] Creating release ${tag} and uploading assets...`)
-    const createArgs = ["gh", "release", "create", tag, ...assets, "--title", tag, "--generate-notes"]
+    const createArgs = ["gh", "release", "create", tag, ...assets, "--title", tag, "--notes", cleanedNotes]
     if (manifest.channel !== "stable") {
       createArgs.push("--prerelease")
     }
