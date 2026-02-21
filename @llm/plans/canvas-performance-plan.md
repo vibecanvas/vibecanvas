@@ -1,27 +1,42 @@
 # Canvas Performance Optimization Plan
 
+## Sub-Plans
+
+| # | Issue | Priority | Link |
+|---|-------|----------|------|
+| 01 | TransformBox Graphics Caching | P0 | [Sub-Plan](./canvas-performance/subplan-01-transformbox-cache.md) |
+| 02 | TextElement Re-rasterization Fix | P0 | [Sub-Plan](./canvas-performance/subplan-02-textelement-cache.md) |
+| 03 | Drag Selection Container Transforms | P0 | [Sub-Plan](./canvas-performance/subplan-03-drag-selection-transforms.md) |
+| 04 | MultiTransformBox Dashed Line Caching | P1 | [Sub-Plan](./canvas-performance/subplan-04-multitransformbox-cache.md) |
+| 05 | Conditional Redraw on CRDT Patches | P1 | [Sub-Plan](./canvas-performance/subplan-05-conditional-patch-redraw.md) |
+| 06 | Selection Effect Diffing | P1 | [Sub-Plan](./canvas-performance/subplan-06-selection-diffing.md) |
+| 07 | VirtualGroup Smart Cache Invalidation | P2 | [Sub-Plan](./canvas-performance/subplan-07-virtualgroup-cache.md) |
+| 08 | RectElement Dimensions Setter Check | P2 | [Sub-Plan](./canvas-performance/subplan-08-rect-dimensions-check.md) |
+
 ## Overview
 
 This plan addresses 8 critical performance issues in the PixiJS canvas rendering system. The primary bottlenecks are excessive `redraw()` calls, unnecessary Graphics rebuilds, and inefficient text re-rasterization.
 
 ## Issues Summary
 
-| Priority | Issue | File | Impact |
-|----------|-------|------|--------|
-| P0 | TransformBox Graphics rebuild on every redraw | `transform-box.ts:275-363` | High |
-| P0 | TextElement double re-rasterization during resize | `text.class.ts:147-196` | High |
-| P0 | Excessive redraws during drag operations | `cmd.drag-selection.ts:224-234` | High |
-| P1 | MultiTransformBox dashed line rebuild | `multi-transform-box.ts:74-107` | Medium-High |
-| P1 | Unconditional redraw on CRDT patches | `element.patch.ts:154` | Medium |
-| P1 | Selection effect full reset | `setup.doc-sync.ts:150-234` | Medium |
-| P2 | VirtualGroup bounds cache invalidation | `virtual-group.class.ts:279` | Medium |
-| P2 | Dimensions setter always redraws | `rect.class.ts:139-147` | Low-Medium |
+| Priority | Issue | File | Impact | Sub-Plan |
+|----------|-------|------|--------|----------|
+| P0 | TransformBox Graphics rebuild on every redraw | `transform-box.ts:275-363` | High | [Sub-Plan 01](./canvas-performance/subplan-01-transformbox-cache.md) |
+| P0 | TextElement double re-rasterization during resize | `text.class.ts:147-196` | High | [Sub-Plan 02](./canvas-performance/subplan-02-textelement-cache.md) |
+| P0 | Excessive redraws during drag operations | `cmd.drag-selection.ts:224-234` | High | [Sub-Plan 03](./canvas-performance/subplan-03-drag-selection-transforms.md) |
+| P1 | MultiTransformBox dashed line rebuild | `multi-transform-box.ts:74-107` | Medium-High | [Sub-Plan 04](./canvas-performance/subplan-04-multitransformbox-cache.md) |
+| P1 | Unconditional redraw on CRDT patches | `element.patch.ts:154` | Medium | [Sub-Plan 05](./canvas-performance/subplan-05-conditional-patch-redraw.md) |
+| P1 | Selection effect full reset | `setup.doc-sync.ts:150-234` | Medium | [Sub-Plan 06](./canvas-performance/subplan-06-selection-diffing.md) |
+| P2 | VirtualGroup bounds cache invalidation | `virtual-group.class.ts:279` | Medium | [Sub-Plan 07](./canvas-performance/subplan-07-virtualgroup-cache.md) |
+| P2 | Dimensions setter always redraws | `rect.class.ts:139-147` | Low-Medium | [Sub-Plan 08](./canvas-performance/subplan-08-rect-dimensions-check.md) |
 
 ---
 
 ## P0: Critical Issues (Implement First)
 
 ### 1. TransformBox.redraw() - Cache GraphicsContext
+
+**[View Full Sub-Plan](./canvas-performance/subplan-01-transformbox-cache.md)**
 
 **Current Problem:**
 Each `redraw()` clears and rebuilds 9 Graphics objects (4 edges + 4 corners + rotation handle).
@@ -126,6 +141,8 @@ export class TransformBox implements IRenderable {
 ---
 
 ### 2. TextElement.redraw() - Avoid Re-rasterization
+
+**[View Full Sub-Plan](./canvas-performance/subplan-02-textelement-cache.md)**
 
 **Current Problem:**
 `setResize()` calls `redraw()` twice (lines 174 and 194), and each `redraw()` re-rasterizes text by setting `text`, `fontSize`, and `fontFamily`.
@@ -272,6 +289,8 @@ export class TextElement extends AElement<'text'> {
 
 ### 3. CmdDragSelection - Use Container Transforms
 
+**[View Full Sub-Plan](./canvas-performance/subplan-03-drag-selection-transforms.md)**
+
 **Current Problem:**
 During `pointermove`, VirtualGroup and MultiTransformBox are redrawn EVERY frame.
 
@@ -366,6 +385,8 @@ function handleUp(ctx: PointerInputContext): boolean {
 
 ### 4. MultiTransformBox - Cache Dashed Line Geometry
 
+**[View Full Sub-Plan](./canvas-performance/subplan-04-multitransformbox-cache.md)**
+
 **File:** `multi-transform-box.ts:74-107`
 
 **Solution:**
@@ -426,6 +447,8 @@ export class MultiTransformBox implements IRenderable {
 
 ### 5. Element.patch.ts - Conditional Redraw
 
+**[View Full Sub-Plan](./canvas-performance/subplan-05-conditional-patch-redraw.md)**
+
 **File:** `element.patch.ts:117-155`
 
 **Solution:**
@@ -479,6 +502,8 @@ function handleElementUpdated(canvas: Canvas, doc: TCanvasDoc, elementId: string
 ---
 
 ### 6. Setup.doc-sync.ts - Diff Selection Changes
+
+**[View Full Sub-Plan](./canvas-performance/subplan-06-selection-diffing.md)**
 
 **File:** `setup.doc-sync.ts:150-234`
 
@@ -559,6 +584,8 @@ const listenLocalStore = (canvas: Canvas) => {
 
 ### 7. VirtualGroup - Smart Cache Invalidation
 
+**[View Full Sub-Plan](./canvas-performance/subplan-07-virtualgroup-cache.md)**
+
 **File:** `virtual-group.class.ts:279`
 
 Only invalidate bounds cache on position-changing actions, not all actions:
@@ -585,6 +612,8 @@ public dispatch(action: TAction): TChanges | null {
 ---
 
 ### 8. RectElement.dimensions - Check Before Redraw
+
+**[View Full Sub-Plan](./canvas-performance/subplan-08-rect-dimensions-check.md)**
 
 **File:** `rect.class.ts:139-147`
 

@@ -87,7 +87,10 @@ export function PathPickerDialog(props: TPathPickerDialogProps) {
         <Dialog.Overlay class="fixed inset-0 bg-black/50 z-40" />
         <Dialog.Content
           class="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-popover text-popover-foreground border border-border shadow-md z-50 w-xl max-w-[92vw] max-h-[70vh] p-5 flex flex-col"
-          onWheel={(e: WheelEvent) => e.stopPropagation()}
+          onWheel={(e: WheelEvent) => {
+            e.stopPropagation();
+            if (e.ctrlKey) e.preventDefault();
+          }}
           style={{ "overscroll-behavior": "contain" }}
         >
           <Dialog.Title class="font-display text-base text-foreground mb-1 shrink-0">{props.title}</Dialog.Title>
