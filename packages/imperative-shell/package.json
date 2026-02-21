@@ -1,6 +1,6 @@
 {
   "name": "@vibecanvas/shell",
-  "version": "0.0.9",
+  "version": "0.0.10",
   "private": true,
   "type": "module",
   "main": "src/index.ts",
@@ -17,6 +17,7 @@
     "@automerge/automerge": "catalog:",
     "@automerge/automerge-repo": "catalog:",
     "@automerge/automerge-repo-network-websocket": "catalog:",
+    "@orpc/server": "catalog:",
     "@vibecanvas/core": "workspace:*",
     "drizzle-orm": "catalog:",
     "drizzle-zod": "catalog:",

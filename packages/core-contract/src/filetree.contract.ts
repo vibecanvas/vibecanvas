@@ -1,29 +1,20 @@
-import { oc } from "@orpc/contract";
+import { eventIterator, oc } from "@orpc/contract";
 import { ZFileTreeSelect } from "@vibecanvas/shell/database/schema";
 import type * as _DrizzleZod from "drizzle-zod";
 import { z } from "zod";
 
 const createFiletreeInputSchema = z.object({
   canvas_id: z.string(),
-  title: z.string(),
+  path: z.string().optional(),
   x: z.number(),
-  y: z.number(),
-  width: z.number(),
-  height: z.number(),
-  is_collapsed: z.boolean().optional(),
-  glob_pattern: z.string().optional(),
+  y: z.number()
 });
 
 const updateFiletreeBodySchema = z.object({
   title: z.string().optional(),
-  x: z.number().optional(),
-  y: z.number().optional(),
-  width: z.number().optional(),
-  height: z.number().optional(),
-  is_collapsed: z.boolean().optional(),
+  path: z.string().optional(),
+  locked: z.boolean().optional(),
   glob_pattern: z.string().nullable().optional(),
-  group_ids: z.array(z.string()).optional(),
-  bound_ids: z.array(z.string()).optional(),
 });
 
 export default oc.router({
@@ -38,4 +29,13 @@ export default oc.router({
   remove: oc
     .input(z.object({ params: z.object({ id: z.string() }) }))
     .output(z.void()),
+
+  watch: oc
+    .input(z.object({ params: z.object({ uuid: z.string(), path: z.string() }) }))
+    .output(eventIterator(z.object({ eventType: z.enum(['rename', 'change']), fileName: z.string() }))),
+
+  unwatch: oc
+    .input(z.object({ params: z.object({ uuid: z.string() }) }))
+    .output(z.void()),
+
 });

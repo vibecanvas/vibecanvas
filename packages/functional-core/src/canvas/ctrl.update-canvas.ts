@@ -9,17 +9,15 @@ export type TPortal = {
 export type TUpdateArgs = {
   id: string;
   name?: string;
-  path?: string;
 };
 
-type TCanvas = { id: string; name: string; path: string; created_at: Date };
+type TCanvas = { id: string; name: string; created_at: Date };
 
-function ctrlUpdateCanvas(portal: TPortal, args: TUpdateArgs): TErrTuple<TCanvas> {
+export function ctrlUpdateCanvas(portal: TPortal, args: TUpdateArgs): TErrTuple<TCanvas> {
   try {
     const updateData: Partial<typeof schema.canvas.$inferInsert> = {};
 
     if (args.name !== undefined) updateData.name = args.name;
-    if (args.path !== undefined) updateData.path = args.path;
 
     const result = portal.db
       .update(schema.canvas)
@@ -46,5 +44,3 @@ function ctrlUpdateCanvas(portal: TPortal, args: TUpdateArgs): TErrTuple<TCanvas
     }];
   }
 }
-
-export default ctrlUpdateCanvas;

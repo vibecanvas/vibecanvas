@@ -220,6 +220,8 @@ Related scripts:
 
 Contributions are welcome.
 
+**By submitting a pull request, you agree to transfer ownership of your contribution to the project maintainer.** This allows the project to be re-licensed or otherwise managed without needing to contact every individual contributor.
+
 Recommended workflow:
 1. Create a branch from `main`.
 2. Make focused changes with tests.

@@ -236,23 +236,23 @@ async function collectMigrationFiles(): Promise<string[]> {
 }
 
 async function generateEmbeddedMigrations(migrationFiles: string[]): Promise<void> {
+  const imports = migrationFiles
+    .map((f, i) => `import migration${i} from '../../database-migrations/${f}' with { type: "file" };`)
+    .join("\n");
+
   const embeddedMigrationsCode = `// Auto-generated file - do not edit
-const embeddedMigrationContents = new Map<string, string>([
-${(await Promise.all(
-    migrationFiles.map(async (f) => {
-      const filePath = path.join(shellMigrationsDir, f)
-      const content = await Bun.file(filePath).text()
-      return `  [${JSON.stringify(f)}, ${JSON.stringify(content)}],`
-    }),
-  )).join("\n")}
+${imports}
+
+const embeddedMigrationPaths = new Map<string, string>([
+${migrationFiles.map((f, i) => `  [${JSON.stringify(f)}, migration${i}],`).join("\n")}
 ]);
 
 export function listEmbeddedMigrationFiles(): string[] {
-  return [...embeddedMigrationContents.keys()];
+  return [...embeddedMigrationPaths.keys()];
 }
 
-export function getEmbeddedMigrationContent(relativePath: string): string | null {
-  return embeddedMigrationContents.get(relativePath) ?? null;
+export function getEmbeddedMigrationPath(relativePath: string): string | null {
+  return embeddedMigrationPaths.get(relativePath) ?? null;
 }
 `
 

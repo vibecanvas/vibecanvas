@@ -53,20 +53,30 @@ export function CanvasComponent(props: { viewData: TCanvasViewData, canvasData: 
     orpcWebsocketService.safeClient.api.db.events({ canvasId: props.canvasData.id }).then(async ([err, it]) => {
       if (err) return
       for await (const event of it) {
-        if (event.data.change === 'update') {
-          if (event.data.table === 'canvas') {
-            setStore('canvasSlice', 'backendCanvas', event.data.id, (canvas) => canvas?.id === event.data.id ? event.data.record : canvas)
+        const data = event.data
+
+        if (data.change === 'update') {
+          if (data.table === 'canvas') {
+            setStore('canvasSlice', 'backendCanvas', data.id, (canvas) => canvas?.id === data.id ? data.record as TBackendCanvas : canvas)
           }
-          if (event.data.table === 'chats') {
-            setStore('chatSlice', 'backendChats', event.data.record.canvas_id, (chat) => chat.id === event.data.id, event.data.record)
+          if (data.table === 'chats') {
+            setStore('chatSlice', 'backendChats', data.record.canvas_id, (chat) => chat.id === data.id, data.record)
           }
         }
-        if (event.data.change === 'delete') {
-          if (event.data.table === 'canvas') {
-            setStore('canvasSlice', 'backendCanvas', event.data.id, undefined)
+
+        if (data.change === 'delete') {
+          if (data.table === 'canvas') {
+            setStore('canvasSlice', 'backendCanvas', data.id, undefined)
           }
-          if (event.data.table === 'chats') {
-            setStore('chatSlice', 'backendChats', event.data.record.canvas_id, chats => chats.filter(chat => chat.id !== event.data.id))
+          if (data.table === 'chats') {
+            // For delete events, we need to search through all canvas IDs to find and remove the chat
+            setStore('chatSlice', 'backendChats', chats => {
+              const updated = { ...chats }
+              for (const canvasId in updated) {
+                updated[canvasId] = updated[canvasId].filter(chat => chat.id !== data.id)
+              }
+              return updated
+            })
           }
         }
       }

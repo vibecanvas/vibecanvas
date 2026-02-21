@@ -1,7 +1,7 @@
 /// <reference path="../build-constants.d.ts" />
+import { txConfigPath } from "@vibecanvas/core/vibecanvas-config/tx.config-path";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "fs";
 import { join } from "path";
-import { txConfigPath } from "@vibecanvas/core/vibecanvas-config/index";
 
 const CHECK_INTERVAL_MS = 24 * 60 * 60 * 1000;
 
@@ -10,7 +10,8 @@ type TState = {
 };
 
 function stateFilePath(): string | null {
-  const [configPathData] = txConfigPath({ fs: { existsSync, mkdirSync } }, { isCompiled: VIBECANVAS_COMPILED });
+  const isCompiled = typeof VIBECANVAS_COMPILED !== "undefined" ? VIBECANVAS_COMPILED : false;
+  const [configPathData] = txConfigPath({ fs: { existsSync, mkdirSync } }, { isCompiled });
   if (!configPathData) return null;
   return join(configPathData.configDir, "autoupdate-state.json");
 }
@@ -41,4 +42,5 @@ function shouldCheckNow(now = Date.now()): boolean {
   return now - lastCheckedAt >= CHECK_INTERVAL_MS;
 }
 
-export { shouldCheckNow, setLastCheckedAt, getLastCheckedAt, CHECK_INTERVAL_MS };
+export { CHECK_INTERVAL_MS, getLastCheckedAt, setLastCheckedAt, shouldCheckNow };
+

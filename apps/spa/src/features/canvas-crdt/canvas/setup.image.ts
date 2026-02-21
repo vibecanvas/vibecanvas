@@ -1,6 +1,6 @@
-import { setStore } from "@/store"
 import { orpcWebsocketService } from "@/services/orpc-websocket"
-import { createElement } from "../input-commands/cmd.draw-new"
+import { setStore } from "@/store"
+import { createElement } from "@vibecanvas/core/automerge/fn.create-element"
 import { fileToBase64, getImageDimensions } from "../util/image.util"
 import type { Canvas } from "./canvas"
 

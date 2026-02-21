@@ -9,14 +9,9 @@ type TScrollAreaProps = {
 export function ScrollArea(props: TScrollAreaProps) {
   return (
     <div
-      class={`relative h-full min-h-0 overflow-scroll ${props.class ?? ""}`}
-      onWheel={(e: WheelEvent) => e.stopPropagation()}
+      class={`min-h-0 overflow-y-auto overflow-x-hidden [scrollbar-width:thin] ${props.class ?? ""} ${props.viewportClass ?? ""}`}
     >
-      <div
-        class={`h-full min-h-0 w-full overflow-y-auto overflow-x-hidden pr-1 [scrollbar-width:thin] ${props.viewportClass ?? ""}`}
-      >
-        {props.children}
-      </div>
+      {props.children}
     </div>
   )
 }

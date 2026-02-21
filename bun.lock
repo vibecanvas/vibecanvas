@@ -15,7 +15,7 @@
     },
     "apps/server": {
       "name": "@vibecanvas/server",
-      "version": "0.0.2",
+      "version": "0.0.9",
       "dependencies": {
         "@anthropic-ai/claude-agent-sdk": "catalog:",
         "@automerge/automerge": "catalog:",
@@ -39,7 +39,7 @@
     },
     "apps/spa": {
       "name": "@vibecanvas/spa",
-      "version": "0.0.2",
+      "version": "0.0.9",
       "dependencies": {
         "@automerge/automerge": "catalog:",
         "@automerge/automerge-repo": "catalog:",
@@ -87,7 +87,7 @@
     },
     "apps/vibecanvas": {
       "name": "vibecanvas",
-      "version": "0.0.2",
+      "version": "0.0.9",
       "bin": {
         "vibecanvas": "./bin/vibecanvas",
       },
@@ -105,7 +105,7 @@
     },
     "apps/web": {
       "name": "@vibecanvas/web",
-      "version": "0.0.2",
+      "version": "0.0.9",
       "dependencies": {
         "@astrojs/mdx": "^4.2.2",
         "@astrojs/solid-js": "^5.0.6",
@@ -115,7 +115,7 @@
     },
     "packages/core-contract": {
       "name": "@vibecanvas/core-contract",
-      "version": "0.0.2",
+      "version": "0.0.9",
       "dependencies": {
         "@anthropic-ai/claude-agent-sdk": "catalog:",
         "@orpc/contract": "catalog:",
@@ -126,9 +126,11 @@
     },
     "packages/functional-core": {
       "name": "@vibecanvas/core",
-      "version": "0.0.2",
+      "version": "0.0.9",
       "dependencies": {
         "@anthropic-ai/claude-agent-sdk": "catalog:",
+        "@automerge/automerge": "catalog:",
+        "@automerge/automerge-repo": "catalog:",
         "@vibecanvas/shell": "workspace:*",
         "drizzle-orm": "catalog:",
         "typescript": "catalog:",
@@ -136,12 +138,13 @@
     },
     "packages/imperative-shell": {
       "name": "@vibecanvas/shell",
-      "version": "0.0.2",
+      "version": "0.0.9",
       "dependencies": {
         "@anthropic-ai/claude-agent-sdk": "catalog:",
         "@automerge/automerge": "catalog:",
         "@automerge/automerge-repo": "catalog:",
         "@automerge/automerge-repo-network-websocket": "catalog:",
+        "@orpc/server": "catalog:",
         "@vibecanvas/core": "workspace:*",
         "drizzle-orm": "catalog:",
         "drizzle-zod": "catalog:",

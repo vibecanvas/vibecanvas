@@ -11,7 +11,6 @@ The functional core lives in `packages/functional-core/`. It contains all busine
 packages/functional-core/
 └── src/
     └── <module>/
-        ├── index.ts              # Re-exports
         ├── ctrl.<name>.ts        # Controllers (orchestration)
         ├── fn.<name>.ts          # Pure functions
         ├── fx.<name>.ts          # Effectful functions (reads)
@@ -47,6 +46,27 @@ All side effects are controlled via `TPortal` - a dependency injection object pa
 - **Deterministic** - Same inputs → same outputs
 - **Composable** - Functions can be combined freely
 
+## Import/Export Policy (Mandatory)
+
+For all code under `packages/functional-core`:
+
+- **No default exports**. Use named exports only.
+- **No barrel files** (`index.ts` re-export files are not allowed).
+- **Always deep import** from the concrete file path you need.
+
+Examples:
+
+```ts
+// Good: named export + deep import
+import { ctrlUserCreate } from "@vibecanvas/core/user/ctrl.create-user";
+
+// Bad: package-level barrel import
+import { ctrlUserCreate } from "@vibecanvas/core";
+
+// Bad: default export import
+import ctrlUserCreate from "@vibecanvas/core/user/ctrl.create-user";
+```
+
 ---
 
 ## Pure Functions (`fn.*`)
@@ -77,7 +97,7 @@ function fnUserValidateEmail(args: TArgs): TErrTuple<TValidatedEmail> {
   }, null];
 }
 
-export default fnUserValidateEmail;
+export { fnUserValidateEmail };
 ```
 
 **Use `fn.*` when:**
@@ -124,7 +144,7 @@ async function fxUserGetById(
   return [user, null];
 }
 
-export default fxUserGetById;
+export { fxUserGetById };
 ```
 
 **Use `fx.*` when:**
@@ -194,7 +214,7 @@ async function txPaymentCharge(
   }
 }
 
-export default txPaymentCharge;
+export { txPaymentCharge };
 ```
 
 **Use `tx.*` when:**
@@ -213,9 +233,9 @@ Orchestrate functions. Handle rollbacks. Return `TErrTuple<T>`.
 // packages/functional-core/src/user/ctrl.create-user.ts
 import type mainDb from "@vibecanvas/shell/db/db.main"
 import { executeRollbacks } from "../err.rollback";
-import fnUserValidateEmail from "./fn.validate-email";
-import fxUserCheckExists from "./fx.check-exists";
-import txUserCreate from "./tx.create";
+import { fnUserValidateEmail } from "./fn.validate-email";
+import { fxUserCheckExists } from "./fx.check-exists";
+import { txUserCreate } from "./tx.create";
 import { UserErr } from "./err.codes";
 
 type TPortal = {
@@ -262,7 +282,7 @@ async function ctrlUserCreate(
   return [user, null];
 }
 
-export default ctrlUserCreate;
+export { ctrlUserCreate };
 ```
 
 **Controllers are responsible for:**
@@ -416,7 +436,7 @@ Test files use `.test.ts` suffix in the same directory:
 ```ts
 // packages/functional-core/src/user/ctrl.create-user.test.ts
 import { describe, test, expect } from 'bun:test';
-import ctrlUserCreate from './ctrl.create-user';
+import { ctrlUserCreate } from './ctrl.create-user';
 
 describe('ctrlUserCreate', () => {
   test('creates user with valid email', async () => {
@@ -454,28 +474,22 @@ bun --filter @vibecanvas/functional-core test user
 
 ---
 
-## Export Pattern
+## Import Pattern (Deep Imports Only)
 
 ```ts
-// packages/functional-core/src/user/index.ts
-export { default as ctrlUserCreate } from "./ctrl.create-user";
-export { default as fnUserValidateEmail } from "./fn.validate-email";
-export { default as fxUserGetById } from "./fx.get-by-id";
-export { default as txUserCreate } from "./tx.create";
-export { UserErr } from "./err.codes";
+// Deep import from exact file
+import { ctrlUserCreate } from "@vibecanvas/core/user/ctrl.create-user";
+import { fnUserValidateEmail } from "@vibecanvas/core/user/fn.validate-email";
+import { UserErr } from "@vibecanvas/core/user/err.codes";
 
-// Also export executeRollbacks utility
-// packages/functional-core/src/index.ts
-export { executeRollbacks } from "./err.rollback";
-
-// packages/functional-core/src/index.ts
-export * from "./user";
-export * from "./project";
+// Another deep import example
+import { executeRollbacks } from "@vibecanvas/core/err.rollback";
 ```
 
 Import in apps:
 ```ts
-import { ctrlUserCreate, UserErr } from "@vibecanvas/functional-core";
+import { ctrlUserCreate } from "@vibecanvas/core/user/ctrl.create-user";
+import { UserErr } from "@vibecanvas/core/user/err.codes";
 ```
 
 ---

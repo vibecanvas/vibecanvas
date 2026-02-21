@@ -1,6 +1,6 @@
 {
   "name": "@vibecanvas/core",
-  "version": "0.0.9",
+  "version": "0.0.10",
   "private": true,
   "type": "module",
   "exports": {
@@ -12,6 +12,8 @@
   "dependencies": {
     "@anthropic-ai/claude-agent-sdk": "catalog:",
     "@vibecanvas/shell": "workspace:*",
+    "@automerge/automerge": "catalog:",
+    "@automerge/automerge-repo": "catalog:",
     "drizzle-orm": "catalog:",
     "typescript": "catalog:"
   }

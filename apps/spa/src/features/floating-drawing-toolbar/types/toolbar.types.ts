@@ -14,7 +14,8 @@ export type Tool =
   | "pen"
   | "text"
   | "image"
-  | "chat";
+  | "chat"
+  | "filesystem";
 
 export interface ToolDefinition {
   tool: Tool;
@@ -43,6 +44,7 @@ export const TOOL_SHORTCUTS: Record<string, Tool> = {
   "p": "pen",
   "t": "text",
   "c": "chat",
+  "f": "filesystem",
   "Escape": "select",
 } as const;
 
@@ -59,4 +61,5 @@ export const TOOLS: ToolDefinition[] = [
   { tool: "text", shortcut: "8" },
   { tool: "image", shortcut: "9" },
   { tool: "chat" },
+  { tool: "filesystem" },
 ];

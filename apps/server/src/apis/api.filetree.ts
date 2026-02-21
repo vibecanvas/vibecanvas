@@ -1,28 +1,37 @@
-import { ctrlCreateFiletree, ctrlDeleteFiletree, ctrlUpdateFiletree } from "@vibecanvas/core/filetree/index";
+import { ORPCError } from "@orpc/contract";
+import { ctrlCreateFiletree } from "@vibecanvas/core/filetree/ctrl.create-filetree";
+import { ctrlDeleteFiletree } from "@vibecanvas/core/filetree/ctrl.delete-filetree";
+import { ctrlUpdateFiletree } from "@vibecanvas/core/filetree/ctrl.update-filetree";
+import { repo } from "@vibecanvas/server/automerge-repo";
 import { tExternal } from "@vibecanvas/server/error-fn";
 import { baseOs } from "../orpc.base";
-import type * as _DrizzleZod from "drizzle-zod";
+import { dbUpdatePublisher } from "./api.db";
+import { EventPublisher } from "@orpc/server";
+import { FileSystemWatcher } from "@vibecanvas/shell/filesystem-watcher/srv.filesystem-watcher";
 
 const create = baseOs.api.filetree.create.handler(async ({ input, context: { db } }) => {
-  const [result, error] = ctrlCreateFiletree({ db }, {
+  const [result, error] = await ctrlCreateFiletree({ db, repo }, {
     canvas_id: input.canvas_id,
-    title: input.title,
+    title: 'File Tree',
+    path: input.path || '',
     x: input.x,
     y: input.y,
-    width: input.width,
-    height: input.height,
-    is_collapsed: input.is_collapsed,
-    glob_pattern: input.glob_pattern,
+    locked: false,
+    glob_pattern: null,
   });
 
   if (error || !result) {
-    throw new Error(tExternal(error));
+    throw new ORPCError(error.code, { message: tExternal(error) })
   }
 
   const filetree = db.query.filetrees.findFirst({ where: (table, { eq }) => eq(table.id, result.id) }).sync();
   if (!filetree) {
-    throw new Error("Filetree not found after creation");
+    throw new ORPCError('NOT_FOUND', { message: 'Filetree not found after creation' })
   }
+
+  dbUpdatePublisher.publish(filetree.canvas_id, {
+    data: { change: 'insert', id: filetree.id, table: 'filetrees', record: filetree },
+  });
 
   return filetree;
 });
@@ -34,26 +43,57 @@ const update = baseOs.api.filetree.update.handler(async ({ input, context: { db 
   });
 
   if (error) {
-    throw new Error(tExternal(error));
+    throw new ORPCError(error.code, { message: tExternal(error) })
   }
 
   const filetree = db.query.filetrees.findFirst({ where: (table, { eq }) => eq(table.id, input.params.id) }).sync();
   if (!filetree) {
-    throw new Error("Filetree not found");
+    throw new ORPCError('NOT_FOUND', { message: 'Filetree not found' })
   }
+
+  dbUpdatePublisher.publish(filetree.canvas_id, {
+    data: { change: 'update', id: filetree.id, table: 'filetrees', record: filetree },
+  });
 
   return filetree;
 });
 
 const remove = baseOs.api.filetree.remove.handler(async ({ input, context: { db } }) => {
+  const filetree = db.query.filetrees.findFirst({ where: (table, { eq }) => eq(table.id, input.params.id) }).sync();
   const [, error] = ctrlDeleteFiletree({ db }, { filetreeId: input.params.id });
-  if (error) {
-    throw new Error(tExternal(error));
+  if (error && error.code !== "CTRL.FILETREE.DELETE_FILETREE.NOT_FOUND") {
+    throw new ORPCError(error.code, { message: tExternal(error) })
+  }
+
+  if (filetree) {
+    dbUpdatePublisher.publish(filetree.canvas_id, {
+      data: { change: 'delete', id: filetree.id, table: 'filetrees' },
+    });
   }
 });
 
-export const filetree: any = {
+const fsPublisher = new EventPublisher<{ [path: string]: { eventType: 'rename' | 'change', fileName: string } }>()
+const fileSystemWatcher = new FileSystemWatcher(fsPublisher);
+
+const watch = baseOs.api.filetree.watch.handler(async function* ({ input: { params: { uuid, path } } }) {
+  fileSystemWatcher.registerPath(uuid, path);
+  try {
+    for await (const event of fsPublisher.subscribe(path)) {
+      yield event;
+    }
+  } finally {
+    fileSystemWatcher.unregisterPath(uuid);
+  }
+});
+
+const unwatch = baseOs.api.filetree.unwatch.handler(async ({ input: { params: { uuid } } }) => {
+  fileSystemWatcher.unregisterPath(uuid);
+});
+
+export const filetree = {
   create,
   update,
   remove,
+  watch,
+  unwatch,
 };

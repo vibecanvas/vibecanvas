@@ -1,6 +1,6 @@
-import { drizzle } from "drizzle-orm/bun-sqlite";
+import { txConfigPath } from "@vibecanvas/core/vibecanvas-config/tx.config-path";
 import { Database } from "bun:sqlite";
-import { txConfigPath } from "@vibecanvas/core/vibecanvas-config/index";
+import { drizzle } from "drizzle-orm/bun-sqlite";
 import { existsSync, mkdirSync } from "fs";
 import fxRunDatabaseMigrations from "./fx.migrations";
 

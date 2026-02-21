@@ -1,9 +1,9 @@
-import { drizzle } from 'drizzle-orm/bun-sqlite';
+import { txConfigPath } from '@vibecanvas/core/vibecanvas-config/tx.config-path';
 import { Database } from 'bun:sqlite';
-import * as schema from './schema';
-import { txConfigPath } from '@vibecanvas/core/vibecanvas-config/index';
+import { drizzle } from 'drizzle-orm/bun-sqlite';
 import { existsSync, mkdirSync } from "fs";
 import fxRunDatabaseMigrations from './fx.migrations';
+import * as schema from './schema';
 
 const [config, configError] = txConfigPath({ fs: { existsSync, mkdirSync } });
 if (configError) {

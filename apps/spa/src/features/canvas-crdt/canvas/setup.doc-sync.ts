@@ -8,6 +8,7 @@ import { ArrowElement } from "../renderables/elements/arrow/arrow.class";
 import { ChatElement } from "../renderables/elements/chat/chat.class";
 import { DiamondElement } from "../renderables/elements/diamond/diamond.class";
 import { EllipseElement } from "../renderables/elements/ellipse/ellipse.class";
+import { FiletreeElement } from "../renderables/elements/filetree/filetree.class";
 import { ImageElement } from "../renderables/elements/image/image.class";
 import { LineElement } from "../renderables/elements/line/line.class";
 import { RectElement } from "../renderables/elements/rect/rect.class";
@@ -113,6 +114,10 @@ export function setupDocSync(canvas: Canvas, handle: DocHandle<TCanvasDoc>) {
     else if (element.data.type === 'chat') {
       const chatElement = new ChatElement(element as TBackendElementOf<'chat'>, canvas)
       canvas.addElement(chatElement)
+    }
+    else if (element.data.type === 'filetree') {
+      const filetreeElement = new FiletreeElement(element as TBackendElementOf<'filetree'>, canvas)
+      canvas.addElement(filetreeElement)
     }
   }
 
@@ -233,7 +238,7 @@ const listenLocalStore = (canvas: Canvas) => {
       if (activeTool === 'select') {
         canvas.app.canvas.style.cursor = 'default'
         canvas.app.stage.cursor = 'default'
-      } else if (activeTool === 'rectangle' || activeTool === 'diamond' || activeTool === 'ellipse' || activeTool === 'line' || activeTool === 'arrow' || activeTool === 'pen' || activeTool === 'text' || activeTool === 'image') {
+      } else if (activeTool === 'rectangle' || activeTool === 'diamond' || activeTool === 'ellipse' || activeTool === 'line' || activeTool === 'arrow' || activeTool === 'pen' || activeTool === 'text' || activeTool === 'image' || activeTool === 'filesystem') {
         canvas.app.canvas.style.cursor = 'crosshair'
         canvas.app.stage.cursor = 'crosshair'
       } else if (activeTool === 'hand') {

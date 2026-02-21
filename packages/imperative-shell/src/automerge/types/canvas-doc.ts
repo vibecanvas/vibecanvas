@@ -151,7 +151,6 @@ export type TImageData = {
 
 export type TChatData = {
   type: 'chat'
-  title: string
   sessionId: string | null    // Claude agent session
   w: number
   h: number
@@ -160,7 +159,6 @@ export type TChatData = {
 
 export type TFiletreeData = {
   type: 'filetree'
-  title: string
   w: number
   h: number
   isCollapsed: boolean

@@ -1,6 +1,6 @@
-import { ctrlCreateChat } from "@vibecanvas/core/chat/index";
-import ctrlDeleteChat from "@vibecanvas/core/chat/ctrl.delete-chat";
-import ctrlUpdateChat from "@vibecanvas/core/chat/ctrl.update-chat";
+import { ctrlCreateChat } from "@vibecanvas/core/chat/ctrl.create-chat";
+import { ctrlDeleteChat } from "@vibecanvas/core/chat/ctrl.delete-chat";
+import { ctrlUpdateChat } from "@vibecanvas/core/chat/ctrl.update-chat";
 import { ClaudeAgent } from "@vibecanvas/shell/claude-agent/srv.claude-agent";
 import { tExternal } from "@vibecanvas/server/error-fn";
 import { baseOs } from "../orpc.base";
@@ -40,7 +40,7 @@ const update = baseOs.api.chat.update.handler(async ({ input, context: { db } })
   if (!chat) {
     throw new Error("Chat not found");
   }
-  dbUpdatePublisher.publish(chat.canvas_id, { data: { change: 'update', id: chat.id, table: 'chats', record: chat}})
+  dbUpdatePublisher.publish(chat.canvas_id, { data: { change: 'update', id: chat.id, table: 'chats', record: chat } })
 
   return chat;
 });

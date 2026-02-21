@@ -1,7 +1,7 @@
 import { join } from "path";
 import { ProjectFsErr } from "./err.codes";
 
-type TPortal = {
+export type TPortal = {
   bun: {
     spawn: typeof Bun.spawn;
   };
@@ -10,7 +10,7 @@ type TPortal = {
   };
 };
 
-type TArgs = {
+export type TArgs = {
   projectRoot: string;
 };
 
@@ -30,7 +30,7 @@ async function runCommand(
   return { stdout, exitCode: proc.exitCode ?? 0 };
 }
 
-async function fxProjectFsFileTree(
+export async function fxProjectFsFileTree(
   portal: TPortal,
   args: TArgs
 ): Promise<TErrTuple<TFileTree>> {
@@ -132,6 +132,3 @@ async function fxProjectFsFileTree(
     null,
   ];
 }
-
-export default fxProjectFsFileTree;
-export type { TPortal, TArgs, TFileTree };

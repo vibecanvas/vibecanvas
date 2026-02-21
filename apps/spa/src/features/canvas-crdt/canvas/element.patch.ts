@@ -6,6 +6,7 @@ import { ArrowElement } from "../renderables/elements/arrow/arrow.class";
 import { ChatElement } from "../renderables/elements/chat/chat.class";
 import { DiamondElement } from "../renderables/elements/diamond/diamond.class";
 import { EllipseElement } from "../renderables/elements/ellipse/ellipse.class";
+import { FiletreeElement } from "../renderables/elements/filetree/filetree.class";
 import type { TBackendElementOf } from "../renderables/element.abstract";
 import { ImageElement } from "../renderables/elements/image/image.class";
 import { LineElement } from "../renderables/elements/line/line.class";
@@ -142,9 +143,9 @@ function handleElementUpdated(canvas: Canvas, doc: TCanvasDoc, elementId: string
   // Handle other elements with w/h or rx/ry
   // Sync container transform from new data
   const w = 'w' in newData.data ? newData.data.w :
-            'rx' in newData.data ? newData.data.rx * 2 : 0
+    'rx' in newData.data ? newData.data.rx * 2 : 0
   const h = 'h' in newData.data ? newData.data.h :
-            'ry' in newData.data ? newData.data.ry * 2 : 0
+    'ry' in newData.data ? newData.data.ry * 2 : 0
   renderable.container.x = newData.x + w / 2
   renderable.container.y = newData.y + h / 2
   renderable.container.rotation = newData.angle
@@ -177,8 +178,11 @@ function createElementRenderable(element: TElement, canvas: Canvas): AElement | 
       return new PenElement(element as TBackendElementOf<'pen'>, canvas)
     case 'chat':
       return new ChatElement(element as TBackendElementOf<'chat'>, canvas)
+    case 'filetree':
+      return new FiletreeElement(element as TBackendElementOf<'filetree'>, canvas)
     default:
-      console.warn(`Unknown element type: ${element.data.type}`)
+      // @ts-ignore
+      console.warn(`Unknown element type: ${element?.data?.type}`)
       return null
   }
 }

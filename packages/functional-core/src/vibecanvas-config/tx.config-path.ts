@@ -5,11 +5,11 @@ import { ConfigErr } from "./err.codes";
 
 declare const VIBECANVAS_COMPILED: boolean;
 
-type TPortal = {
+export type TPortal = {
   fs: { existsSync: typeof existsSync, mkdirSync: typeof mkdirSync };
 };
 
-type TArgs = {
+export type TArgs = {
   env?: NodeJS.ProcessEnv;
   isCompiled?: boolean;
 };
@@ -38,7 +38,7 @@ function findMonorepoRoot(fs: TPortal["fs"], startDir: string): string | null {
   return null;
 }
 
-function txConfigPath(portal: TPortal, args: TArgs = {}): TErrTriple<TConfigPath> {
+export function txConfigPath(portal: TPortal, args: TArgs = {}): TErrTriple<TConfigPath> {
   const rollbacks: TExternalRollback[] = [];
 
   try {
@@ -93,6 +93,3 @@ function txConfigPath(portal: TPortal, args: TArgs = {}): TErrTriple<TConfigPath
     ];
   }
 }
-
-export default txConfigPath;
-export type { TArgs, TConfigPath };

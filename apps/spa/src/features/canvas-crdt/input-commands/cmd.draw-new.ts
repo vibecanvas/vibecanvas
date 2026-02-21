@@ -1,46 +1,25 @@
-import { setStore, store } from "@/store"
 import { DEFAULT_FILL_COLOR, DEFAULT_STROKE_COLOR, getRecentColorStorageKey } from "@/features/floating-selection-menu/types"
-import type { TElement, TElementData, TElementStyle } from "@vibecanvas/shell/automerge/index"
-import { Point } from "pixi.js"
+import { setStore, store } from "@/store"
+import { createElement } from "@vibecanvas/core/automerge/fn.create-element"
+import type { TElementStyle } from "@vibecanvas/shell/automerge/index"
+import { Point, type FederatedPointerEvent } from "pixi.js"
 import type { ExtractElementData, TBackendElementOf } from "../renderables/element.abstract"
+import { ArrowElement } from "../renderables/elements/arrow/arrow.class"
 import { ChatElement } from "../renderables/elements/chat/chat.class"
 import { DiamondElement } from "../renderables/elements/diamond/diamond.class"
 import { EllipseElement } from "../renderables/elements/ellipse/ellipse.class"
+import { FiletreeElement } from "../renderables/elements/filetree/filetree.class"
 import { LineElement } from "../renderables/elements/line/line.class"
-import { ArrowElement } from "../renderables/elements/arrow/arrow.class"
+import { PenElement } from "../renderables/elements/pen/pen.class"
 import { RectElement } from "../renderables/elements/rect/rect.class"
 import { TextElement } from "../renderables/elements/text/text.class"
-import { PenElement } from "../renderables/elements/pen/pen.class"
 import type { InputCommand, PointerInputContext } from "./types"
 import { isElementTarget } from "./types"
-
-export function createElement(
-  id: string,
-  x: number,
-  y: number,
-  data: TElementData,
-  style: TElementStyle,
-  zIndex: string = 'a'
-): TElement {
-  const now = Date.now()
-  return {
-    id,
-    x,
-    y,
-    angle: 0,
-    zIndex,
-    parentGroupId: null,
-    bindings: [],
-    locked: false,
-    createdAt: now,
-    updatedAt: now,
-    data,
-    style,
-  }
-}
+import { orpcWebsocketService } from "@/services/orpc-websocket"
 
 
-const DRAWING_TOOLS = ['rectangle', 'diamond', 'ellipse', 'arrow', 'line', 'pen', 'text', 'image', 'chat'] as const
+
+const DRAWING_TOOLS = ['rectangle', 'diamond', 'ellipse', 'arrow', 'line', 'pen', 'text', 'image', 'chat', 'filesystem'] as const
 const DRAG_THRESHOLD = 5
 
 let isDragging = false
@@ -99,7 +78,7 @@ function handleMove(ctx: PointerInputContext): boolean {
 
   if (tool === 'rectangle') {
     if (!preview) {
-      const {data, style} = createRectElementDataAndStyle(w, h, 0, drawingDefaults)
+      const { data, style } = createRectElementDataAndStyle(w, h, 0, drawingDefaults)
       // TODO: use smaller ids
       const element = createElement(crypto.randomUUID(), x, y, data, style)
       const renderable = new RectElement(element as TBackendElementOf<'rect'>, ctx.canvas)
@@ -115,7 +94,7 @@ function handleMove(ctx: PointerInputContext): boolean {
 
   if (tool === 'diamond') {
     if (!preview) {
-      const {data, style} = createDiamondElementDataAndStyle(w, h, drawingDefaults)
+      const { data, style } = createDiamondElementDataAndStyle(w, h, drawingDefaults)
       const element = createElement(crypto.randomUUID(), x, y, data, style)
       const renderable = new DiamondElement(element as TBackendElementOf<'diamond'>, ctx.canvas)
       ctx.canvas.setPreviewElement(renderable)
@@ -133,7 +112,7 @@ function handleMove(ctx: PointerInputContext): boolean {
     const rx = w / 2
     const ry = h / 2
     if (!preview) {
-      const {data, style} = createEllipseElementDataAndStyle(rx, ry, drawingDefaults)
+      const { data, style } = createEllipseElementDataAndStyle(rx, ry, drawingDefaults)
       const element = createElement(crypto.randomUUID(), x, y, data, style)
       const renderable = new EllipseElement(element as TBackendElementOf<'ellipse'>, ctx.canvas)
       ctx.canvas.setPreviewElement(renderable)
@@ -311,7 +290,7 @@ function handleUp(ctx: Parameters<InputCommand>[0]): boolean {
     if (tool !== 'pen') {
       setStore('toolbarSlice', 'activeTool', 'select')
     }
-  } else if (!wasDragging && tool === 'text') {
+  } else if (tool === 'text') {
     // Text: create on single click (no drag)
     const drawingDefaults = getDrawingStyleDefaults(ctx.canvas.canvasId)
     const { data, style } = createTextElementDataAndStyle(drawingDefaults)
@@ -356,7 +335,7 @@ function handleUp(ctx: Parameters<InputCommand>[0]): boolean {
     requestAnimationFrame(() => {
       renderable.dispatch({ type: 'enter' })
     })
-  } else if (!wasDragging && tool === 'chat') {
+  } else if (tool === 'chat') {
     // Chat: create on single click (no drag)
     const { data, style } = createChatElementDataAndStyle()
     const element = createElement(
@@ -395,6 +374,50 @@ function handleUp(ctx: Parameters<InputCommand>[0]): boolean {
     })
 
     setStore('toolbarSlice', 'activeTool', 'select')
+  } else if (tool === 'filesystem') {
+    // const { data, style } = createFiletreeElementDataAndStyle()
+    // const element = createElement(
+    //   crypto.randomUUID(),
+    //   dragStartWorld.x,
+    //   dragStartWorld.y,
+    //   data,
+    //   style
+    // )
+    // const renderable = new FiletreeElement(element as TBackendElementOf<'filetree'>, ctx.canvas)
+
+    // ctx.canvas.addElement(renderable)
+
+    // const elementId = renderable.id
+    // const elementData = { ...renderable.element }
+
+    // ctx.canvas.handle.change(doc => {
+    //   doc.elements[elementId] = renderable.element
+    // })
+    const lastFiletreePath = localStorage.getItem('vibecanvas-filetree-last-path');
+    orpcWebsocketService.safeClient.api.filetree.create({
+      canvas_id: ctx.canvas.canvasId,
+      x: dragStartWorld.x,
+      y: dragStartWorld.y,
+      ...(lastFiletreePath ? { path: lastFiletreePath } : {}),
+    }).then(([err, filetree]) => {
+      console.log(err, filetree)
+      // ctx.canvas.undoManager.record({
+      //   label: 'Create File Tree',
+      //   undo: () => {
+      //     ctx.canvas.handle.change(doc => {
+      //       delete doc.elements[elementId]
+      //     })
+      //   },
+      //   redo: () => {
+      //     ctx.canvas.handle.change(doc => {
+      //       doc.elements[elementId] = { ...elementData }
+      //     })
+      //   }
+      // })
+    })
+
+
+    setStore('toolbarSlice', 'activeTool', 'select')
   } else {
     // Cancel preview if not dragging
     ctx.canvas.clearPreviewElement()
@@ -416,7 +439,7 @@ function createRectElementDataAndStyle(
   h: number,
   radius: number,
   defaults: TDrawingStyleDefaults,
-): {data: ExtractElementData<'rect'>, style: TElementStyle} {
+): { data: ExtractElementData<'rect'>, style: TElementStyle } {
   return {
     data: { type: 'rect', w, h, radius },
     style: {
@@ -428,7 +451,7 @@ function createRectElementDataAndStyle(
   }
 }
 
-function createDiamondElementDataAndStyle(w: number, h: number, defaults: TDrawingStyleDefaults): {data: ExtractElementData<'diamond'>, style: TElementStyle} {
+function createDiamondElementDataAndStyle(w: number, h: number, defaults: TDrawingStyleDefaults): { data: ExtractElementData<'diamond'>, style: TElementStyle } {
   return {
     data: { type: 'diamond', w, h },
     style: {
@@ -440,7 +463,7 @@ function createDiamondElementDataAndStyle(w: number, h: number, defaults: TDrawi
   }
 }
 
-function createEllipseElementDataAndStyle(rx: number, ry: number, defaults: TDrawingStyleDefaults): {data: ExtractElementData<'ellipse'>, style: TElementStyle} {
+function createEllipseElementDataAndStyle(rx: number, ry: number, defaults: TDrawingStyleDefaults): { data: ExtractElementData<'ellipse'>, style: TElementStyle } {
   return {
     data: { type: 'ellipse', rx, ry },
     style: {
@@ -452,7 +475,7 @@ function createEllipseElementDataAndStyle(rx: number, ry: number, defaults: TDra
   }
 }
 
-function createTextElementDataAndStyle(defaults: TDrawingStyleDefaults): {data: ExtractElementData<'text'>, style: TElementStyle} {
+function createTextElementDataAndStyle(defaults: TDrawingStyleDefaults): { data: ExtractElementData<'text'>, style: TElementStyle } {
   return {
     data: {
       type: 'text',
@@ -559,7 +582,6 @@ function createChatElementDataAndStyle(): {
   return {
     data: {
       type: 'chat',
-      title: 'Chat',
       sessionId: null,
       w: 300,
       h: 500,
@@ -581,8 +603,8 @@ function createChatElementDataAndStyle(): {
 /**
  * Get pressure from PointerEvent if available, otherwise return default.
  */
-function getPressure(event: Event): number {
-  if (event instanceof PointerEvent && event.pressure > 0) {
+function getPressure(event: FederatedPointerEvent): number {
+  if (event.pressure > 0) {
     return event.pressure
   }
   return 0.5 // Default for mouse without pressure
@@ -592,6 +614,6 @@ function getPressure(event: Event): number {
  * Detect if device supports pressure (e.g., tablet/stylus).
  * Returns true if pressure is between 0 and 1 (exclusive).
  */
-function getPressureSupported(event: Event): boolean {
-  return event instanceof PointerEvent && event.pressure > 0 && event.pressure < 1
+function getPressureSupported(event: FederatedPointerEvent): boolean {
+  return event.pressure > 0 && event.pressure < 1
 }

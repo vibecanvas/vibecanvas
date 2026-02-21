@@ -15,7 +15,7 @@ type TDeleteResult = {
   deleted: boolean;
 };
 
-function ctrlDeleteCanvas(portal: TPortal, args: TDeleteArgs): TErrTuple<TDeleteResult> {
+export function ctrlDeleteCanvas(portal: TPortal, args: TDeleteArgs): TErrTuple<TDeleteResult> {
   try {
     const result = portal.db
       .delete(schema.canvas)
@@ -41,5 +41,3 @@ function ctrlDeleteCanvas(portal: TPortal, args: TDeleteArgs): TErrTuple<TDelete
     }];
   }
 }
-
-export default ctrlDeleteCanvas;

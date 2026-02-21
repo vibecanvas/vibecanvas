@@ -1,20 +1,19 @@
 // @refresh reload
-import { CONNECTION_STATE } from "@/features/canvas-crdt/renderables/elements/chat/chat.state-machine"
-import type { Accessor, Setter } from "solid-js"
-import { StatusLine } from "./status-line"
-import type { SDKUserMessage } from "@anthropic-ai/claude-agent-sdk"
-import { ChatMessages } from "./chat-message"
-import { ChatInput, type TContentBlock } from "./chat-input"
-import { ErrorBoundary, createEffect, createResource, createSignal, on, onMount } from "solid-js"
-import type { TCanvas } from "@vibecanvas/core/canvas/index"
-import * as schema from "@vibecanvas/shell/database/schema"
-import { orpcWebsocketService } from "@/services/orpc-websocket"
+import { PathPickerDialog } from "@/components/path-picker-dialog"
+import { applyChangesToCRDT } from "@/features/canvas-crdt/changes"
 import { AElement } from "@/features/canvas-crdt/renderables/element.abstract"
-import { ChatHeader } from "./chat-header"
-import { ChatPathPickerDialog } from "./chat-path-picker-dialog"
+import { CONNECTION_STATE } from "@/features/canvas-crdt/renderables/elements/chat/chat.state-machine"
+import { orpcWebsocketService } from "@/services/orpc-websocket"
 import { setStore, store } from "@/store"
 import { TBackendChat } from "@/types/backend.types"
-import { applyChangesToCRDT } from "@/features/canvas-crdt/changes"
+import type { SDKUserMessage } from "@anthropic-ai/claude-agent-sdk"
+import type { TCanvas } from "@vibecanvas/core/canvas/ctrl.create-canvas"
+import type { Accessor, Setter } from "solid-js"
+import { ErrorBoundary, createEffect, createResource, createSignal, on, onMount } from "solid-js"
+import { ChatHeader } from "./chat-header"
+import { ChatInput, type TContentBlock } from "./chat-input"
+import { ChatMessages } from "./chat-message"
+import { StatusLine } from "./status-line"
 
 export type TChatBounds = {
   x: number
@@ -143,7 +142,7 @@ export function Chat(props: TChatProps) {
       return
     }
 
-    const [initError, init] = await orpcWebsocketService.safeClient.api.ai.init({canvasId: props.canvas.id, chatId: props.chatId, harness: 'CLAUDE_CODE'})
+    const [initError, init] = await orpcWebsocketService.safeClient.api.ai.init({ canvasId: props.canvas.id, chatId: props.chatId, harness: 'CLAUDE_CODE' })
     if (initError) {
       console.error('init error', initError)
       props.setState(CONNECTION_STATE.ERROR)
@@ -178,7 +177,7 @@ export function Chat(props: TChatProps) {
     lastPos = { x: e.clientX, y: e.clientY }
     props.onSelect()
     props.onDragStart()
-    ;(e.target as HTMLElement).setPointerCapture(e.pointerId)
+      ; (e.target as HTMLElement).setPointerCapture(e.pointerId)
   }
 
   const handlePointerMove = (e: PointerEvent) => {
@@ -197,7 +196,7 @@ export function Chat(props: TChatProps) {
     if (!isDragging) return
     isDragging = false
     props.onDragEnd()
-    ;(e.target as HTMLElement).releasePointerCapture(e.pointerId)
+      ; (e.target as HTMLElement).releasePointerCapture(e.pointerId)
   }
 
   const sendMessage = async (content: TContentBlock[]) => {
@@ -274,11 +273,11 @@ export function Chat(props: TChatProps) {
         onCollapse={() => {
           // TODO: Implement collapse logic
         }}
-        onRemove={( ) => {
+        onRemove={() => {
           const handle = store.canvasSlice.canvas?.handle
-          if(!handle) return // should never happen
-          const changes = props.chatClass.dispatch({type: 'delete'})
-          if(changes) applyChangesToCRDT(handle, [changes])
+          if (!handle) return // should never happen
+          const changes = props.chatClass.dispatch({ type: 'delete' })
+          if (changes) applyChangesToCRDT(handle, [changes])
         }}
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}
@@ -299,7 +298,7 @@ export function Chat(props: TChatProps) {
         onSend={sendMessage}
       />
       <StatusLine state={props.state} />
-      <ChatPathPickerDialog
+      <PathPickerDialog
         open={isPathDialogOpen()}
         onOpenChange={setIsPathDialogOpen}
         initialPath={chat()?.local_path ?? null}
@@ -307,6 +306,8 @@ export function Chat(props: TChatProps) {
           await updateLocalPath(path)
           setIsPathDialogOpen(false)
         }}
+        title="Select Chat Folder"
+        description="Path change starts a new session."
       />
     </div>
   )

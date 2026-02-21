@@ -34,7 +34,7 @@ describe("buildMigrationsFolderCandidates", () => {
     });
 
     expect(candidates).toContain(sourceDir);
-    expect(candidates.at(-1)).toBe(sourceDir);
+    expect(candidates[0]).toBe(sourceDir);
   });
 
   test("keeps env override at highest priority", () => {
