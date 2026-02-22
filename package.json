@@ -16,6 +16,7 @@
     "@orpc/client": "1.13.4",
     "@orpc/contract": "1.13.4",
     "@orpc/server": "1.13.4",
+    "@opencode-ai/sdk": "1.2.10",
     "drizzle-kit": "0.31.8",
     "drizzle-orm": "0.45.1",
     "drizzle-zod": "0.8.3",

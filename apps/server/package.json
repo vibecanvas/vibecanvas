@@ -18,6 +18,7 @@
     "@automerge/automerge-repo-network-websocket": "catalog:",
     "@orpc/server": "catalog:",
     "@orpc/contract": "catalog:",
+    "@opencode-ai/sdk": "catalog:",
     "@vibecanvas/core": "workspace:*",
     "@vibecanvas/shell": "workspace:*",
     "@vibecanvas/core-contract": "workspace:*",
