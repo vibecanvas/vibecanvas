@@ -44,7 +44,7 @@ export const chats = sqliteTable("chats", {
   canvas_id: text("canvas_id").notNull().references(() => canvas.id, { onDelete: "cascade" }),
   title: text("title").notNull(),
   session_id: text("session_id").notNull(),
-  local_path: text("local_path"),
+  local_path: text("local_path").notNull(),
   created_at: integer("created_at", { mode: "timestamp" }).notNull().default(sql`(unixepoch())`),
   updated_at: integer("updated_at", { mode: "timestamp" }).notNull().default(sql`(unixepoch())`),
 });
