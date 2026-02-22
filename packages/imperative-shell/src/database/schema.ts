@@ -1,7 +1,7 @@
 import { sqliteTable, text, integer, real, blob, index } from "drizzle-orm/sqlite-core";
 import { createSelectSchema } from 'drizzle-zod';
 import { sql } from "drizzle-orm";
-import type { SDKMessage } from "@anthropic-ai/claude-agent-sdk";
+import type { Message, Part } from "@opencode-ai/sdk/v2";
 
 /**
  * @llm-hint DRIZZLE JSON DEFAULTS
@@ -33,8 +33,10 @@ export const agent_logs = sqliteTable("agent_logs", {
   canvas_id: text("canvas_id").notNull().references(() => canvas.id, { onDelete: "cascade" }),
   session_id: text("session_id").notNull(),
   timestamp: integer({ mode: "timestamp" }).notNull(),
-  type: text({ enum: ['CLAUDE_CODE'] }).notNull(),
-  data: text("data", { mode: "json" }).$type<SDKMessage>(),
+  data: text("data", { mode: "json" }).$type<{
+    info: Message;
+    parts: Array<Part>;
+  }>(),
 });
 
 export const ZAgentLogsSelect = createSelectSchema(agent_logs);

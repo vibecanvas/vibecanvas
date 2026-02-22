@@ -351,7 +351,7 @@ export function Chat(props: TChatProps) {
       }}
     >
       <ChatHeader
-        title={chat()?.title ?? ''}
+        title={(chat()?.title) + ' ' + chat()?.session_id}
         subtitle={chat()?.local_path ?? ''}
         onSetFolder={handleSetFolder}
         onCollapse={() => {

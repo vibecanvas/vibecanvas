@@ -139,7 +139,6 @@ const root = createRoot((dispose) => {
       for await (const event of it) {
         if (event.type === "error") showErrorToast(event.title, event.description);
         else if (event.type === "success") showSuccessToast(event.title, event.description);
-        else showToast(event.title, event.description);
       }
     });
 

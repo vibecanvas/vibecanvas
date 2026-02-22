@@ -3,7 +3,8 @@ import { tExternal } from "@vibecanvas/server/error-fn";
 import { homedir } from "os";
 import { baseOs } from "../orpc.base";
 import { dbUpdatePublisher } from "./api.db";
-import type { Event as OpenCodeEvent, NotFoundError } from "@opencode-ai/sdk/v2";
+import type { Event as OpenCodeEvent, NotFoundError, UserMessage } from "@opencode-ai/sdk/v2";
+import { agent_logs } from "@vibecanvas/shell/database/schema"
 
 // Base64 Images
 // Send images and other binary files using data URLs in the url field of file parts.
@@ -59,14 +60,11 @@ const prompt = baseOs.api.ai.prompt.handler(async ({ input, context: { db, openc
   if (!chat) throw new ORPCError('CHAT_NOT_FOUND', { message: 'Chat not found', })
 
   const client = opencodeService.getClient(chat.id)
-  const newSession = await client.session.create({ directory: chat.local_path ?? homedir() })
-  if (newSession.error) throw new ORPCError('SESSION_NOT_FOUND', { message: 'Session not found', })
 
-  const { data, error, response } = await client.session.prompt({
-    sessionID: newSession.data.id,
+  const { data, error } = await client.session.prompt({
+    sessionID: chat.session_id,
     parts: input.parts,
   })
-  console.log(error, data, await response.json())
 
   if (error) {
     if ("name" in error && error.name === "NotFoundError") {
@@ -74,12 +72,44 @@ const prompt = baseOs.api.ai.prompt.handler(async ({ input, context: { db, openc
         message: error.data.message,
       })
     }
-    console.error('opencode prompt bad request ' + error.data)
+    console.error('opencode prompt bad request ' + JSON.stringify(error, null, 2))
     // BadRequestError (no `name` field)
     throw new ORPCError('BAD_REQUEST', {
       message: 'Bad request',
     })
   }
+
+  console.log(JSON.stringify(data, null, 2))
+
+  const userMessageID = data.info.parentID
+  // Fetch complete message with parts
+  const { data: userMessage, error: userMessageError } = await client.session.message({
+    sessionID: chat.session_id,
+    messageID: userMessageID,
+  })
+
+  if (userMessageError) {
+    console.error('opencode message bad request ' + JSON.stringify(userMessageError, null, 2))
+    throw new ORPCError('BAD_REQUEST', {
+      message: 'Bad request',
+    })
+  }
+
+  db.insert(agent_logs).values({
+    id: data.info.parentID,
+    canvas_id: chat.canvas_id,
+    session_id: data.info.sessionID,
+    timestamp: new Date(),
+    data: userMessage,
+  }).run()
+
+  db.insert(agent_logs).values({
+    id: data.info.id,
+    canvas_id: chat.canvas_id,
+    session_id: data.info.sessionID,
+    timestamp: new Date(),
+    data,
+  }).run()
 
 
   return data;
