@@ -47,6 +47,33 @@ In compiled mode, the server:
 - `src/apis/`: Individual API implementations.
 - `src/update/`: Logic for the self-update mechanism.
 
+## Error Handling Middleware
+
+All error translation is handled by a global `onError` middleware in `orpc.base.ts`. Handlers never need to translate errors themselves.
+
+### How It Works
+
+1. **Type guard** (`isErrorEntry`): Checks if a thrown value is a `TErrorEntry` (has `code: string` and `statusCode: number`).
+2. **Middleware** (`.use(onError(...))`): Catches all thrown errors and routes them:
+   - `TErrorEntry` → translates via `tExternal()`, optionally logs via `tInternal()`, re-throws as `ORPCError`.
+   - `ORPCError` → re-throws as-is.
+   - Unknown → wraps in a generic `ORPCError('UNKNOWN')`.
+
+### Handler Pattern
+
+Handlers call a controller and throw the `TErrorEntry` directly. The middleware does the rest:
+
+```typescript
+const create = baseOs.api.chat.create.handler(async ({ input, context: { db } }) => {
+  const [result, error] = await ctrlCreateChat({ db, repo }, { ... });
+  if (error) throw error;       // TErrorEntry — middleware handles translation
+  // ...
+  return chat;
+});
+```
+
+**Do not** wrap errors in `new Error(...)` or `new ORPCError(...)` inside handlers. Just `throw error`.
+
 ## Integration Patterns
 
 - **Context Injection**: Every oRPC request has access to the Drizzle database instance via the `context` object.
