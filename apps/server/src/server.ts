@@ -9,12 +9,21 @@ import { createServer } from 'net';
 import { join, normalize } from 'path';
 import { router } from './api-router';
 import { publishNotification } from './apis/api.notification';
-import { fileMetaFromPathname } from './files/file-storage';
+import { fileMetaFromPathname } from '@vibecanvas/core/file/fn.file-storage';
 import { baseOs } from './orpc.base';
 import './preload/patch-negative-timeout';
 import { getServerVersion } from './runtime';
 import checkForUpgrade from './update';
 import { wsAdapter } from './automerge-repo';
+import { createOpencodeServer } from "@opencode-ai/sdk"
+
+// Start opencode server so client can talk to
+const opencodeServer = await createOpencodeServer({
+  config: {
+    autoupdate: false,
+
+  }
+})
 
 // Export API type for Eden client
 export type App = any;

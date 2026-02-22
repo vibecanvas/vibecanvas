@@ -6,7 +6,7 @@ import { createHash } from "crypto";
 import { existsSync, readdirSync, statSync } from "fs";
 import { homedir } from "os";
 import { dirname, join } from "path";
-import { extensionFromFormat, toPublicFileUrl } from "../files/file-storage";
+import { extensionFromFormat, toPublicFileUrl } from "@vibecanvas/core/file/fn.file-storage";
 import { baseOs } from "../orpc.base";
 
 function getBase64Payload(base64OrDataUrl: string): string {
