@@ -58,12 +58,15 @@ const prompt = baseOs.api.ai.prompt.handler(async ({ input, context: { db, openc
   const chat = db.query.chats.findFirst({ where: (table, { eq }) => eq(table.id, input.chatId) }).sync()
   if (!chat) throw new ORPCError('CHAT_NOT_FOUND', { message: 'Chat not found', })
 
-
   const client = opencodeService.getClient(chat.id)
-  const { data, error } = await client.session.prompt({
-    sessionID: chat.session_id,
+  const newSession = await client.session.create({ directory: chat.local_path ?? homedir() })
+  if (newSession.error) throw new ORPCError('SESSION_NOT_FOUND', { message: 'Session not found', })
+
+  const { data, error, response } = await client.session.prompt({
+    sessionID: newSession.data.id,
     parts: input.parts,
   })
+  console.log(error, data, await response.json())
 
   if (error) {
     if ("name" in error && error.name === "NotFoundError") {
@@ -77,6 +80,7 @@ const prompt = baseOs.api.ai.prompt.handler(async ({ input, context: { db, openc
       message: 'Bad request',
     })
   }
+
 
   return data;
 })

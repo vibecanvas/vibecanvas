@@ -12,7 +12,6 @@ const createChatInputSchema = z.object({
 
 const updateChatBodySchema = z.object({
   title: z.string().optional(),
-  local_path: z.string().nullable().optional(),
 });
 
 export type TChat = z.infer<typeof ZChatsSelect>;

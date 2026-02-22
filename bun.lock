@@ -49,6 +49,7 @@
         "@automerge/automerge-repo-storage-indexeddb": "^2.5.1",
         "@fontsource-variable/jetbrains-mono": "^5.2.8",
         "@kobalte/core": "^0.13.11",
+        "@opencode-ai/sdk": "catalog:",
         "@opentf/obj-diff": "^0.12.0",
         "@orpc/client": "catalog:",
         "@orpc/contract": "catalog:",

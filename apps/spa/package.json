@@ -34,6 +34,7 @@
     "@vibecanvas/core-contract": "workspace:*",
     "@vibecanvas/core": "workspace:*",
     "@vibecanvas/shell": "workspace:*",
+    "@opencode-ai/sdk": "catalog:",
     "@orpc/client": "catalog:",
     "@orpc/contract": "catalog:",
     "@automerge/automerge": "catalog:",

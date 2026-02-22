@@ -1,14 +1,16 @@
+import type { Repo } from "@automerge/automerge-repo";
 import type { TCanvasDoc, TChatData } from "@vibecanvas/shell/automerge/types/canvas-doc";
 import type db from "@vibecanvas/shell/database/db";
 import * as schema from "@vibecanvas/shell/database/schema";
+import { type OpencodeService } from "@vibecanvas/shell/opencode/srv.opencode";
+import { eq } from "drizzle-orm";
 import { homedir } from 'os';
 import { createElement } from "../automerge/fn.create-element";
-import { eq } from "drizzle-orm";
-import type { Repo } from "@automerge/automerge-repo";
 
 type TPortal = {
   db: typeof db;
-  repo: Repo
+  repo: Repo;
+  opencodeService: OpencodeService;
 };
 
 type TArgs = Pick<TChat, 'canvas_id' | 'title' | 'local_path'> & { x: number, y: number };
@@ -38,12 +40,20 @@ export async function ctrlCreateChat(portal: TPortal, args: TArgs): Promise<TErr
       return [null, { code: "CTRL.CHAT.CREATE_CHAT.CANVAS_NOT_FOUND", statusCode: 404, externalMessage: { en: "Canvas not found" } }];
     }
 
+    const chatId = crypto.randomUUID()
+
+    const newSession = await portal.opencodeService.getClient(canvas.id).session.create({ directory: args.local_path })
+    if (newSession.error) {
+      return [null, { code: "CTRL.CHAT.CREATE_CHAT.FAILED", statusCode: 500, internalLogLevel: 'error', shouldLogInternally: true, internalMessage: JSON.stringify(newSession.error), externalMessage: { en: "Failed to create chat" } }];
+    }
+
+
     const chatData: typeof schema.chats.$inferInsert = {
-      id: crypto.randomUUID(),
+      id: chatId,
       canvas_id: args.canvas_id,
       title: args.title,
-      session_id: crypto.randomUUID(),
-      local_path: args.local_path ?? homedir(),
+      session_id: newSession.data.id,
+      local_path: args.local_path,
     } as const;
     const chat = portal.db.insert(schema.chats).values(chatData).returning().all()[0]!;
 
