@@ -351,7 +351,7 @@ function handleUp(ctx: Parameters<InputCommand>[0]): boolean {
         showErrorToast(err.message)
         return
       }
-      setStore('chatSlice', 'backendChats', ctx.canvas.canvasId, chat)
+      setStore('chatSlice', 'backendChats', ctx.canvas.canvasId, (prev) => [...(prev ?? []), chat])
       // Record undo entry
       // ctx.canvas.undoManager.record({
       //   label: 'Create Chat',
