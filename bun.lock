@@ -118,7 +118,7 @@
       "name": "@vibecanvas/core-contract",
       "version": "0.0.10",
       "dependencies": {
-        "@anthropic-ai/claude-agent-sdk": "catalog:",
+        "@opencode-ai/sdk": "catalog:",
         "@orpc/contract": "catalog:",
         "@vibecanvas/shell": "workspace:*",
         "drizzle-zod": "catalog:",
@@ -145,6 +145,7 @@
         "@automerge/automerge": "catalog:",
         "@automerge/automerge-repo": "catalog:",
         "@automerge/automerge-repo-network-websocket": "catalog:",
+        "@opencode-ai/sdk": "catalog:",
         "@orpc/server": "catalog:",
         "@vibecanvas/core": "workspace:*",
         "drizzle-orm": "catalog:",

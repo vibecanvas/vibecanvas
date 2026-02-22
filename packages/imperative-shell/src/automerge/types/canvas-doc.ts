@@ -151,7 +151,6 @@ export type TImageData = {
 
 export type TChatData = {
   type: 'chat'
-  sessionId: string | null    // Claude agent session
   w: number
   h: number
   isCollapsed: boolean

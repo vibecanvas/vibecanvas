@@ -1,10 +1,10 @@
 import { ctrlCreateChat } from "@vibecanvas/core/chat/ctrl.create-chat";
 import { ctrlDeleteChat } from "@vibecanvas/core/chat/ctrl.delete-chat";
 import { ctrlUpdateChat } from "@vibecanvas/core/chat/ctrl.update-chat";
-import { ClaudeAgent } from "@vibecanvas/shell/claude-agent/srv.claude-agent";
+import { repo } from "@vibecanvas/server/automerge-repo";
 import { tExternal } from "@vibecanvas/server/error-fn";
+import { ClaudeAgent } from "@vibecanvas/shell/claude-agent/srv.claude-agent";
 import { baseOs } from "../orpc.base";
-import type * as _DrizzleZod from "drizzle-zod";
 import { dbUpdatePublisher } from "./api.db";
 
 const list = baseOs.api.chat.list.handler(async ({ context: { db } }) => {
@@ -12,11 +12,12 @@ const list = baseOs.api.chat.list.handler(async ({ context: { db } }) => {
 });
 
 const create = baseOs.api.chat.create.handler(async ({ input, context: { db } }) => {
-  const [result, error] = ctrlCreateChat({ db }, {
+  const [result, error] = await ctrlCreateChat({ db, repo }, {
     canvas_id: input.canvas_id,
     title: input.title,
-    harness: input.harness,
     local_path: input.local_path ?? null,
+    x: input.x,
+    y: input.y,
   });
   if (error || !result) {
     throw new Error(tExternal(error));

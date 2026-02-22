@@ -5,8 +5,9 @@ import { z } from "zod";
 const createChatInputSchema = z.object({
   canvas_id: z.string(),
   title: z.string(),
-  harness: z.literal('CLAUDE_CODE'),
   local_path: z.string().nullable().optional(),
+  x: z.number(),
+  y: z.number(),
 });
 
 const updateChatBodySchema = z.object({

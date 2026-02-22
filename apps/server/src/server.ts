@@ -3,6 +3,7 @@
 import { onError } from '@orpc/server';
 import { RPCHandler } from '@orpc/server/bun-ws';
 import { ClaudeAgent } from '@vibecanvas/shell/claude-agent/srv.claude-agent';
+import { OpencodeService } from '@vibecanvas/shell/opencode/srv.opencode';
 import db from "@vibecanvas/shell/database/db";
 import { existsSync } from 'fs';
 import { createServer } from 'net';
@@ -15,15 +16,6 @@ import './preload/patch-negative-timeout';
 import { getServerVersion } from './runtime';
 import checkForUpgrade from './update';
 import { wsAdapter } from './automerge-repo';
-import { createOpencodeServer } from "@opencode-ai/sdk"
-
-// Start opencode server so client can talk to
-const opencodeServer = await createOpencodeServer({
-  config: {
-    autoupdate: false,
-
-  }
-})
 
 // Export API type for Eden client
 export type App = any;
@@ -135,6 +127,8 @@ export async function startServer(options: StartServerOptions): Promise<void> {
     console.warn(`[Server] Port ${preferredPort} is busy, using ${httpPort}`);
   }
 
+  const opencodeService = await OpencodeService.init()
+
   Bun.serve({
     port: httpPort,
     fetch(req, server) {
@@ -242,7 +236,7 @@ export async function startServer(options: StartServerOptions): Promise<void> {
       message(ws, message) {
         if (ws.data.path === '/api') {
           handler.message(ws, message, {
-            context: { db }, // Provide initial context if needed
+            context: { db, opencodeService }, // Provide initial context if needed
           })
         } else if (ws.data.path === '/automerge') {
           const wrapper = automergeConnections.get(ws);

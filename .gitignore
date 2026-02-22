@@ -26,6 +26,7 @@ Thumbs.db
 # Logs
 *.log
 logs/
+BASED.md
 
 # Test coverage
 coverage/
