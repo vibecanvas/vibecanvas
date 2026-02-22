@@ -88,16 +88,6 @@ const root = createRoot((dispose) => {
     },
     chatSlice: {
       backendChats: {} as { [canvasId: string]: TBackendChat[] },
-      get backendChatsActive() {
-        const canvasId = activeCanvasId()
-        if (!canvasId) return []
-        const chats = this.backendChats[canvasId]
-        if (chats) return chats
-        // should exist, build it
-        setStore('chatSlice', 'backendChats', canvasId, [])
-        return this.backendChats[canvasId]
-      },
-
     },
     contextMenuSlice: defaultContextMenuSlice,
   });
