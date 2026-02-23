@@ -256,9 +256,7 @@ const sessionFilePartInputSchema = z.object({
 });
 
 const sessionCommandInputSchema = z.object({
-  path: z.object({
-    id: z.string(),
-  }),
+  chatId: z.string(),
   body: z.object({
     messageID: z.string().optional(),
     agent: z.string().optional(),
@@ -271,9 +269,7 @@ const sessionCommandInputSchema = z.object({
 });
 
 const sessionShellInputSchema = z.object({
-  path: z.object({
-    id: z.string(),
-  }),
+  chatId: z.string(),
   body: z.object({
     command: z.string(),
     agent: z.string().optional(),
@@ -287,12 +283,14 @@ const sessionShellInputSchema = z.object({
 });
 
 const findTextInputSchema = z.object({
+  chatId: z.string(),
   query: z.object({
     pattern: z.string(),
   }),
 });
 
 const findFilesInputSchema = z.object({
+  chatId: z.string(),
   query: z.object({
     query: z.string(),
     type: z.enum(["file", "directory"]).optional(),
@@ -301,16 +299,22 @@ const findFilesInputSchema = z.object({
 });
 
 const fileReadInputSchema = z.object({
+  chatId: z.string(),
   query: z.object({
     path: z.string(),
   }),
 });
 
 const authSetInputSchema = z.object({
+  chatId: z.string(),
   path: z.object({
     id: z.string(),
   }),
   body: authSchema,
+});
+
+const chatScopedInputSchema = z.object({
+  chatId: z.string(),
 });
 
 const promptInputSchema = z.object({
@@ -376,16 +380,19 @@ export default oc.router({
 
   app: oc.router({
     agents: oc
+      .input(chatScopedInputSchema)
       .output(z.array(agentSchema)),
   }),
 
   path: oc.router({
     get: oc
+      .input(chatScopedInputSchema)
       .output(pathInfoSchema),
   }),
 
   config: oc.router({
     providers: oc
+      .input(chatScopedInputSchema)
       .output(
         z.object({
           providers: z.array(providerSchema),

@@ -28,8 +28,16 @@ function throwFromOpencodeError(error: unknown): never {
   throw new ORPCError("OPENCODE_ERROR", { message: getErrorMessage(error) });
 }
 
-function getGlobalClientKey(): string {
-  return "__opencode__global__";
+function requireChatContext(
+  db: any,
+  opencodeService: { getClient: (id: string, directory?: string) => any },
+  chatId: string,
+) {
+  const chat = db.query.chats.findFirst({ where: (table: any, { eq }: any) => eq(table.id, chatId) }).sync();
+  if (!chat) throw new ORPCError("CHAT_NOT_FOUND", { message: "Chat not found" });
+
+  const client = opencodeService.getClient(chat.id, chat.local_path);
+  return { chat, client };
 }
 
 // Base64 Images
@@ -81,10 +89,7 @@ function getGlobalClientKey(): string {
 // - Works for any binary format supported by the LLM
 // - Avoid sending very large images (check model limits)
 const prompt = baseOs.api.opencode.prompt.handler(async ({ input, context: { db, opencodeService } }) => {
-  const chat = db.query.chats.findFirst({ where: (table, { eq }) => eq(table.id, input.chatId) }).sync();
-  if (!chat) throw new ORPCError("CHAT_NOT_FOUND", { message: "Chat not found" });
-
-  const client = opencodeService.getClient(chat.id);
+  const { chat, client } = requireChatContext(db, opencodeService, input.chatId);
 
   const { data, error } = await client.session.prompt({
     sessionID: chat.session_id,
@@ -141,39 +146,36 @@ const prompt = baseOs.api.opencode.prompt.handler(async ({ input, context: { db,
 });
 
 const events = baseOs.api.opencode.events.handler(async function* ({ input, context: { db, opencodeService } }) {
-  const chat = db.query.chats.findFirst({ where: (table, { eq }) => eq(table.id, input.chatId) }).sync();
-  if (!chat) throw new ORPCError("CHAT_NOT_FOUND", { message: "Chat not found" });
-
-  const client = opencodeService.getClient(chat.id);
+  const { chat, client } = requireChatContext(db, opencodeService, input.chatId);
   for await (const event of (await client.event.subscribe({ directory: chat.local_path })).stream) {
     yield event;
   }
 });
 
-const appAgents = baseOs.api.opencode.app.agents.handler(async ({ context: { opencodeService } }) => {
-  const client = opencodeService.getClient(getGlobalClientKey());
+const appAgents = baseOs.api.opencode.app.agents.handler(async ({ input, context: { db, opencodeService } }) => {
+  const { chat, client } = requireChatContext(db, opencodeService, input.chatId);
 
-  const { data, error } = await client.app.agents();
+  const { data, error } = await client.app.agents({ directory: chat.local_path });
   if (error) throwFromOpencodeError(error);
   if (!data) throw new ORPCError("OPENCODE_ERROR", { message: "Missing OpenCode response data" });
 
   return data;
 });
 
-const pathGet = baseOs.api.opencode.path.get.handler(async ({ context: { opencodeService } }) => {
-  const client = opencodeService.getClient(getGlobalClientKey());
+const pathGet = baseOs.api.opencode.path.get.handler(async ({ input, context: { db, opencodeService } }) => {
+  const { chat, client } = requireChatContext(db, opencodeService, input.chatId);
 
-  const { data, error } = await client.path.get();
+  const { data, error } = await client.path.get({ directory: chat.local_path });
   if (error) throwFromOpencodeError(error);
   if (!data) throw new ORPCError("OPENCODE_ERROR", { message: "Missing OpenCode response data" });
 
   return data;
 });
 
-const configProviders = baseOs.api.opencode.config.providers.handler(async ({ context: { opencodeService } }) => {
-  const client = opencodeService.getClient(getGlobalClientKey());
+const configProviders = baseOs.api.opencode.config.providers.handler(async ({ input, context: { db, opencodeService } }) => {
+  const { chat, client } = requireChatContext(db, opencodeService, input.chatId);
 
-  const { data, error } = await client.config.providers();
+  const { data, error } = await client.config.providers({ directory: chat.local_path });
   if (error) throwFromOpencodeError(error);
   if (!data) throw new ORPCError("OPENCODE_ERROR", { message: "Missing OpenCode response data" });
 
@@ -181,10 +183,7 @@ const configProviders = baseOs.api.opencode.config.providers.handler(async ({ co
 });
 
 const sessionCommand = baseOs.api.opencode.session.command.handler(async ({ input, context: { db, opencodeService } }) => {
-  const chat = db.query.chats.findFirst({ where: (table, { eq }) => eq(table.id, input.path.id) }).sync();
-  if (!chat) throw new ORPCError("CHAT_NOT_FOUND", { message: "Chat not found" });
-
-  const client = opencodeService.getClient(chat.id);
+  const { chat, client } = requireChatContext(db, opencodeService, input.chatId);
 
   const { data, error } = await client.session.command({
     sessionID: chat.session_id,
@@ -205,10 +204,7 @@ const sessionCommand = baseOs.api.opencode.session.command.handler(async ({ inpu
 });
 
 const sessionShell = baseOs.api.opencode.session.shell.handler(async ({ input, context: { db, opencodeService } }) => {
-  const chat = db.query.chats.findFirst({ where: (table, { eq }) => eq(table.id, input.path.id) }).sync();
-  if (!chat) throw new ORPCError("CHAT_NOT_FOUND", { message: "Chat not found" });
-
-  const client = opencodeService.getClient(chat.id);
+  const { chat, client } = requireChatContext(db, opencodeService, input.chatId);
 
   const { data, error } = await client.session.shell({
     sessionID: chat.session_id,
@@ -224,11 +220,12 @@ const sessionShell = baseOs.api.opencode.session.shell.handler(async ({ input, c
   return data;
 });
 
-const findText = baseOs.api.opencode.find.text.handler(async ({ input, context: { opencodeService } }) => {
-  const client = opencodeService.getClient(getGlobalClientKey());
+const findText = baseOs.api.opencode.find.text.handler(async ({ input, context: { db, opencodeService } }) => {
+  const { chat, client } = requireChatContext(db, opencodeService, input.chatId);
 
   const { data, error } = await client.find.text({
     pattern: input.query.pattern,
+    directory: chat.local_path,
   });
 
   if (error) throwFromOpencodeError(error);
@@ -237,8 +234,8 @@ const findText = baseOs.api.opencode.find.text.handler(async ({ input, context: 
   return data;
 });
 
-const findFiles = baseOs.api.opencode.find.files.handler(async ({ input, context: { opencodeService } }) => {
-  const client = opencodeService.getClient(getGlobalClientKey());
+const findFiles = baseOs.api.opencode.find.files.handler(async ({ input, context: { db, opencodeService } }) => {
+  const { chat, client } = requireChatContext(db, opencodeService, input.chatId);
 
   const dirs = input.query.type === "directory" ? "true" : input.query.type === "file" ? "false" : undefined;
 
@@ -247,6 +244,7 @@ const findFiles = baseOs.api.opencode.find.files.handler(async ({ input, context
     type: input.query.type,
     limit: input.query.limit,
     dirs,
+    directory: chat.local_path,
   });
 
   if (error) throwFromOpencodeError(error);
@@ -255,11 +253,12 @@ const findFiles = baseOs.api.opencode.find.files.handler(async ({ input, context
   return data;
 });
 
-const fileRead = baseOs.api.opencode.file.read.handler(async ({ input, context: { opencodeService } }) => {
-  const client = opencodeService.getClient(getGlobalClientKey());
+const fileRead = baseOs.api.opencode.file.read.handler(async ({ input, context: { db, opencodeService } }) => {
+  const { chat, client } = requireChatContext(db, opencodeService, input.chatId);
 
   const { data, error } = await client.file.read({
     path: input.query.path,
+    directory: chat.local_path,
   });
 
   if (error) throwFromOpencodeError(error);
@@ -268,8 +267,8 @@ const fileRead = baseOs.api.opencode.file.read.handler(async ({ input, context: 
   return data;
 });
 
-const authSet = baseOs.api.opencode.auth.set.handler(async ({ input, context: { opencodeService } }) => {
-  const client = opencodeService.getClient(getGlobalClientKey());
+const authSet = baseOs.api.opencode.auth.set.handler(async ({ input, context: { db, opencodeService } }) => {
+  const { chat, client } = requireChatContext(db, opencodeService, input.chatId);
 
   const { data, error } = await client.auth.set({
     providerID: input.path.id,
