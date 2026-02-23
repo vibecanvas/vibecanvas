@@ -24,13 +24,20 @@ export function applyEnter(ctx: TApplyContext<TTextData>, text: Text): null {
 
   const textInput = document.createElement('textarea')
   const initialTextValue = text.text
+  const stage = ctx.canvas.app.stage
+  const anchorGlobalAtStart = text.toGlobal({ x: 0, y: 0 })
+  const anchorWorld = stage.toLocal(anchorGlobalAtStart)
+
+  const SIZE_BUFFER_FACTOR = 1.05
+  const WIDTH_ADJUST_PX = 0.5
+
   textInput.style.position = 'fixed'
   textInput.style.padding = '0'
   textInput.style.margin = '0'
   // Use outline instead of border so edit chrome doesn't shift text content.
   textInput.style.border = 'none'
   textInput.style.outline = '1px solid #0066ff'
-  textInput.style.boxSizing = 'border-box'
+  textInput.style.boxSizing = 'content-box'
   textInput.style.backgroundColor = 'transparent'
   textInput.style.color = textColor
   textInput.style.caretColor = textColor
@@ -41,6 +48,9 @@ export function applyEnter(ctx: TApplyContext<TTextData>, text: Text): null {
   textInput.style.whiteSpace = 'pre'
   textInput.style.overflow = 'hidden'
   textInput.style.resize = 'none'
+  textInput.style.backfaceVisibility = 'hidden'
+  textInput.style.display = 'inline-block'
+  textInput.style.minHeight = '1em'
   textInput.style.transformOrigin = 'top left'
   textInput.style.zIndex = '1000'
   textInput.spellcheck = false
@@ -72,13 +82,13 @@ export function applyEnter(ctx: TApplyContext<TTextData>, text: Text): null {
   // Update input position/size to match canvas text (handles pan/zoom)
   const updateInputTransform = () => {
     const canvasRect = ctx.canvas.app.canvas.getBoundingClientRect()
-    const globalPos = text.toGlobal({ x: 0, y: 0 })
+    const globalPos = stage.toGlobal(anchorWorld)
     const scale = getScale()
 
     textInput.style.left = `${globalPos.x + canvasRect.left}px`
     textInput.style.top = `${globalPos.y + canvasRect.top}px`
-    textInput.style.width = `${liveWidth * scale}px`
-    textInput.style.height = `${liveHeight * scale}px`
+    textInput.style.width = `${liveWidth * scale + WIDTH_ADJUST_PX}px`
+    textInput.style.height = `${liveHeight * SIZE_BUFFER_FACTOR * scale}px`
     textInput.style.fontSize = `${ctx.element.data.fontSize * scale}px`
     textInput.style.lineHeight = `${lineHeightPx * scale}px`
     textInput.style.transform = `rotate(${ctx.element.angle}rad)`
@@ -114,10 +124,6 @@ export function applyEnter(ctx: TApplyContext<TTextData>, text: Text): null {
     cancelAnimationFrame(rafId)
     document.removeEventListener('pointerdown', handlePointerDown, true)
 
-    // Save current text origin in canvas/world space so editing keeps anchor stable.
-    // Do not use toGlobal() here because that returns screen space (includes stage pan/zoom).
-    const anchorGlobal = text.toGlobal({ x: 0, y: 0 })
-    const anchorWorld = ctx.canvas.app.stage.toLocal(anchorGlobal)
     const anchorWorldX = anchorWorld.x
     const anchorWorldY = anchorWorld.y
 
