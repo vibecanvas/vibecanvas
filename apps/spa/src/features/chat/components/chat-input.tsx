@@ -21,13 +21,15 @@ type TChatInputProps = {
   canSend: boolean
   onSend: (content: TInputPart[]) => void
   onInputFocus?: () => void
-  fileSuggestions?: TFileSuggestion[]
+  onFileSearch?: (query: string, options?: { limit?: number }) => Promise<TFileSuggestion[]>
+  onFileSuggestionUsed?: (path: string) => void
   workingDirectoryPath?: string | null
 }
 
 type TFileSuggestion = {
   name: string
   path: string
+  isDirectory: boolean
 }
 
 type TAutocompleteMatch = {
@@ -56,8 +58,9 @@ type TAutocompleteState = {
   items: TAutocompleteItem[]
 }
 
-const MAX_AUTOCOMPLETE_ITEMS = 8
+const MAX_AUTOCOMPLETE_ITEMS = 10
 const AUTOCOMPLETE_VERTICAL_OFFSET = 10
+const FILE_SEARCH_DEBOUNCE_MS = 180
 const FILETREE_DND_MIME = "application/x-vibecanvas-filetree-node"
 
 const COMMAND_SUGGESTIONS: TAutocompleteItem[] = [
@@ -216,48 +219,61 @@ function sortByRelevance(items: TAutocompleteItem[], query: string): TAutocomple
   })
 }
 
-function buildAutocompleteItems(
-  trigger: "@" | "/",
-  query: string,
+function buildCommandAutocompleteItems(query: string): TAutocompleteItem[] {
+  const commandQuery = query.toLowerCase()
+  const filtered = COMMAND_SUGGESTIONS.filter((item) => {
+    if (!commandQuery) return true
+    return item.label.toLowerCase().includes(commandQuery)
+  })
+  return sortByRelevance(filtered, commandQuery).slice(0, MAX_AUTOCOMPLETE_ITEMS)
+}
+
+function normalizeSuggestionPath(path: string, workingDirectoryPath: string | null): string | null {
+  const normalizedPath = path.trim().replaceAll("\\", "/")
+  if (!normalizedPath) return null
+
+  const isAbsolute = normalizedPath.startsWith("/") || /^[A-Za-z]:\//.test(normalizedPath)
+  if (isAbsolute) {
+    return toRelativePathWithinBase(normalizedPath, workingDirectoryPath)
+  }
+
+  if (normalizedPath === ".") return "."
+
+  const stripped = normalizedPath.replace(/^\.\//, "").replace(/^\/+/, "")
+  return stripped.length > 0 ? stripped : null
+}
+
+function buildFileAutocompleteItems(
   fileSuggestions: TFileSuggestion[],
   workingDirectoryPath: string | null,
 ): TAutocompleteItem[] {
-  if (trigger === "/") {
-    const commandQuery = query.toLowerCase()
-    const filtered = COMMAND_SUGGESTIONS.filter((item) => {
-      if (!commandQuery) return true
-      return item.label.toLowerCase().includes(commandQuery)
-    })
-    return sortByRelevance(filtered, commandQuery).slice(0, MAX_AUTOCOMPLETE_ITEMS)
-  }
-
-  const fileQuery = query.toLowerCase()
   const fileItems = fileSuggestions
     .map((file) => {
-      const relativePath = toRelativePathWithinBase(file.path, workingDirectoryPath)
+      const relativePath = normalizeSuggestionPath(file.path, workingDirectoryPath)
       if (!relativePath) return null
 
+      const displayPath = file.isDirectory && !relativePath.endsWith("/")
+        ? `${relativePath}/`
+        : relativePath
+
       return {
-        key: file.path,
-        label: `@${relativePath}`,
-        detail: relativePath,
-        value: relativePath,
+        key: `${file.isDirectory ? "d" : "f"}:${file.path}`,
+        label: `@${displayPath}`,
+        detail: file.isDirectory ? `${relativePath} (dir)` : relativePath,
+        value: displayPath,
       }
     })
     .filter((item): item is TAutocompleteItem => item !== null)
 
-  const filtered = fileItems.filter((item) => {
-    if (!fileQuery) return true
-    return item.label.toLowerCase().includes(fileQuery) || item.detail.toLowerCase().includes(fileQuery)
-  })
-
-  return sortByRelevance(filtered, fileQuery).slice(0, MAX_AUTOCOMPLETE_ITEMS)
+  return fileItems.slice(0, MAX_AUTOCOMPLETE_ITEMS)
 }
 
 export function ChatInput(props: TChatInputProps) {
   let editorRef: HTMLDivElement | undefined
   let menuRef: HTMLDivElement | undefined
   let view: EditorView | undefined
+  let fileSearchTimer: ReturnType<typeof setTimeout> | undefined
+  let fileSearchRequestId = 0
   const [autocomplete, setAutocomplete] = createSignal<TAutocompleteState>(emptyAutocompleteState())
   const [isFiletreeDragOver, setIsFiletreeDragOver] = createSignal(false)
 
@@ -272,7 +288,15 @@ export function ChatInput(props: TChatInputProps) {
     })
   }
 
+  const clearFileSearchTimer = () => {
+    if (!fileSearchTimer) return
+    clearTimeout(fileSearchTimer)
+    fileSearchTimer = undefined
+  }
+
   const closeAutocomplete = () => {
+    clearFileSearchTimer()
+    fileSearchRequestId += 1
     setAutocomplete(emptyAutocompleteState())
   }
 
@@ -288,33 +312,95 @@ export function ChatInput(props: TChatInputProps) {
       return
     }
 
-    const items = buildAutocompleteItems(
-      match.trigger,
-      match.query,
-      props.fileSuggestions ?? [],
-      props.workingDirectoryPath ?? null,
-    )
-    if (items.length === 0) {
+    if (match.trigger === "/") {
+      clearFileSearchTimer()
+
+      const items = buildCommandAutocompleteItems(match.query)
+      if (items.length === 0) {
+        closeAutocomplete()
+        return
+      }
+
+      const coords = view.coordsAtPos(match.to)
+      const hostRect = editorRef.getBoundingClientRect()
+
+      setAutocomplete((prev) => ({
+        open: true,
+        trigger: match.trigger,
+        from: match.from,
+        to: match.to,
+        query: match.query,
+        selectedIndex: Math.min(prev.selectedIndex, items.length - 1),
+        left: Math.max(0, coords.left - hostRect.left),
+        top: Math.max(0, coords.bottom - hostRect.top + AUTOCOMPLETE_VERTICAL_OFFSET),
+        items,
+      }))
+
+      ensureSelectedItemVisible(Math.min(autocomplete().selectedIndex, items.length - 1))
+      return
+    }
+
+    if (!props.onFileSearch) {
       closeAutocomplete()
       return
     }
 
-    const coords = view.coordsAtPos(match.to)
-    const hostRect = editorRef.getBoundingClientRect()
+    const requestId = ++fileSearchRequestId
+    clearFileSearchTimer()
 
-    setAutocomplete((prev) => ({
-      open: true,
-      trigger: match.trigger,
-      from: match.from,
-      to: match.to,
-      query: match.query,
-      selectedIndex: Math.min(prev.selectedIndex, items.length - 1),
-      left: Math.max(0, coords.left - hostRect.left),
-      top: Math.max(0, coords.bottom - hostRect.top + AUTOCOMPLETE_VERTICAL_OFFSET),
-      items,
-    }))
+    fileSearchTimer = setTimeout(async () => {
+      if (!view || !editorRef) return
 
-    ensureSelectedItemVisible(Math.min(autocomplete().selectedIndex, items.length - 1))
+      const activeMatch = getAutocompleteMatch(view)
+      if (!activeMatch || activeMatch.trigger !== "@") {
+        if (requestId === fileSearchRequestId) {
+          setAutocomplete(emptyAutocompleteState())
+        }
+        return
+      }
+
+      const fileSuggestions = await props.onFileSearch?.(activeMatch.query, {
+        limit: MAX_AUTOCOMPLETE_ITEMS,
+      })
+      if (requestId !== fileSearchRequestId || !fileSuggestions) return
+
+      const latestMatch = getAutocompleteMatch(view)
+      if (!latestMatch || latestMatch.trigger !== "@") {
+        if (requestId === fileSearchRequestId) {
+          setAutocomplete(emptyAutocompleteState())
+        }
+        return
+      }
+
+      const items = buildFileAutocompleteItems(
+        fileSuggestions,
+        props.workingDirectoryPath ?? null,
+      )
+
+      if (items.length === 0) {
+        if (requestId === fileSearchRequestId) {
+          setAutocomplete(emptyAutocompleteState())
+        }
+        return
+      }
+
+      const coords = view.coordsAtPos(latestMatch.to)
+      const hostRect = editorRef.getBoundingClientRect()
+
+      setAutocomplete((prev) => ({
+        open: true,
+        trigger: latestMatch.trigger,
+        from: latestMatch.from,
+        to: latestMatch.to,
+        query: latestMatch.query,
+        selectedIndex: Math.min(prev.selectedIndex, items.length - 1),
+        left: Math.max(0, coords.left - hostRect.left),
+        top: Math.max(0, coords.bottom - hostRect.top + AUTOCOMPLETE_VERTICAL_OFFSET),
+        items,
+      }))
+
+      ensureSelectedItemVisible(Math.min(autocomplete().selectedIndex, items.length - 1))
+    }, FILE_SEARCH_DEBOUNCE_MS)
   }
 
   const moveAutocompleteSelection = (delta: number) => {
@@ -339,6 +425,11 @@ export function ChatInput(props: TChatInputProps) {
     const replacement = `${state.trigger}${item.value} `
     const tr = view.state.tr.insertText(replacement, state.from, state.to)
     view.dispatch(tr)
+
+    if (state.trigger === "@") {
+      props.onFileSuggestionUsed?.(item.value)
+    }
+
     closeAutocomplete()
     view.focus()
     return true
@@ -354,6 +445,9 @@ export function ChatInput(props: TChatInputProps) {
       : view.state.tr.insertText(mentionText, from, to)
 
     view.dispatch(tr.scrollIntoView())
+
+    props.onFileSuggestionUsed?.(path)
+
     closeAutocomplete()
     view.focus()
     return true
@@ -515,6 +609,7 @@ export function ChatInput(props: TChatInputProps) {
   })
 
   onCleanup(() => {
+    clearFileSearchTimer()
     view?.destroy()
     view = undefined
   })

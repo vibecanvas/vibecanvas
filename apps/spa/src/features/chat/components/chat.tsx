@@ -8,6 +8,7 @@ import { setStore, store } from "@/store"
 import { toTildePath } from "@/utils/path-display"
 import type { TCanvas } from "@vibecanvas/core/canvas/ctrl.create-canvas"
 import type { Event as OpenCodeEvent, Message, Part } from "@opencode-ai/sdk/v2"
+import fuzzysort from "fuzzysort"
 import type { Accessor, Setter } from "solid-js"
 import { ErrorBoundary, createEffect, createMemo, createSignal, on, onMount } from "solid-js"
 import { createStore as createSolidStore } from "solid-js/store"
@@ -48,26 +49,96 @@ type TChatState = {
 type TFileSuggestion = {
   name: string
   path: string
+  isDirectory: boolean
 }
 
-type TTreeNode = {
-  name: string
-  path: string
-  is_dir: boolean
-  children: TTreeNode[]
+type TFileSearchOptions = {
+  limit?: number
 }
 
-function flattenFileSuggestions(nodes: TTreeNode[], acc: TFileSuggestion[] = []): TFileSuggestion[] {
-  for (const node of nodes) {
-    if (!node.is_dir) {
-      acc.push({ name: node.name, path: node.path })
-    }
-    if (node.children.length > 0) {
-      flattenFileSuggestions(node.children, acc)
-    }
+const DEFAULT_FILE_SUGGESTION_LIMIT = 10
+const MAX_FILE_SUGGESTION_LIMIT = 200
+const DIRECTORY_SEARCH_MULTIPLIER = 20
+const mentionUsage = new Map<string, { count: number; lastUsedAt: number }>()
+
+function normalizeUsagePath(path: string): string {
+  return path
+    .trim()
+    .replaceAll("\\", "/")
+    .replace(/^\.\//, "")
+    .replace(/^\/+/, "")
+    .replace(/\/+$/, "")
+    .toLowerCase()
+}
+
+function toUsageKey(chatId: string, path: string): string {
+  return `${chatId}:${normalizeUsagePath(path)}`
+}
+
+function recordMentionUsage(chatId: string, path: string) {
+  const key = toUsageKey(chatId, path)
+  const existing = mentionUsage.get(key)
+  const now = Date.now()
+
+  if (existing) {
+    mentionUsage.set(key, {
+      count: existing.count + 1,
+      lastUsedAt: now,
+    })
+    return
   }
 
-  return acc
+  mentionUsage.set(key, {
+    count: 1,
+    lastUsedAt: now,
+  })
+}
+
+function getFrecencyScore(chatId: string, path: string): number {
+  const usage = mentionUsage.get(toUsageKey(chatId, path))
+  if (!usage) return 0
+
+  const ageMs = Math.max(0, Date.now() - usage.lastUsedAt)
+  const ageDays = ageMs / (1000 * 60 * 60 * 24)
+  const recencyWeight = 1 / (1 + ageDays)
+  return usage.count * recencyWeight
+}
+
+function getPathDepth(path: string): number {
+  return path
+    .split("/")
+    .map((segment) => segment.trim())
+    .filter((segment) => segment.length > 0 && segment !== ".")
+    .length
+}
+
+function isHiddenPath(path: string): boolean {
+  const segments = path
+    .split("/")
+    .map((segment) => segment.trim())
+    .filter((segment) => segment.length > 0)
+
+  return segments.some((segment) => segment.startsWith(".") && segment !== "." && segment !== "..")
+}
+
+function shouldPrioritizeHidden(query: string): boolean {
+  const normalized = query.trim()
+  return normalized.includes(".") || normalized.includes("/..")
+}
+
+function resolveMentionPath(path: string, basePath: string): string | null {
+  const normalizedPath = path.trim().replaceAll("\\", "/")
+  if (!normalizedPath) return null
+
+  const isAbsolute = normalizedPath.startsWith("/") || /^[A-Za-z]:\//.test(normalizedPath)
+  if (isAbsolute) {
+    return toRelativePathWithinBase(normalizedPath, basePath)
+  }
+
+  if (normalizedPath === ".") return "."
+
+  const stripped = normalizedPath.replace(/^\.\//, "").replace(/^\/+/, "")
+  return stripped.length > 0 ? stripped : null
 }
 
 export function Chat(props: TChatProps) {
@@ -95,7 +166,6 @@ export function Chat(props: TChatProps) {
 
   const [isAtBottom, setIsAtBottom] = createSignal(true)
   const [isPathDialogOpen, setIsPathDialogOpen] = createSignal(false)
-  const [fileSuggestions, setFileSuggestions] = createSignal<TFileSuggestion[]>([])
   const [homePath, setHomePath] = createSignal<string | null>(null)
 
   // Derived memo for rendering
@@ -289,28 +359,137 @@ export function Chat(props: TChatProps) {
     requestAnimationFrame(() => scrollToBottom())
   }
 
-  const loadFileSuggestions = async () => {
+  const searchFileSuggestionsWithOptions = async (
+    query: string,
+    options?: TFileSearchOptions,
+  ): Promise<TFileSuggestion[]> => {
     const localPath = chat()?.local_path
     if (!localPath) {
-      setFileSuggestions([])
-      return
+      return []
     }
 
-    const [listError, listResult] = await orpcWebsocketService.safeClient.api.file.files({
-      query: {
-        path: localPath,
-        max_depth: 4,
-      },
+    const requestedLimit = options?.limit ?? DEFAULT_FILE_SUGGESTION_LIMIT
+    const safeLimit = Math.min(MAX_FILE_SUGGESTION_LIMIT, Math.max(1, requestedLimit))
+    const normalizedQuery = query.trim()
+    const includeHiddenFirst = shouldPrioritizeHidden(normalizedQuery)
+
+    const candidateLimit = Math.min(MAX_FILE_SUGGESTION_LIMIT, safeLimit * DIRECTORY_SEARCH_MULTIPLIER)
+
+    const dedupe = new Map<string, TFileSuggestion>()
+    const appendPaths = (paths: string[], isDirectory: boolean) => {
+      for (const itemPath of paths) {
+        const relativePath = resolveMentionPath(itemPath, localPath)
+        if (!relativePath) continue
+
+        const normalizedRelative = relativePath.replace(/\/+$/, "")
+        if (!normalizedRelative) continue
+
+        const key = `${isDirectory ? "d" : "f"}:${normalizedRelative}`
+        if (dedupe.has(key)) continue
+
+        dedupe.set(key, {
+          name: normalizedRelative.split("/").at(-1) ?? normalizedRelative,
+          path: normalizedRelative,
+          isDirectory,
+        })
+      }
+    }
+
+    if (normalizedQuery.length === 0) {
+      const [directoryError, directoryResults] = await orpcWebsocketService.safeClient.api.opencode.find.files({
+        chatId: props.chatId,
+        query: {
+          query: "",
+          type: "directory",
+          limit: candidateLimit,
+        },
+      })
+
+      if (directoryError || !directoryResults) {
+        return []
+      }
+
+      appendPaths(directoryResults, true)
+    } else {
+      const [directoryTuple, fileTuple] = await Promise.all([
+        orpcWebsocketService.safeClient.api.opencode.find.files({
+          chatId: props.chatId,
+          query: {
+            query: normalizedQuery,
+            type: "directory",
+            limit: candidateLimit,
+          },
+        }),
+        orpcWebsocketService.safeClient.api.opencode.find.files({
+          chatId: props.chatId,
+          query: {
+            query: normalizedQuery,
+            type: "file",
+            limit: candidateLimit,
+          },
+        }),
+      ])
+
+      const [directoryError, directoryResults] = directoryTuple
+      const [fileError, fileResults] = fileTuple
+
+      if (!directoryError && directoryResults) {
+        appendPaths(directoryResults, true)
+      }
+
+      if (!fileError && fileResults) {
+        appendPaths(fileResults, false)
+      }
+
+      if ((directoryError || !directoryResults) && (fileError || !fileResults)) {
+        return []
+      }
+    }
+
+    const candidates = Array.from(dedupe.values())
+    if (candidates.length === 0) {
+      return []
+    }
+
+    const filtered = normalizedQuery.length > 0
+      ? fuzzysort
+        .go(normalizedQuery, candidates, {
+          key: "path",
+          limit: MAX_FILE_SUGGESTION_LIMIT,
+        })
+        .map((match) => match.obj)
+      : candidates
+
+    filtered.sort((a, b) => {
+      const aHidden = isHiddenPath(a.path)
+      const bHidden = isHiddenPath(b.path)
+
+      if (!includeHiddenFirst && aHidden !== bHidden) {
+        return aHidden ? 1 : -1
+      }
+
+      if (includeHiddenFirst && aHidden !== bHidden) {
+        return aHidden ? -1 : 1
+      }
+
+      const frecencyDiff = getFrecencyScore(props.chatId, b.path) - getFrecencyScore(props.chatId, a.path)
+      if (frecencyDiff !== 0) {
+        return frecencyDiff
+      }
+
+      const depthDiff = getPathDepth(a.path) - getPathDepth(b.path)
+      if (depthDiff !== 0) {
+        return depthDiff
+      }
+
+      return a.path.localeCompare(b.path)
     })
 
-    if (listError || !listResult || "type" in listResult) {
-      setFileSuggestions([])
-      return
-    }
+    return filtered.slice(0, safeLimit)
+  }
 
-    const flattened = flattenFileSuggestions(listResult.children as TTreeNode[])
-    flattened.sort((a, b) => a.path.localeCompare(b.path))
-    setFileSuggestions(flattened.slice(0, 300))
+  const handleFileSuggestionUsed = (path: string) => {
+    recordMentionUsage(props.chatId, path)
   }
 
   const loadHomePath = async () => {
@@ -328,7 +507,6 @@ export function Chat(props: TChatProps) {
 
     await loadPreviousMessages()
     await loadHomePath()
-    await loadFileSuggestions()
 
     const [err, it] = await orpcWebsocketService.safeClient.api.opencode.events({
       chatId: props.chatId,
@@ -446,13 +624,6 @@ export function Chat(props: TChatProps) {
     setStore("chatSlice", "backendChats", props.canvas.id, (chats) => [...chats, newChat])
   }
 
-  createEffect(on(
-    () => chat()?.local_path,
-    () => {
-      void loadFileSuggestions()
-    },
-  ))
-
   const handleSetFolder = () => {
     setIsPathDialogOpen(true)
   }
@@ -499,7 +670,8 @@ export function Chat(props: TChatProps) {
         canSend={canSendMessage()}
         onInputFocus={resetToReadyIfFinished}
         onSend={sendMessage}
-        fileSuggestions={fileSuggestions()}
+        onFileSearch={searchFileSuggestionsWithOptions}
+        onFileSuggestionUsed={handleFileSuggestionUsed}
         workingDirectoryPath={chat()?.local_path ?? null}
       />
       <StatusLine state={props.state} />
