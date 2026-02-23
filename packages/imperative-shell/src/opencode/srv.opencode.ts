@@ -110,7 +110,7 @@ export class OpencodeService {
         const red = color("red", "ansi")
         const reset = "\x1b[0m"
         console.error(`${red}[Opencode] opencode is not installed. Install it with: bun install -g opencode-ai${reset}`)
-        process.exit(1)
+        throw new Error('opencode is not installed')
       }
 
       // Try to reuse an existing healthy opencode server
