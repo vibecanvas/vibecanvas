@@ -1,7 +1,63 @@
 import { parseArgs } from 'util';
 import checkForUpgrade from './update';
-import type { TInstallMethod } from './update/types';
-import { getCliArgv, getServerVersion } from './runtime';
+import type { TInstallMethod, TUpgradeProgressEvent } from './update/types';
+import { getServerVersion } from './runtime';
+
+const ANSI_RESET = '\x1b[0m';
+
+function createUpgradeProgressRenderer() {
+  const isTTY = Boolean(process.stdout.isTTY);
+  const columns = process.stdout.columns ?? 80;
+  const updateColor = Bun.color('#60a5fa', 'ansi') ?? '';
+  const labelColor = Bun.color('#34d399', 'ansi') ?? '';
+  const barColor = Bun.color('#22c55e', 'ansi') ?? '';
+
+  let lastPercent = -1;
+  let lastLabel = '';
+
+  function clampPercent(value: number): number {
+    return Math.max(0, Math.min(100, Math.round(value)));
+  }
+
+  function renderBar(percent: number): string {
+    const barSize = 24;
+    const filled = Math.round((percent / 100) * barSize);
+    const empty = barSize - filled;
+    const fill = '#'.repeat(filled);
+    const rest = '-'.repeat(empty);
+    return `${barColor}[${fill}${rest}]${ANSI_RESET}`;
+  }
+
+  function renderLine(percent: number, label: string): string {
+    const line = `${updateColor}[Update]${ANSI_RESET} ${labelColor}${label}${ANSI_RESET} ${renderBar(percent)} ${percent}%`;
+    return Bun.wrapAnsi(line, columns, { hard: true, wordWrap: true, trim: true }).replaceAll('\n', ' ');
+  }
+
+  function update(event: TUpgradeProgressEvent): void {
+    const percent = clampPercent(event.percent);
+    const label = event.label;
+
+    if (!isTTY) {
+      if (percent === lastPercent && label === lastLabel) return;
+      console.log(`[Update] ${label} (${percent}%)`);
+      lastPercent = percent;
+      lastLabel = label;
+      return;
+    }
+
+    const line = renderLine(percent, label);
+    process.stdout.write(`\r\x1b[2K${line}`);
+    lastPercent = percent;
+    lastLabel = label;
+  }
+
+  function finish(): void {
+    if (!isTTY) return;
+    process.stdout.write('\n');
+  }
+
+  return { update, finish };
+}
 
 /**
  * Handles the 'upgrade' subcommand.
@@ -54,11 +110,16 @@ Options:
     process.exit(1);
   }
 
+  const progress = createUpgradeProgressRenderer();
+
   const result = await checkForUpgrade({
     force: true,
     checkOnly: Boolean(values.check),
     methodOverride,
     targetVersionOverride: values['target-version'] as string | undefined,
+    onProgress: progress.update,
+  }).finally(() => {
+    progress.finish();
   });
   const currentVersion = getServerVersion();
 

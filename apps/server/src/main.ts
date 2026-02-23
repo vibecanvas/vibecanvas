@@ -62,9 +62,6 @@ async function main() {
   if (subcommand === 'upgrade') {
     const { runUpgrade } = await import('./cmd.upgrade');
     await runUpgrade(argv);
-    // runUpgrade always exits, but TypeScript needs this
-    console.log("Upgrade completed")
-    process.exit(1);
   }
 
   // Top-level --help and --version (only when no subcommand or 'serve')
