@@ -25,7 +25,7 @@ const docs = (await getCollection("docs")).sort(
       </a>
       <nav class="topnav">
         <a href={base}>Home</a>
-        <a href={`${base}docs/`}>Docs</a>
+        <a href={`${base}docs`}>Docs</a>
         <a href="https://github.com/vibecanvas/vibecanvas" target="_blank" rel="noreferrer">GitHub</a>
       </nav>
     </header>
@@ -35,7 +35,7 @@ const docs = (await getCollection("docs")).sort(
         <p class="sidebar-title">Guides</p>
         <ul>
           {docs.map((entry) => {
-            const href = `${base}docs/${entry.slug}/`;
+            const href = `${base}docs/${entry.slug}`;
             const active = currentSlug === entry.slug;
 
             return (

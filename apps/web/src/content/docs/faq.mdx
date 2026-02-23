@@ -6,9 +6,55 @@ order: 3
 
 ## What agents do you support?
 
-Currently, Vibecanvas supports **Claude Code**.
+Currently, Vibecanvas chat runs through **OpenCode**.
 
-We will add support for other agents soon.
+Install with:
+
+```bash
+bun add -g opencode-ai
+```
+
+Then run `opencode` once to complete setup.
+
+## What can chat access right now?
+
+Today, chat can read your local project files through the chat path you choose.
+
+Current limitations:
+
+- Chat does not see canvas elements directly yet.
+- Chat can still get visual context if you paste screenshots from your clipboard into chat.
+
+## Do my global OpenCode configs work in Vibecanvas?
+
+Yes. Vibecanvas uses OpenCode sessions, so your global OpenCode setup is reused.
+
+In practice, these global OpenCode features are valid in Vibecanvas chat:
+
+- Agents
+- Skills
+- Commands
+
+If they are available in your OpenCode CLI environment, they are generally available to sessions started by Vibecanvas.
+
+## Why does chat UI look simpler than OpenCode?
+
+The current chat UI does not expose every OpenCode capability yet.
+
+Examples:
+
+- Some OpenCode features are available in the runtime but not fully represented in the Vibecanvas chat interface.
+- The UI is focused on core prompt + streamed response workflows first.
+- Advanced OpenCode controls may be added to the UI in future releases.
+
+## How do I upgrade Vibecanvas?
+
+Use the built-in CLI command:
+
+```bash
+vibecanvas upgrade --check
+vibecanvas upgrade
+```
 
 ## Where can I ask questions or share feedback?
 

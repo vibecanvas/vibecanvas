@@ -1,11 +1,11 @@
-import type { ClaudeAgent } from "@vibecanvas/shell/claude-agent/srv.claude-agent";
-import type db from "@vibecanvas/shell/database/db"
-import * as schema from "@vibecanvas/shell/database/schema"
+import db from "@vibecanvas/shell/database/db";
+import * as schema from "@vibecanvas/shell/database/schema";
 import { eq } from "drizzle-orm";
+import type { OpencodeService } from "packages/imperative-shell/src/opencode/srv.opencode";
 
 type TPortal = {
   db: typeof db;
-  claudeAgent: typeof ClaudeAgent;
+  opencodeService: OpencodeService;
 };
 
 type TArgs = {
@@ -17,11 +17,8 @@ export function ctrlDeleteChat(portal: TPortal, args: TArgs): TErrTuple<boolean>
 
     const result = portal.db.delete(schema.chats).where(eq(schema.chats.id, args.id)).returning().all()
     const deletedChat = result.at(0)
+    portal.opencodeService.closeClient(args.id)
     if (!deletedChat) return [false, null];
-    if (deletedChat.session_id) {
-      const agent = portal.claudeAgent.instances.get(deletedChat.session_id)
-      if (agent) agent[Symbol.dispose]()
-    }
 
     return [true, null];
   } catch (error) {

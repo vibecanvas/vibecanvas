@@ -64,6 +64,10 @@ vibecanvas
 
 Open [http://localhost:7496](http://localhost:7496) to use the app.
 
+For common setup/runtime questions (OpenCode config support, chat limitations, upgrades), see the FAQ:
+
+- https://vibecanvas.dev/docs/faq
+
 ### Upgrade vibecanvas
 
 Vibecanvas includes a built-in upgrade command from the server CLI (`apps/server/src/main.ts`).

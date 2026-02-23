@@ -2,7 +2,6 @@
 // Initialize global functions (tExternal, tInternal, executeRollbacks)
 import { onError } from '@orpc/server';
 import { RPCHandler } from '@orpc/server/bun-ws';
-import { ClaudeAgent } from '@vibecanvas/shell/claude-agent/srv.claude-agent';
 import { OpencodeService } from '@vibecanvas/shell/opencode/srv.opencode';
 import db from "@vibecanvas/shell/database/db";
 import { existsSync } from 'fs';
@@ -88,15 +87,6 @@ function getPublicAssetPath(pathname: string): string | null {
 
 export async function startServer(options: StartServerOptions): Promise<void> {
   const { port: preferredPort } = options;
-
-
-  const claudeRuntime = ClaudeAgent.bootstrapRuntime();
-  if (claudeRuntime.available) {
-    console.log(`[Claude] Runtime ready (${claudeRuntime.source}): ${claudeRuntime.detected.claudePath}`);
-  } else {
-    console.warn(`[Claude] Runtime unavailable: ${claudeRuntime.reason}`);
-  }
-
 
   // Stable wrapper per connection.
   // We keep a separate wrapper object to avoid mutating websocket internals.
