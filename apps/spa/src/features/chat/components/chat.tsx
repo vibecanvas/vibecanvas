@@ -211,12 +211,64 @@ export function Chat(props: TChatProps) {
     }
   }
 
+  const loadPreviousMessages = async () => {
+    const sessionId = chat()?.session_id
+    if (!sessionId) return
+
+    const [logsError, logsResult] = await orpcWebsocketService.safeClient.api["agent-logs"].getBySession({
+      params: { sessionId },
+    })
+
+    if (logsError) {
+      console.error("Failed to load previous messages", logsError)
+      return
+    }
+
+    if (!Array.isArray(logsResult)) {
+      console.error("Failed to load previous messages", logsResult.message)
+      return
+    }
+
+    const logsByTime = [...logsResult].sort((a, b) => {
+      const aTime = new Date(a.timestamp).getTime()
+      const bTime = new Date(b.timestamp).getTime()
+      return aTime - bTime
+    })
+
+    const messages: Record<string, Message> = {}
+    const parts: Record<string, Part> = {}
+    const messageOrder: string[] = []
+
+    for (const log of logsByTime) {
+      const message = log.data?.info
+      if (!message) continue
+
+      messages[message.id] = message
+      if (!messageOrder.includes(message.id)) {
+        messageOrder.push(message.id)
+      }
+
+      for (const part of log.data?.parts ?? []) {
+        parts[part.id] = part
+      }
+    }
+
+    setChatState({
+      messages,
+      parts,
+      messageOrder,
+    })
+    requestAnimationFrame(() => scrollToBottom())
+  }
+
   onMount(async () => {
     if (orpcWebsocketService.websocket.readyState === WebSocket.OPEN) {
       props.setState(CONNECTION_STATE.READY)
     } else {
       return
     }
+
+    await loadPreviousMessages()
 
     const [err, it] = await orpcWebsocketService.safeClient.api.ai.events({
       chatId: props.chatId,
