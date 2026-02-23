@@ -3,7 +3,7 @@ import type { AElement } from "@/features/canvas-crdt/renderables/element.abstra
 import { orpcWebsocketService } from "@/services/orpc-websocket";
 import type { TBackendFileTree } from "@/types/backend.types";
 import { PathPickerDialog } from "@/components/path-picker-dialog";
-import { expandTildePath, toTildePath } from "@/utils/path-display";
+import { toTildePath } from "@/utils/path-display";
 import type { Accessor } from "solid-js";
 import { For, Show, createEffect, createResource, createSignal, on, onCleanup, onMount } from "solid-js";
 import ChevronDown from "lucide-solid/icons/chevron-down";
@@ -78,7 +78,6 @@ export function Filetree(props: TFiletreeProps) {
 
   const [currentPath, setCurrentPath] = createSignal("");
   const [homePath, setHomePath] = createSignal<string | null>(null);
-  const [pathInput, setPathInput] = createSignal("");
   const [globInput, setGlobInput] = createSignal("");
   const [isGlobDirty, setIsGlobDirty] = createSignal(false);
   const [appliedGlob, setAppliedGlob] = createSignal<string | null>(null);
@@ -487,7 +486,6 @@ export function Filetree(props: TFiletreeProps) {
   createEffect(on(filetree, (row) => {
     if (!row) return;
     setCurrentPath(row.path);
-    setPathInput(toTildePath(row.path, homePath()));
 
     const persistedGlob = normalizeGlob(row.glob_pattern);
     if (!isGlobDirty()) {
@@ -542,13 +540,7 @@ export function Filetree(props: TFiletreeProps) {
 
   createEffect(on(currentPath, (path) => {
     if (!path) return;
-    setPathInput(toTildePath(path, homePath()));
     void startWatching(path);
-  }));
-
-  createEffect(on(homePath, () => {
-    if (!currentPath()) return;
-    setPathInput(toTildePath(currentPath(), homePath()));
   }));
 
   onCleanup(() => {
@@ -703,26 +695,6 @@ export function Filetree(props: TFiletreeProps) {
       />
 
       <div class="p-2 border-b border-border flex flex-col gap-2">
-        <div class="flex items-center gap-1">
-          <input
-            class="flex-1 h-7 px-2 border border-border bg-background text-xs"
-            value={pathInput()}
-            onInput={(event) => setPathInput(event.currentTarget.value)}
-            placeholder="Base path"
-          />
-          <button
-            type="button"
-            class="h-7 px-2 border border-border bg-secondary text-secondary-foreground hover:bg-accent text-xs"
-            onClick={() => {
-              const nextPath = expandTildePath(pathInput(), homePath());
-              if (!nextPath) return;
-              setCurrentPath(nextPath);
-              void updateFiletree({ path: nextPath });
-            }}
-          >
-            Apply
-          </button>
-        </div>
         <div class="flex items-center gap-1">
           <button
             type="button"
