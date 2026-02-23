@@ -42,7 +42,7 @@ export async function ctrlCreateChat(portal: TPortal, args: TArgs): Promise<TErr
 
     const chatId = crypto.randomUUID()
 
-    const newSession = await portal.opencodeService.getClient(canvas.id).session.create({ directory: args.local_path })
+    const newSession = await portal.opencodeService.getClient(canvas.id, args.local_path).session.create({ directory: args.local_path })
     if (newSession.error) {
       return [null, { code: "CTRL.CHAT.CREATE_CHAT.FAILED", statusCode: 500, internalLogLevel: 'error', shouldLogInternally: true, internalMessage: JSON.stringify(newSession.error), externalMessage: { en: "Failed to create chat" } }];
     }

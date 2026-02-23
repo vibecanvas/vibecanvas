@@ -1,10 +1,6 @@
-import { EventPublisher, ORPCError } from "@orpc/server";
-import { tExternal } from "@vibecanvas/server/error-fn";
-import { homedir } from "os";
+import { ORPCError } from "@orpc/server";
+import { agent_logs } from "@vibecanvas/shell/database/schema";
 import { baseOs } from "../orpc.base";
-import { dbUpdatePublisher } from "./api.db";
-import type { Event as OpenCodeEvent, NotFoundError, UserMessage } from "@opencode-ai/sdk/v2";
-import { agent_logs } from "@vibecanvas/shell/database/schema"
 
 // Base64 Images
 // Send images and other binary files using data URLs in the url field of file parts.
@@ -64,6 +60,8 @@ const prompt = baseOs.api.ai.prompt.handler(async ({ input, context: { db, openc
   const { data, error } = await client.session.prompt({
     sessionID: chat.session_id,
     parts: input.parts,
+    tools: {},
+    directory: chat.local_path,
   })
 
   if (error) {
@@ -79,8 +77,6 @@ const prompt = baseOs.api.ai.prompt.handler(async ({ input, context: { db, openc
     })
   }
 
-  console.log(JSON.stringify(data, null, 2))
-
   const userMessageID = data.info.parentID
   // Fetch complete message with parts
   const { data: userMessage, error: userMessageError } = await client.session.message({
@@ -95,22 +91,23 @@ const prompt = baseOs.api.ai.prompt.handler(async ({ input, context: { db, openc
     })
   }
 
-  db.insert(agent_logs).values({
-    id: data.info.parentID,
-    canvas_id: chat.canvas_id,
-    session_id: data.info.sessionID,
-    timestamp: new Date(),
-    data: userMessage,
-  }).run()
+  db.transaction(tx => {
+    tx.insert(agent_logs).values({
+      id: data.info.parentID,
+      canvas_id: chat.canvas_id,
+      session_id: data.info.sessionID,
+      timestamp: new Date(),
+      data: userMessage,
+    }).run()
 
-  db.insert(agent_logs).values({
-    id: data.info.id,
-    canvas_id: chat.canvas_id,
-    session_id: data.info.sessionID,
-    timestamp: new Date(),
-    data,
-  }).run()
-
+    tx.insert(agent_logs).values({
+      id: data.info.id,
+      canvas_id: chat.canvas_id,
+      session_id: data.info.sessionID,
+      timestamp: new Date(),
+      data,
+    }).run()
+  })
 
   return data;
 })
@@ -120,7 +117,7 @@ const events = baseOs.api.ai.events.handler(async function* ({ input, context: {
   if (!chat) throw new ORPCError('CHAT_NOT_FOUND', { message: 'Chat not found', })
 
   const client = opencodeService.getClient(chat.id)
-  for await (const event of (await client.event.subscribe()).stream) {
+  for await (const event of (await client.event.subscribe({ directory: chat.local_path })).stream) {
     yield event;
   }
 })

@@ -1,5 +1,5 @@
-import { createServer } from "node:net";
 import { type OpencodeClient, createOpencodeClient, createOpencodeServer } from "@opencode-ai/sdk/v2";
+import { createServer } from "node:net";
 
 type TGlobalWithOpencodeServicePromise = typeof globalThis & {
   __vibecanvasOpencodeServicePromise?: Promise<OpencodeService>
@@ -128,17 +128,19 @@ export class OpencodeService {
     return globalWithOpencodeServicePromise.__vibecanvasOpencodeServicePromise
   }
 
-  getClient(chatId: string) {
+  getClient(chatId: string, directory?: string) {
     if (this.opencodeClients[chatId]) return this.opencodeClients[chatId];
 
     this.opencodeClients[chatId] = createOpencodeClient({
       baseUrl: this.opencodeServer.url,
+      directory
     })
     return this.opencodeClients[chatId];
   }
 
   closeClient(chatId: string) {
     if (this.opencodeClients[chatId]) {
+      this.opencodeClients[chatId].instance.dispose()
       delete this.opencodeClients[chatId];
     }
   }
