@@ -10,7 +10,7 @@ CREATE TABLE `__new_chats` (
 	FOREIGN KEY (`canvas_id`) REFERENCES `canvas`(`id`) ON UPDATE no action ON DELETE cascade
 );
 --> statement-breakpoint
-INSERT INTO `__new_chats`("id", "canvas_id", "title", "session_id", "local_path", "created_at", "updated_at") SELECT "id", "canvas_id", "title", "session_id", "local_path", "created_at", "updated_at" FROM `chats`;--> statement-breakpoint
+INSERT INTO `__new_chats`("id", "canvas_id", "title", "session_id", "local_path", "created_at", "updated_at") SELECT "id", "canvas_id", "title", "session_id", COALESCE("local_path", '.'), "created_at", "updated_at" FROM `chats`;--> statement-breakpoint
 DROP TABLE `chats`;--> statement-breakpoint
 ALTER TABLE `__new_chats` RENAME TO `chats`;--> statement-breakpoint
 PRAGMA foreign_keys=ON;
