@@ -211,18 +211,29 @@ async function main() {
     console.log("[test-binary] All checks passed")
   } finally {
     proc.kill()
-    await proc.exited
+
+    const exitOrTimeout = Promise.race([
+      proc.exited,
+      Bun.sleep(5000).then(() => "timeout"),
+    ])
+    const result = await exitOrTimeout
+    if (result === "timeout") {
+      proc.kill(9)
+      await proc.exited
+    }
 
     await Bun.$`rm -rf ${tempConfigDir}`.quiet()
 
-    const [stdout, stderr] = await Promise.all([stdoutPromise, stderrPromise])
-    if (stdout.trim()) {
+    const [stdout, stderr] = await Promise.allSettled([stdoutPromise, stderrPromise])
+    const stdoutText = stdout.status === "fulfilled" ? stdout.value : ""
+    const stderrText = stderr.status === "fulfilled" ? stderr.value : ""
+    if (stdoutText.trim()) {
       console.log("[test-binary] server stdout:")
-      console.log(stdout)
+      console.log(stdoutText)
     }
-    if (stderr.trim()) {
+    if (stderrText.trim()) {
       console.log("[test-binary] server stderr:")
-      console.log(stderr)
+      console.log(stderrText)
     }
   }
 }
