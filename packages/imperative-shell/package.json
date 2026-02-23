@@ -13,7 +13,6 @@
     "db:migrate": "bun src/database/migrate.ts"
   },
   "dependencies": {
-    "@anthropic-ai/claude-agent-sdk": "catalog:",
     "@automerge/automerge": "catalog:",
     "@automerge/automerge-repo": "catalog:",
     "@automerge/automerge-repo-network-websocket": "catalog:",
