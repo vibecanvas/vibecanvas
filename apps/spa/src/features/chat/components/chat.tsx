@@ -321,7 +321,7 @@ export function Chat(props: TChatProps) {
     await loadPreviousMessages()
     await loadFileSuggestions()
 
-    const [err, it] = await orpcWebsocketService.safeClient.api.ai.events({
+    const [err, it] = await orpcWebsocketService.safeClient.api.opencode.events({
       chatId: props.chatId,
     })
     if (err) {
@@ -404,7 +404,7 @@ export function Chat(props: TChatProps) {
     setIsAtBottom(true)
     requestAnimationFrame(() => scrollToBottom())
 
-    const [promptError] = await orpcWebsocketService.safeClient.api.ai.prompt({
+    const [promptError] = await orpcWebsocketService.safeClient.api.opencode.prompt({
       chatId: props.chatId,
       parts,
     })

@@ -1,6 +1,5 @@
 import { oc } from "@orpc/contract";
 import agentLogsContract from "./agent-logs.contract";
-import aiContract from "./ai.contract";
 import canvasContract from "./canvas.contract";
 import chatContract from "./chat.contract";
 import dbContract from "./db.contract";
@@ -24,7 +23,6 @@ export const contract = oc.router({
   file: fileContract,
   filetree: filetreeContract,
   "agent-logs": agentLogsContract,
-  ai: aiContract,
   opencode: opencodeContract,
   db: dbContract,
   notification: notificationContract,
