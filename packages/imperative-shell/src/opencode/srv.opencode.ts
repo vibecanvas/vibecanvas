@@ -1,5 +1,11 @@
 import { type OpencodeClient, createOpencodeClient, createOpencodeServer } from "@opencode-ai/sdk/v2";
 import { createServer } from "node:net";
+import { color } from "bun";
+
+function isOpencodeInstalled(): boolean {
+  const result = Bun.spawnSync(["opencode", "--version"], { stdout: "ignore", stderr: "ignore" })
+  return result.exitCode === 0
+}
 
 type TGlobalWithOpencodeServicePromise = typeof globalThis & {
   __vibecanvasOpencodeServicePromise?: Promise<OpencodeService>
@@ -100,6 +106,13 @@ export class OpencodeService {
     }
 
     globalWithOpencodeServicePromise.__vibecanvasOpencodeServicePromise = (async () => {
+      if (!isOpencodeInstalled()) {
+        const red = color("red", "ansi")
+        const reset = "\x1b[0m"
+        console.error(`${red}[Opencode] opencode is not installed. Install it with: bun install -g opencode-ai${reset}`)
+        process.exit(1)
+      }
+
       // Try to reuse an existing healthy opencode server
       const existingPort = await findHealthyOpencodePort(4096, 4196)
       if (existingPort !== null) {

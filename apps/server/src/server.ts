@@ -5,7 +5,6 @@ import { RPCHandler } from '@orpc/server/bun-ws';
 import { OpencodeService } from '@vibecanvas/shell/opencode/srv.opencode';
 import db from "@vibecanvas/shell/database/db";
 import { existsSync } from 'fs';
-import { createServer } from 'net';
 import { join, normalize } from 'path';
 import { router } from './api-router';
 import { publishNotification } from './apis/api.notification';
@@ -23,34 +22,35 @@ export type StartServerOptions = {
   port: number;
 };
 
-async function isPortAvailable(port: number): Promise<boolean> {
-  return new Promise((resolve) => {
-    const server = createServer();
-
-    server.once('error', () => {
-      resolve(false);
-    });
-
-    server.once('listening', () => {
-      server.close(() => resolve(true));
-    });
-
-    server.listen({ port, exclusive: true });
-  });
-}
-
-async function resolveServerPort(startPort: number): Promise<number> {
+/**
+ * Atomically bind a port with Bun.serve, retrying the next port on failure.
+ * Eliminates the TOCTOU race of probe-then-bind that could cause the server to
+ * silently listen on a different port than expected.
+ */
+function serveWithPortFallback(
+  serve: (port: number) => void,
+  startPort: number,
+): number {
   if (!VIBECANVAS_COMPILED) {
-    return startPort;
+    serve(startPort)
+    return startPort
   }
 
-  for (let port = startPort; port <= 65535; port += 1) {
-    if (await isPortAvailable(port)) {
-      return port;
+  const maxAttempts = 100
+  for (let i = 0; i < maxAttempts; i++) {
+    const port = startPort + i
+    try {
+      serve(port)
+      if (port !== startPort) {
+        console.warn(`[Server] Port ${startPort} is busy, using ${port}`)
+      }
+      return port
+    } catch {
+      // Port busy, try next
     }
   }
 
-  throw new Error(`[Server] No available port found starting from ${startPort}`);
+  throw new Error(`[Server] No available port found starting from ${startPort}`)
 }
 
 type EmbeddedAssetsModule = {
@@ -108,19 +108,14 @@ export async function startServer(options: StartServerOptions): Promise<void> {
     ],
   })
 
+  let opencodeService!: OpencodeService
+
   type WebSocketData = {
     path: string;
   };
 
-  const httpPort = await resolveServerPort(preferredPort);
-  if (httpPort !== preferredPort) {
-    console.warn(`[Server] Port ${preferredPort} is busy, using ${httpPort}`);
-  }
-
-  const opencodeService = await OpencodeService.init()
-
-  Bun.serve({
-    port: httpPort,
+  const httpPort = serveWithPortFallback((port) => Bun.serve<WebSocketData>({
+    port,
     fetch(req, server) {
       const url = new URL(req.url)
 
@@ -226,7 +221,7 @@ export async function startServer(options: StartServerOptions): Promise<void> {
       message(ws, message) {
         if (ws.data.path === '/api') {
           handler.message(ws, message, {
-            context: { db, opencodeService }, // Provide initial context if needed
+            context: { db, opencodeService },
           })
         } else if (ws.data.path === '/automerge') {
           const wrapper = automergeConnections.get(ws);
@@ -275,9 +270,16 @@ export async function startServer(options: StartServerOptions): Promise<void> {
         }
       },
     },
-  })
+  }), preferredPort)
 
   console.log(`Server verion ${VIBECANVAS_VERSION} listening on http://localhost:${httpPort}`);
+
+  // Initialize opencode service after the HTTP server is listening.
+  // This prevents slow opencode startup (port scanning, daemon spawn) from
+  // blocking the server health-check in CI and production.
+  OpencodeService.init()
+    .then((svc) => { opencodeService = svc })
+    .catch((err) => { console.error('[Opencode] init failed:', err) })
 
   setTimeout(() => {
     checkForUpgrade()
