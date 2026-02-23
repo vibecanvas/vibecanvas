@@ -7,6 +7,7 @@ import dbContract from "./db.contract";
 import fileContract from "./file.contract";
 import filetreeContract from "./filetree.contract";
 import notificationContract from "./notification.contract";
+import opencodeContract from "./opencode.contract";
 
 export * from "./agent-logs.contract";
 export * from "./canvas.contract";
@@ -15,6 +16,7 @@ export * from "./file.contract";
 export * from "./filetree.contract";
 export * from "./db.contract";
 export * from "./notification.contract";
+export * from "./opencode.contract";
 
 export const contract = oc.router({
   canvas: canvasContract,
@@ -23,6 +25,7 @@ export const contract = oc.router({
   filetree: filetreeContract,
   "agent-logs": agentLogsContract,
   ai: aiContract,
+  opencode: opencodeContract,
   db: dbContract,
   notification: notificationContract,
 });

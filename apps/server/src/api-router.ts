@@ -6,6 +6,7 @@ import { db } from './apis/api.db';
 import { file } from './apis/api.file';
 import { filetree } from './apis/api.filetree';
 import { notification } from './apis/api.notification';
+import { opencode } from './apis/api.opencode';
 
 export const router = {
   api: {
@@ -15,6 +16,7 @@ export const router = {
     filetree,
     "agent-logs": agentLogs,
     ai,
+    opencode,
     db,
     notification,
   }
