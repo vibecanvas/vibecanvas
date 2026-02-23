@@ -19,9 +19,25 @@ const putFileOutputSchema = z.object({
   url: z.string(),
 });
 
+const moveFileInputSchema = z.object({
+  body: z.object({
+    source_path: z.string(),
+    destination_dir_path: z.string(),
+  }),
+});
+
+const moveFileOutputSchema = z.object({
+  source_path: z.string(),
+  destination_dir_path: z.string(),
+  target_path: z.string(),
+  moved: z.boolean(),
+});
+
 export type TPutFileInput = z.infer<typeof putFileInputSchema>;
 export type TPutFileOutput = z.infer<typeof putFileOutputSchema>;
 export type TFileFormat = z.infer<typeof fileFormatSchema>;
+export type TMoveFileInput = z.infer<typeof moveFileInputSchema>;
+export type TMoveFileOutput = z.infer<typeof moveFileOutputSchema>;
 
 
 const dirChildSchema = z.object({
@@ -85,4 +101,8 @@ export default oc.router({
   put: oc
     .input(putFileInputSchema)
     .output(putFileOutputSchema),
+
+  move: oc
+    .input(moveFileInputSchema)
+    .output(z.union([moveFileOutputSchema, projectDirErrorSchema])),
 });

@@ -4,7 +4,6 @@ import { orpcWebsocketService } from "@/services/orpc-websocket";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import ChevronRight from "lucide-solid/icons/chevron-right";
 import Folder from "lucide-solid/icons/folder";
-import FolderOpen from "lucide-solid/icons/folder-open";
 import House from "lucide-solid/icons/house";
 import ArrowUp from "lucide-solid/icons/arrow-up";
 import { For, Show, createEffect, createSignal } from "solid-js";
@@ -27,6 +26,7 @@ export function PathPickerDialog(props: TPathPickerDialogProps) {
   const [currentPath, setCurrentPath] = createSignal("");
   const [parentPath, setParentPath] = createSignal<string | null>(null);
   const [children, setChildren] = createSignal<TDirChild[]>([]);
+  const [pathInput, setPathInput] = createSignal("");
   const [isLoading, setIsLoading] = createSignal(false);
   const [errorMessage, setErrorMessage] = createSignal<string | null>(null);
 
@@ -46,6 +46,7 @@ export function PathPickerDialog(props: TPathPickerDialogProps) {
     }
 
     setCurrentPath(listResult.current);
+    setPathInput(listResult.current);
     setParentPath(listResult.parent);
     setChildren(listResult.children);
     return true;
@@ -128,9 +129,30 @@ export function PathPickerDialog(props: TPathPickerDialogProps) {
             </Button>
           </div>
 
-          <div class="mb-2 px-2 py-1.5 border border-border bg-background text-xs text-muted-foreground truncate flex items-center gap-1 shrink-0">
-            <FolderOpen size={12} />
-            <span class="truncate">{currentPath() || "Loading..."}</span>
+          <div class="mb-2 flex items-center gap-2 shrink-0">
+            <input
+              class="flex-1 h-8 px-2 border border-border bg-background text-xs"
+              value={pathInput()}
+              onInput={(event) => setPathInput(event.currentTarget.value)}
+              onKeyDown={(event) => {
+                if (event.key !== "Enter") return;
+                const nextPath = pathInput().trim();
+                if (!nextPath) return;
+                void loadDirectory(nextPath);
+              }}
+              placeholder="Paste full path"
+            />
+            <Button
+              class="h-8 px-2 text-xs bg-secondary text-secondary-foreground border border-border hover:bg-accent disabled:opacity-50"
+              disabled={isLoading() || !pathInput().trim()}
+              onClick={() => {
+                const nextPath = pathInput().trim();
+                if (!nextPath) return;
+                void loadDirectory(nextPath);
+              }}
+            >
+              Go
+            </Button>
           </div>
 
           <ScrollArea class="flex-1 min-h-0 border border-border bg-background" viewportClass="h-full">
