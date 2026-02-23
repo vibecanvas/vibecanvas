@@ -1,14 +1,15 @@
-import { createSignal, Show, For } from "solid-js"
-import { Tooltip } from "@kobalte/core/tooltip"
-import X from "lucide-solid/icons/x"
-import ImageIcon from "lucide-solid/icons/image"
-
-type TPendingImage = {
-  id: string
-  dataUrl: string
-  mediaType: "image/jpeg" | "image/png" | "image/gif" | "image/webp"
-  name: string
-}
+import { baseKeymap } from "prosemirror-commands"
+import { history, redo, undo } from "prosemirror-history"
+import type { Node as ProseMirrorNode } from "prosemirror-model"
+import { Plugin } from "prosemirror-state"
+import { EditorState } from "prosemirror-state"
+import { keymap } from "prosemirror-keymap"
+import { EditorView } from "prosemirror-view"
+import { For, Show, createSignal, onCleanup, onMount } from "solid-js"
+import { ImageTokenNodeView } from "../prosemirror/nodeviews/image-token-view"
+import { pasteImagePlugin } from "../prosemirror/plugins/paste-image"
+import { chatSchema } from "../prosemirror/schema"
+import { serializeDoc } from "../prosemirror/serialize"
 
 export type TInputPart =
   | { type: "text"; text: string }
@@ -18,7 +19,50 @@ type TChatInputProps = {
   canSend: boolean
   onSend: (content: TInputPart[]) => void
   onInputFocus?: () => void
+  fileSuggestions?: TFileSuggestion[]
 }
+
+type TFileSuggestion = {
+  name: string
+  path: string
+}
+
+type TAutocompleteMatch = {
+  trigger: "@" | "/"
+  from: number
+  to: number
+  query: string
+}
+
+type TAutocompleteItem = {
+  key: string
+  label: string
+  detail: string
+  value: string
+}
+
+type TAutocompleteState = {
+  open: boolean
+  trigger: "@" | "/" | null
+  from: number
+  to: number
+  query: string
+  selectedIndex: number
+  left: number
+  top: number
+  items: TAutocompleteItem[]
+}
+
+const MAX_AUTOCOMPLETE_ITEMS = 8
+const AUTOCOMPLETE_VERTICAL_OFFSET = 10
+
+const COMMAND_SUGGESTIONS: TAutocompleteItem[] = [
+  { key: "fix", label: "/fix", detail: "Ask assistant to fix current issue", value: "fix" },
+  { key: "plan", label: "/plan", detail: "Ask assistant to draft an implementation plan", value: "plan" },
+  { key: "explain", label: "/explain", detail: "Ask assistant to explain selected code", value: "explain" },
+  { key: "test", label: "/test", detail: "Ask assistant to add or run tests", value: "test" },
+  { key: "review", label: "/review", detail: "Ask assistant to review current changes", value: "review" },
+]
 
 const SUPPORTED_IMAGE_TYPES = new Set([
   "image/jpeg",
@@ -42,136 +86,354 @@ function generateId(): string {
   return `img-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`
 }
 
-export function ChatInput(props: TChatInputProps) {
-  const [text, setText] = createSignal("")
-  const [pendingImages, setPendingImages] = createSignal<TPendingImage[]>([])
-
-  const handlePaste = async (e: ClipboardEvent) => {
-    // Stop propagation to prevent canvas paste handler from firing
-    e.stopPropagation()
-
-    const items = e.clipboardData?.items
-    if (!items) return
-
-    const imageFiles: File[] = []
-
-    for (const item of items) {
-      if (item.kind === "file" && SUPPORTED_IMAGE_TYPES.has(item.type)) {
-        const file = item.getAsFile()
-        if (file) imageFiles.push(file)
-      }
+function hasImageTokens(doc: ProseMirrorNode): boolean {
+  let found = false
+  doc.descendants((node) => {
+    if (node.type.name === "image_token") {
+      found = true
+      return false
     }
+    return true
+  })
+  return found
+}
 
-    if (imageFiles.length === 0) return
+function isDocEmpty(doc: ProseMirrorNode): boolean {
+  return doc.textContent.trim() === "" && !hasImageTokens(doc)
+}
 
-    // Prevent default only if we're handling images
-    e.preventDefault()
-
-    for (const file of imageFiles) {
-      try {
-        const dataUrl = await fileToDataUrl(file)
-        const pendingImage: TPendingImage = {
-          id: generateId(),
-          dataUrl,
-          mediaType: file.type as TPendingImage["mediaType"],
-          name: file.name || `image.${file.type.split("/")[1]}`,
+function placeholderPlugin(placeholder: string) {
+  return new Plugin({
+    view(editorView) {
+      const applyPlaceholder = () => {
+        if (isDocEmpty(editorView.state.doc)) {
+          editorView.dom.setAttribute("data-placeholder", placeholder)
+        } else {
+          editorView.dom.removeAttribute("data-placeholder")
         }
-        setPendingImages((p) => [...p, pendingImage])
-      } catch (err) {
-        console.error("Failed to process pasted image:", err)
       }
-    }
+
+      applyPlaceholder()
+
+      return {
+        update: applyPlaceholder,
+        destroy() {
+          editorView.dom.removeAttribute("data-placeholder")
+        },
+      }
+    },
+  })
+}
+
+function clearEditor(view: EditorView) {
+  const emptyParagraph = chatSchema.nodes.paragraph.createAndFill()
+  if (!emptyParagraph) return
+
+  const tr = view.state.tr.replaceWith(0, view.state.doc.content.size, emptyParagraph)
+  view.dispatch(tr)
+}
+
+function emptyAutocompleteState(): TAutocompleteState {
+  return {
+    open: false,
+    trigger: null,
+    from: 0,
+    to: 0,
+    query: "",
+    selectedIndex: 0,
+    left: 0,
+    top: 0,
+    items: [],
+  }
+}
+
+function getAutocompleteMatch(view: EditorView): TAutocompleteMatch | null {
+  const { state } = view
+  const { selection } = state
+  if (!selection.empty) return null
+
+  const { $from } = selection
+  if (!$from.parent.isTextblock) return null
+
+  const textBefore = $from.parent.textBetween(0, $from.parentOffset, "\n", "\n")
+  const match = /(^|\s)([@/])([^\s@/]*)$/.exec(textBefore)
+  if (!match) return null
+
+  const leadingSpaceLength = match[1]?.length ?? 0
+  const trigger = match[2] as "@" | "/"
+  const query = match[3] ?? ""
+  const parentStart = $from.start()
+  const from = parentStart + (match.index ?? 0) + leadingSpaceLength
+  const to = $from.pos
+
+  return { trigger, from, to, query }
+}
+
+function sortByRelevance(items: TAutocompleteItem[], query: string): TAutocompleteItem[] {
+  if (!query) return items
+
+  const lower = query.toLowerCase()
+
+  return [...items].sort((a, b) => {
+    const aLabel = a.label.toLowerCase()
+    const bLabel = b.label.toLowerCase()
+    const aStarts = aLabel.startsWith(lower) ? 0 : 1
+    const bStarts = bLabel.startsWith(lower) ? 0 : 1
+    if (aStarts !== bStarts) return aStarts - bStarts
+    return aLabel.localeCompare(bLabel)
+  })
+}
+
+function buildAutocompleteItems(
+  trigger: "@" | "/",
+  query: string,
+  fileSuggestions: TFileSuggestion[],
+): TAutocompleteItem[] {
+  if (trigger === "/") {
+    const commandQuery = query.toLowerCase()
+    const filtered = COMMAND_SUGGESTIONS.filter((item) => {
+      if (!commandQuery) return true
+      return item.label.toLowerCase().includes(commandQuery)
+    })
+    return sortByRelevance(filtered, commandQuery).slice(0, MAX_AUTOCOMPLETE_ITEMS)
   }
 
-  const handleKeyDown = (e: KeyboardEvent) => {
-    if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault()
-      handleSend()
+  const fileQuery = query.toLowerCase()
+  const fileItems = fileSuggestions.map((file) => ({
+    key: file.path,
+    label: `@${file.path}`,
+    detail: file.path,
+    value: file.path,
+  }))
+
+  const filtered = fileItems.filter((item) => {
+    if (!fileQuery) return true
+    return item.label.toLowerCase().includes(fileQuery) || item.detail.toLowerCase().includes(fileQuery)
+  })
+
+  return sortByRelevance(filtered, fileQuery).slice(0, MAX_AUTOCOMPLETE_ITEMS)
+}
+
+export function ChatInput(props: TChatInputProps) {
+  let editorRef: HTMLDivElement | undefined
+  let menuRef: HTMLDivElement | undefined
+  let view: EditorView | undefined
+  const [autocomplete, setAutocomplete] = createSignal<TAutocompleteState>(emptyAutocompleteState())
+
+  const ensureSelectedItemVisible = (selectedIndex: number) => {
+    if (!menuRef) return
+
+    requestAnimationFrame(() => {
+      const active = menuRef?.querySelector(
+        `[data-autocomplete-index="${selectedIndex}"]`,
+      ) as HTMLElement | null
+      active?.scrollIntoView({ block: "nearest" })
+    })
+  }
+
+  const closeAutocomplete = () => {
+    setAutocomplete(emptyAutocompleteState())
+  }
+
+  const updateAutocomplete = () => {
+    if (!view || !editorRef) {
+      closeAutocomplete()
+      return
     }
+
+    const match = getAutocompleteMatch(view)
+    if (!match) {
+      closeAutocomplete()
+      return
+    }
+
+    const items = buildAutocompleteItems(match.trigger, match.query, props.fileSuggestions ?? [])
+    if (items.length === 0) {
+      closeAutocomplete()
+      return
+    }
+
+    const coords = view.coordsAtPos(match.to)
+    const hostRect = editorRef.getBoundingClientRect()
+
+    setAutocomplete((prev) => ({
+      open: true,
+      trigger: match.trigger,
+      from: match.from,
+      to: match.to,
+      query: match.query,
+      selectedIndex: Math.min(prev.selectedIndex, items.length - 1),
+      left: Math.max(0, coords.left - hostRect.left),
+      top: Math.max(0, coords.bottom - hostRect.top + AUTOCOMPLETE_VERTICAL_OFFSET),
+      items,
+    }))
+
+    ensureSelectedItemVisible(Math.min(autocomplete().selectedIndex, items.length - 1))
+  }
+
+  const moveAutocompleteSelection = (delta: number) => {
+    const state = autocomplete()
+    if (!state.open || state.items.length === 0) return
+
+    const next = (state.selectedIndex + delta + state.items.length) % state.items.length
+    setAutocomplete({ ...state, selectedIndex: next })
+    ensureSelectedItemVisible(next)
+  }
+
+  const selectAutocompleteItem = (index?: number) => {
+    if (!view) return false
+
+    const state = autocomplete()
+    if (!state.open || !state.trigger) return false
+
+    const targetIndex = index ?? state.selectedIndex
+    const item = state.items[targetIndex]
+    if (!item) return false
+
+    const replacement = `${state.trigger}${item.value} `
+    const tr = view.state.tr.insertText(replacement, state.from, state.to)
+    view.dispatch(tr)
+    closeAutocomplete()
+    view.focus()
+    return true
   }
 
   const handleSend = () => {
-    if (!props.canSend) return
+    if (!props.canSend || !view) return
 
-    const content: TInputPart[] = []
+    const parts = serializeDoc(view.state.doc)
+    if (parts.length === 0) return
 
-    // Add images first
-    for (const img of pendingImages()) {
-      content.push({
-        type: "file",
-        mime: img.mediaType,
-        url: img.dataUrl,
-        filename: img.name,
-      })
-    }
-
-    // Add text if present
-    if (text().trim()) {
-      content.push({ type: "text", text: text().trim() })
-    }
-
-    if (content.length === 0) return
-
-    props.onSend(content)
-    setText("")
-    setPendingImages([])
+    props.onSend(parts)
+    clearEditor(view)
+    closeAutocomplete()
+    view.focus()
   }
 
-  const removeImage = (id: string) => {
-    setPendingImages((p) => p.filter((img) => img.id !== id))
-  }
+  onMount(() => {
+    if (!editorRef) return
+
+    const chatKeys = keymap({
+      Enter: () => {
+        if (autocomplete().open) {
+          selectAutocompleteItem()
+          return true
+        }
+
+        if (!view) return true
+        if (isDocEmpty(view.state.doc)) return true
+
+        handleSend()
+        return true
+      },
+      ArrowDown: () => {
+        if (!autocomplete().open) return false
+        moveAutocompleteSelection(1)
+        return true
+      },
+      ArrowUp: () => {
+        if (!autocomplete().open) return false
+        moveAutocompleteSelection(-1)
+        return true
+      },
+      Tab: () => {
+        if (!autocomplete().open) return false
+        selectAutocompleteItem()
+        return true
+      },
+      Escape: () => {
+        if (!autocomplete().open) return false
+        closeAutocomplete()
+        return true
+      },
+      "Shift-Enter": (state, dispatch) => {
+        const hardBreak = state.schema.nodes.hard_break
+        if (dispatch) {
+          dispatch(state.tr.replaceSelectionWith(hardBreak.create()).scrollIntoView())
+        }
+        return true
+      },
+      "Mod-z": undo,
+      "Mod-Shift-z": redo,
+    })
+
+    const state = EditorState.create({
+      schema: chatSchema,
+      plugins: [
+        history(),
+        chatKeys,
+        pasteImagePlugin({
+          supportedImageTypes: SUPPORTED_IMAGE_TYPES,
+          fileToDataUrl,
+          generateId,
+        }),
+        placeholderPlugin("Type your message..."),
+        keymap(baseKeymap),
+      ],
+    })
+
+    view = new EditorView(editorRef, {
+      state,
+      dispatchTransaction(transaction) {
+        if (!view) return
+        const newState = view.state.apply(transaction)
+        view.updateState(newState)
+        updateAutocomplete()
+      },
+      handleDOMEvents: {
+        focus: () => {
+          props.onInputFocus?.()
+          return false
+        },
+        blur: () => {
+          closeAutocomplete()
+          return false
+        },
+      },
+      nodeViews: {
+        image_token: (node, editorView, getPos) => new ImageTokenNodeView(node, editorView, getPos),
+      },
+    })
+
+    updateAutocomplete()
+  })
+
+  onCleanup(() => {
+    view?.destroy()
+    view = undefined
+  })
 
   return (
-    <div>
-      <Show when={pendingImages().length > 0}>
-        <div class="flex flex-wrap gap-1 px-2 py-1 border-t border-border">
-          <For each={pendingImages()}>
-            {(img) => <ImageBadge image={img} onRemove={() => removeImage(img.id)} />}
+    <div class="relative border-t border-border">
+      <div ref={editorRef} class="chat-composer-root w-full p-2" />
+      <Show when={autocomplete().open}>
+        <div
+          ref={menuRef}
+          class="chat-autocomplete"
+          style={{
+            left: `${autocomplete().left}px`,
+            top: `${autocomplete().top}px`,
+          }}
+        >
+          <For each={autocomplete().items}>
+            {(item, index) => (
+              <button
+                type="button"
+                class="chat-autocomplete-item"
+                data-autocomplete-index={String(index())}
+                classList={{ "chat-autocomplete-item--active": index() === autocomplete().selectedIndex }}
+                onMouseDown={(event) => {
+                  event.preventDefault()
+                  selectAutocompleteItem(index())
+                }}
+              >
+                <span class="chat-autocomplete-item-label">{item.label}</span>
+                <span class="chat-autocomplete-item-detail">{item.detail}</span>
+              </button>
+            )}
           </For>
         </div>
       </Show>
-      <textarea
-        value={text()}
-        onInput={(e) => setText(e.currentTarget.value)}
-        onKeyDown={handleKeyDown}
-        onPaste={handlePaste}
-        onFocus={() => props.onInputFocus?.()}
-        class="w-full p-2 border border-border rounded-md resize-none"
-        placeholder="Type your message..."
-      />
     </div>
-  )
-}
-
-function ImageBadge(props: { image: TPendingImage; onRemove: () => void }) {
-  return (
-    <Tooltip openDelay={200} closeDelay={0} placement="top">
-      <Tooltip.Trigger
-        as="div"
-        class="flex items-center gap-1 px-2 py-1 bg-muted border border-border text-xs cursor-pointer"
-      >
-        <ImageIcon size={12} />
-        <span class="max-w-15 truncate">{props.image.name}</span>
-        <button
-          type="button"
-          onClick={(e) => {
-            e.stopPropagation()
-            props.onRemove()
-          }}
-          class="text-muted-foreground hover:text-destructive"
-        >
-          <X size={12} />
-        </button>
-      </Tooltip.Trigger>
-      <Tooltip.Portal>
-        <Tooltip.Content class="z-50 p-1 bg-card border border-border shadow-md">
-          <img
-            src={props.image.dataUrl}
-            alt={props.image.name}
-            class="max-w-[200px] max-h-[150px] object-contain"
-          />
-        </Tooltip.Content>
-      </Tooltip.Portal>
-    </Tooltip>
   )
 }
