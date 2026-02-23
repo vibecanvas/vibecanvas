@@ -43,7 +43,8 @@ The feature uses a hybrid model: geometry lives in Automerge CRDT, while chat/se
   - Enter to send,
   - Shift+Enter for newline,
   - image paste as file parts,
-  - autocomplete for slash commands (`/`) and file mentions (`@`).
+  - autocomplete for slash commands (`/`) and file mentions (`@`),
+  - drag-drop filetree rows into composer to insert `@/absolute/path ` mentions.
 - Prompt sends structured parts (`text` and/or `file`) to backend `ai.prompt`.
 - Event stream updates message/part state in real time.
 - Previous messages load from `agent_logs` on mount.
@@ -83,6 +84,7 @@ The feature uses a hybrid model: geometry lives in Automerge CRDT, while chat/se
 
 - `history()` + undo/redo keybinds (`Mod-z`, `Mod-Shift-z`).
 - `pasteImagePlugin` intercepts paste events, filters image MIME types, converts to data URL, inserts `image_token` node.
+- Composer `handleDOMEvents` accepts drag payload `application/x-vibecanvas-filetree-node` and inserts mention text at drop caret via `posAtCoords`.
 - Placeholder plugin sets `data-placeholder` while doc is empty.
 - Enter behavior:
   - if autocomplete open -> select highlighted item,
@@ -268,6 +270,7 @@ type TAgentLogRow = {
   - send plain text, multiline (`Shift+Enter`), and pasted image,
   - verify optimistic user message then streamed assistant parts,
   - test `/` and `@` autocomplete behavior,
+  - drag file and folder rows from filetree widget into composer and confirm mention insertion at drop position,
   - switch chat folder via PATH and confirm new chat/session,
   - delete widget and verify chat row/session cleanup behavior.
 

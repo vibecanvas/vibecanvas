@@ -55,6 +55,7 @@ type TAutocompleteState = {
 
 const MAX_AUTOCOMPLETE_ITEMS = 8
 const AUTOCOMPLETE_VERTICAL_OFFSET = 10
+const FILETREE_DND_MIME = "application/x-vibecanvas-filetree-node"
 
 const COMMAND_SUGGESTIONS: TAutocompleteItem[] = [
   { key: "fix", label: "/fix", detail: "Ask assistant to fix current issue", value: "fix" },
@@ -70,6 +71,34 @@ const SUPPORTED_IMAGE_TYPES = new Set([
   "image/gif",
   "image/webp",
 ])
+
+function hasFiletreeDragPayload(event: DragEvent): boolean {
+  const types = event.dataTransfer?.types
+  if (!types) return false
+  return Array.from(types).includes(FILETREE_DND_MIME)
+}
+
+function parseDroppedFiletreePath(event: DragEvent): string | null {
+  const transfer = event.dataTransfer
+  if (!transfer) return null
+
+  const raw = transfer.getData(FILETREE_DND_MIME)
+  if (raw) {
+    try {
+      const parsed = JSON.parse(raw) as { path?: unknown }
+      if (typeof parsed.path === "string" && parsed.path.length > 0) {
+        return parsed.path
+      }
+    } catch {
+      // fallback to text/plain
+    }
+  }
+
+  const fallback = transfer.getData("text/plain")
+  if (!fallback || !fallback.startsWith("@")) return null
+  const path = fallback.slice(1).trim()
+  return path.length > 0 ? path : null
+}
 
 function fileToDataUrl(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -219,6 +248,7 @@ export function ChatInput(props: TChatInputProps) {
   let menuRef: HTMLDivElement | undefined
   let view: EditorView | undefined
   const [autocomplete, setAutocomplete] = createSignal<TAutocompleteState>(emptyAutocompleteState())
+  const [isFiletreeDragOver, setIsFiletreeDragOver] = createSignal(false)
 
   const ensureSelectedItemVisible = (selectedIndex: number) => {
     if (!menuRef) return
@@ -293,6 +323,21 @@ export function ChatInput(props: TChatInputProps) {
     const replacement = `${state.trigger}${item.value} `
     const tr = view.state.tr.insertText(replacement, state.from, state.to)
     view.dispatch(tr)
+    closeAutocomplete()
+    view.focus()
+    return true
+  }
+
+  const insertMention = (path: string, pos?: number) => {
+    if (!view) return false
+
+    const mentionText = `@${path} `
+    const { from, to } = view.state.selection
+    const tr = typeof pos === "number"
+      ? view.state.tr.insertText(mentionText, pos, pos)
+      : view.state.tr.insertText(mentionText, from, to)
+
+    view.dispatch(tr.scrollIntoView())
     closeAutocomplete()
     view.focus()
     return true
@@ -387,6 +432,51 @@ export function ChatInput(props: TChatInputProps) {
         },
         blur: () => {
           closeAutocomplete()
+          setIsFiletreeDragOver(false)
+          return false
+        },
+        dragenter: (_, event) => {
+          const dragEvent = event as DragEvent
+          if (!hasFiletreeDragPayload(dragEvent)) return false
+          setIsFiletreeDragOver(true)
+          return false
+        },
+        dragover: (_, event) => {
+          const dragEvent = event as DragEvent
+          if (!hasFiletreeDragPayload(dragEvent)) return false
+          dragEvent.preventDefault()
+          if (dragEvent.dataTransfer) {
+            dragEvent.dataTransfer.dropEffect = "copy"
+          }
+          setIsFiletreeDragOver(true)
+          return true
+        },
+        dragleave: (_, event) => {
+          const dragEvent = event as DragEvent
+          if (!hasFiletreeDragPayload(dragEvent)) return false
+          const nextTarget = dragEvent.relatedTarget as Node | null
+          if (editorRef && nextTarget && editorRef.contains(nextTarget)) {
+            return false
+          }
+          setIsFiletreeDragOver(false)
+          return false
+        },
+        drop: (_, event) => {
+          const dragEvent = event as DragEvent
+          const droppedPath = parseDroppedFiletreePath(dragEvent)
+          if (!droppedPath) {
+            setIsFiletreeDragOver(false)
+            return false
+          }
+
+          dragEvent.preventDefault()
+          const coords = view?.posAtCoords({ left: dragEvent.clientX, top: dragEvent.clientY })
+          const inserted = insertMention(droppedPath, coords?.pos)
+          setIsFiletreeDragOver(false)
+          return inserted
+        },
+        dragend: () => {
+          setIsFiletreeDragOver(false)
           return false
         },
       },
@@ -405,7 +495,11 @@ export function ChatInput(props: TChatInputProps) {
 
   return (
     <div class="relative border-t border-border">
-      <div ref={editorRef} class="chat-composer-root w-full p-2" />
+      <div
+        ref={editorRef}
+        class="chat-composer-root w-full p-2"
+        classList={{ "chat-composer-root--drop-target": isFiletreeDragOver() }}
+      />
       <Show when={autocomplete().open}>
         <div
           ref={menuRef}

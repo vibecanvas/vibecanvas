@@ -38,7 +38,8 @@ The feature follows the existing Functional Core / Imperative Shell architecture
   - set base path,
   - jump to home,
   - go to parent,
-  - apply optional glob filter.
+  - apply optional glob filter,
+  - drag file/folder rows into chat composer for `@path` mentions.
 - Filesystem response must be nested and directly renderable by SPA.
 - Filesystem watching for live updates when files change in the watched directory.
 - Recursive traversal must be depth-limited (default `max_depth = 5`) to avoid OOM.
@@ -208,6 +209,7 @@ Filetree element class is registered in:
 - Path navigation: Home, Up, Apply path, Pick folder (via dialog)
 - Glob pattern input with debounced updates
 - Tree rendering with folder/file icons and expand/collapse
+- Each row is a native HTML5 drag source emitting `application/x-vibecanvas-filetree-node` and `text/plain` (`@path`) payloads
 - Drag support via pointer events on header
 
 **`filetree-header.tsx`**
@@ -251,7 +253,8 @@ Filetree element class is registered in:
   - create filetree widget,
   - switch path/glob,
   - verify nested rendering and depth-limited traversal on large directories,
-  - verify live updates when files change.
+  - verify live updates when files change,
+  - drag rows from filetree into chat composer and verify mention insertion.
 
 ## File Map
 

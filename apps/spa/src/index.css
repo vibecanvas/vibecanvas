@@ -272,6 +272,11 @@ pre {
   position: relative;
 }
 
+.chat-composer-root--drop-target {
+  background: color-mix(in oklab, var(--accent) 55%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--ring) 70%, transparent);
+}
+
 .chat-autocomplete {
   position: absolute;
   z-index: 70;

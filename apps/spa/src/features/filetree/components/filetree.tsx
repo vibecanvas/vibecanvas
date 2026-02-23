@@ -43,6 +43,8 @@ type TTreeNode = {
   children: TTreeNode[];
 };
 
+const FILETREE_DND_MIME = "application/x-vibecanvas-filetree-node";
+
 export function Filetree(props: TFiletreeProps) {
   let isDragging = false;
   let lastPos = { x: 0, y: 0 };
@@ -400,9 +402,23 @@ export function Filetree(props: TFiletreeProps) {
       <div>
         <button
           type="button"
+          draggable={true}
           class="w-full text-left px-2 py-1 text-xs flex items-center gap-1 border-b border-border/60 hover:bg-accent"
           classList={{ "bg-accent": isSelected() }}
           style={{ "padding-left": `${depth * 12 + 8}px` }}
+          onDragStart={(event) => {
+            const payload = {
+              path: node.path,
+              name: node.name,
+              is_dir: node.is_dir,
+            };
+
+            event.dataTransfer?.setData(FILETREE_DND_MIME, JSON.stringify(payload));
+            event.dataTransfer?.setData("text/plain", `@${node.path}`);
+            if (event.dataTransfer) {
+              event.dataTransfer.effectAllowed = "copy";
+            }
+          }}
           onClick={() => {
             setSelectedRowPath(node.path);
             if (!node.is_dir) return;
