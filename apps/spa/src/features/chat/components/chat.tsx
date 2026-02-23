@@ -500,6 +500,7 @@ export function Chat(props: TChatProps) {
         onInputFocus={resetToReadyIfFinished}
         onSend={sendMessage}
         fileSuggestions={fileSuggestions()}
+        workingDirectoryPath={chat()?.local_path ?? null}
       />
       <StatusLine state={props.state} />
       <PathPickerDialog

@@ -4,6 +4,18 @@ function normalizePath(path: string): string {
   return normalized.replace(/\/+$/, "");
 }
 
+export function toRelativePathWithinBase(targetPath: string, basePath: string | null): string | null {
+  if (!basePath) return null;
+
+  const normalizedTarget = normalizePath(targetPath);
+  const normalizedBase = normalizePath(basePath);
+
+  if (normalizedTarget === normalizedBase) return ".";
+  if (!normalizedTarget.startsWith(`${normalizedBase}/`)) return null;
+
+  return normalizedTarget.slice(normalizedBase.length + 1);
+}
+
 export function toTildePath(path: string, homePath: string | null): string {
   if (!homePath) return path;
 

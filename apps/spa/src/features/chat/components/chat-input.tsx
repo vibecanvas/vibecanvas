@@ -6,6 +6,8 @@ import { EditorState } from "prosemirror-state"
 import { keymap } from "prosemirror-keymap"
 import { EditorView } from "prosemirror-view"
 import { For, Show, createSignal, onCleanup, onMount } from "solid-js"
+import { showErrorToast } from "@/components/ui/Toast"
+import { toRelativePathWithinBase } from "@/utils/path-display"
 import { ImageTokenNodeView } from "../prosemirror/nodeviews/image-token-view"
 import { pasteImagePlugin } from "../prosemirror/plugins/paste-image"
 import { chatSchema } from "../prosemirror/schema"
@@ -20,6 +22,7 @@ type TChatInputProps = {
   onSend: (content: TInputPart[]) => void
   onInputFocus?: () => void
   fileSuggestions?: TFileSuggestion[]
+  workingDirectoryPath?: string | null
 }
 
 type TFileSuggestion = {
@@ -217,6 +220,7 @@ function buildAutocompleteItems(
   trigger: "@" | "/",
   query: string,
   fileSuggestions: TFileSuggestion[],
+  workingDirectoryPath: string | null,
 ): TAutocompleteItem[] {
   if (trigger === "/") {
     const commandQuery = query.toLowerCase()
@@ -228,12 +232,19 @@ function buildAutocompleteItems(
   }
 
   const fileQuery = query.toLowerCase()
-  const fileItems = fileSuggestions.map((file) => ({
-    key: file.path,
-    label: `@${file.path}`,
-    detail: file.path,
-    value: file.path,
-  }))
+  const fileItems = fileSuggestions
+    .map((file) => {
+      const relativePath = toRelativePathWithinBase(file.path, workingDirectoryPath)
+      if (!relativePath) return null
+
+      return {
+        key: file.path,
+        label: `@${relativePath}`,
+        detail: relativePath,
+        value: relativePath,
+      }
+    })
+    .filter((item): item is TAutocompleteItem => item !== null)
 
   const filtered = fileItems.filter((item) => {
     if (!fileQuery) return true
@@ -277,7 +288,12 @@ export function ChatInput(props: TChatInputProps) {
       return
     }
 
-    const items = buildAutocompleteItems(match.trigger, match.query, props.fileSuggestions ?? [])
+    const items = buildAutocompleteItems(
+      match.trigger,
+      match.query,
+      props.fileSuggestions ?? [],
+      props.workingDirectoryPath ?? null,
+    )
     if (items.length === 0) {
       closeAutocomplete()
       return
@@ -471,7 +487,17 @@ export function ChatInput(props: TChatInputProps) {
 
           dragEvent.preventDefault()
           const coords = view?.posAtCoords({ left: dragEvent.clientX, top: dragEvent.clientY })
-          const inserted = insertMention(droppedPath, coords?.pos)
+          const relativePath = toRelativePathWithinBase(droppedPath, props.workingDirectoryPath ?? null)
+          if (!relativePath) {
+            showErrorToast(
+              "Path outside chat folder",
+              "You can only reference files inside this chat folder.",
+            )
+            setIsFiletreeDragOver(false)
+            return true
+          }
+
+          const inserted = insertMention(relativePath, coords?.pos)
           setIsFiletreeDragOver(false)
           return inserted
         },

@@ -44,7 +44,7 @@ The feature uses a hybrid model: geometry lives in Automerge CRDT, while chat/se
   - Shift+Enter for newline,
   - image paste as file parts,
   - autocomplete for slash commands (`/`) and file mentions (`@`),
-  - drag-drop filetree rows into composer to insert `@/absolute/path ` mentions.
+  - drag-drop filetree rows into composer to insert `@relative/path ` mentions (relative to chat local path).
 - Prompt sends structured parts (`text` and/or `file`) to backend `ai.prompt`.
 - Event stream updates message/part state in real time.
 - Previous messages load from `agent_logs` on mount.
@@ -85,6 +85,7 @@ The feature uses a hybrid model: geometry lives in Automerge CRDT, while chat/se
 - `history()` + undo/redo keybinds (`Mod-z`, `Mod-Shift-z`).
 - `pasteImagePlugin` intercepts paste events, filters image MIME types, converts to data URL, inserts `image_token` node.
 - Composer `handleDOMEvents` accepts drag payload `application/x-vibecanvas-filetree-node` and inserts mention text at drop caret via `posAtCoords`.
+- Drag-dropped file references are accepted only when source path is inside chat local path; otherwise composer shows an error toast and skips insertion.
 - Placeholder plugin sets `data-placeholder` while doc is empty.
 - Enter behavior:
   - if autocomplete open -> select highlighted item,
