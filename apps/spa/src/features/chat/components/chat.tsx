@@ -44,6 +44,31 @@ type TChatState = {
   sessionStatus: { type: "idle" | "busy" | "retry" }
 }
 
+type TFileSuggestion = {
+  name: string
+  path: string
+}
+
+type TTreeNode = {
+  name: string
+  path: string
+  is_dir: boolean
+  children: TTreeNode[]
+}
+
+function flattenFileSuggestions(nodes: TTreeNode[], acc: TFileSuggestion[] = []): TFileSuggestion[] {
+  for (const node of nodes) {
+    if (!node.is_dir) {
+      acc.push({ name: node.name, path: node.path })
+    }
+    if (node.children.length > 0) {
+      flattenFileSuggestions(node.children, acc)
+    }
+  }
+
+  return acc
+}
+
 export function Chat(props: TChatProps) {
   const SCROLL_THRESHOLD = 50
   const ENABLED_INPUT_STATES = [
@@ -69,6 +94,7 @@ export function Chat(props: TChatProps) {
 
   const [isAtBottom, setIsAtBottom] = createSignal(true)
   const [isPathDialogOpen, setIsPathDialogOpen] = createSignal(false)
+  const [fileSuggestions, setFileSuggestions] = createSignal<TFileSuggestion[]>([])
 
   // Derived memo for rendering
   const orderedMessages = createMemo((): TMessageGroup[] =>
@@ -261,6 +287,30 @@ export function Chat(props: TChatProps) {
     requestAnimationFrame(() => scrollToBottom())
   }
 
+  const loadFileSuggestions = async () => {
+    const localPath = chat()?.local_path
+    if (!localPath) {
+      setFileSuggestions([])
+      return
+    }
+
+    const [listError, listResult] = await orpcWebsocketService.safeClient.api.file.files({
+      query: {
+        path: localPath,
+        max_depth: 4,
+      },
+    })
+
+    if (listError || !listResult || "type" in listResult) {
+      setFileSuggestions([])
+      return
+    }
+
+    const flattened = flattenFileSuggestions(listResult.children as TTreeNode[])
+    flattened.sort((a, b) => a.path.localeCompare(b.path))
+    setFileSuggestions(flattened.slice(0, 300))
+  }
+
   onMount(async () => {
     if (orpcWebsocketService.websocket.readyState === WebSocket.OPEN) {
       props.setState(CONNECTION_STATE.READY)
@@ -269,8 +319,9 @@ export function Chat(props: TChatProps) {
     }
 
     await loadPreviousMessages()
+    await loadFileSuggestions()
 
-    const [err, it] = await orpcWebsocketService.safeClient.api.ai.events({
+    const [err, it] = await orpcWebsocketService.safeClient.api.opencode.events({
       chatId: props.chatId,
     })
     if (err) {
@@ -353,7 +404,7 @@ export function Chat(props: TChatProps) {
     setIsAtBottom(true)
     requestAnimationFrame(() => scrollToBottom())
 
-    const [promptError] = await orpcWebsocketService.safeClient.api.ai.prompt({
+    const [promptError] = await orpcWebsocketService.safeClient.api.opencode.prompt({
       chatId: props.chatId,
       parts,
     })
@@ -385,6 +436,13 @@ export function Chat(props: TChatProps) {
 
     setStore("chatSlice", "backendChats", props.canvas.id, (chats) => [...chats, newChat])
   }
+
+  createEffect(on(
+    () => chat()?.local_path,
+    () => {
+      void loadFileSuggestions()
+    },
+  ))
 
   const handleSetFolder = () => {
     setIsPathDialogOpen(true)
@@ -432,6 +490,7 @@ export function Chat(props: TChatProps) {
         canSend={canSendMessage()}
         onInputFocus={resetToReadyIfFinished}
         onSend={sendMessage}
+        fileSuggestions={fileSuggestions()}
       />
       <StatusLine state={props.state} />
       <PathPickerDialog
