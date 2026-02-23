@@ -11,9 +11,20 @@ import { clampX, clampY, type TApplyContext } from "./rect.apply-context"
  * Line has unique implementation (x/y only, no w/h in changes).
  */
 export function applyMove(ctx: TApplyContext<any>, action: TMoveAction): TChanges {
-  ctx.element.x = clampX(ctx.element.x + action.delta.x)
-  ctx.element.y = clampY(ctx.element.y + action.delta.y)
-  ctx.redraw()
+  const prevX = ctx.element.x
+  const prevY = ctx.element.y
+  const nextX = clampX(prevX + action.delta.x)
+  const nextY = clampY(prevY + action.delta.y)
+  const appliedDeltaX = nextX - prevX
+  const appliedDeltaY = nextY - prevY
+
+  ctx.element.x = nextX
+  ctx.element.y = nextY
+
+  // Move container only; geometry does not change during translation.
+  // Use applied deltas (post-clamp) to keep container and element in sync at bounds.
+  ctx.container.x += appliedDeltaX
+  ctx.container.y += appliedDeltaY
 
   return {
     action,

@@ -10,7 +10,8 @@ import type { TLineApplyContext } from "./line.apply-context"
 export function applyMove(ctx: TLineApplyContext, action: TMoveAction): TChanges {
   ctx.element.x = ctx.element.x + action.delta.x
   ctx.element.y = ctx.element.y + action.delta.y
-  ctx.redraw()
+  ctx.container.x = ctx.container.x + action.delta.x
+  ctx.container.y = ctx.container.y + action.delta.y
 
   return {
     action,
