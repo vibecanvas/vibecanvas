@@ -10,6 +10,11 @@ type TLatestVersion = {
   channel: string;
 };
 
+type TUpgradeProgressEvent = {
+  percent: number;
+  label: string;
+};
+
 type TUpgradeResult =
   | { status: "updated"; version: string; method: TInstallMethod }
   | { status: "up-to-date"; version: string; method: TInstallMethod }
@@ -17,4 +22,4 @@ type TUpgradeResult =
   | { status: "disabled"; method: TInstallMethod; reason: TUpdatePolicy["reason"] }
   | { status: "error"; method: TInstallMethod; message: string };
 
-export type { TInstallMethod, TUpdatePolicy, TLatestVersion, TUpgradeResult };
+export type { TInstallMethod, TUpdatePolicy, TLatestVersion, TUpgradeResult, TUpgradeProgressEvent };

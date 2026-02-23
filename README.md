@@ -1,29 +1,32 @@
 # Vibecanvas
 
-Run your agents in an infinite canvas.
+Run your agents in an infinite drawing canvas.
 
-Vibecanvas is a Bun-based visual devtool that combines:
-- a collaborative infinite canvas (SolidJS + PixiJS + Automerge CRDT),
-- a typed realtime API layer (oRPC over WebSocket),
-- and a local-first backend (Bun + SQLite + Drizzle).
+Runs completly local. Reuses your llm subscriptions.
 
 The project is organized as a monorepo and follows a **Functional Core / Imperative Shell** architecture.
 
-## Important: Claude Code First
+## Important: OpenCode Required
 
-Vibecanvas is built to work **on top of Claude Code CLI** and uses the **Anthropic Claude Agent SDK** under the hood.
+Vibecanvas now runs agent sessions through **OpenCode**.
 
-Before using Vibecanvas, authenticate with Claude Code first.
+Before using Vibecanvas chat, install OpenCode globally:
 
 ```bash
-claude auth login
+# bun
+bun add -g opencode-ai
+
+# npm
+npm i -g opencode-ai
+
+# pnpm
+pnpm add -g opencode-ai
+
+# yarn
+yarn global add opencode-ai
 ```
 
-You can use either:
-- Claude subscription auth via Claude Code CLI, or
-- Claude API keys,
-
-but in both cases you should make sure Claude Code is already set up and authenticated on your machine.
+Then run `opencode` once and complete authentication/setup in the CLI.
 
 ## Features
 
@@ -31,7 +34,7 @@ but in both cases you should make sure Claude Code is already set up and authent
 - Real-time CRDT sync with Automerge for conflict-free collaboration
 - Unified WebSocket API endpoint for app RPC (`/api`)
 - Dedicated Automerge sync endpoint (`/automerge`)
-- Built-in Claude agent integration and chat sessions
+- Built-in OpenCode agent integration and chat sessions
 - Native binary distribution for macOS, Linux, and Windows
 - Auto-update checks in the CLI/server runtime
 
@@ -61,6 +64,29 @@ vibecanvas
 
 Open [http://localhost:7496](http://localhost:7496) to use the app.
 
+For common setup/runtime questions (OpenCode config support, chat limitations, upgrades), see the FAQ:
+
+- https://vibecanvas.dev/docs/faq
+
+### Upgrade vibecanvas
+
+Vibecanvas includes a built-in upgrade command from the server CLI (`apps/server/src/main.ts`).
+
+```bash
+# check for updates and install
+vibecanvas upgrade
+
+# check only (no install)
+vibecanvas upgrade --check
+```
+
+Useful related commands:
+
+```bash
+vibecanvas --version
+vibecanvas --help
+```
+
 ### Uninstall
 
 ```bash
@@ -80,141 +106,16 @@ yarn global remove vibecanvas
 If you installed using the install script (`curl ... | bash`) instead of a package manager, remove the installed files manually:
 
 ```bash
-rm -f ~/.vibecanvas/bin/vibecanvas
-rm -rf ~/.vibecanvas/database-migrations
+rm -rf ~/.vibecanvas
 ```
 
 Also remove any PATH line you added for `~/.vibecanvas/bin` in your shell profile (`~/.zshrc`, `~/.bashrc`, `~/.profile`, or fish config).
-
-### 1) Install dependencies
-
-```bash
-bun install
-```
-
-### 2) Run in development
-
-Run everything in parallel:
-
-```bash
-bun dev
-```
-
-Or run SPA and server separately:
-
-```bash
-bun client:dev
-bun server:dev
-```
-
-### 3) Open the app
-
-- SPA dev server: `http://localhost:3001`
-- Server default port in runtime: `3000` (or `7496` in `server:prod` script)
-
-## Monorepo Layout
-
-```text
-apps/
-  server/       # Bun server + oRPC + websocket transport
-  spa/          # SolidJS SPA + PixiJS canvas
-  vibecanvas/   # npm wrapper package + binary launcher
-
-packages/
-  functional-core/   # Pure/business logic (ctrl.*, fn.*, fx.*, tx.*)
-  imperative-shell/  # Infrastructure (database, websocket, agent runtime)
-  core-contract/     # Shared typed API contracts
-
-scripts/
-  build.ts           # Multi-platform binary build pipeline
-  test-binary.ts     # Validates compiled binary assets + WS endpoints
-  publish-npm.ts     # Publish dist packages to npm
-  release.ts         # Upload release assets with gh
-```
-
-## Architecture
-
-Vibecanvas uses a layered architecture:
-
-1. **Apps** (`apps/*`) wire UI/transport and dependency injection.
-2. **Functional Core** (`packages/functional-core`) contains deterministic logic and orchestration.
-3. **Imperative Shell** (`packages/imperative-shell`) contains side-effectful infrastructure.
-
-Within the SPA canvas system, interactions follow a command-chain model:
-- input commands process pointer/wheel/keyboard events,
-- renderables apply visual changes and emit structured mutations,
-- CRDT writes are committed at interaction boundaries.
-
-## Tech Stack
-
-- **Runtime:** Bun
-- **Frontend:** SolidJS, PixiJS, Tailwind v4, Kobalte
-- **Sync:** Automerge + `@automerge/automerge-repo`
-- **API:** oRPC over WebSocket
-- **Database:** SQLite + Drizzle ORM
-- **Typing/Validation:** TypeScript + Zod
-
-## Common Commands
-
-```bash
-# Tests
-bun test
-bun --filter @vibecanvas/core test
-bun --filter @vibecanvas/shell test
-
-# Dev
-bun dev
-bun client:dev
-bun server:dev
-bun server:prod
-
-# Build and binary validation
-bun run scripts/build.ts
-bun run scripts/build.ts --single
-bun run scripts/test-binary.ts
-```
-
-Important: after a final build (`scripts/build.ts`), run `scripts/test-binary.ts` and ensure it passes.
 
 ## Database
 
 - Primary local SQLite DB path: `~/.vibecanvas/vibecanvas.sqlite`
 - Schema source: `packages/imperative-shell/src/database/`
 
-## Local Storage
-
-By default, Vibecanvas stores local runtime data in:
-
-- `~/.vibecanvas/`
-
-This folder is used for app state such as local database/config/runtime artifacts.
-
-When schema changes:
-
-```bash
-cd packages/imperative-shell
-bun run db:generate
-bun run db:migrate
-```
-
-## Binary Distribution
-
-The release pipeline builds platform-specific executables and a wrapper package:
-
-- Build artifacts: `dist/`
-- Manifest: `dist/release-manifest.json`
-- Wrapper package: `apps/vibecanvas/`
-
-Related scripts:
-- `bun run scripts/build.ts`
-- `bun run scripts/publish-npm.ts`
-- `bun run scripts/release.ts`
-
-## API / Transport Notes
-
-- App RPC and chat share the `/api` WebSocket endpoint.
-- Automerge document sync uses `/automerge`.
-- Static/file assets are served by the server, with support for embedded assets in compiled binaries.
 
 ## Contributing
 

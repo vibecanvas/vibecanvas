@@ -15,6 +15,34 @@
       "when": 1771235767016,
       "tag": "0001_dashing_wraith",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1771756770376,
+      "tag": "0002_tiresome_silhouette",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "6",
+      "when": 1771765748608,
+      "tag": "0003_lovely_moon_knight",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1771765851089,
+      "tag": "0004_watery_komodo",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "6",
+      "when": 1771804723838,
+      "tag": "0005_puzzling_jubilee",
+      "breakpoints": true
     }
   ]
 }

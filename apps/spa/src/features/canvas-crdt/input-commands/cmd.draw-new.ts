@@ -16,6 +16,7 @@ import { TextElement } from "../renderables/elements/text/text.class"
 import type { InputCommand, PointerInputContext } from "./types"
 import { isElementTarget } from "./types"
 import { orpcWebsocketService } from "@/services/orpc-websocket"
+import { showErrorToast } from "@/components/ui/Toast"
 
 
 
@@ -336,63 +337,43 @@ function handleUp(ctx: Parameters<InputCommand>[0]): boolean {
       renderable.dispatch({ type: 'enter' })
     })
   } else if (tool === 'chat') {
-    // Chat: create on single click (no drag)
-    const { data, style } = createChatElementDataAndStyle()
-    const element = createElement(
-      crypto.randomUUID(),
-      dragStartWorld.x,
-      dragStartWorld.y,
-      data,
-      style
-    )
-    const renderable = new ChatElement(element as TBackendElementOf<'chat'>, ctx.canvas)
 
-    // Add to canvas
-    ctx.canvas.addElement(renderable)
-
-    // Persist to CRDT
-    const elementId = renderable.id
-    const elementData = { ...renderable.element }
-
-    ctx.canvas.handle.change(doc => {
-      doc.elements[elementId] = renderable.element
-    })
-
-    // Record undo entry
-    ctx.canvas.undoManager.record({
-      label: 'Create Chat',
-      undo: () => {
-        ctx.canvas.handle.change(doc => {
-          delete doc.elements[elementId]
-        })
-      },
-      redo: () => {
-        ctx.canvas.handle.change(doc => {
-          doc.elements[elementId] = { ...elementData }
-        })
+    // BASED: [[A2]] Add undo for chat
+    const lastFiletreePath = localStorage.getItem('vibecanvas-filetree-last-path');
+    orpcWebsocketService.safeClient.api.chat.create({
+      canvas_id: ctx.canvas.canvasId,
+      x: dragStartWorld.x,
+      y: dragStartWorld.y,
+      title: 'New Chat',
+      local_path: lastFiletreePath ?? null,
+    }).then(([err, chat]) => {
+      if (err) {
+        showErrorToast(err.message)
+        return
       }
+      setStore('chatSlice', 'backendChats', ctx.canvas.canvasId, (prev) => [...(prev ?? []), chat])
+      // Record undo entry
+      // ctx.canvas.undoManager.record({
+      //   label: 'Create Chat',
+      //   undo: () => {
+      //     ctx.canvas.handle.change(doc => {
+      //       delete doc.elements[chat.id]
+      //     })
+      //   },
+      //   redo: () => {
+      //     ctx.canvas.handle.change(doc => {
+      //       doc.elements[chat.id] = { ...chat }
+      //     })
+      //   }
+      // })
     })
+
+
+
 
     setStore('toolbarSlice', 'activeTool', 'select')
   } else if (tool === 'filesystem') {
-    // const { data, style } = createFiletreeElementDataAndStyle()
-    // const element = createElement(
-    //   crypto.randomUUID(),
-    //   dragStartWorld.x,
-    //   dragStartWorld.y,
-    //   data,
-    //   style
-    // )
-    // const renderable = new FiletreeElement(element as TBackendElementOf<'filetree'>, ctx.canvas)
-
-    // ctx.canvas.addElement(renderable)
-
-    // const elementId = renderable.id
-    // const elementData = { ...renderable.element }
-
-    // ctx.canvas.handle.change(doc => {
-    //   doc.elements[elementId] = renderable.element
-    // })
+    // BASED: [[A1]] Add undo for filetree
     const lastFiletreePath = localStorage.getItem('vibecanvas-filetree-last-path');
     orpcWebsocketService.safeClient.api.filetree.create({
       canvas_id: ctx.canvas.canvasId,
@@ -400,7 +381,10 @@ function handleUp(ctx: Parameters<InputCommand>[0]): boolean {
       y: dragStartWorld.y,
       ...(lastFiletreePath ? { path: lastFiletreePath } : {}),
     }).then(([err, filetree]) => {
-      console.log(err, filetree)
+      if (err) {
+        showErrorToast(err.message)
+        return
+      }
       // ctx.canvas.undoManager.record({
       //   label: 'Create File Tree',
       //   undo: () => {
@@ -582,7 +566,6 @@ function createChatElementDataAndStyle(): {
   return {
     data: {
       type: 'chat',
-      sessionId: null,
       w: 300,
       h: 500,
       isCollapsed: false,

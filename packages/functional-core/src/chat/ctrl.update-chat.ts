@@ -6,7 +6,7 @@ export type TPortal = {
   db: typeof db;
 };
 
-type TArgs = { id: string } & Partial<Pick<TChat, 'title' | 'local_path'>>;
+type TArgs = { id: string } & Partial<Pick<TChat, 'title'>>;
 
 type TChat = typeof schema.chats.$inferSelect;
 
@@ -15,8 +15,6 @@ export function ctrlUpdateChat(portal: TPortal, args: TArgs): TErrTuple<TChat> {
     const updateData: Partial<typeof schema.chats.$inferInsert> = {};
 
     if (args.title !== undefined) updateData.title = args.title;
-    if (args.local_path !== undefined) updateData.local_path = args.local_path;
-    if (args.local_path !== undefined) updateData.session_id = null;
 
     const result = portal.db
       .update(schema.chats)

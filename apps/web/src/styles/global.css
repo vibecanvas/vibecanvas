@@ -153,12 +153,16 @@ h3 {
   border: 1px solid var(--border);
   background: #fff;
   overflow: hidden;
+  aspect-ratio: 16 / 9;
 }
 
+.hero-gif-frame picture,
 .hero-gif-frame img {
   width: 100%;
-  height: auto;
+  height: 100%;
   display: block;
+  object-fit: cover;
+  object-position: top center;
 }
 
 .hero-cta {
@@ -375,6 +379,11 @@ a {
 }
 
 @media (max-width: 900px) {
+  .hero-gif-frame {
+    aspect-ratio: 338 / 600;
+    max-height: 70vh;
+  }
+
   .steps-grid {
     grid-template-columns: 1fr;
   }

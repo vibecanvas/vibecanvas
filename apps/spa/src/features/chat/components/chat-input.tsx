@@ -5,20 +5,18 @@ import ImageIcon from "lucide-solid/icons/image"
 
 type TPendingImage = {
   id: string
-  base64: string
+  dataUrl: string
   mediaType: "image/jpeg" | "image/png" | "image/gif" | "image/webp"
   name: string
 }
 
-type TImageMediaType = "image/jpeg" | "image/png" | "image/gif" | "image/webp"
-
-export type TContentBlock =
-  | { type: "image"; source: { type: "base64"; data: string; media_type: TImageMediaType } }
+export type TInputPart =
   | { type: "text"; text: string }
+  | { type: "file"; mime: string; url: string; filename?: string }
 
 type TChatInputProps = {
   canSend: boolean
-  onSend: (content: TContentBlock[]) => void
+  onSend: (content: TInputPart[]) => void
   onInputFocus?: () => void
 }
 
@@ -29,14 +27,11 @@ const SUPPORTED_IMAGE_TYPES = new Set([
   "image/webp",
 ])
 
-function fileToBase64(file: File): Promise<string> {
+function fileToDataUrl(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader()
     reader.onload = () => {
-      const result = reader.result as string
-      // Remove the data URL prefix (e.g., "data:image/png;base64,")
-      const base64 = result.split(",")[1]
-      resolve(base64)
+      resolve(reader.result as string)
     }
     reader.onerror = reject
     reader.readAsDataURL(file)
@@ -74,10 +69,10 @@ export function ChatInput(props: TChatInputProps) {
 
     for (const file of imageFiles) {
       try {
-        const base64 = await fileToBase64(file)
+        const dataUrl = await fileToDataUrl(file)
         const pendingImage: TPendingImage = {
           id: generateId(),
-          base64,
+          dataUrl,
           mediaType: file.type as TPendingImage["mediaType"],
           name: file.name || `image.${file.type.split("/")[1]}`,
         }
@@ -98,17 +93,15 @@ export function ChatInput(props: TChatInputProps) {
   const handleSend = () => {
     if (!props.canSend) return
 
-    const content: TContentBlock[] = []
+    const content: TInputPart[] = []
 
     // Add images first
     for (const img of pendingImages()) {
       content.push({
-        type: "image",
-        source: {
-          type: "base64",
-          data: img.base64,
-          media_type: img.mediaType,
-        },
+        type: "file",
+        mime: img.mediaType,
+        url: img.dataUrl,
+        filename: img.name,
       })
     }
 
@@ -173,7 +166,7 @@ function ImageBadge(props: { image: TPendingImage; onRemove: () => void }) {
       <Tooltip.Portal>
         <Tooltip.Content class="z-50 p-1 bg-card border border-border shadow-md">
           <img
-            src={`data:${props.image.mediaType};base64,${props.image.base64}`}
+            src={props.image.dataUrl}
             alt={props.image.name}
             class="max-w-[200px] max-h-[150px] object-contain"
           />

@@ -14,14 +14,14 @@ Follow the Bun install guide, then verify:
 bun --version
 ```
 
-## 2) Log in to Claude Code
+## 2) Install and set up OpenCode
 
 ```bash
-claude
-/login
+bun add -g opencode-ai
+opencode
 ```
 
-Vibecanvas uses Claude Code and the Claude Agent SDK, so you should complete login before launching Vibecanvas.
+Vibecanvas uses OpenCode for agent sessions, so complete OpenCode setup before launching Vibecanvas.
 
 ## 3) Install Vibecanvas globally
 
@@ -43,6 +43,15 @@ vibecanvas
 - App opens with canvas and side panels.
 - Chat can start a new conversation.
 - Project files appear in the workspace tree.
+
+## 6) Keep Vibecanvas updated
+
+```bash
+vibecanvas upgrade --check
+vibecanvas upgrade
+```
+
+The CLI upgrade command is built into `apps/server/src/main.ts`.
 
 If one of these fails, ask in Discussions:
 

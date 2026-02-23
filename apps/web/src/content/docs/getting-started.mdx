@@ -9,12 +9,12 @@ Vibecanvas is a visual development workspace where you can sketch flows, discuss
 ## Prerequisites
 
 - Bun installed on your machine.
-- Claude Code CLI installed and logged in.
+- OpenCode CLI installed and set up.
 - A local project folder where you want to work.
 
 ```bash
-claude
-/login
+bun add -g opencode-ai
+opencode
 ```
 
 ## Install
@@ -38,6 +38,15 @@ vibecanvas
 ```
 
 Once launched, open the canvas and start creating frames, notes, and task flows.
+
+## Upgrade
+
+```bash
+vibecanvas upgrade --check
+vibecanvas upgrade
+```
+
+Use `--check` for a dry run, or `upgrade` to install the latest version.
 
 ## What to do first
 

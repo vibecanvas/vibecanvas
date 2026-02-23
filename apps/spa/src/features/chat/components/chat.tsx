@@ -5,14 +5,14 @@ import { AElement } from "@/features/canvas-crdt/renderables/element.abstract"
 import { CONNECTION_STATE } from "@/features/canvas-crdt/renderables/elements/chat/chat.state-machine"
 import { orpcWebsocketService } from "@/services/orpc-websocket"
 import { setStore, store } from "@/store"
-import { TBackendChat } from "@/types/backend.types"
-import type { SDKUserMessage } from "@anthropic-ai/claude-agent-sdk"
 import type { TCanvas } from "@vibecanvas/core/canvas/ctrl.create-canvas"
+import type { Event as OpenCodeEvent, Message, Part } from "@opencode-ai/sdk/v2"
 import type { Accessor, Setter } from "solid-js"
-import { ErrorBoundary, createEffect, createResource, createSignal, on, onMount } from "solid-js"
+import { ErrorBoundary, createEffect, createMemo, createSignal, on, onMount } from "solid-js"
+import { createStore as createSolidStore } from "solid-js/store"
 import { ChatHeader } from "./chat-header"
-import { ChatInput, type TContentBlock } from "./chat-input"
-import { ChatMessages } from "./chat-message"
+import { ChatInput, type TInputPart } from "./chat-input"
+import { ChatMessages, type TMessageGroup } from "./chat-message"
 import { StatusLine } from "./status-line"
 
 export type TChatBounds = {
@@ -37,11 +37,13 @@ type TChatProps = {
   onDragEnd: () => void
 }
 
-/**
- * Chat component that overlays on top of the canvas.
- * Positioned using world coordinates - the parent overlay container
- * has the canvas transform applied, so we just use x/y directly.
- */
+type TChatState = {
+  messages: Record<string, Message>
+  parts: Record<string, Part>
+  messageOrder: string[]
+  sessionStatus: { type: "idle" | "busy" | "retry" }
+}
+
 export function Chat(props: TChatProps) {
   const SCROLL_THRESHOLD = 50
   const ENABLED_INPUT_STATES = [
@@ -56,49 +58,28 @@ export function Chat(props: TChatProps) {
   let lastPos = { x: 0, y: 0 }
   let scrollContainerRef: HTMLDivElement | undefined
 
-  const chat = () => store.chatSlice.backendChats[props.canvas.id].find((chat) => chat.id === props.chatId)
-  const setChat = (chat: TBackendChat) => setStore('chatSlice', 'backendChats', props.canvas.id, (chats) => chat.id === chat.id ? chat : chats)
-  const [isAtBottom, setIsAtBottom] = createSignal(true)
-  const [isPathDialogOpen, setIsPathDialogOpen] = createSignal(false)
-  const [pendingUserMessages, setPendingUserMessages] = createSignal<SDKUserMessage[]>([])
+  const chat = () => store.chatSlice.backendChats[props.canvas.id]?.find((c) => c.id === props.chatId)
 
-  const [messages, setMessages] = createResource(() => chat()?.session_id, async (sessionId) => {
-    const r = await orpcWebsocketService.client.api["agent-logs"].getBySession({ params: { sessionId } })
-    if (!Array.isArray(r)) {
-      throw new Error(r.message ?? 'Unknown error')
-    }
-    return r.map(d => d.data!)
+  const [chatState, setChatState] = createSolidStore<TChatState>({
+    messages: {},
+    parts: {},
+    messageOrder: [],
+    sessionStatus: { type: "idle" },
   })
 
-  createEffect(on(
-    () => chat()?.session_id,
-    (sessionId, previousSessionId) => {
-      if (sessionId === null && previousSessionId && previousSessionId !== sessionId) {
-        setMessages.mutate([])
-        setPendingUserMessages([])
-      }
-    }
-  ))
+  const [isAtBottom, setIsAtBottom] = createSignal(true)
+  const [isPathDialogOpen, setIsPathDialogOpen] = createSignal(false)
 
-  createEffect(on(
-    () => messages(),
-    (currentMessages) => {
-      const pending = pendingUserMessages()
-      if (pending.length === 0) return
+  // Derived memo for rendering
+  const orderedMessages = createMemo((): TMessageGroup[] =>
+    chatState.messageOrder.map(msgId => ({
+      message: chatState.messages[msgId],
+      parts: Object.values(chatState.parts)
+        .filter((p): p is Part => p != null && p.messageID === msgId),
+    })).filter(m => m.message != null)
+  )
 
-      const hasMessage = (target: SDKUserMessage) =>
-        (currentMessages ?? []).some(
-          (msg) =>
-            msg.type === 'user' &&
-            JSON.stringify(msg.message.content) === JSON.stringify(target.message.content)
-        )
-
-      const missing = pending.filter((msg) => !hasMessage(msg))
-      if (missing.length > 0) {
-        setMessages.mutate((list) => [...(list || []), ...missing])
-      }
-    }
-  ))
+  const isBusy = () => chatState.sessionStatus.type === "busy"
 
   const resetToReadyIfFinished = () => {
     if (props.state() === CONNECTION_STATE.FINISHED) {
@@ -126,14 +107,159 @@ export function Chat(props: TChatProps) {
 
   // Auto-scroll when messages change, but only if user was at bottom
   createEffect(on(
-    () => messages(),
+    () => chatState.messageOrder.length,
     () => {
       if (isAtBottom()) {
-        // Use requestAnimationFrame to ensure DOM has updated
         requestAnimationFrame(() => scrollToBottom())
       }
     }
   ))
+
+  // Also auto-scroll on part text deltas when at bottom
+  createEffect(on(
+    () => {
+      // Track the text of the last part for scroll triggering
+      const lastMsgId = chatState.messageOrder[chatState.messageOrder.length - 1]
+      if (!lastMsgId) return ""
+      const parts = Object.values(chatState.parts).filter(
+        (p): p is Part => p != null && p.messageID === lastMsgId && p.type === "text"
+      )
+      const lastPart = parts[parts.length - 1]
+      return lastPart && "text" in lastPart ? String(lastPart.text ?? "").length : 0
+    },
+    () => {
+      if (isAtBottom()) {
+        requestAnimationFrame(() => scrollToBottom())
+      }
+    }
+  ))
+
+  function handleOpenCodeEvent(event: OpenCodeEvent) {
+    const sessionId = chat()?.session_id
+    if (!sessionId) return
+
+    switch (event.type) {
+      case "message.updated": {
+        const msg = event.properties.info
+        if (msg.sessionID !== sessionId) return
+
+        // Replace optimistic message if this is a user message
+        if (msg.role === "user") {
+          const optimistic = chatState.messageOrder.find(id => id.startsWith("optimistic-"))
+          if (optimistic) {
+            setChatState("messages", optimistic, undefined!)
+            setChatState("messageOrder", prev => prev.filter(id => id !== optimistic))
+            // Clean up optimistic parts
+            for (const [pid, p] of Object.entries(chatState.parts)) {
+              if (p?.messageID === optimistic) setChatState("parts", pid, undefined!)
+            }
+          }
+        }
+
+        setChatState("messages", msg.id, msg)
+        if (!chatState.messageOrder.includes(msg.id)) {
+          setChatState("messageOrder", prev => [...prev, msg.id])
+        }
+        break
+      }
+
+      case "message.part.updated": {
+        const { part } = event.properties
+        if (part.sessionID !== sessionId) return
+        setChatState("parts", part.id, part)
+        break
+      }
+
+      case "message.part.delta": {
+        const { sessionID, partID, field, delta } = event.properties
+        if (sessionID !== sessionId) return
+        if (field === "text" && chatState.parts[partID]) {
+          setChatState("parts", partID, "text" as never, ((prev: string) => (prev ?? "") + delta) as never)
+        }
+        break
+      }
+
+      case "message.part.removed": {
+        const { sessionID, partID } = event.properties
+        if (sessionID !== sessionId) return
+        setChatState("parts", partID, undefined!)
+        break
+      }
+
+      case "session.status": {
+        const { sessionID, status } = event.properties
+        if (sessionID !== sessionId) return
+        setChatState("sessionStatus", { type: status.type })
+        if (status.type === "busy") props.setState(CONNECTION_STATE.STREAMING)
+        else if (status.type === "retry") props.setState(CONNECTION_STATE.RETRYING)
+        break
+      }
+
+      case "session.idle": {
+        const { sessionID } = event.properties
+        if (sessionID !== sessionId) return
+        setChatState("sessionStatus", { type: "idle" })
+        props.setState(CONNECTION_STATE.FINISHED)
+        break
+      }
+
+      case "session.error": {
+        if (event.properties.sessionID && event.properties.sessionID !== sessionId) return
+        props.setState(CONNECTION_STATE.ERROR)
+        break
+      }
+    }
+  }
+
+  const loadPreviousMessages = async () => {
+    const sessionId = chat()?.session_id
+    if (!sessionId) return
+
+    const [logsError, logsResult] = await orpcWebsocketService.safeClient.api["agent-logs"].getBySession({
+      params: { sessionId },
+    })
+
+    if (logsError) {
+      console.error("Failed to load previous messages", logsError)
+      return
+    }
+
+    if (!Array.isArray(logsResult)) {
+      console.error("Failed to load previous messages", logsResult.message)
+      return
+    }
+
+    const logsByTime = [...logsResult].sort((a, b) => {
+      const aTime = new Date(a.timestamp).getTime()
+      const bTime = new Date(b.timestamp).getTime()
+      return aTime - bTime
+    })
+
+    const messages: Record<string, Message> = {}
+    const parts: Record<string, Part> = {}
+    const messageOrder: string[] = []
+
+    for (const log of logsByTime) {
+      const message = log.data?.info
+      if (!message) continue
+
+      messages[message.id] = message
+      if (!messageOrder.includes(message.id)) {
+        messageOrder.push(message.id)
+      }
+
+      for (const part of log.data?.parts ?? []) {
+        parts[part.id] = part
+      }
+    }
+
+    setChatState({
+      messages,
+      parts,
+      messageOrder,
+    })
+    requestAnimationFrame(() => scrollToBottom())
+  }
 
   onMount(async () => {
     if (orpcWebsocketService.websocket.readyState === WebSocket.OPEN) {
@@ -142,32 +268,20 @@ export function Chat(props: TChatProps) {
       return
     }
 
-    const [initError, init] = await orpcWebsocketService.safeClient.api.ai.init({ canvasId: props.canvas.id, chatId: props.chatId, harness: 'CLAUDE_CODE' })
-    if (initError) {
-      console.error('init error', initError)
+    await loadPreviousMessages()
+
+    const [err, it] = await orpcWebsocketService.safeClient.api.ai.events({
+      chatId: props.chatId,
+    })
+    if (err) {
+      console.error("Events subscription error", err)
       props.setState(CONNECTION_STATE.ERROR)
       return
     }
-    setChat(init)
 
-    orpcWebsocketService.safeClient.api.ai.events({ chatId: props.chatId }).then(async ([err, it]) => {
-      if (err) {
-        props.setState(CONNECTION_STATE.ERROR)
-        return
-      }
-
-      for await (const event of it) {
-        setMessages.mutate(m => [...(m || []), event])
-
-        if (event.type === 'stream_event' && event.event.type === 'message_start') {
-          props.setState(CONNECTION_STATE.STREAMING)
-        }
-
-        if (event.type === 'stream_event' && event.event.type === 'message_stop') {
-          props.setState(CONNECTION_STATE.FINISHED)
-        }
-      }
-    })
+    for await (const event of it) {
+      handleOpenCodeEvent(event)
+    }
   })
 
   const handlePointerDown = (e: PointerEvent) => {
@@ -199,55 +313,77 @@ export function Chat(props: TChatProps) {
       ; (e.target as HTMLElement).releasePointerCapture(e.pointerId)
   }
 
-  const sendMessage = async (content: TContentBlock[]) => {
-    // Create optimistic user message matching server structure
-    const userMessage: SDKUserMessage = {
-      type: 'user' as const,
-      session_id: chat()?.session_id ?? '',
-      parent_tool_use_id: null,
-      message: {
-        role: 'user' as const,
-        content,
-      },
-      isSynthetic: false,
+  const sendMessage = async (parts: TInputPart[]) => {
+    const sessionId = chat()?.session_id
+    if (!sessionId) return
+
+    // Optimistic user message
+    const optMsgId = `optimistic-${Date.now()}`
+    setChatState("messages", optMsgId, {
+      id: optMsgId,
+      sessionID: sessionId,
+      role: "user" as const,
+      time: { created: Date.now() },
+      agent: "",
+      model: { providerID: "", modelID: "" },
+    } satisfies Message & { role: "user" })
+    setChatState("messageOrder", prev => [...prev, optMsgId])
+
+    // Optimistic parts
+    for (const [i, part] of parts.entries()) {
+      const partId = `optimistic-part-${Date.now()}-${i}`
+      const basePart = {
+        id: partId,
+        sessionID: sessionId,
+        messageID: optMsgId,
+      }
+      if (part.type === "text") {
+        setChatState("parts", partId, { ...basePart, type: "text", text: part.text } as Part)
+      } else {
+        setChatState("parts", partId, {
+          ...basePart,
+          type: "file",
+          mime: part.mime,
+          url: part.url,
+          filename: part.filename,
+        } as Part)
+      }
     }
 
-    // Add to local state immediately (optimistic update)
-    setPendingUserMessages(m => [...m, userMessage])
-    setMessages.mutate(m => [...(m || []), userMessage])
-
-    // User is sending a message, so scroll to bottom to see it
     setIsAtBottom(true)
     requestAnimationFrame(() => scrollToBottom())
 
-    // Send to server
     const [promptError] = await orpcWebsocketService.safeClient.api.ai.prompt({
       chatId: props.chatId,
-      data: content
+      parts,
     })
-
-    // Handle prompt error or result
     if (promptError) {
-      console.error('Prompt error:', promptError)
+      console.error("Prompt error:", promptError)
     }
-
   }
 
   const updateLocalPath = async (nextLocalPath: string) => {
     const normalizedPath = nextLocalPath.trim()
     if (!normalizedPath) return
 
-    const [updateError, updatedChat] = await orpcWebsocketService.safeClient.api.chat.update({
-      params: { id: props.chatId },
-      body: { local_path: normalizedPath },
+    // Get world coordinates from the element
+    const worldX = props.chatClass.element.x
+    const worldY = props.chatClass.element.y
+
+    const [createError, newChat] = await orpcWebsocketService.safeClient.api.chat.create({
+      canvas_id: props.canvas.id,
+      x: worldX + 30,
+      y: worldY + 30,
+      title: `Chat - ${normalizedPath.split("/").pop()}`,
+      local_path: normalizedPath,
     })
 
-    if (updateError || !updatedChat) {
-      console.error("Failed to update chat local_path", updateError)
+    if (createError || !newChat) {
+      console.error("Failed to create new chat", createError)
       return
     }
 
-    // setChat(updatedChat)
+    setStore("chatSlice", "backendChats", props.canvas.id, (chats) => [...chats, newChat])
   }
 
   const handleSetFolder = () => {
@@ -267,8 +403,8 @@ export function Chat(props: TChatProps) {
       }}
     >
       <ChatHeader
-        title={chat()?.session_id ?? 'no chat id'}
-        subtitle={chat()?.local_path ?? "No folder selected"}
+        title={(chat()?.title) + ' ' + chat()?.session_id}
+        subtitle={chat()?.local_path ?? ''}
         onSetFolder={handleSetFolder}
         onCollapse={() => {
           // TODO: Implement collapse logic
@@ -289,7 +425,7 @@ export function Chat(props: TChatProps) {
         class="p-2 text-muted-foreground text-sm flex-1 overflow-y-auto"
       >
         <ErrorBoundary fallback={(err) => <div class="text-red-500">{err.message}</div>}>
-          <ChatMessages messages={messages() ?? []} />
+          <ChatMessages messages={orderedMessages()} isBusy={isBusy()} />
         </ErrorBoundary>
       </div>
       <ChatInput

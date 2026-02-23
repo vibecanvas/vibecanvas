@@ -1,5 +1,5 @@
 import { defineConfig } from "drizzle-kit";
-import { txConfigPath } from "@vibecanvas/core/vibecanvas-config/index";
+import { txConfigPath } from "@vibecanvas/core/vibecanvas-config/tx.config-path";
 import { existsSync, mkdirSync } from "fs";
 
 const [config] = txConfigPath({ fs: { existsSync, mkdirSync } });

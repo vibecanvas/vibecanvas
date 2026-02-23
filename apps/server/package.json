@@ -1,6 +1,6 @@
 {
   "name": "@vibecanvas/server",
-  "version": "0.0.10",
+  "version": "0.1.0",
   "private": true,
   "type": "module",
   "exports": {
@@ -12,12 +12,12 @@
     "test": "bun test"
   },
   "dependencies": {
-    "@anthropic-ai/claude-agent-sdk": "catalog:",
     "@automerge/automerge": "catalog:",
     "@automerge/automerge-repo": "catalog:",
     "@automerge/automerge-repo-network-websocket": "catalog:",
     "@orpc/server": "catalog:",
     "@orpc/contract": "catalog:",
+    "@opencode-ai/sdk": "catalog:",
     "@vibecanvas/core": "workspace:*",
     "@vibecanvas/shell": "workspace:*",
     "@vibecanvas/core-contract": "workspace:*",

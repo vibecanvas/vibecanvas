@@ -1,6 +1,6 @@
 {
   "name": "@vibecanvas/core",
-  "version": "0.0.10",
+  "version": "0.1.0",
   "private": true,
   "type": "module",
   "exports": {
@@ -10,7 +10,6 @@
     "test": "bun test"
   },
   "dependencies": {
-    "@anthropic-ai/claude-agent-sdk": "catalog:",
     "@vibecanvas/shell": "workspace:*",
     "@automerge/automerge": "catalog:",
     "@automerge/automerge-repo": "catalog:",

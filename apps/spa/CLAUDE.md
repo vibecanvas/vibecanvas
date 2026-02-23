@@ -283,7 +283,6 @@ export const [store, setStore] = createStore<TStore>({
 
   chatSlice: {
     backendChats: { [canvasId]: TBackendChat[] },
-    backendChatsActive: TBackendChat[],                // Computed getter
   },
 
   contextMenuSlice: {

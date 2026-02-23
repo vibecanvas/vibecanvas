@@ -2,14 +2,14 @@
 // Initialize global functions (tExternal, tInternal, executeRollbacks)
 import { onError } from '@orpc/server';
 import { RPCHandler } from '@orpc/server/bun-ws';
-import { ClaudeAgent } from '@vibecanvas/shell/claude-agent/srv.claude-agent';
+import { OpencodeService } from '@vibecanvas/shell/opencode/srv.opencode';
 import db from "@vibecanvas/shell/database/db";
 import { existsSync } from 'fs';
 import { createServer } from 'net';
 import { join, normalize } from 'path';
 import { router } from './api-router';
 import { publishNotification } from './apis/api.notification';
-import { fileMetaFromPathname } from './files/file-storage';
+import { fileMetaFromPathname } from '@vibecanvas/core/file/fn.file-storage';
 import { baseOs } from './orpc.base';
 import './preload/patch-negative-timeout';
 import { getServerVersion } from './runtime';
@@ -88,15 +88,6 @@ function getPublicAssetPath(pathname: string): string | null {
 export async function startServer(options: StartServerOptions): Promise<void> {
   const { port: preferredPort } = options;
 
-
-  const claudeRuntime = ClaudeAgent.bootstrapRuntime();
-  if (claudeRuntime.available) {
-    console.log(`[Claude] Runtime ready (${claudeRuntime.source}): ${claudeRuntime.detected.claudePath}`);
-  } else {
-    console.warn(`[Claude] Runtime unavailable: ${claudeRuntime.reason}`);
-  }
-
-
   // Stable wrapper per connection.
   // We keep a separate wrapper object to avoid mutating websocket internals.
   // wrapper object that satisfies the adapter's WebSocketWithIsAlive interface.
@@ -125,6 +116,8 @@ export async function startServer(options: StartServerOptions): Promise<void> {
   if (httpPort !== preferredPort) {
     console.warn(`[Server] Port ${preferredPort} is busy, using ${httpPort}`);
   }
+
+  const opencodeService = await OpencodeService.init()
 
   Bun.serve({
     port: httpPort,
@@ -233,7 +226,7 @@ export async function startServer(options: StartServerOptions): Promise<void> {
       message(ws, message) {
         if (ws.data.path === '/api') {
           handler.message(ws, message, {
-            context: { db }, // Provide initial context if needed
+            context: { db, opencodeService }, // Provide initial context if needed
           })
         } else if (ws.data.path === '/automerge') {
           const wrapper = automergeConnections.get(ws);

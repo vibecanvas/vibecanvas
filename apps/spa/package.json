@@ -1,6 +1,6 @@
 {
   "name": "@vibecanvas/spa",
-  "version": "0.0.10",
+  "version": "0.1.0",
   "private": true,
   "description": "SolidJS SPA with canvas",
   "type": "module",
@@ -34,6 +34,7 @@
     "@vibecanvas/core-contract": "workspace:*",
     "@vibecanvas/core": "workspace:*",
     "@vibecanvas/shell": "workspace:*",
+    "@opencode-ai/sdk": "catalog:",
     "@orpc/client": "catalog:",
     "@orpc/contract": "catalog:",
     "@automerge/automerge": "catalog:",

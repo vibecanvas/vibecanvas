@@ -1,7 +1,7 @@
 import { sqliteTable, text, integer, real, blob, index } from "drizzle-orm/sqlite-core";
 import { createSelectSchema } from 'drizzle-zod';
 import { sql } from "drizzle-orm";
-import type { SDKMessage } from "@anthropic-ai/claude-agent-sdk";
+import type { Message, Part } from "@opencode-ai/sdk/v2";
 
 /**
  * @llm-hint DRIZZLE JSON DEFAULTS
@@ -33,8 +33,10 @@ export const agent_logs = sqliteTable("agent_logs", {
   canvas_id: text("canvas_id").notNull().references(() => canvas.id, { onDelete: "cascade" }),
   session_id: text("session_id").notNull(),
   timestamp: integer({ mode: "timestamp" }).notNull(),
-  type: text({ enum: ['CLAUDE_CODE'] }).notNull(),
-  data: text("data", { mode: "json" }).$type<SDKMessage>(),
+  data: text("data", { mode: "json" }).$type<{
+    info: Message;
+    parts: Array<Part>;
+  }>(),
 });
 
 export const ZAgentLogsSelect = createSelectSchema(agent_logs);
@@ -43,9 +45,8 @@ export const chats = sqliteTable("chats", {
   id: text("id").primaryKey(),
   canvas_id: text("canvas_id").notNull().references(() => canvas.id, { onDelete: "cascade" }),
   title: text("title").notNull(),
-  session_id: text("session_id"),
-  harness: text({ enum: ['CLAUDE_CODE'] }).notNull(),
-  local_path: text("local_path"),
+  session_id: text("session_id").notNull(),
+  local_path: text("local_path").notNull(),
   created_at: integer("created_at", { mode: "timestamp" }).notNull().default(sql`(unixepoch())`),
   updated_at: integer("updated_at", { mode: "timestamp" }).notNull().default(sql`(unixepoch())`),
 });
