@@ -3,6 +3,7 @@ import type { AElement } from "@/features/canvas-crdt/renderables/element.abstra
 import { orpcWebsocketService } from "@/services/orpc-websocket";
 import type { TBackendFileTree } from "@/types/backend.types";
 import { PathPickerDialog } from "@/components/path-picker-dialog";
+import { expandTildePath, toTildePath } from "@/utils/path-display";
 import type { Accessor } from "solid-js";
 import { For, Show, createEffect, createResource, createSignal, on, onCleanup, onMount } from "solid-js";
 import ChevronDown from "lucide-solid/icons/chevron-down";
@@ -43,12 +44,22 @@ type TTreeNode = {
   children: TTreeNode[];
 };
 
-const FILETREE_DND_MIME = "application/x-vibecanvas-filetree-node";
+type TDraggedFiletreeNode = {
+  path: string;
+  name: string;
+  is_dir: boolean;
+};
+
+const FILETREE_CHAT_DND_MIME = "application/x-vibecanvas-filetree-node";
+const FILETREE_MOVE_DND_MIME = "application/x-vibecanvas-filetree-move";
+const FOLDER_AUTO_OPEN_DELAY_MS = 1000;
 
 export function Filetree(props: TFiletreeProps) {
   let isDragging = false;
   let lastPos = { x: 0, y: 0 };
   let globDebounceTimer: ReturnType<typeof setTimeout> | null = null;
+  let folderAutoOpenTimer: ReturnType<typeof setTimeout> | null = null;
+  let folderAutoOpenTargetPath: string | null = null;
   let didEnsureFiletreeRow = false;
   let didHydrateGlobInput = false;
   const lazyLoadedFolderPaths = new Set<string>();
@@ -66,6 +77,8 @@ export function Filetree(props: TFiletreeProps) {
   };
 
   const [currentPath, setCurrentPath] = createSignal("");
+  const [homePath, setHomePath] = createSignal<string | null>(null);
+  const [pathInput, setPathInput] = createSignal("");
   const [globInput, setGlobInput] = createSignal("");
   const [isGlobDirty, setIsGlobDirty] = createSignal(false);
   const [appliedGlob, setAppliedGlob] = createSignal<string | null>(null);
@@ -74,6 +87,25 @@ export function Filetree(props: TFiletreeProps) {
   const [openFolders, setOpenFolders] = createSignal<Set<string>>(new Set());
   const [selectedRowPath, setSelectedRowPath] = createSignal<string | null>(null);
   const [isPathDialogOpen, setIsPathDialogOpen] = createSignal(false);
+  const [draggedNode, setDraggedNode] = createSignal<TDraggedFiletreeNode | null>(null);
+  const [dragOverTargetPath, setDragOverTargetPath] = createSignal<string | null>(null);
+  const [isRootDropTarget, setIsRootDropTarget] = createSignal(false);
+  const [isDragMoveCancelled, setIsDragMoveCancelled] = createSignal(false);
+
+  const clearFolderAutoOpenTimer = () => {
+    if (!folderAutoOpenTimer) return;
+    clearTimeout(folderAutoOpenTimer);
+    folderAutoOpenTimer = null;
+    folderAutoOpenTargetPath = null;
+  };
+
+  const clearMoveDragState = () => {
+    clearFolderAutoOpenTimer();
+    setDraggedNode(null);
+    setDragOverTargetPath(null);
+    setIsRootDropTarget(false);
+    setIsDragMoveCancelled(false);
+  };
 
   const [filetree, { mutate: mutateFiletree, refetch: refetchFiletree }] = createResource(
     () => ({ canvasId: props.canvasId, filetreeId: props.filetreeId }),
@@ -110,6 +142,12 @@ export function Filetree(props: TFiletreeProps) {
     }
 
     return listResult;
+  };
+
+  const loadHomePath = async () => {
+    const [homeError, homeResult] = await orpcWebsocketService.safeClient.api.file.home();
+    if (homeError || !homeResult || "type" in homeResult) return;
+    setHomePath(homeResult.path);
   };
 
   const [treeData, { mutate: mutateTreeData, refetch: refetchTreeData }] = createResource(
@@ -157,6 +195,89 @@ export function Filetree(props: TFiletreeProps) {
     return normalized === "" ? null : normalized;
   };
 
+  const normalizePathForCompare = (path: string): string => path.replaceAll("\\", "/").replace(/\/+$/, "");
+
+  const isPathDescendant = (path: string, maybeDescendant: string): boolean => {
+    const parent = normalizePathForCompare(path);
+    const child = normalizePathForCompare(maybeDescendant);
+    if (child === parent) return false;
+    return child.startsWith(`${parent}/`);
+  };
+
+  const parseDraggedMoveNode = (event: DragEvent): TDraggedFiletreeNode | null => {
+    const raw = event.dataTransfer?.getData(FILETREE_MOVE_DND_MIME);
+    if (!raw) return null;
+
+    try {
+      const parsed = JSON.parse(raw) as {
+        path?: unknown;
+        name?: unknown;
+        is_dir?: unknown;
+      };
+
+      if (typeof parsed.path !== "string") return null;
+      if (typeof parsed.name !== "string") return null;
+      if (typeof parsed.is_dir !== "boolean") return null;
+
+      return {
+        path: parsed.path,
+        name: parsed.name,
+        is_dir: parsed.is_dir,
+      };
+    } catch {
+      return null;
+    }
+  };
+
+  const hasMoveDragPayload = (event: DragEvent): boolean => {
+    const types = event.dataTransfer?.types;
+    if (!types) return false;
+    return Array.from(types).includes(FILETREE_MOVE_DND_MIME);
+  };
+
+  const isDragLeaveStillInsideCurrentTarget = (event: DragEvent): boolean => {
+    const currentTarget = event.currentTarget as HTMLElement | null;
+    if (!currentTarget) return false;
+
+    const relatedTarget = event.relatedTarget as Node | null;
+    if (relatedTarget && currentTarget.contains(relatedTarget)) return true;
+
+    const hoveredElement = document.elementFromPoint(event.clientX, event.clientY);
+    return hoveredElement ? currentTarget.contains(hoveredElement) : false;
+  };
+
+  const ensureFolderAutoOpen = (node: TTreeNode) => {
+    if (!node.is_dir) return;
+    if (openFolders().has(node.path)) return;
+    if (folderAutoOpenTargetPath === node.path && folderAutoOpenTimer) return;
+
+    clearFolderAutoOpenTimer();
+    folderAutoOpenTargetPath = node.path;
+    folderAutoOpenTimer = setTimeout(() => {
+      setOpenFolders((previous) => {
+        const next = new Set(previous);
+        next.add(node.path);
+        return next;
+      });
+
+      if (node.children.length === 0) {
+        void loadSubdirectoryChildren(node.path);
+      }
+
+      clearFolderAutoOpenTimer();
+    }, FOLDER_AUTO_OPEN_DELAY_MS);
+  };
+
+  const canDropNodeIntoDestination = (node: TDraggedFiletreeNode, destinationPath: string): boolean => {
+    if (isDragMoveCancelled()) return false;
+    const normalizedDestination = normalizePathForCompare(destinationPath);
+    if (!normalizedDestination) return false;
+    if (node.is_dir && (normalizedDestination === normalizePathForCompare(node.path) || isPathDescendant(node.path, destinationPath))) {
+      return false;
+    }
+    return true;
+  };
+
   const replaceNodeChildren = (nodes: TTreeNode[], targetPath: string, nextChildren: TTreeNode[]): TTreeNode[] => {
     let changed = false;
     const mapped = nodes.map((node) => {
@@ -195,6 +316,26 @@ export function Filetree(props: TFiletreeProps) {
         children: replaceNodeChildren(prev.children, folderPath, result.children),
       };
     });
+  };
+
+  const moveNodeIntoFolder = async (node: TDraggedFiletreeNode, destinationFolderPath: string) => {
+    const [moveError, moveResult] = await orpcWebsocketService.safeClient.api.file.move({
+      body: {
+        source_path: node.path,
+        destination_dir_path: destinationFolderPath,
+      },
+    });
+
+    if (moveError || !moveResult || "type" in moveResult) {
+      setErrorMessage(moveError?.message ?? (moveResult && "message" in moveResult ? moveResult.message : "Failed to move file or folder"));
+      return;
+    }
+
+    if (!moveResult.moved) return;
+
+    lazyLoadedFolderPaths.clear();
+    setSelectedRowPath(moveResult.target_path);
+    void refetchTreeData();
   };
 
   const ensureRowExists = async () => {
@@ -254,6 +395,7 @@ export function Filetree(props: TFiletreeProps) {
       setErrorMessage(homeError?.message ?? "Failed to resolve home directory");
       return;
     }
+    setHomePath(homeResult.path);
     setCurrentPath(homeResult.path);
     await updateFiletree({ path: homeResult.path });
   };
@@ -309,8 +451,21 @@ export function Filetree(props: TFiletreeProps) {
     (event.target as HTMLElement).releasePointerCapture(event.pointerId);
   };
 
+  const handleWindowKeyDown = (event: KeyboardEvent) => {
+    if (event.key !== "Escape") return;
+    if (!draggedNode()) return;
+
+    event.preventDefault();
+    clearFolderAutoOpenTimer();
+    setDragOverTargetPath(null);
+    setIsRootDropTarget(false);
+    setIsDragMoveCancelled(true);
+  };
+
   onMount(() => {
     void refetchFiletree();
+    void loadHomePath();
+    window.addEventListener("keydown", handleWindowKeyDown);
   });
 
   createEffect(() => {
@@ -332,6 +487,7 @@ export function Filetree(props: TFiletreeProps) {
   createEffect(on(filetree, (row) => {
     if (!row) return;
     setCurrentPath(row.path);
+    setPathInput(toTildePath(row.path, homePath()));
 
     const persistedGlob = normalizeGlob(row.glob_pattern);
     if (!isGlobDirty()) {
@@ -386,17 +542,27 @@ export function Filetree(props: TFiletreeProps) {
 
   createEffect(on(currentPath, (path) => {
     if (!path) return;
+    setPathInput(toTildePath(path, homePath()));
     void startWatching(path);
+  }));
+
+  createEffect(on(homePath, () => {
+    if (!currentPath()) return;
+    setPathInput(toTildePath(currentPath(), homePath()));
   }));
 
   onCleanup(() => {
     if (globDebounceTimer) clearTimeout(globDebounceTimer);
+    clearFolderAutoOpenTimer();
+    window.removeEventListener("keydown", handleWindowKeyDown);
     stopWatching();
   });
 
-  const renderTree = (node: TTreeNode, depth: number) => {
+  const renderTree = (node: TTreeNode, depth: number, parentPath: string) => {
     const isOpen = () => openFolders().has(node.path);
     const isSelected = () => selectedRowPath() === node.path;
+    const isDropTarget = () => dragOverTargetPath() === node.path;
+    const destinationPath = node.is_dir ? node.path : parentPath;
 
     return (
       <div>
@@ -404,7 +570,10 @@ export function Filetree(props: TFiletreeProps) {
           type="button"
           draggable={true}
           class="w-full text-left px-2 py-1 text-xs flex items-center gap-1 border-b border-border/60 hover:bg-accent"
-          classList={{ "bg-accent": isSelected() }}
+          classList={{
+            "bg-accent": isSelected(),
+            "bg-amber-200/60": isDropTarget(),
+          }}
           style={{ "padding-left": `${depth * 12 + 8}px` }}
           onDragStart={(event) => {
             const payload = {
@@ -413,11 +582,66 @@ export function Filetree(props: TFiletreeProps) {
               is_dir: node.is_dir,
             };
 
-            event.dataTransfer?.setData(FILETREE_DND_MIME, JSON.stringify(payload));
+            setDraggedNode(payload);
+            setIsDragMoveCancelled(false);
+            event.dataTransfer?.setData(FILETREE_CHAT_DND_MIME, JSON.stringify(payload));
+            event.dataTransfer?.setData(FILETREE_MOVE_DND_MIME, JSON.stringify(payload));
             event.dataTransfer?.setData("text/plain", `@${node.path}`);
             if (event.dataTransfer) {
-              event.dataTransfer.effectAllowed = "copy";
+              event.dataTransfer.effectAllowed = "copyMove";
             }
+          }}
+          onDragEnd={() => {
+            clearMoveDragState();
+          }}
+          onDragEnter={(event) => {
+            if (!hasMoveDragPayload(event) && !draggedNode()) return;
+            const currentDraggedNode = draggedNode();
+            if (!currentDraggedNode) return;
+            if (!canDropNodeIntoDestination(currentDraggedNode, destinationPath)) return;
+
+            setDragOverTargetPath(node.path);
+            setIsRootDropTarget(false);
+
+            ensureFolderAutoOpen(node);
+          }}
+          onDragOver={(event) => {
+            if (!hasMoveDragPayload(event) && !draggedNode()) return;
+            const currentDraggedNode = draggedNode();
+            if (!currentDraggedNode) return;
+            if (!canDropNodeIntoDestination(currentDraggedNode, destinationPath)) return;
+
+            event.preventDefault();
+            if (event.dataTransfer) {
+              event.dataTransfer.dropEffect = "move";
+            }
+            setDragOverTargetPath(node.path);
+            setIsRootDropTarget(false);
+            ensureFolderAutoOpen(node);
+          }}
+          onDragLeave={(event) => {
+            if (isDragLeaveStillInsideCurrentTarget(event)) {
+              return;
+            }
+            if (dragOverTargetPath() === node.path) {
+              setDragOverTargetPath(null);
+            }
+
+            if (folderAutoOpenTargetPath === node.path) {
+              clearFolderAutoOpenTimer();
+            }
+          }}
+          onDrop={(event) => {
+            clearFolderAutoOpenTimer();
+            setDragOverTargetPath(null);
+            setIsRootDropTarget(false);
+
+            const droppedNode = parseDraggedMoveNode(event) ?? draggedNode();
+            if (!droppedNode) return;
+            if (!canDropNodeIntoDestination(droppedNode, destinationPath)) return;
+
+            event.preventDefault();
+            void moveNodeIntoFolder(droppedNode, destinationPath);
           }}
           onClick={() => {
             setSelectedRowPath(node.path);
@@ -444,7 +668,7 @@ export function Filetree(props: TFiletreeProps) {
         </button>
 
         <Show when={node.is_dir && isOpen()}>
-          <For each={node.children}>{(child) => renderTree(child, depth + 1)}</For>
+          <For each={node.children}>{(child) => renderTree(child, depth + 1, node.path)}</For>
         </Show>
       </div>
     );
@@ -464,7 +688,7 @@ export function Filetree(props: TFiletreeProps) {
     >
       <FiletreeHeader
         title={filetree()?.title ?? "File Tree"}
-        subtitle={currentPath() || ""}
+        subtitle={toTildePath(currentPath() || "", homePath())}
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}
@@ -482,14 +706,19 @@ export function Filetree(props: TFiletreeProps) {
         <div class="flex items-center gap-1">
           <input
             class="flex-1 h-7 px-2 border border-border bg-background text-xs"
-            value={currentPath()}
-            onInput={(event) => setCurrentPath(event.currentTarget.value)}
+            value={pathInput()}
+            onInput={(event) => setPathInput(event.currentTarget.value)}
             placeholder="Base path"
           />
           <button
             type="button"
             class="h-7 px-2 border border-border bg-secondary text-secondary-foreground hover:bg-accent text-xs"
-            onClick={() => void updateFiletree({ path: currentPath().trim() })}
+            onClick={() => {
+              const nextPath = expandTildePath(pathInput(), homePath());
+              if (!nextPath) return;
+              setCurrentPath(nextPath);
+              void updateFiletree({ path: nextPath });
+            }}
           >
             Apply
           </button>
@@ -542,11 +771,47 @@ export function Filetree(props: TFiletreeProps) {
         />
       </div>
 
-      <div class="flex-1 overflow-auto">
+      <div
+        class="flex-1 overflow-auto"
+        classList={{ "bg-amber-100/50": isRootDropTarget() }}
+        onDragOver={(event) => {
+          if (event.defaultPrevented) return;
+          if (!hasMoveDragPayload(event) && !draggedNode()) return;
+          const currentDraggedNode = draggedNode();
+          const rootPath = treeData()?.root;
+          if (!currentDraggedNode || !rootPath) return;
+          if (!canDropNodeIntoDestination(currentDraggedNode, rootPath)) return;
+
+          event.preventDefault();
+          if (event.dataTransfer) {
+            event.dataTransfer.dropEffect = "move";
+          }
+          setDragOverTargetPath(null);
+          setIsRootDropTarget(true);
+        }}
+        onDragLeave={() => {
+          setIsRootDropTarget(false);
+        }}
+        onDrop={(event) => {
+          if (event.defaultPrevented) return;
+
+          const droppedNode = parseDraggedMoveNode(event) ?? draggedNode();
+          const rootPath = treeData()?.root;
+          setIsRootDropTarget(false);
+          setDragOverTargetPath(null);
+          clearFolderAutoOpenTimer();
+
+          if (!droppedNode || !rootPath) return;
+          if (!canDropNodeIntoDestination(droppedNode, rootPath)) return;
+
+          event.preventDefault();
+          void moveNodeIntoFolder(droppedNode, rootPath);
+        }}
+      >
         <Show when={!isLoading()} fallback={<div class="p-3 text-xs text-muted-foreground">Loading files...</div>}>
           <Show when={!errorMessage()} fallback={<div class="p-3 text-xs text-destructive">{errorMessage()}</div>}>
             <Show when={(treeData()?.children.length ?? 0) > 0} fallback={<div class="p-3 text-xs text-muted-foreground">No files found</div>}>
-              <For each={treeData()?.children ?? []}>{(node) => renderTree(node, 0)}</For>
+              <For each={treeData()?.children ?? []}>{(node) => renderTree(node, 0, treeData()?.root ?? "")}</For>
             </Show>
           </Show>
         </Show>

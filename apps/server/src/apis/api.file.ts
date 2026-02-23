@@ -1,11 +1,12 @@
 import { ctrlDirFiles } from "@vibecanvas/core/file/ctrl.dir-files";
 import { ctrlDirHome } from "@vibecanvas/core/file/ctrl.dir-home";
 import { ctrlDirList } from "@vibecanvas/core/file/ctrl.dir-list";
+import { ctrlFileMove } from "@vibecanvas/core/file/ctrl.file-move";
 import { files as dbFiles } from "@vibecanvas/shell/database/schema";
 import { createHash } from "crypto";
-import { existsSync, readdirSync, statSync } from "fs";
+import { existsSync, readdirSync, renameSync, statSync } from "fs";
 import { homedir } from "os";
-import { dirname, join } from "path";
+import { basename, dirname, join, resolve, sep } from "path";
 import { extensionFromFormat, toPublicFileUrl } from "@vibecanvas/core/file/fn.file-storage";
 import { baseOs } from "../orpc.base";
 
@@ -46,8 +47,8 @@ const put = baseOs.api.file.put.handler(async ({ input, context: { db } }) => {
 
 const dirPortal = {
   os: { homedir },
-  fs: { readdirSync, existsSync, statSync },
-  path: { dirname, join },
+  fs: { readdirSync, existsSync, statSync, renameSync },
+  path: { dirname, join, basename, resolve, sep },
 };
 
 const home = baseOs.api.file.home.handler(async ({ }) => {
@@ -79,9 +80,23 @@ const files = baseOs.api.file.files.handler(async ({ input }) => {
   return result;
 });
 
+const move = baseOs.api.file.move.handler(async ({ input }) => {
+  const [result, error] = ctrlFileMove(dirPortal, {
+    source_path: input.body.source_path,
+    destination_dir_path: input.body.destination_dir_path,
+  });
+
+  if (error || !result) {
+    return { type: error?.code ?? "ERROR", message: error?.externalMessage?.en ?? "Failed to move file or folder" };
+  }
+
+  return result;
+});
+
 export const file = {
   home,
   put,
   list,
   files,
+  move,
 };

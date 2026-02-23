@@ -39,7 +39,8 @@ The feature follows the existing Functional Core / Imperative Shell architecture
   - jump to home,
   - go to parent,
   - apply optional glob filter,
-  - drag file/folder rows into chat composer for `@path` mentions.
+  - drag file/folder rows into chat composer for `@path` mentions,
+  - move files/folders by drag-dropping onto folder rows inside filetree.
 - Filesystem response must be nested and directly renderable by SPA.
 - Filesystem watching for live updates when files change in the watched directory.
 - Recursive traversal must be depth-limited (default `max_depth = 5`) to avoid OOM.
@@ -102,6 +103,7 @@ The feature follows the existing Functional Core / Imperative Shell architecture
 - **`file.home`** - Returns `{ path: string }` or error union
 - **`file.list`** - Input: `{ path: string, omitFiles?: boolean }`, Output: `{ current: string, parent: string | null, children: TDirChild[] }` or error
 - **`file.files`** - Input: `{ path: string, glob_pattern?: string, max_depth?: number }`, Output: `TDirFilesResponse` or error
+- **`file.move`** - Input: `{ source_path, destination_dir_path }`, Output: `{ target_path, moved }` or error
 - **`file.put`** - Upload base64 file
 
 ### Directory files response shape
@@ -207,9 +209,11 @@ Filetree element class is registered in:
 - Subscribes to `filetree.watch` for live updates (with cleanup)
 - Lazy-loads subdirectory children on folder expand
 - Path navigation: Home, Up, Apply path, Pick folder (via dialog)
+- Path display uses `~` when current path is under home; Apply accepts both absolute paths and `~`-prefixed paths
 - Glob pattern input with debounced updates
 - Tree rendering with folder/file icons and expand/collapse
 - Each row is a native HTML5 drag source emitting `application/x-vibecanvas-filetree-node` and `text/plain` (`@path`) payloads
+- Rows are also drag sources/targets for filesystem moves (`file.move`) with folder-only drops, hover-to-auto-open, and `Escape` drag cancel
 - Drag support via pointer events on header
 
 **`filetree-header.tsx`**

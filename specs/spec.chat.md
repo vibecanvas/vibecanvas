@@ -232,6 +232,7 @@ type TAgentLogRow = {
 ### Header and status UI
 
 - `ChatHeader` handles drag pointer events and widget actions (set folder, collapse placeholder, remove).
+- Chat folder subtitle uses `~` display when local path is inside home directory.
 - `StatusLine` maps `CONNECTION_STATE` to labels/colors.
 - `PathPickerDialog` action currently creates a new chat with offset position (`+30,+30`) and selected path.
 

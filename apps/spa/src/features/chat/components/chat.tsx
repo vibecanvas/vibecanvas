@@ -5,6 +5,7 @@ import { AElement } from "@/features/canvas-crdt/renderables/element.abstract"
 import { CONNECTION_STATE } from "@/features/canvas-crdt/renderables/elements/chat/chat.state-machine"
 import { orpcWebsocketService } from "@/services/orpc-websocket"
 import { setStore, store } from "@/store"
+import { toTildePath } from "@/utils/path-display"
 import type { TCanvas } from "@vibecanvas/core/canvas/ctrl.create-canvas"
 import type { Event as OpenCodeEvent, Message, Part } from "@opencode-ai/sdk/v2"
 import type { Accessor, Setter } from "solid-js"
@@ -95,6 +96,7 @@ export function Chat(props: TChatProps) {
   const [isAtBottom, setIsAtBottom] = createSignal(true)
   const [isPathDialogOpen, setIsPathDialogOpen] = createSignal(false)
   const [fileSuggestions, setFileSuggestions] = createSignal<TFileSuggestion[]>([])
+  const [homePath, setHomePath] = createSignal<string | null>(null)
 
   // Derived memo for rendering
   const orderedMessages = createMemo((): TMessageGroup[] =>
@@ -311,6 +313,12 @@ export function Chat(props: TChatProps) {
     setFileSuggestions(flattened.slice(0, 300))
   }
 
+  const loadHomePath = async () => {
+    const [homeError, homeResult] = await orpcWebsocketService.safeClient.api.file.home()
+    if (homeError || !homeResult || "type" in homeResult) return
+    setHomePath(homeResult.path)
+  }
+
   onMount(async () => {
     if (orpcWebsocketService.websocket.readyState === WebSocket.OPEN) {
       props.setState(CONNECTION_STATE.READY)
@@ -319,6 +327,7 @@ export function Chat(props: TChatProps) {
     }
 
     await loadPreviousMessages()
+    await loadHomePath()
     await loadFileSuggestions()
 
     const [err, it] = await orpcWebsocketService.safeClient.api.opencode.events({
@@ -462,7 +471,7 @@ export function Chat(props: TChatProps) {
     >
       <ChatHeader
         title={(chat()?.title) + ' ' + chat()?.session_id}
-        subtitle={chat()?.local_path ?? ''}
+        subtitle={toTildePath(chat()?.local_path ?? "", homePath())}
         onSetFolder={handleSetFolder}
         onCollapse={() => {
           // TODO: Implement collapse logic
