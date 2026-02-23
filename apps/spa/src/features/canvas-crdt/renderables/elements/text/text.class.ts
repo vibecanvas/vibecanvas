@@ -197,6 +197,9 @@ export class TextElement extends AElement<'text'> {
 
   public redraw(): void {
     const { data } = this.element
+    const lineHeightPx = data.lineHeight <= 4
+      ? data.fontSize * data.lineHeight
+      : data.lineHeight
     const textColor = this.element.style.strokeColor && this.element.style.strokeColor !== 'transparent'
       ? this.element.style.strokeColor
       : '#1f1f22'
@@ -206,6 +209,8 @@ export class TextElement extends AElement<'text'> {
     this.text.text = data.text
     this.text.style.fontSize = data.fontSize
     this.text.style.fontFamily = data.fontFamily
+    this.text.style.lineHeight = lineHeightPx
+    this.text.style.align = data.textAlign
     this.text.style.fill = textColor
     this.text.alpha = textOpacity
 
