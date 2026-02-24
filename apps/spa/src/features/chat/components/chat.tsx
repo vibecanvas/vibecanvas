@@ -12,6 +12,7 @@ import type { Accessor, Setter } from "solid-js"
 import { ErrorBoundary, Show, createSignal } from "solid-js"
 import { ChatDialog } from "./chat-dialog"
 import { getDialogView, hasDialogCommand } from "./chat-dialog-commands"
+import { createAgentsDialogView } from "./chat-dialog.cmd.agents"
 import { ChatHeader } from "./chat-header"
 import { ChatInput } from "./chat-input"
 import { ChatMessages } from "./chat-message"
@@ -112,7 +113,14 @@ export function Chat(props: TChatProps) {
 
       <Show when={dialogCommand()}>
         <ChatDialog
-          view={getDialogView(dialogCommand()!)}
+          view={dialogCommand() === "agents" 
+            ? createAgentsDialogView({
+                agents: chatLogic.availableAgents() as any,
+                selectedAgentName: chatLogic.selectedAgentName(),
+                onSelectAgent: chatLogic.setSelectedAgent,
+              })
+            : getDialogView(dialogCommand()!)
+          }
           onClose={() => setDialogCommand(null)}
         />
       </Show>

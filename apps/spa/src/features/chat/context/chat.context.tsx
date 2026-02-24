@@ -436,6 +436,10 @@ export function createChatContextLogic(args: TCreateChatContextArgs) {
     setSelectedAgentName(selectableAgentNames[nextIndex])
   }
 
+  const setSelectedAgent = (agentName: string) => {
+    setSelectedAgentName(agentName)
+  }
+
   const searchFileSuggestionsWithOptions = async (
     query: string,
     options?: TFileSearchOptions,
@@ -728,6 +732,7 @@ export function createChatContextLogic(args: TCreateChatContextArgs) {
     availableAgents,
     selectedAgentName,
     cycleAgent,
+    setSelectedAgent,
     isPathDialogOpen,
     setIsPathDialogOpen,
     updateLocalPath,

@@ -6,10 +6,14 @@ const DIALOG_COMMANDS: Record<string, () => TDialogView> = {
 }
 
 export function hasDialogCommand(command: string): boolean {
-  return command in DIALOG_COMMANDS
+  return command in DIALOG_COMMANDS || command === "agents"
 }
 
 export function getDialogView(command: string): TDialogView {
+  if (command === "agents") {
+    // Agents is handled specially in chat.tsx with dynamic data
+    throw new Error("Agents dialog requires dynamic data - handle in chat.tsx")
+  }
   const factory = DIALOG_COMMANDS[command]
   if (!factory) throw new Error(`No dialog command: ${command}`)
   return factory()
