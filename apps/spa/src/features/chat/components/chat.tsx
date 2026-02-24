@@ -1,5 +1,6 @@
 // @refresh reload
 import { PathPickerDialog } from "@/components/path-picker-dialog"
+import { showToast } from "@/components/ui/Toast"
 import { applyChangesToCRDT } from "@/features/canvas-crdt/changes"
 import { AElement } from "@/features/canvas-crdt/renderables/element.abstract"
 import { CONNECTION_STATE } from "@/features/canvas-crdt/renderables/elements/chat/chat.state-machine"
@@ -8,7 +9,9 @@ import { store } from "@/store"
 import { toTildePath } from "@/utils/path-display"
 import type { TCanvas } from "@vibecanvas/core/canvas/ctrl.create-canvas"
 import type { Accessor, Setter } from "solid-js"
-import { ErrorBoundary } from "solid-js"
+import { ErrorBoundary, Show, createSignal } from "solid-js"
+import { ChatDialog } from "./chat-dialog"
+import { getDialogView, hasDialogCommand } from "./chat-dialog-commands"
 import { ChatHeader } from "./chat-header"
 import { ChatInput } from "./chat-input"
 import { ChatMessages } from "./chat-message"
@@ -37,6 +40,28 @@ type TChatProps = {
 }
 
 export function Chat(props: TChatProps) {
+  const [dialogCommand, setDialogCommand] = createSignal<string | null>(null)
+
+  const removeChat = () => {
+    const handle = store.canvasSlice.canvas?.handle
+    if (!handle) return
+    const changes = props.chatClass.dispatch({ type: "delete" })
+    if (changes) applyChangesToCRDT(handle, [changes])
+  }
+
+  const handleSlashCommand = (command: string) => {
+    if (command === "exit") {
+      removeChat()
+      return
+    }
+
+    if (hasDialogCommand(command)) {
+      setDialogCommand(command)
+    } else {
+      showToast("Slash command not implemented", `/${command} is not implemented yet.`)
+    }
+  }
+
   const chatLogic = createChatContextLogic({
     chatId: props.chatId,
     canvas: props.canvas,
@@ -69,12 +94,7 @@ export function Chat(props: TChatProps) {
         onCollapse={() => {
           // TODO: Implement collapse logic
         }}
-        onRemove={() => {
-          const handle = store.canvasSlice.canvas?.handle
-          if (!handle) return
-          const changes = props.chatClass.dispatch({ type: "delete" })
-          if (changes) applyChangesToCRDT(handle, [changes])
-        }}
+        onRemove={removeChat}
         onPointerDown={chatLogic.handlePointerDown}
         onPointerMove={chatLogic.handlePointerMove}
         onPointerUp={chatLogic.handlePointerUp}
@@ -90,6 +110,13 @@ export function Chat(props: TChatProps) {
         </ErrorBoundary>
       </div>
 
+      <Show when={dialogCommand()}>
+        <ChatDialog
+          view={getDialogView(dialogCommand()!)}
+          onClose={() => setDialogCommand(null)}
+        />
+      </Show>
+
       <ChatInput
         canSend={chatLogic.canSendMessage()}
         onInputFocus={chatLogic.resetToReadyIfFinished}
@@ -97,6 +124,7 @@ export function Chat(props: TChatProps) {
         onCycleAgent={chatLogic.cycleAgent}
         onFileSearch={chatLogic.searchFileSuggestionsWithOptions}
         onFileSuggestionUsed={chatLogic.handleFileSuggestionUsed}
+        onSlashCommand={handleSlashCommand}
         workingDirectoryPath={chatLogic.chat()?.local_path ?? null}
       />
 

@@ -320,3 +320,72 @@ pre {
   overflow: hidden;
   text-overflow: ellipsis;
 }
+
+/* ========================================
+   CHAT DIALOG (in-chat overlay)
+   ======================================== */
+.chat-dialog-overlay {
+  position: absolute;
+  inset: 8px;
+  z-index: 60;
+  display: flex;
+  flex-direction: column;
+  background: var(--card);
+  border: 1px solid var(--border);
+  box-shadow: 0 4px 16px color-mix(in oklab, var(--foreground) 18%, transparent);
+  outline: none;
+}
+
+.chat-dialog-section {
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: var(--accent-foreground);
+  padding: 6px 12px 2px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.chat-dialog-item {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  text-align: left;
+  padding: 6px 12px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  font-family: var(--font-mono);
+}
+
+.chat-dialog-item:hover,
+.chat-dialog-item--active {
+  background: var(--accent);
+}
+
+.chat-dialog-item-indicator {
+  flex-shrink: 0;
+  font-size: 0.5rem;
+  line-height: 1;
+}
+
+.chat-dialog-item-label {
+  flex: 1;
+  font-size: 0.8rem;
+  color: var(--foreground);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.chat-dialog-item-detail {
+  flex-shrink: 0;
+  font-size: 0.7rem;
+  color: var(--muted-foreground);
+}
+
+.chat-dialog-item-arrow {
+  flex-shrink: 0;
+  font-size: 0.75rem;
+  color: var(--muted-foreground);
+}

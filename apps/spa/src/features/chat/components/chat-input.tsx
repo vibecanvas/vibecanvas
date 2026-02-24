@@ -7,7 +7,7 @@ import { EditorState } from "prosemirror-state"
 import { keymap } from "prosemirror-keymap"
 import { EditorView } from "prosemirror-view"
 import { For, Show, createSignal, onCleanup, onMount } from "solid-js"
-import { showErrorToast, showToast } from "@/components/ui/Toast"
+import { showErrorToast } from "@/components/ui/Toast"
 import { toRelativePathWithinBase } from "@/utils/path-display"
 import { ImageTokenNodeView } from "../prosemirror/nodeviews/image-token-view"
 import { pasteImagePlugin } from "../prosemirror/plugins/paste-image"
@@ -25,6 +25,7 @@ type TChatInputProps = {
   onInputFocus?: () => void
   onFileSearch?: (query: string, options?: { limit?: number }) => Promise<TFileSuggestion[]>
   onFileSuggestionUsed?: (path: string) => void
+  onSlashCommand?: (command: string) => void
   workingDirectoryPath?: string | null
 }
 
@@ -80,6 +81,7 @@ const COMMAND_SUGGESTIONS: TAutocompleteItem[] = [
   { key: "skills", label: "/skills", detail: "Open skills picker", value: "skills", aliases: "", type: "command" },
   { key: "timeline", label: "/timeline", detail: "Jump to a previous message", value: "timeline", aliases: "", type: "command" },
   { key: "undo", label: "/undo", detail: "Undo last assistant action", value: "undo", aliases: "", type: "command" },
+  { key: "test-menu", label: "/test-menu", detail: "Demo the chat dialog system", value: "test-menu", aliases: "demo", type: "command" },
 ]
 
 const SUPPORTED_IMAGE_TYPES = new Set([
@@ -299,6 +301,16 @@ function buildFileAutocompleteItems(
   return fileItems.slice(0, MAX_AUTOCOMPLETE_ITEMS)
 }
 
+function parseSlashCommand(parts: TInputPart[]): string | null {
+  if (parts.length !== 1) return null
+
+  const [part] = parts
+  if (part.type !== "text") return null
+
+  const match = /^\/([a-z][a-z0-9-]*)\s*$/i.exec(part.text.trim())
+  return match?.[1]?.toLowerCase() ?? null
+}
+
 export function ChatInput(props: TChatInputProps) {
   let editorRef: HTMLDivElement | undefined
   let menuRef: HTMLDivElement | undefined
@@ -462,7 +474,8 @@ export function ChatInput(props: TChatInputProps) {
     }
 
     if (state.trigger === "/" && item.type === "command") {
-      showToast("Slash command not implemented", `${item.label} is not implemented yet.`)
+      clearEditor(view)
+      props.onSlashCommand?.(item.value)
     }
 
     closeAutocomplete()
@@ -489,10 +502,21 @@ export function ChatInput(props: TChatInputProps) {
   }
 
   const handleSend = () => {
-    if (!props.canSend || !view) return
+    if (!view) return
 
     const parts = serializeDoc(view.state.doc)
     if (parts.length === 0) return
+
+    const slashCommand = parseSlashCommand(parts)
+    if (slashCommand) {
+      clearEditor(view)
+      closeAutocomplete()
+      props.onSlashCommand?.(slashCommand)
+      view.focus()
+      return
+    }
+
+    if (!props.canSend) return
 
     props.onSend(parts)
     clearEditor(view)
