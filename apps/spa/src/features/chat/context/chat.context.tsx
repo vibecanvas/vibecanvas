@@ -36,6 +36,19 @@ type TStatusMeta = {
 
 type TAgent = Awaited<ReturnType<typeof orpcWebsocketService.client.api.opencode.app.agents>>[number]
 
+type TConfigProvidersOutput = Awaited<ReturnType<typeof orpcWebsocketService.client.api.opencode.config.providers>>
+type TProvider = TConfigProvidersOutput extends { providers: Array<infer P> } ? P : never
+type TModel = TProvider extends { models: Record<string, infer M> } ? M : never
+
+type TRecentModel = {
+  providerId: string
+  modelId: string
+  usedAt: number
+}
+
+const MAX_RECENT_MODELS = 5
+const RECENT_MODELS_KEY = 'vibecanvas-recent-models'
+
 type TCreateChatContextArgs = {
   chatId: string
   canvas: TCanvas
@@ -204,6 +217,8 @@ export function createChatContextLogic(args: TCreateChatContextArgs) {
   const [homePath, setHomePath] = createSignal<string | null>(null)
   const [availableAgents, setAvailableAgents] = createSignal<TAgent[]>([])
   const [selectedAgentName, setSelectedAgentName] = createSignal<string | null>(null)
+  const [availableProviders, setAvailableProviders] = createSignal<TProvider[]>([])
+  const [selectedModel, setSelectedModel] = createSignal<{ providerID: string; modelID: string } | null>(null)
 
   let isDragging = false
   let lastPos = { x: 0, y: 0 }
@@ -217,7 +232,18 @@ export function createChatContextLogic(args: TCreateChatContextArgs) {
   )
 
   const isBusy = () => chatState.sessionStatus.type === "busy"
-  const statusLineMeta = createMemo(() => extractRuntimeStatusFromMessages(chatState.messages, chatState.messageOrder))
+  const statusLineMeta = createMemo(() => {
+    const fromHistory = extractRuntimeStatusFromMessages(chatState.messages, chatState.messageOrder)
+    // If a model is selected, always show it (overrides history)
+    if (selectedModel()) {
+      return {
+        agentName: fromHistory.agentName,
+        modelID: selectedModel()!.modelID,
+        providerID: selectedModel()!.providerID,
+      }
+    }
+    return fromHistory
+  })
 
   const canSendMessage = () => [
     CONNECTION_STATE.READY,
@@ -440,6 +466,47 @@ export function createChatContextLogic(args: TCreateChatContextArgs) {
     setSelectedAgentName(agentName)
   }
 
+  const recordRecentModel = (providerID: string, modelID: string) => {
+    try {
+      const stored = localStorage.getItem(RECENT_MODELS_KEY)
+      const recent: TRecentModel[] = stored ? JSON.parse(stored) : []
+      const updated = [
+        { providerId: providerID, modelId: modelID, usedAt: Date.now() },
+        ...recent.filter((m) => !(m.providerId === providerID && m.modelId === modelID)),
+      ].slice(0, MAX_RECENT_MODELS)
+      localStorage.setItem(RECENT_MODELS_KEY, JSON.stringify(updated))
+    } catch {
+      // Ignore localStorage errors
+    }
+  }
+
+  const loadRecentModels = (): TRecentModel[] => {
+    try {
+      const stored = localStorage.getItem(RECENT_MODELS_KEY)
+      return stored ? JSON.parse(stored) : []
+    } catch {
+      return []
+    }
+  }
+
+  const setSelectedModelAndRecord = (providerID: string, modelID: string) => {
+    setSelectedModel({ providerID, modelID })
+    recordRecentModel(providerID, modelID)
+  }
+
+  const loadAvailableProviders = async () => {
+    const [providersError, providersResult] = await orpcWebsocketService.safeClient.api.opencode.config.providers({
+      chatId: args.chatId,
+    })
+
+    if (providersError || !providersResult) {
+      console.error("Failed to load providers", providersError)
+      return
+    }
+
+    setAvailableProviders(providersResult.providers)
+  }
+
   const searchFileSuggestionsWithOptions = async (
     query: string,
     options?: TFileSearchOptions,
@@ -600,6 +667,7 @@ export function createChatContextLogic(args: TCreateChatContextArgs) {
     const [promptError] = await orpcWebsocketService.safeClient.api.opencode.prompt({
       chatId: args.chatId,
       agent: selectedAgentName() ?? undefined,
+      model: selectedModel() ?? undefined,
       parts,
     })
     if (promptError) {
@@ -645,7 +713,7 @@ export function createChatContextLogic(args: TCreateChatContextArgs) {
     lastPos = { x: e.clientX, y: e.clientY }
     args.onSelect()
     args.onDragStart()
-    ; (e.target as HTMLElement).setPointerCapture(e.pointerId)
+      ; (e.target as HTMLElement).setPointerCapture(e.pointerId)
   }
 
   const handlePointerMove = (e: PointerEvent) => {
@@ -664,7 +732,7 @@ export function createChatContextLogic(args: TCreateChatContextArgs) {
     if (!isDragging) return
     isDragging = false
     args.onDragEnd()
-    ; (e.target as HTMLElement).releasePointerCapture(e.pointerId)
+      ; (e.target as HTMLElement).releasePointerCapture(e.pointerId)
   }
 
   createEffect(on(
@@ -702,6 +770,7 @@ export function createChatContextLogic(args: TCreateChatContextArgs) {
 
     await loadPreviousMessages()
     await loadAvailableAgents()
+    await loadAvailableProviders()
     await loadHomePath()
 
     const [err, it] = await orpcWebsocketService.safeClient.api.opencode.events({
@@ -733,6 +802,11 @@ export function createChatContextLogic(args: TCreateChatContextArgs) {
     selectedAgentName,
     cycleAgent,
     setSelectedAgent,
+    availableProviders,
+    selectedModel,
+    setSelectedModelAndRecord,
+    loadRecentModels,
+    loadAvailableProviders,
     isPathDialogOpen,
     setIsPathDialogOpen,
     updateLocalPath,

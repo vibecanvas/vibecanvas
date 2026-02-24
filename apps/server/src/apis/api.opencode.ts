@@ -96,6 +96,7 @@ const prompt = baseOs.api.opencode.prompt.handler(async ({ input, context: { db,
   const { data, error } = await client.session.prompt({
     sessionID: chat.session_id,
     agent: input.agent,
+    model: input.model,
     parts: input.parts,
     tools: {},
     directory: chat.local_path,
@@ -195,6 +196,16 @@ const configGet = baseOs.api.opencode.config.get.handler(async ({ input, context
   return data;
 });
 
+const configProviders = baseOs.api.opencode.config.providers.handler(async ({ input, context: { db, opencodeService } }) => {
+  const { chat, client } = requireChatContext(db, opencodeService, input.chatId);
+
+  const { data, error } = await client.config.providers();
+  if (error) throwFromOpencodeError(error);
+  if (!data) throw new ORPCError("OPENCODE_ERROR", { message: "Missing OpenCode response data" });
+
+  return data;
+});
+
 const sessionCommand = baseOs.api.opencode.session.command.handler(async ({ input, context: { db, opencodeService } }) => {
   const { chat, client } = requireChatContext(db, opencodeService, input.chatId);
 
@@ -229,20 +240,6 @@ const sessionShell = baseOs.api.opencode.session.shell.handler(async ({ input, c
 
   if (error) throwFromOpencodeError(error);
   if (!data) throw new ORPCError("OPENCODE_ERROR", { message: "Missing OpenCode response data" });
-
-  return data;
-});
-
-const sessionInit = baseOs.api.opencode.session.init.handler(async ({ input, context: { db, opencodeService } }) => {
-  const { chat, client } = requireChatContext(db, opencodeService, input.chatId);
-
-  const { data, error } = await client.session.init({
-    directory: chat.local_path,
-    ...input.body,
-  });
-
-  if (error) throwFromOpencodeError(error);
-  if (typeof data !== "boolean") throw new ORPCError("OPENCODE_ERROR", { message: "Missing OpenCode response data" });
 
   return data;
 });
@@ -320,9 +317,9 @@ export const opencode = {
   },
   config: {
     get: configGet,
+    providers: configProviders,
   },
   session: {
-    init: sessionInit,
     command: sessionCommand,
     shell: sessionShell,
   },

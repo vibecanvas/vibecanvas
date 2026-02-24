@@ -57,6 +57,7 @@ type TMethodInput<TMethod> = TMethod extends (input: infer TInput, ...args: any[
 type TAppLogInput = TMethodInput<OpencodeClient["app"]["log"]>;
 type TAppLogOutput = TMethodData<OpencodeClient["app"]["log"]>;
 type TAppAgentsOutput = TMethodData<OpencodeClient["app"]["agents"]>;
+type TConfigProvidersOutput = TMethodData<OpencodeClient["config"]["providers"]>;
 
 type TSessionListOutput = TMethodData<OpencodeClient["session"]["list"]>;
 type TSessionOutput = TMethodData<OpencodeClient["session"]["get"]>;
@@ -269,6 +270,10 @@ const chatScopedInputSchema = z.object({
 const promptInputSchema = z.object({
   chatId: z.string(),
   agent: z.string().optional(),
+  model: z.object({
+    providerID: z.string(),
+    modelID: z.string(),
+  }).optional(),
   parts: z.array(z.discriminatedUnion("type", [
     z.object({
       id: z.string().optional(),
@@ -348,6 +353,10 @@ export default oc.router({
     get: oc
       .input(chatScopedInputSchema)
       .output(type<TConfigGetOutput>()),
+
+    providers: oc
+      .input(chatScopedInputSchema)
+      .output(type<TConfigProvidersOutput>()),
   }),
 
   session: oc.router({
