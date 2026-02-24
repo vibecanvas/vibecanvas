@@ -63,8 +63,12 @@ type TSessionOutput = TMethodData<OpencodeClient["session"]["get"]>;
 type TSessionGetInput = TMethodInput<OpencodeClient["session"]["get"]>;
 type TSessionChildrenInput = TMethodInput<OpencodeClient["session"]["children"]>;
 type TSessionCreateInput = TMethodInput<OpencodeClient["session"]["create"]>;
-type TSessionInitInput = TMethodInput<OpencodeClient["session"]["init"]>;
-type TSessionInitOutput = TMethodData<OpencodeClient["session"]["init"]>;
+const sessionInitInputSchema = z.object({
+  chatId: z.string(),
+  body: z.object({
+    path: z.string().optional(),
+  }).optional(),
+});
 type TSessionAbortInput = TMethodInput<OpencodeClient["session"]["abort"]>;
 type TSessionAbortOutput = TMethodData<OpencodeClient["session"]["abort"]>;
 type TSessionSummarizeInput = TMethodInput<OpencodeClient["session"]["summarize"]>;
@@ -363,8 +367,8 @@ export default oc.router({
       .output(type<TSessionOutput>()),
 
     init: oc
-      .input(type<TSessionInitInput>())
-      .output(type<TSessionInitOutput>()),
+      .input(sessionInitInputSchema)
+      .output(z.boolean()),
 
     abort: oc
       .input(type<TSessionAbortInput>())

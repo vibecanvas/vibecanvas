@@ -18,6 +18,7 @@ import { ChatInput } from "./chat-input"
 import { ChatMessages } from "./chat-message"
 import { StatusLine } from "./status-line"
 import { formatTranscript } from "../utils/format-transcript"
+import { orpcWebsocketService } from "@/services/orpc-websocket"
 
 export type TChatBounds = {
   x: number
@@ -79,6 +80,20 @@ export function Chat(props: TChatProps) {
       } catch (error) {
         console.error("Failed to copy transcript:", error)
         showToast("Copy failed", "Could not access clipboard")
+      }
+      return
+    }
+
+    if (command === "init") {
+      try {
+        await orpcWebsocketService.client.api.opencode.session.init({
+          chatId: props.chatId,
+          body: {},
+        })
+        showToast("Initializing...", "Project context initialized")
+      } catch (error) {
+        console.error("Init failed:", error)
+        showToast("Init failed", "Could not initialize project context")
       }
       return
     }
