@@ -64,6 +64,7 @@ function handleMove(ctx: Parameters<InputCommand>[0]): boolean {
   // Update stage position
   stage.x += deltaX
   stage.y += deltaY
+  ctx.canvas.notifyViewportChanged()
 
   // Update store
   updateCanvasViewport(ctx.canvas.canvasId, stage.x, stage.y)

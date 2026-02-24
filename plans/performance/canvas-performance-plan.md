@@ -50,6 +50,33 @@ This plan addresses 8 critical performance issues in the PixiJS canvas rendering
 - We can remove most per-frame `computeGroupBounds()+redraw()` work by treating drag as translation first and only escalating to full refresh when observed deltas/bounds indicate non-translational behavior.
 - Resetting transient multi-box translation inside authoritative `redraw()` keeps visuals stable while preventing offset accumulation across gestures.
 
+### 2026-02-24 - Idle Loop Reductions (Overlay + Devtools)
+
+- Gated Pixi devtools initialization to development mode only in `canvas.ts`.
+- Removed per-frame ticker polling from chat/filetree overlay synchronization.
+- Added event-driven viewport notifications:
+  - `Canvas` now exposes `onViewportChange()` and `notifyViewportChanged()`.
+  - pan/zoom commands call `notifyViewportChanged()` when stage transform changes.
+- Updated chat/filetree overlays to refresh bounds only on:
+  - element transform/redraw,
+  - viewport-change notifications.
+- Added bounds-diff guards for chat/filetree overlay updates to skip redundant Solid signal writes.
+
+### What We Learned (Idle)
+
+- The main idle heat contributor in this area was not canvas mutation itself, but continuous UI overlay synchronization work running on every frame.
+- Event-driven synchronization plus bounds diffing preserves behavior while cutting idle reactive churn significantly.
+
+### 2026-02-24 - Drag Smoothness Follow-up
+
+- Reintroduced per-drag-event overlay bounds updates for chat/filetree widgets only (no idle ticker restore).
+- Implementation: force `updateOverlayBounds(true)` inside `onDrag` handlers so overlays track pointer movement every drag frame.
+
+### What We Learned (Drag vs Idle)
+
+- Global per-frame ticker loops should stay removed for idle thermals.
+- Drag interactions still require per-event overlay updates for smooth visual coupling; this can be scoped to active drag handlers without reintroducing idle heat.
+
 ## Issues Summary
 
 | Priority | Issue | File | Impact | Sub-Plan |

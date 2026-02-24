@@ -30,6 +30,7 @@ export const cmdZoom: InputCommand = (ctx) => {
   stage.scale.set(newScale)
   stage.x = ctx.screenPos.x - ctx.worldPos.x * newScale
   stage.y = ctx.screenPos.y - ctx.worldPos.y * newScale
+  ctx.canvas.notifyViewportChanged()
 
   updateCanvasScale(ctx.canvas.canvasId, newScale)
 

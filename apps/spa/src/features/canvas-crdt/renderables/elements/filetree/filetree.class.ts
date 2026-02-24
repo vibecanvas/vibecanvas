@@ -36,6 +36,20 @@ type TFiletreeBounds = {
   scale: number;
 };
 
+const BOUNDS_EPSILON = 0.01;
+
+function hasBoundsChanged(next: TFiletreeBounds, prev: TFiletreeBounds | null): boolean {
+  if (!prev) return true;
+  return (
+    Math.abs(next.x - prev.x) > BOUNDS_EPSILON
+    || Math.abs(next.y - prev.y) > BOUNDS_EPSILON
+    || Math.abs(next.w - prev.w) > BOUNDS_EPSILON
+    || Math.abs(next.h - prev.h) > BOUNDS_EPSILON
+    || Math.abs(next.angle - prev.angle) > BOUNDS_EPSILON
+    || Math.abs(next.scale - prev.scale) > BOUNDS_EPSILON
+  );
+}
+
 const FILETREE_SUPPORTED_ACTIONS: ReadonlySet<TActionType> = new Set([
   "setPosition",
   "move",
@@ -53,7 +67,8 @@ export class FiletreeElement extends AElement<"filetree"> {
   private graphics: Graphics = new Graphics();
   private overlayDiv: HTMLDivElement | null = null;
   private setBounds: ((bounds: TFiletreeBounds) => void) | null = null;
-  private tickerCallback: (() => void) | null = null;
+  private cleanupViewportSync: (() => void) | null = null;
+  private lastBounds: TFiletreeBounds | null = null;
 
   constructor(element: TBackendElementOf<"filetree">, canvas: Canvas) {
     super(element, canvas);
@@ -84,8 +99,10 @@ export class FiletreeElement extends AElement<"filetree"> {
     if (!overlayEntrypoint) return;
     overlayEntrypoint.appendChild(div);
 
-    const [bounds, setBounds] = createSignal<TFiletreeBounds>(this.getScreenBounds());
+    const initialBounds = this.getScreenBounds();
+    const [bounds, setBounds] = createSignal<TFiletreeBounds>(initialBounds);
     this.setBounds = setBounds;
+    this.lastBounds = initialBounds;
 
     let lastDragMovement: TChanges | null = null;
     const storeModule = await import("@/store");
@@ -102,7 +119,12 @@ export class FiletreeElement extends AElement<"filetree"> {
       filetreeId: this.element.id,
       onSelect: () => applySelect(this.getApplyContext()),
       onDrag: ({ x, y }) => {
-        lastDragMovement = applyMove(this.getApplyContext(), { delta: new Point(x, y), type: "move" });
+        const result = this.dispatch({ type: "move", delta: new Point(x, y) });
+        if (result) {
+          lastDragMovement = result;
+        }
+        // Keep overlay drag smooth while still avoiding idle ticker churn.
+        this.updateOverlayBounds(true);
       },
       onDragEnd: () => {
         if (lastDragMovement) {
@@ -120,10 +142,9 @@ export class FiletreeElement extends AElement<"filetree"> {
   }
 
   private setupViewportSync() {
-    this.tickerCallback = () => {
+    this.cleanupViewportSync = this.canvas.onViewportChange(() => {
       this.updateOverlayBounds();
-    };
-    this.canvas.app.ticker.add(this.tickerCallback);
+    });
   }
 
   private getScreenBounds(): TFiletreeBounds {
@@ -141,19 +162,26 @@ export class FiletreeElement extends AElement<"filetree"> {
     };
   }
 
-  private updateOverlayBounds() {
-    if (this.setBounds) this.setBounds(this.getScreenBounds());
+  private updateOverlayBounds(force = false) {
+    if (!this.setBounds) return;
+
+    const nextBounds = this.getScreenBounds();
+    if (!force && !hasBoundsChanged(nextBounds, this.lastBounds)) return;
+
+    this.lastBounds = nextBounds;
+    this.setBounds(nextBounds);
   }
 
   private cleanupOverlay() {
-    if (this.tickerCallback) {
-      this.canvas.app.ticker.remove(this.tickerCallback);
-      this.tickerCallback = null;
+    if (this.cleanupViewportSync) {
+      this.cleanupViewportSync();
+      this.cleanupViewportSync = null;
     }
     if (this.overlayDiv) {
       this.overlayDiv.remove();
       this.overlayDiv = null;
     }
+    this.lastBounds = null;
   }
 
   public get supportedActions(): ReadonlySet<TActionType> {
@@ -254,6 +282,7 @@ export class FiletreeElement extends AElement<"filetree"> {
     this.container.pivot.set(w / 2, h / 2);
     this.container.position.set(this.element.x + w / 2, this.element.y + h / 2);
     this.container.boundsArea = new Rectangle(0, 0, w, h);
+    this.updateOverlayBounds();
   }
 
   static isFiletreeElement(instance: AElement): instance is FiletreeElement {

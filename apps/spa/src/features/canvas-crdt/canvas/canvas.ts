@@ -1,6 +1,5 @@
 import { setStore } from "@/store"
 import type { DocHandle } from "@automerge/automerge-repo"
-import { initDevtools } from '@pixi/devtools'
 import type { TCanvasDoc } from "@vibecanvas/shell"
 import { throttle } from "@solid-primitives/scheduled"
 import { Application, type FederatedPointerEvent, Graphics, Rectangle, RenderLayer } from "pixi.js"
@@ -50,6 +49,7 @@ export class Canvas {
 
   private cleanupFns: (() => void)[] = []
   private _debugGraphics: Graphics | null = null
+  private viewportListeners = new Set<() => void>()
 
   private constructor() {
     // Private - use Canvas.create()
@@ -70,7 +70,10 @@ export class Canvas {
     // Initialize PixiJS
     this.app = new Application()
 
-    initDevtools({ app: this.app })
+    if (import.meta.env.DEV) {
+      const { initDevtools } = await import('@pixi/devtools')
+      initDevtools({ app: this.app })
+    }
 
     await this.app.init({
       background: 'white',
@@ -209,6 +212,19 @@ export class Canvas {
       const local = event.getLocalPosition(this.app.stage)
       updateMousePosition(local.x, local.y)
     })
+  }
+
+  public onViewportChange(listener: () => void): () => void {
+    this.viewportListeners.add(listener)
+    return () => {
+      this.viewportListeners.delete(listener)
+    }
+  }
+
+  public notifyViewportChanged(): void {
+    for (const listener of this.viewportListeners) {
+      listener()
+    }
   }
 
   debugRect(x: number, y: number, width: number, height: number, color: number = 0xff0000): void {
