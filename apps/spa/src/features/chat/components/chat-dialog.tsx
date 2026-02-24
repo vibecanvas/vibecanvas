@@ -6,7 +6,7 @@
  *
  * ## Usage
  *
- * 1. Define a `TDialogView` describing your root menu (title, items, optional search/footer).
+ * 1. Define a `TDialogView` describing your root menu (title, items, optional search).
  * 2. Render `<ChatDialog view={myView} onClose={() => ...} />` conditionally.
  * 3. The dialog manages its own internal state (nav stack, search, selection index).
  *
@@ -20,8 +20,8 @@
  *       items: [
  *         { id: "1", label: "Claude Opus", detail: "Anthropic", section: "Popular" },
  *         { id: "2", label: "Settings", section: "Other", submenu: settingsView },
+ *         { id: "3", label: "Username", inputPlaceholder: "Enter name...", onInputSubmit: (val) => save(val) },
  *       ],
- *       footerHints: [{ label: "Select", shortcut: "enter" }],
  *       onSelect: (item) => console.log("picked", item.id),
  *     }}
  *     onClose={() => setIsOpen(false)}
@@ -30,8 +30,8 @@
  * ```
  *
  * ## Keyboard
- * - **Arrow Up/Down** — move selection
- * - **Enter** — activate (push submenu or fire `onAction`/`onSelect`)
+ * - **Arrow Up/Down / Tab / Shift-Tab** — move selection
+ * - **Enter** — activate (push submenu, fire `onAction`/`onSelect`, or submit input value)
  * - **Escape** — pop submenu, or close at root
  * - **Typing** — auto-focuses the search input (if `searchable`)
  *
@@ -39,12 +39,16 @@
  * Set `submenu` on a `TDialogItem` to push a nested `TDialogView` onto the nav stack.
  * Esc pops back. The back-arrow indicator appears automatically.
  *
+ * ## Input items
+ * Set `inputPlaceholder` (and optionally `inputValue`) on a `TDialogItem` to render an
+ * inline text input. `onInputSubmit(value)` fires on Enter while the input is focused.
+ *
  * ## Item anatomy
- * `[indicator]  label  ...detail  [→ if submenu]`
+ * `[indicator]  label  [input | ...detail]  [→ if submenu]`
  *
  * Register command → view mappings in `chat-dialog-commands.ts`.
  */
-import { For, Show, createMemo, createSignal, onMount } from "solid-js"
+import { For, Show, createEffect, createMemo, createSignal, onMount } from "solid-js"
 
 /** A single selectable row in the dialog. */
 export type TDialogItem = {
@@ -56,17 +60,19 @@ export type TDialogItem = {
   section?: string
   submenu?: TDialogView
   onAction?: () => void
+  /** If set, renders an inline text input instead of detail text. */
+  inputPlaceholder?: string
+  /** Pre-filled value for the inline input. */
+  inputValue?: string
+  /** Called with the input value when Enter is pressed on an input item. */
+  onInputSubmit?: (value: string) => void
 }
-
-/** A shortcut hint rendered in the dialog footer bar. */
-export type TFooterHint = { label: string; shortcut: string }
 
 /** Describes one "screen" of the dialog. Push a new view via `TDialogItem.submenu`. */
 export type TDialogView = {
   id: string
   title: string
   items: TDialogItem[]
-  footerHints?: TFooterHint[]
   searchable?: boolean
   onSelect?: (item: TDialogItem) => void
 }
@@ -84,6 +90,8 @@ export function ChatDialog(props: TChatDialogProps) {
   const [navStack, setNavStack] = createSignal<TDialogView[]>([props.view])
   const [search, setSearch] = createSignal("")
   const [selectedIndex, setSelectedIndex] = createSignal(0)
+  /** Tracks per-item input values keyed by item id. */
+  const [inputValues, setInputValues] = createSignal<Record<string, string>>({})
 
   const currentView = () => navStack().at(-1)!
 
@@ -112,13 +120,43 @@ export function ChatDialog(props: TChatDialogProps) {
     })
   }
 
+  const getInputValue = (item: TDialogItem): string => {
+    return inputValues()[item.id] ?? item.inputValue ?? ""
+  }
+
+  const setItemInputValue = (itemId: string, value: string) => {
+    setInputValues((prev) => ({ ...prev, [itemId]: value }))
+  }
+
+  const focusWrapper = () => {
+    requestAnimationFrame(() => wrapperRef?.focus())
+  }
+
+  const focusDialog = () => {
+    requestAnimationFrame(() => {
+      if (currentView().searchable) {
+        searchRef?.focus()
+      } else {
+        wrapperRef?.focus()
+      }
+    })
+  }
+
   const activateItem = (item: TDialogItem) => {
     if (item.submenu) {
       setNavStack((stack) => [...stack, item.submenu!])
       setSearch("")
       setSelectedIndex(0)
+      focusDialog()
+      return
+    }
+
+    if (item.inputPlaceholder != null) {
+      // For input items, focus the input field
       requestAnimationFrame(() => {
-        if (currentView().searchable) searchRef?.focus()
+        const input = listRef?.querySelector(`[data-input-id="${item.id}"]`) as HTMLInputElement | null
+        input?.focus()
+        input?.select()
       })
       return
     }
@@ -133,39 +171,82 @@ export function ChatDialog(props: TChatDialogProps) {
     props.onClose()
   }
 
-  const handleKeyDown = (e: KeyboardEvent) => {
+  const moveSelection = (delta: number) => {
     const items = filteredItems()
+    if (items.length === 0) return
+    const next = (selectedIndex() + delta + items.length) % items.length
+    setSelectedIndex(next)
+    scrollSelectedIntoView(next)
+  }
+
+  const goBack = () => {
+    if (navStack().length > 1) {
+      setNavStack((stack) => stack.slice(0, -1))
+      setSearch("")
+      setSelectedIndex(0)
+      focusDialog()
+    } else {
+      props.onClose()
+    }
+  }
+
+  const handleKeyDown = (e: KeyboardEvent) => {
+    // If an inline input is focused, let it handle most keys
+    const activeEl = document.activeElement
+    const isInputFocused = activeEl instanceof HTMLInputElement && activeEl.dataset.inputId
+
+    if (isInputFocused) {
+      if (e.key === "Escape") {
+        e.preventDefault()
+        // Return focus to the wrapper so arrow keys work again
+        focusWrapper()
+        return
+      }
+      if (e.key === "Enter") {
+        e.preventDefault()
+        const itemId = (activeEl as HTMLInputElement).dataset.inputId!
+        const item = filteredItems().find((it) => it.id === itemId)
+        if (item?.onInputSubmit) {
+          item.onInputSubmit(getInputValue(item))
+        }
+        return
+      }
+      if (e.key === "Tab") {
+        e.preventDefault()
+        focusWrapper()
+        moveSelection(e.shiftKey ? -1 : 1)
+        return
+      }
+      // Let the input handle all other keys (typing, arrows within the input, etc.)
+      return
+    }
 
     switch (e.key) {
-      case "ArrowDown": {
+      case "ArrowDown":
+      case "Tab": {
+        if (e.key === "Tab" && e.shiftKey) {
+          e.preventDefault()
+          moveSelection(-1)
+          break
+        }
         e.preventDefault()
-        const next = items.length > 0 ? (selectedIndex() + 1) % items.length : 0
-        setSelectedIndex(next)
-        scrollSelectedIntoView(next)
+        moveSelection(1)
         break
       }
       case "ArrowUp": {
         e.preventDefault()
-        const next = items.length > 0 ? (selectedIndex() - 1 + items.length) % items.length : 0
-        setSelectedIndex(next)
-        scrollSelectedIntoView(next)
+        moveSelection(-1)
         break
       }
       case "Enter": {
         e.preventDefault()
-        const item = items[selectedIndex()]
+        const item = filteredItems()[selectedIndex()]
         if (item) activateItem(item)
         break
       }
       case "Escape": {
         e.preventDefault()
-        if (navStack().length > 1) {
-          setNavStack((stack) => stack.slice(0, -1))
-          setSearch("")
-          setSelectedIndex(0)
-        } else {
-          props.onClose()
-        }
+        goBack()
         break
       }
       default: {
@@ -188,14 +269,14 @@ export function ChatDialog(props: TChatDialogProps) {
     setSelectedIndex(0)
   }
 
+  // Re-focus whenever the nav stack changes (fixes submenu focus)
+  createEffect(() => {
+    navStack() // track
+    focusDialog()
+  })
+
   onMount(() => {
-    requestAnimationFrame(() => {
-      if (currentView().searchable) {
-        searchRef?.focus()
-      } else {
-        wrapperRef?.focus()
-      }
-    })
+    focusDialog()
   })
 
   return (
@@ -209,11 +290,23 @@ export function ChatDialog(props: TChatDialogProps) {
       <div class="flex items-center justify-between px-3 py-2 border-b border-border">
         <div class="flex items-center gap-2">
           <Show when={navStack().length > 1}>
-            <span class="text-xs text-muted-foreground">←</span>
+            <button
+              type="button"
+              class="text-xs text-muted-foreground hover:text-foreground"
+              onClick={() => goBack()}
+            >
+              ←
+            </button>
           </Show>
           <span class="text-sm text-foreground font-mono font-medium">{currentView().title}</span>
         </div>
-        <span class="text-[11px] text-muted-foreground font-mono">esc</span>
+        <button
+          type="button"
+          class="text-[11px] text-muted-foreground font-mono hover:text-foreground"
+          onClick={() => props.onClose()}
+        >
+          esc
+        </button>
       </div>
 
       {/* Search */}
@@ -243,8 +336,7 @@ export function ChatDialog(props: TChatDialogProps) {
               <Show when={shouldShowSectionHeader(item, i())}>
                 <div class="chat-dialog-section">{item.section}</div>
               </Show>
-              <button
-                type="button"
+              <div
                 class="chat-dialog-item"
                 classList={{ "chat-dialog-item--active": i() === selectedIndex() }}
                 data-dialog-index={i()}
@@ -263,31 +355,33 @@ export function ChatDialog(props: TChatDialogProps) {
                   </span>
                 </Show>
                 <span class="chat-dialog-item-label">{item.label}</span>
-                <Show when={item.detail}>
-                  <span class="chat-dialog-item-detail">{item.detail}</span>
+                <Show
+                  when={item.inputPlaceholder != null}
+                  fallback={
+                    <Show when={item.detail}>
+                      <span class="chat-dialog-item-detail">{item.detail}</span>
+                    </Show>
+                  }
+                >
+                  <input
+                    type="text"
+                    class="chat-dialog-item-input"
+                    data-input-id={item.id}
+                    placeholder={item.inputPlaceholder}
+                    value={getInputValue(item)}
+                    onInput={(e) => setItemInputValue(item.id, e.currentTarget.value)}
+                    onMouseDown={(e) => e.stopPropagation()}
+                    onClick={(e) => e.stopPropagation()}
+                  />
                 </Show>
                 <Show when={item.submenu}>
                   <span class="chat-dialog-item-arrow">→</span>
                 </Show>
-              </button>
+              </div>
             </>
           )}
         </For>
       </div>
-
-      {/* Footer */}
-      <Show when={currentView().footerHints && currentView().footerHints!.length > 0}>
-        <div class="flex gap-4 px-3 py-2 border-t border-border text-[11px] text-muted-foreground font-mono">
-          <For each={currentView().footerHints}>
-            {(hint) => (
-              <span>
-                <span class="text-foreground">{hint.shortcut}</span>{" "}
-                {hint.label}
-              </span>
-            )}
-          </For>
-        </div>
-      </Show>
     </div>
   )
 }

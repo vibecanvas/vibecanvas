@@ -370,17 +370,36 @@ pre {
 }
 
 .chat-dialog-item-label {
-  flex: 1;
+  flex-shrink: 0;
   font-size: 0.8rem;
   color: var(--foreground);
   white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
 
 .chat-dialog-item-detail {
   flex-shrink: 0;
   font-size: 0.7rem;
+  color: var(--muted-foreground);
+}
+
+.chat-dialog-item-input {
+  flex: 1;
+  min-width: 0;
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  color: var(--foreground);
+  background: color-mix(in oklab, var(--muted) 50%, transparent);
+  border: 1px solid var(--border);
+  padding: 2px 6px;
+  outline: none;
+}
+
+.chat-dialog-item-input:focus {
+  border-color: var(--ring);
+  background: var(--card);
+}
+
+.chat-dialog-item-input::placeholder {
   color: var(--muted-foreground);
 }
 
