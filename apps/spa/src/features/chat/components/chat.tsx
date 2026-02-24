@@ -17,6 +17,7 @@ import { ChatHeader } from "./chat-header"
 import { ChatInput } from "./chat-input"
 import { ChatMessages } from "./chat-message"
 import { StatusLine } from "./status-line"
+import { formatTranscript } from "../utils/format-transcript"
 
 export type TChatBounds = {
   x: number
@@ -50,9 +51,35 @@ export function Chat(props: TChatProps) {
     if (changes) applyChangesToCRDT(handle, [changes])
   }
 
-  const handleSlashCommand = (command: string) => {
+  const handleSlashCommand = async (command: string) => {
     if (command === "exit") {
       removeChat()
+      return
+    }
+
+    if (command === "copy") {
+      const transcriptData = chatLogic.getTranscriptData()
+      if (!transcriptData) {
+        showToast("Copy failed", "No chat session found")
+        return
+      }
+
+      if (transcriptData.messages.length === 0) {
+        showToast("Copy failed", "No messages to copy")
+        return
+      }
+
+      try {
+        const transcript = formatTranscript(
+          transcriptData.session,
+          transcriptData.messages,
+        )
+        await navigator.clipboard.writeText(transcript)
+        showToast("Copied!", "Chat transcript copied to clipboard")
+      } catch (error) {
+        console.error("Failed to copy transcript:", error)
+        showToast("Copy failed", "Could not access clipboard")
+      }
       return
     }
 

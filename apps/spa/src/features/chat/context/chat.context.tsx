@@ -742,5 +742,26 @@ export function createChatContextLogic(args: TCreateChatContextArgs) {
     handlePointerDown,
     handlePointerMove,
     handlePointerUp,
+    getTranscriptData: () => {
+      const currentChat = chat()
+      if (!currentChat) return null
+
+      const messages = orderedMessages().map((group) => ({
+        info: group.message,
+        parts: group.parts,
+      }))
+
+      return {
+        session: {
+          id: currentChat.session_id,
+          title: currentChat.title,
+          time: {
+            created: new Date(currentChat.created_at).getTime(),
+            updated: new Date(currentChat.updated_at).getTime(),
+          },
+        },
+        messages,
+      }
+    },
   }
 }
