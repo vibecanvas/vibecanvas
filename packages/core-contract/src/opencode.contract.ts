@@ -44,26 +44,33 @@ type TConfigGetOutput = Awaited<ReturnType<OpencodeClient["config"]["get"]>> ext
   ? NonNullable<TData>
   : never;
 
-const agentSchema = z.object({
-  name: z.string(),
-  description: z.string().optional(),
-  mode: z.enum(["subagent", "primary", "all"]),
-  builtIn: z.boolean().optional(),
-  topP: z.number().optional(),
-  temperature: z.number().optional(),
-  color: z.string().optional(),
-  permission: z.unknown(),
-  model: z
-    .object({
-      modelID: z.string(),
-      providerID: z.string(),
-    })
-    .optional(),
-  prompt: z.string().optional(),
-  tools: z.record(z.string(), z.boolean()).optional(),
-  options: z.record(z.string(), z.unknown()).optional(),
-  maxSteps: z.number().optional(),
-}).passthrough();
+type TMethodData<TMethod> = TMethod extends (...args: any[]) => Promise<infer TResult>
+  ? TResult extends { data: infer TData }
+    ? NonNullable<TData>
+    : never
+  : never;
+
+type TMethodInput<TMethod> = TMethod extends (input: infer TInput, ...args: any[]) => unknown
+  ? TInput
+  : never;
+
+type TAppLogInput = TMethodInput<OpencodeClient["app"]["log"]>;
+type TAppLogOutput = TMethodData<OpencodeClient["app"]["log"]>;
+type TAppAgentsOutput = TMethodData<OpencodeClient["app"]["agents"]>;
+
+type TSessionListOutput = TMethodData<OpencodeClient["session"]["list"]>;
+type TSessionOutput = TMethodData<OpencodeClient["session"]["get"]>;
+type TSessionGetInput = TMethodInput<OpencodeClient["session"]["get"]>;
+type TSessionChildrenInput = TMethodInput<OpencodeClient["session"]["children"]>;
+type TSessionCreateInput = TMethodInput<OpencodeClient["session"]["create"]>;
+type TSessionInitInput = TMethodInput<OpencodeClient["session"]["init"]>;
+type TSessionInitOutput = TMethodData<OpencodeClient["session"]["init"]>;
+type TSessionAbortInput = TMethodInput<OpencodeClient["session"]["abort"]>;
+type TSessionAbortOutput = TMethodData<OpencodeClient["session"]["abort"]>;
+type TSessionSummarizeInput = TMethodInput<OpencodeClient["session"]["summarize"]>;
+type TSessionSummarizeOutput = TMethodData<OpencodeClient["session"]["summarize"]>;
+type TSessionRevertInput = TMethodInput<OpencodeClient["session"]["revert"]>;
+type TSessionUnrevertInput = TMethodInput<OpencodeClient["session"]["unrevert"]>;
 
 const pathInfoSchema = z.object({
   state: z.string(),
@@ -257,6 +264,7 @@ const chatScopedInputSchema = z.object({
 
 const promptInputSchema = z.object({
   chatId: z.string(),
+  agent: z.string().optional(),
   parts: z.array(z.discriminatedUnion("type", [
     z.object({
       id: z.string().optional(),
@@ -317,9 +325,13 @@ export default oc.router({
     .output(eventIterator(type<OpenCodeEvent>())),
 
   app: oc.router({
+    log: oc
+      .input(type<TAppLogInput>())
+      .output(type<TAppLogOutput>()),
+
     agents: oc
       .input(chatScopedInputSchema)
-      .output(z.array(agentSchema)),
+      .output(type<TAppAgentsOutput>()),
   }),
 
   path: oc.router({
@@ -335,6 +347,41 @@ export default oc.router({
   }),
 
   session: oc.router({
+    list: oc
+      .output(type<TSessionListOutput>()),
+
+    get: oc
+      .input(type<TSessionGetInput>())
+      .output(type<TSessionOutput>()),
+
+    children: oc
+      .input(type<TSessionChildrenInput>())
+      .output(type<TSessionListOutput>()),
+
+    create: oc
+      .input(type<TSessionCreateInput>())
+      .output(type<TSessionOutput>()),
+
+    init: oc
+      .input(type<TSessionInitInput>())
+      .output(type<TSessionInitOutput>()),
+
+    abort: oc
+      .input(type<TSessionAbortInput>())
+      .output(type<TSessionAbortOutput>()),
+
+    summarize: oc
+      .input(type<TSessionSummarizeInput>())
+      .output(type<TSessionSummarizeOutput>()),
+
+    revert: oc
+      .input(type<TSessionRevertInput>())
+      .output(type<TSessionOutput>()),
+
+    unrevert: oc
+      .input(type<TSessionUnrevertInput>())
+      .output(type<TSessionOutput>()),
+
     command: oc
       .input(sessionCommandInputSchema)
       .output(sessionCommandOutputSchema),

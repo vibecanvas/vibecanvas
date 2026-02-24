@@ -1,4 +1,5 @@
 import { Show } from "solid-js"
+import { Badge } from "@kobalte/core/badge"
 import { CONNECTION_STATE } from "@/features/canvas-crdt/renderables/elements/chat/chat.state-machine"
 import type { Accessor } from "solid-js"
 
@@ -49,7 +50,9 @@ export function StatusLine(props: TStatusLineProps) {
       <div class="flex items-center gap-3 min-w-0">
         <span>{STATE_LABELS[props.state()]}</span>
         <Show when={props.agentName}>
-          <span class="text-blue-600 truncate">{props.agentName}</span>
+          <Badge class="px-1.5 py-0.5 border border-blue-300 bg-blue-100 text-blue-700 truncate max-w-40">
+            {props.agentName}
+          </Badge>
         </Show>
         <Show when={modelWithProvider()}>
           <span class="text-emerald-700 truncate">{modelWithProvider()}</span>

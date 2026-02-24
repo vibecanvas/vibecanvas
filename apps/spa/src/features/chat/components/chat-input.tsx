@@ -21,6 +21,7 @@ export type TInputPart =
 type TChatInputProps = {
   canSend: boolean
   onSend: (content: TInputPart[]) => void
+  onCycleAgent?: (direction: 1 | -1) => void
   onInputFocus?: () => void
   onFileSearch?: (query: string, options?: { limit?: number }) => Promise<TFileSuggestion[]>
   onFileSuggestionUsed?: (path: string) => void
@@ -525,9 +526,24 @@ export function ChatInput(props: TChatInputProps) {
         moveAutocompleteSelection(-1)
         return true
       },
+      "Shift-Tab": () => {
+        if (autocomplete().open) {
+          moveAutocompleteSelection(-1)
+          return true
+        }
+
+        if (!props.onCycleAgent) return false
+        props.onCycleAgent(-1)
+        return true
+      },
       Tab: () => {
-        if (!autocomplete().open) return false
-        selectAutocompleteItem()
+        if (autocomplete().open) {
+          selectAutocompleteItem()
+          return true
+        }
+
+        if (!props.onCycleAgent) return false
+        props.onCycleAgent(1)
         return true
       },
       Escape: () => {

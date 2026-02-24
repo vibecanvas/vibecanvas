@@ -95,6 +95,7 @@ const prompt = baseOs.api.opencode.prompt.handler(async ({ input, context: { db,
 
   const { data, error } = await client.session.prompt({
     sessionID: chat.session_id,
+    agent: input.agent,
     parts: input.parts,
     tools: {},
     directory: chat.local_path,
@@ -152,6 +153,16 @@ const events = baseOs.api.opencode.events.handler(async function* ({ input, cont
   for await (const event of (await client.event.subscribe({ directory: chat.local_path })).stream) {
     yield event;
   }
+});
+
+const appLog = baseOs.api.opencode.app.log.handler(async ({ input, context: { opencodeService } }) => {
+  const client = opencodeService.getClient("__app__");
+
+  const { data, error } = await client.app.log(input);
+  if (error) throwFromOpencodeError(error);
+  if (data === null || data === undefined) throw new ORPCError("OPENCODE_ERROR", { message: "Missing OpenCode response data" });
+
+  return data;
 });
 
 const appAgents = baseOs.api.opencode.app.agents.handler(async ({ input, context: { db, opencodeService } }) => {
@@ -287,6 +298,7 @@ export const opencode = {
   prompt,
   events,
   app: {
+    log: appLog,
     agents: appAgents,
   },
   path: {
