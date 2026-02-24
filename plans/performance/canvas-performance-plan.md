@@ -33,6 +33,23 @@ This plan addresses 8 critical performance issues in the PixiJS canvas rendering
 - For bounded movement, container translation must use **applied delta after clamp**, not raw pointer delta, otherwise container/data drift can occur at world bounds.
 - Move actions change only translation, not geometry, so avoiding redraw on move is safe and yields immediate drag FPS gains across many element types.
 
+### 2026-02-24 - Drag Selection Fast Path (P0-3 foundation)
+
+- Implemented a drag fast path in `cmd.drag-selection.ts`:
+  - captures per-target pre-move snapshots,
+  - computes per-target applied deltas after dispatch,
+  - translates `VirtualGroup` containers directly when motion is pure translation,
+  - translates `MultiTransformBox` directly when all targets share a uniform applied delta.
+- Added guarded fallback to full recompute/redraw when needed:
+  - non-uniform applied deltas across targets,
+  - `VirtualGroup` bounds size changes (non-translation behavior near clamp edges).
+- Added lightweight transient translation API to `MultiTransformBox` via `translateBy(dx, dy)` and reset that transient offset in `redraw()`.
+
+### What We Learned (Drag)
+
+- We can remove most per-frame `computeGroupBounds()+redraw()` work by treating drag as translation first and only escalating to full refresh when observed deltas/bounds indicate non-translational behavior.
+- Resetting transient multi-box translation inside authoritative `redraw()` keeps visuals stable while preventing offset accumulation across gestures.
+
 ## Issues Summary
 
 | Priority | Issue | File | Impact | Sub-Plan |
