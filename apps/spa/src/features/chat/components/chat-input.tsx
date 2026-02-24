@@ -1,4 +1,5 @@
 import { baseKeymap } from "prosemirror-commands"
+import fuzzysort from "fuzzysort"
 import { history, redo, undo } from "prosemirror-history"
 import type { Node as ProseMirrorNode } from "prosemirror-model"
 import { Plugin } from "prosemirror-state"
@@ -6,7 +7,7 @@ import { EditorState } from "prosemirror-state"
 import { keymap } from "prosemirror-keymap"
 import { EditorView } from "prosemirror-view"
 import { For, Show, createSignal, onCleanup, onMount } from "solid-js"
-import { showErrorToast } from "@/components/ui/Toast"
+import { showErrorToast, showToast } from "@/components/ui/Toast"
 import { toRelativePathWithinBase } from "@/utils/path-display"
 import { ImageTokenNodeView } from "../prosemirror/nodeviews/image-token-view"
 import { pasteImagePlugin } from "../prosemirror/plugins/paste-image"
@@ -44,6 +45,8 @@ type TAutocompleteItem = {
   label: string
   detail: string
   value: string
+  aliases: string
+  type: "file" | "command"
 }
 
 type TAutocompleteState = {
@@ -64,11 +67,18 @@ const FILE_SEARCH_DEBOUNCE_MS = 180
 const FILETREE_DND_MIME = "application/x-vibecanvas-filetree-node"
 
 const COMMAND_SUGGESTIONS: TAutocompleteItem[] = [
-  { key: "fix", label: "/fix", detail: "Ask assistant to fix current issue", value: "fix" },
-  { key: "plan", label: "/plan", detail: "Ask assistant to draft an implementation plan", value: "plan" },
-  { key: "explain", label: "/explain", detail: "Ask assistant to explain selected code", value: "explain" },
-  { key: "test", label: "/test", detail: "Ask assistant to add or run tests", value: "test" },
-  { key: "review", label: "/review", detail: "Ask assistant to review current changes", value: "review" },
+  { key: "agents", label: "/agents", detail: "List and pick available agents", value: "agents", aliases: "", type: "command" },
+  { key: "compact", label: "/compact", detail: "Compact current session context", value: "compact", aliases: "", type: "command" },
+  { key: "copy", label: "/copy", detail: "Copy latest assistant output", value: "copy", aliases: "", type: "command" },
+  { key: "exit", label: "/exit", detail: "Exit current chat session", value: "exit", aliases: "", type: "command" },
+  { key: "init", label: "/init", detail: "Initialize project assistant context", value: "init", aliases: "", type: "command" },
+  { key: "models", label: "/models", detail: "Show or switch available models", value: "models", aliases: "", type: "command" },
+  { key: "new", label: "/new", detail: "Start a new session", value: "new", aliases: "", type: "command" },
+  { key: "rename", label: "/rename", detail: "Rename current session", value: "rename", aliases: "", type: "command" },
+  { key: "sessions", label: "/sessions", detail: "Browse and switch sessions", value: "sessions", aliases: "", type: "command" },
+  { key: "skills", label: "/skills", detail: "Open skills picker", value: "skills", aliases: "", type: "command" },
+  { key: "timeline", label: "/timeline", detail: "Jump to a previous message", value: "timeline", aliases: "", type: "command" },
+  { key: "undo", label: "/undo", detail: "Undo last assistant action", value: "undo", aliases: "", type: "command" },
 ]
 
 const SUPPORTED_IMAGE_TYPES = new Set([
@@ -191,41 +201,59 @@ function getAutocompleteMatch(view: EditorView): TAutocompleteMatch | null {
   if (!$from.parent.isTextblock) return null
 
   const textBefore = $from.parent.textBetween(0, $from.parentOffset, "\n", "\n")
-  const match = /(^|\s)([@/])([^\s@/]*)$/.exec(textBefore)
-  if (!match) return null
 
-  const leadingSpaceLength = match[1]?.length ?? 0
-  const trigger = match[2] as "@" | "/"
-  const query = match[3] ?? ""
+  const slashMatch = /^\/([^\s/]*)$/.exec(textBefore)
+  if (slashMatch) {
+    return {
+      trigger: "/",
+      from: $from.start(),
+      to: $from.pos,
+      query: slashMatch[1] ?? "",
+    }
+  }
+
+  const mentionMatch = /(^|\s)@([^\s@/]*)$/.exec(textBefore)
+  if (!mentionMatch) return null
+
+  const leadingSpaceLength = mentionMatch[1]?.length ?? 0
   const parentStart = $from.start()
-  const from = parentStart + (match.index ?? 0) + leadingSpaceLength
+  const from = parentStart + (mentionMatch.index ?? 0) + leadingSpaceLength
   const to = $from.pos
 
-  return { trigger, from, to, query }
-}
-
-function sortByRelevance(items: TAutocompleteItem[], query: string): TAutocompleteItem[] {
-  if (!query) return items
-
-  const lower = query.toLowerCase()
-
-  return [...items].sort((a, b) => {
-    const aLabel = a.label.toLowerCase()
-    const bLabel = b.label.toLowerCase()
-    const aStarts = aLabel.startsWith(lower) ? 0 : 1
-    const bStarts = bLabel.startsWith(lower) ? 0 : 1
-    if (aStarts !== bStarts) return aStarts - bStarts
-    return aLabel.localeCompare(bLabel)
-  })
+  return {
+    trigger: "@",
+    from,
+    to,
+    query: mentionMatch[2] ?? "",
+  }
 }
 
 function buildCommandAutocompleteItems(query: string): TAutocompleteItem[] {
   const commandQuery = query.toLowerCase()
-  const filtered = COMMAND_SUGGESTIONS.filter((item) => {
-    if (!commandQuery) return true
-    return item.label.toLowerCase().includes(commandQuery)
+
+  if (!commandQuery) {
+    return [...COMMAND_SUGGESTIONS]
+      .sort((a, b) => a.label.localeCompare(b.label))
+  }
+
+  const fuzzyResults = fuzzysort.go(commandQuery, COMMAND_SUGGESTIONS, {
+    keys: ["label", "detail", "aliases"],
   })
-  return sortByRelevance(filtered, commandQuery).slice(0, MAX_AUTOCOMPLETE_ITEMS)
+
+  const prefix = `/${commandQuery}`
+  const prioritized = [
+    ...fuzzyResults.filter((result) => result.obj.label.toLowerCase().startsWith(prefix)),
+    ...fuzzyResults.filter((result) => !result.obj.label.toLowerCase().startsWith(prefix)),
+  ]
+
+  const deduped = new Map<string, TAutocompleteItem>()
+  for (const result of prioritized) {
+    if (!deduped.has(result.obj.key)) {
+      deduped.set(result.obj.key, result.obj)
+    }
+  }
+
+  return Array.from(deduped.values())
 }
 
 function normalizeSuggestionPath(path: string, workingDirectoryPath: string | null): string | null {
@@ -261,6 +289,8 @@ function buildFileAutocompleteItems(
         label: `@${displayPath}`,
         detail: file.isDirectory ? `${relativePath} (dir)` : relativePath,
         value: displayPath,
+        aliases: "",
+        type: "file",
       }
     })
     .filter((item): item is TAutocompleteItem => item !== null)
@@ -428,6 +458,10 @@ export function ChatInput(props: TChatInputProps) {
 
     if (state.trigger === "@") {
       props.onFileSuggestionUsed?.(item.value)
+    }
+
+    if (state.trigger === "/" && item.type === "command") {
+      showToast("Slash command not implemented", `${item.label} is not implemented yet.`)
     }
 
     closeAutocomplete()

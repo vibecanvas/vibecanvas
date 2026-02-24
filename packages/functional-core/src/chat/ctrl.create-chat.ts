@@ -47,7 +47,6 @@ export async function ctrlCreateChat(portal: TPortal, args: TArgs): Promise<TErr
       return [null, { code: "CTRL.CHAT.CREATE_CHAT.FAILED", statusCode: 500, internalLogLevel: 'error', shouldLogInternally: true, internalMessage: JSON.stringify(newSession.error), externalMessage: { en: "Failed to create chat" } }];
     }
 
-
     const chatData: typeof schema.chats.$inferInsert = {
       id: chatId,
       canvas_id: args.canvas_id,

@@ -1,4 +1,4 @@
-import type { Event as OpenCodeEvent } from "@opencode-ai/sdk/v2";
+import type { Event as OpenCodeEvent, OpencodeClient } from "@opencode-ai/sdk/v2";
 import { eventIterator, oc, type } from "@orpc/contract";
 import { z } from "zod";
 
@@ -40,71 +40,9 @@ const filePartSourceSchema = z.discriminatedUnion("type", [
   }),
 ]);
 
-const modelSchema = z.object({
-  id: z.string(),
-  providerID: z.string(),
-  api: z.object({
-    id: z.string(),
-    url: z.string(),
-    npm: z.string(),
-  }),
-  name: z.string(),
-  capabilities: z.object({
-    temperature: z.boolean(),
-    reasoning: z.boolean(),
-    attachment: z.boolean(),
-    toolcall: z.boolean(),
-    input: z.object({
-      text: z.boolean(),
-      audio: z.boolean(),
-      image: z.boolean(),
-      video: z.boolean(),
-      pdf: z.boolean(),
-    }),
-    output: z.object({
-      text: z.boolean(),
-      audio: z.boolean(),
-      image: z.boolean(),
-      video: z.boolean(),
-      pdf: z.boolean(),
-    }),
-  }),
-  cost: z.object({
-    input: z.number(),
-    output: z.number(),
-    cache: z.object({
-      read: z.number(),
-      write: z.number(),
-    }),
-    experimentalOver200K: z
-      .object({
-        input: z.number(),
-        output: z.number(),
-        cache: z.object({
-          read: z.number(),
-          write: z.number(),
-        }),
-      })
-      .optional(),
-  }),
-  limit: z.object({
-    context: z.number(),
-    output: z.number(),
-  }),
-  status: z.enum(["alpha", "beta", "deprecated", "active"]),
-  options: z.record(z.string(), z.unknown()),
-  headers: z.record(z.string(), z.string()),
-});
-
-const providerSchema = z.object({
-  id: z.string(),
-  name: z.string(),
-  source: z.enum(["env", "config", "custom", "api"]),
-  env: z.array(z.string()),
-  key: z.string().optional(),
-  options: z.record(z.string(), z.unknown()),
-  models: z.record(z.string(), modelSchema),
-});
+type TConfigGetOutput = Awaited<ReturnType<OpencodeClient["config"]["get"]>> extends { data: infer TData }
+  ? NonNullable<TData>
+  : never;
 
 const agentSchema = z.object({
   name: z.string(),
@@ -391,14 +329,9 @@ export default oc.router({
   }),
 
   config: oc.router({
-    providers: oc
+    get: oc
       .input(chatScopedInputSchema)
-      .output(
-        z.object({
-          providers: z.array(providerSchema),
-          default: z.record(z.string(), z.string()),
-        }),
-      ),
+      .output(type<TConfigGetOutput>()),
   }),
 
   session: oc.router({

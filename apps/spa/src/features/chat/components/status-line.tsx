@@ -1,8 +1,12 @@
+import { Show } from "solid-js"
 import { CONNECTION_STATE } from "@/features/canvas-crdt/renderables/elements/chat/chat.state-machine"
 import type { Accessor } from "solid-js"
 
 type TStatusLineProps = {
   state: Accessor<CONNECTION_STATE>
+  agentName?: string | null
+  modelID?: string | null
+  providerID?: string | null
 }
 
 const STATE_COLORS: Record<CONNECTION_STATE, string> = {
@@ -34,9 +38,23 @@ const STATE_LABELS: Record<CONNECTION_STATE, string> = {
 }
 
 export function StatusLine(props: TStatusLineProps) {
+  const modelWithProvider = () => {
+    if (!props.modelID) return null
+    if (!props.providerID) return props.modelID
+    return `${props.providerID}/${props.modelID}`
+  }
+
   return (
     <div class="px-2 py-1 bg-muted border-t border-border text-muted-foreground text-xs font-mono flex items-center justify-between">
-      <span>{STATE_LABELS[props.state()]}</span>
+      <div class="flex items-center gap-3 min-w-0">
+        <span>{STATE_LABELS[props.state()]}</span>
+        <Show when={props.agentName}>
+          <span class="text-blue-600 truncate">{props.agentName}</span>
+        </Show>
+        <Show when={modelWithProvider()}>
+          <span class="text-emerald-700 truncate">{modelWithProvider()}</span>
+        </Show>
+      </div>
       <span class={`w-3 h-3 rounded-full ${STATE_COLORS[props.state()]}`} />
     </div>
   )

@@ -1,6 +1,8 @@
 import { ORPCError } from "@orpc/server";
 import { agent_logs } from "@vibecanvas/shell/database/schema";
 import { baseOs } from "../orpc.base";
+import type { OpencodeService } from "@vibecanvas/shell/opencode/srv.opencode";
+import type db from "@vibecanvas/shell/database/db";
 
 function getErrorMessage(error: unknown): string {
   if (typeof error === "object" && error !== null) {
@@ -29,11 +31,11 @@ function throwFromOpencodeError(error: unknown): never {
 }
 
 function requireChatContext(
-  db: any,
-  opencodeService: { getClient: (id: string, directory?: string) => any },
+  dbClient: typeof db,
+  opencodeService: OpencodeService,
   chatId: string,
 ) {
-  const chat = db.query.chats.findFirst({ where: (table: any, { eq }: any) => eq(table.id, chatId) }).sync();
+  const chat = dbClient.query.chats.findFirst({ where: (table: any, { eq }: any) => eq(table.id, chatId) }).sync();
   if (!chat) throw new ORPCError("CHAT_NOT_FOUND", { message: "Chat not found" });
 
   const client = opencodeService.getClient(chat.id, chat.local_path);
@@ -172,10 +174,10 @@ const pathGet = baseOs.api.opencode.path.get.handler(async ({ input, context: { 
   return data;
 });
 
-const configProviders = baseOs.api.opencode.config.providers.handler(async ({ input, context: { db, opencodeService } }) => {
+const configGet = baseOs.api.opencode.config.get.handler(async ({ input, context: { db, opencodeService } }) => {
   const { chat, client } = requireChatContext(db, opencodeService, input.chatId);
 
-  const { data, error } = await client.config.providers({ directory: chat.local_path });
+  const { data, error } = await client.config.get();
   if (error) throwFromOpencodeError(error);
   if (!data) throw new ORPCError("OPENCODE_ERROR", { message: "Missing OpenCode response data" });
 
@@ -291,7 +293,7 @@ export const opencode = {
     get: pathGet,
   },
   config: {
-    providers: configProviders,
+    get: configGet,
   },
   session: {
     command: sessionCommand,

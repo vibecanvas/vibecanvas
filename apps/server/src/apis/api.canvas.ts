@@ -2,7 +2,7 @@ import { ctrlCreateCanvas } from "@vibecanvas/core/canvas/ctrl.create-canvas";
 import { ctrlDeleteCanvas } from "@vibecanvas/core/canvas/ctrl.delete-canvas";
 import { ctrlGetFullCanvas } from "@vibecanvas/core/canvas/ctrl.get-full-canvas";
 import { ctrlUpdateCanvas } from "@vibecanvas/core/canvas/ctrl.update-canvas";
-import { tExternal } from "@vibecanvas/server/error-fn";
+import { ORPCError } from "@orpc/server";
 import { baseOs } from "../orpc.base";
 
 const list = baseOs.api.canvas.list.handler(async ({ context: { db } }) => {
@@ -12,8 +12,7 @@ const list = baseOs.api.canvas.list.handler(async ({ context: { db } }) => {
 const get = baseOs.api.canvas.get.handler(async ({ input, context: { db } }) => {
   const [result, error] = ctrlGetFullCanvas({ db }, { id: input.params.id })
   if (error) {
-    const eMsg = tExternal(error)
-    throw new Error(eMsg)
+    throw error
   }
 
   return {
@@ -30,8 +29,7 @@ const create = baseOs.api.canvas.create.handler(async ({ input, context: { db } 
   })
 
   if (error) {
-    const eMsg = tExternal(error)
-    throw new Error(eMsg)
+    throw error
   }
 
   return result
@@ -41,13 +39,12 @@ const update = baseOs.api.canvas.update.handler(async ({ input, context: { db } 
   const [, error] = ctrlUpdateCanvas({ db }, { id: input.params.id, ...input.body })
 
   if (error) {
-    const eMsg = tExternal(error)
-    throw new Error(eMsg)
+    throw error
   }
 
   const canvas = db.query.canvas.findFirst({ where: (table, { eq }) => eq(table.id, input.params.id) }).sync()
   if (!canvas) {
-    throw new Error("Canvas not found")
+    throw new ORPCError("NOT_FOUND", { message: "Canvas not found" })
   }
 
   return canvas
@@ -56,8 +53,7 @@ const update = baseOs.api.canvas.update.handler(async ({ input, context: { db } 
 const remove = baseOs.api.canvas.remove.handler(async ({ input, context: { db } }) => {
   const [, error] = ctrlDeleteCanvas({ db }, { id: input.params.id })
   if (error) {
-    const eMsg = tExternal(error)
-    throw new Error(eMsg)
+    throw error
   }
 })
 

@@ -114,7 +114,7 @@ export class OpencodeService {
       }
 
       // Try to reuse an existing healthy opencode server
-      const existingPort = await findHealthyOpencodePort(4096, 4196)
+      const existingPort = await findHealthyOpencodePort(5096, 5196)
       if (existingPort !== null) {
         return new OpencodeService(
           { url: `http://127.0.0.1:${existingPort}`, close() { } },
@@ -127,9 +127,6 @@ export class OpencodeService {
 
       const opencodeServer = await createOpencodeServer({
         port,
-        config: {
-          autoupdate: false,
-        }
       })
 
       return new OpencodeService(opencodeServer, true)

@@ -5,7 +5,7 @@ import { AElement } from "@/features/canvas-crdt/renderables/element.abstract"
 import { CONNECTION_STATE } from "@/features/canvas-crdt/renderables/elements/chat/chat.state-machine"
 import { orpcWebsocketService } from "@/services/orpc-websocket"
 import { setStore, store } from "@/store"
-import { toTildePath } from "@/utils/path-display"
+import { toRelativePathWithinBase, toTildePath } from "@/utils/path-display"
 import type { TCanvas } from "@vibecanvas/core/canvas/ctrl.create-canvas"
 import type { Event as OpenCodeEvent, Message, Part } from "@opencode-ai/sdk/v2"
 import fuzzysort from "fuzzysort"
@@ -141,6 +141,77 @@ function resolveMentionPath(path: string, basePath: string): string | null {
   return stripped.length > 0 ? stripped : null
 }
 
+type TConfigStatus = {
+  agentName: string | null
+  modelID: string | null
+  providerID: string | null
+}
+
+function extractRuntimeStatusFromMessages(
+  messages: Record<string, Message>,
+  messageOrder: string[],
+): TConfigStatus {
+  for (let index = messageOrder.length - 1; index >= 0; index -= 1) {
+    const message = messages[messageOrder[index]]
+    if (!message || message.role !== "assistant") continue
+
+    const messageRecord = message as unknown as Record<string, unknown>
+    const agentName =
+      readString(messageRecord.agent)
+      ?? readString(messageRecord.mode)
+
+    let modelID: string | null = null
+    let providerID: string | null = null
+
+    const directModelID =
+      readString(messageRecord.modelID)
+      ?? readString(messageRecord.model_id)
+
+    const directProviderID =
+      readString(messageRecord.providerID)
+      ?? readString(messageRecord.provider_id)
+
+    const modelObject = asRecord(messageRecord.model)
+    const modelFromObject = modelObject
+      ? {
+        modelID:
+          readString(modelObject.modelID)
+          ?? readString(modelObject.model_id)
+          ?? readString(modelObject.id),
+        providerID:
+          readString(modelObject.providerID)
+          ?? readString(modelObject.provider_id),
+      }
+      : null
+
+    modelID = directModelID ?? modelFromObject?.modelID ?? null
+    providerID = directProviderID ?? modelFromObject?.providerID ?? null
+
+    if (agentName || modelID || providerID) {
+      return {
+        agentName,
+        modelID,
+        providerID,
+      }
+    }
+  }
+
+  return {
+    agentName: null,
+    modelID: null,
+    providerID: null,
+  }
+}
+
+function asRecord(value: unknown): Record<string, unknown> | null {
+  if (!value || typeof value !== "object") return null
+  return value as Record<string, unknown>
+}
+
+function readString(value: unknown): string | null {
+  return typeof value === "string" && value.trim().length > 0 ? value.trim() : null
+}
+
 export function Chat(props: TChatProps) {
   const SCROLL_THRESHOLD = 50
   const ENABLED_INPUT_STATES = [
@@ -178,6 +249,12 @@ export function Chat(props: TChatProps) {
   )
 
   const isBusy = () => chatState.sessionStatus.type === "busy"
+  const runtimeStatus = createMemo(() => extractRuntimeStatusFromMessages(chatState.messages, chatState.messageOrder))
+  const statusLineMeta = createMemo(() => ({
+    agentName: runtimeStatus().agentName,
+    modelID: runtimeStatus().modelID,
+    providerID: runtimeStatus().providerID,
+  }))
 
   const resetToReadyIfFinished = () => {
     if (props.state() === CONNECTION_STATE.FINISHED) {
@@ -674,7 +751,12 @@ export function Chat(props: TChatProps) {
         onFileSuggestionUsed={handleFileSuggestionUsed}
         workingDirectoryPath={chat()?.local_path ?? null}
       />
-      <StatusLine state={props.state} />
+      <StatusLine
+        state={props.state}
+        agentName={statusLineMeta().agentName}
+        modelID={statusLineMeta().modelID}
+        providerID={statusLineMeta().providerID}
+      />
       <PathPickerDialog
         open={isPathDialogOpen()}
         onOpenChange={setIsPathDialogOpen}
