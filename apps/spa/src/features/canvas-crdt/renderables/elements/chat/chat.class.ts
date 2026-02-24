@@ -42,6 +42,20 @@ type TChatBounds = {
   scale: number
 }
 
+const BOUNDS_EPSILON = 0.01
+
+function hasBoundsChanged(next: TChatBounds, prev: TChatBounds | null): boolean {
+  if (!prev) return true
+  return (
+    Math.abs(next.x - prev.x) > BOUNDS_EPSILON
+    || Math.abs(next.y - prev.y) > BOUNDS_EPSILON
+    || Math.abs(next.w - prev.w) > BOUNDS_EPSILON
+    || Math.abs(next.h - prev.h) > BOUNDS_EPSILON
+    || Math.abs(next.angle - prev.angle) > BOUNDS_EPSILON
+    || Math.abs(next.scale - prev.scale) > BOUNDS_EPSILON
+  )
+}
+
 /** Actions supported by ChatElement */
 const CHAT_SUPPORTED_ACTIONS: ReadonlySet<TActionType> = new Set([
   // Transform actions
@@ -64,7 +78,8 @@ export class ChatElement extends AElement<'chat'> {
   private overlayDiv: HTMLDivElement | null = null
   private setBounds: ((bounds: TChatBounds) => void) | null = null
   private setState: ((state: CONNECTION_STATE) => void) | null = null
-  private tickerCallback: (() => void) | null = null
+  private cleanupViewportSync: (() => void) | null = null
+  private lastBounds: TChatBounds | null = null
 
   constructor(element: TBackendElementOf<'chat'>, canvas: Canvas) {
     super(element, canvas)
@@ -95,8 +110,10 @@ export class ChatElement extends AElement<'chat'> {
     chatEntrypoint.appendChild(div)
 
     // Create signal for reactive bounds
-    const [bounds, setBounds] = createSignal<TChatBounds>(this.getScreenBounds())
+    const initialBounds = this.getScreenBounds()
+    const [bounds, setBounds] = createSignal<TChatBounds>(initialBounds)
     this.setBounds = setBounds
+    this.lastBounds = initialBounds
 
     // Create signal for reactive state
     const [state, setState] = createSignal<CONNECTION_STATE>(CONNECTION_STATE.NOT_CONNECTED)
@@ -119,8 +136,12 @@ export class ChatElement extends AElement<'chat'> {
       chatId: this.element.id,
       onSelect: () => applySelect(this.getApplyContext()),
       onDrag: ({ x, y }) => {
-        // Get fresh context each time - this.element may have been replaced by CRDT sync
-        lastDragMovement = applyMove(this.getApplyContext(), {delta: new Point(x, y), type: 'move'})
+        const result = this.dispatch({ type: 'move', delta: new Point(x, y) })
+        if (result) {
+          lastDragMovement = result
+        }
+        // Keep overlay drag buttery-smooth while still avoiding idle ticker churn.
+        this.updateOverlayBounds(true)
       },
       onDragEnd: () => {
         if (lastDragMovement) {
@@ -141,11 +162,9 @@ export class ChatElement extends AElement<'chat'> {
   }
 
   private setupViewportSync() {
-    // Use ticker to sync overlay position with viewport changes (pan/zoom)
-    this.tickerCallback = () => {
+    this.cleanupViewportSync = this.canvas.onViewportChange(() => {
       this.updateOverlayBounds()
-    }
-    this.canvas.app.ticker.add(this.tickerCallback)
+    })
   }
 
   private getScreenBounds(): TChatBounds {
@@ -165,21 +184,26 @@ export class ChatElement extends AElement<'chat'> {
     }
   }
 
-  private updateOverlayBounds() {
-    if (this.setBounds) {
-      this.setBounds(this.getScreenBounds())
-    }
+  private updateOverlayBounds(force = false) {
+    if (!this.setBounds) return
+
+    const nextBounds = this.getScreenBounds()
+    if (!force && !hasBoundsChanged(nextBounds, this.lastBounds)) return
+
+    this.lastBounds = nextBounds
+    this.setBounds(nextBounds)
   }
 
   private cleanupOverlay() {
-    if (this.tickerCallback) {
-      this.canvas.app.ticker.remove(this.tickerCallback)
-      this.tickerCallback = null
+    if (this.cleanupViewportSync) {
+      this.cleanupViewportSync()
+      this.cleanupViewportSync = null
     }
     if (this.overlayDiv) {
       this.overlayDiv.remove()
       this.overlayDiv = null
     }
+    this.lastBounds = null
   }
 
 
@@ -294,6 +318,7 @@ export class ChatElement extends AElement<'chat'> {
     this.container.pivot.set(w / 2, h / 2)
     this.container.position.set(this.element.x + w / 2, this.element.y + h / 2)
     this.container.boundsArea = new Rectangle(0, 0, w, h)
+    this.updateOverlayBounds()
 
   }
 

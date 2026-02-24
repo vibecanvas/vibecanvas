@@ -236,6 +236,8 @@ export class MultiTransformBox implements IRenderable {
   }
 
   public redraw(): void {
+    // Reset transient drag translation before authoritative redraw.
+    this.container.position.set(0, 0)
     this.container.visible = false
 
     this.drawDashedFrame()
@@ -248,6 +250,15 @@ export class MultiTransformBox implements IRenderable {
 
   public getCenter(): Point {
     return getBoundsCenter(this._bounds)
+  }
+
+  /**
+   * Lightweight drag translation for multi-select visuals.
+   * Used during pointermove to avoid frame/handle geometry rebuilds every tick.
+   */
+  public translateBy(dx: number, dy: number): void {
+    this.container.x += dx
+    this.container.y += dy
   }
 
   public show(): void {

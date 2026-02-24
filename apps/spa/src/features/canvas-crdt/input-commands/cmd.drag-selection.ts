@@ -38,6 +38,18 @@ type TDragState = {
   cloneIds: string[] | null
 }
 
+type TMoveSnapshot = {
+  x: number
+  y: number
+  width?: number
+  height?: number
+}
+
+type TAppliedDelta = {
+  x: number
+  y: number
+}
+
 // ─────────────────────────────────────────────────────────────
 // Drag State (module-level closure)
 // ─────────────────────────────────────────────────────────────
@@ -115,6 +127,82 @@ function shouldHandle(ctx: InputContext): boolean {
   if (!selectCmdState.mouseDownWorld) return false
 
   return true
+}
+
+const MOVE_EPSILON = 0.001
+
+function captureMoveSnapshots(targets: ITransformable[]): Map<string, TMoveSnapshot> {
+  const snapshots = new Map<string, TMoveSnapshot>()
+
+  for (const target of targets) {
+    const pos = target.worldPosition
+    if (isVirtualGroupTarget(target as TCommandTarget)) {
+      const bounds = (target as VirtualGroup).worldBounds
+      snapshots.set(target.id, {
+        x: pos.x,
+        y: pos.y,
+        width: bounds.width,
+        height: bounds.height,
+      })
+      continue
+    }
+
+    snapshots.set(target.id, { x: pos.x, y: pos.y })
+  }
+
+  return snapshots
+}
+
+function calculateAppliedDeltas(args: {
+  targets: ITransformable[]
+  snapshots: Map<string, TMoveSnapshot>
+}): { deltas: Map<string, TAppliedDelta>, requiresFullRefresh: boolean } {
+  const { targets, snapshots } = args
+  const deltas = new Map<string, TAppliedDelta>()
+  let requiresFullRefresh = false
+
+  for (const target of targets) {
+    const snapshot = snapshots.get(target.id)
+    if (!snapshot) continue
+
+    const pos = target.worldPosition
+    deltas.set(target.id, {
+      x: pos.x - snapshot.x,
+      y: pos.y - snapshot.y,
+    })
+
+    if (isVirtualGroupTarget(target as TCommandTarget)) {
+      const bounds = (target as VirtualGroup).worldBounds
+      const prevWidth = snapshot.width ?? bounds.width
+      const prevHeight = snapshot.height ?? bounds.height
+      if (
+        Math.abs(bounds.width - prevWidth) > MOVE_EPSILON
+        || Math.abs(bounds.height - prevHeight) > MOVE_EPSILON
+      ) {
+        requiresFullRefresh = true
+      }
+    }
+  }
+
+  return { deltas, requiresFullRefresh }
+}
+
+function getUniformDelta(deltas: Map<string, TAppliedDelta>): TAppliedDelta | null {
+  const values = [...deltas.values()]
+  if (values.length === 0) return null
+
+  const [first] = values
+  for (let i = 1; i < values.length; i++) {
+    const current = values[i]
+    if (
+      Math.abs(current.x - first.x) > MOVE_EPSILON
+      || Math.abs(current.y - first.y) > MOVE_EPSILON
+    ) {
+      return null
+    }
+  }
+
+  return first
 }
 
 
@@ -215,22 +303,48 @@ function handleMove(ctx: PointerInputContext): boolean {
   const deltaY = ctx.worldPos.y - state.lastWorld.y
   state.lastWorld = ctx.worldPos
 
+  const moveSnapshots = captureMoveSnapshots(state.targets)
+
   // Dispatch setPosition for each element target (visual update only)
   for (const target of state.targets) {
     target.dispatch({ type: 'move', delta: new Point(deltaX, deltaY) })
   }
 
-  // Update transform boxes
+  const { deltas, requiresFullRefresh } = calculateAppliedDeltas({
+    targets: state.targets,
+    snapshots: moveSnapshots,
+  })
+  const uniformDelta = getUniformDelta(deltas)
+  const requiresMultiBoxFullRefresh = state.targets.length > 1 && uniformDelta === null
+  const shouldFullRefresh = requiresFullRefresh || requiresMultiBoxFullRefresh
+
+  if (shouldFullRefresh) {
+    for (const target of state.targets) {
+      if (isVirtualGroupTarget(target as TCommandTarget)) {
+        (target as VirtualGroup).redraw()
+      }
+    }
+
+    if (state.targets.length > 1) {
+      ctx.canvas.multiTransformBox.computeGroupBounds()
+      ctx.canvas.multiTransformBox.redraw()
+    }
+
+    return true
+  }
+
+  // Fast path: move virtual-group transform boxes via container translation only.
   for (const target of state.targets) {
     if (isVirtualGroupTarget(target as TCommandTarget)) {
-      (target as VirtualGroup).invalidateMembers()
-        ; (target as VirtualGroup).redraw()
+      const applied = deltas.get(target.id)
+      if (!applied) continue
+      ; (target as VirtualGroup).container.x += applied.x
+      ; (target as VirtualGroup).container.y += applied.y
     }
   }
 
-  if (state.targets.length > 1) {
-    ctx.canvas.multiTransformBox.computeGroupBounds()
-    ctx.canvas.multiTransformBox.redraw()
+  if (state.targets.length > 1 && uniformDelta) {
+    ctx.canvas.multiTransformBox.translateBy(uniformDelta.x, uniformDelta.y)
   }
 
   return true

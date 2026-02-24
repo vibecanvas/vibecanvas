@@ -21,6 +21,7 @@ export const cmdPan: InputCommand = (ctx) => {
 
   stage.x -= e.deltaX
   stage.y -= e.deltaY
+  ctx.canvas.notifyViewportChanged()
 
   updateCanvasViewport(ctx.canvas.canvasId, stage.x, stage.y)
 
