@@ -1,9 +1,6 @@
 import type { TDialogView } from "./chat-dialog"
-import createTestMenuView from "./chat-dialog.cmd.test-menu"
 
-const DIALOG_COMMANDS: Record<string, () => TDialogView> = {
-  "test-menu": createTestMenuView,
-}
+const DIALOG_COMMANDS: Record<string, () => TDialogView> = {}
 
 export function hasDialogCommand(command: string): boolean {
   return command in DIALOG_COMMANDS || command === "agents" || command === "models" || command === "rename"

@@ -81,7 +81,6 @@ const COMMAND_SUGGESTIONS: TAutocompleteItem[] = [
   { key: "skills", label: "/skills", detail: "Open skills picker", value: "skills", aliases: "", type: "command" },
   { key: "timeline", label: "/timeline", detail: "Jump to a previous message", value: "timeline", aliases: "", type: "command" },
   { key: "undo", label: "/undo", detail: "Undo last assistant action", value: "undo", aliases: "", type: "command" },
-  { key: "test-menu", label: "/test-menu", detail: "Demo the chat dialog system", value: "test-menu", aliases: "demo", type: "command" },
 ]
 
 const SUPPORTED_IMAGE_TYPES = new Set([

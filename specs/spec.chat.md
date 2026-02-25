@@ -277,7 +277,6 @@ Additional exposed OpenCode API surface (currently available to SPA):
 - `/new`: creates a new OpenCode session on the same chat widget, replaces `session_id` in the `chats` row, and clears all local message state to present a clean chat.
 - Dialog commands:
   - `/agents`: opens dynamic agents picker dialog.
-  - `/test-menu`: opens static demo dialog.
 
 ### Suggested but Not Yet Implemented Commands
 
@@ -336,7 +335,7 @@ Manual smoke checklist:
 - Create chat widget and verify CRDT presence + chat row creation.
 - Send plain text, multiline (`Shift+Enter`), and pasted images.
 - Verify optimistic user bubble then streamed assistant parts/tool blocks.
-- Verify `/copy`, `/init`, `/agents`, and `/test-menu`.
+- Verify `/copy`, `/init`, and `/agents`.
 - Verify unimplemented slash command shows feedback.
 - Verify `@` suggestions, Tab/Shift+Tab navigation, and drag-drop mentions from filetree.
 - Change folder via PATH dialog and confirm new offset chat/session appears.
