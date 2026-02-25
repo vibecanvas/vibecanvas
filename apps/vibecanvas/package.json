@@ -1,6 +1,6 @@
 {
   "name": "vibecanvas",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "Run your agents in an infinite canvas",
   "license": "MIT",
   "bin": {

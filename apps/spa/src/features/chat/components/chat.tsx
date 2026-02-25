@@ -106,25 +106,22 @@ export function Chat(props: TChatProps) {
         const localPath = chatLogic.chat()?.local_path
         const statusMeta = chatLogic.statusLineMeta()
         const lastMessageID = chatLogic.orderedMessages().at(-1)?.message.id
+        const body: {
+          path?: string
+          modelID?: string
+          providerID?: string
+          messageID?: string
+        } = {}
+
+        if (typeof localPath === "string") body.path = localPath
+        if (typeof statusMeta.modelID === "string") body.modelID = statusMeta.modelID
+        if (typeof statusMeta.providerID === "string") body.providerID = statusMeta.providerID
+        if (typeof lastMessageID === "string") body.messageID = lastMessageID
+
         await orpcWebsocketService.client.api.opencode.session.init(
-          typeof localPath === "string"
-            ? {
-              chatId: props.chatId,
-              body: {
-                path: localPath,
-                modelID: statusMeta.modelID,
-                providerID: statusMeta.providerID,
-                messageID: lastMessageID,
-              },
-            }
-            : {
-              chatId: props.chatId,
-              body: {
-                modelID: statusMeta.modelID,
-                providerID: statusMeta.providerID,
-                messageID: lastMessageID,
-              },
-            },
+          Object.keys(body).length > 0
+            ? { chatId: props.chatId, body }
+            : { chatId: props.chatId },
         )
         showToast("Initializing...", "Project context initialized")
       } catch (error) {
