@@ -89,6 +89,8 @@ export async function startServer(options: StartServerOptions): Promise<void> {
   const { port: preferredPort } = options;
   const currentVersion = getServerVersion();
   let hasCheckedLatestVersion = false;
+  let isShuttingDown = false;
+  let bunServer: ReturnType<typeof Bun.serve<WebSocketData>> | null = null;
 
   // Stable wrapper per connection.
   // We keep a separate wrapper object to avoid mutating websocket internals.
@@ -138,17 +140,33 @@ export async function startServer(options: StartServerOptions): Promise<void> {
     }
   }
 
+  const shutdownServer = () => {
+    if (isShuttingDown) return;
+    isShuttingDown = true;
+
+    closeOpencodeServer();
+
+    try {
+      bunServer?.stop();
+    } catch (error) {
+      console.error('[Server] stop failed:', error)
+    }
+
+    process.exit(0)
+  }
+
   process.once('exit', closeOpencodeServer)
-  process.once('SIGINT', closeOpencodeServer)
-  process.once('SIGTERM', closeOpencodeServer)
+  process.once('SIGINT', shutdownServer)
+  process.once('SIGTERM', shutdownServer)
 
   type WebSocketData = {
     path: string;
   };
 
-  const httpPort = serveWithPortFallback((port) => Bun.serve<WebSocketData>({
-    port,
-    async fetch(req, server) {
+  const httpPort = serveWithPortFallback((port) => {
+    bunServer = Bun.serve<WebSocketData>({
+      port,
+      async fetch(req, server) {
       const url = new URL(req.url)
 
       if (url.pathname === '/automerge') {
@@ -226,69 +244,70 @@ export async function startServer(options: StartServerOptions): Promise<void> {
 
       return new Response('Not Found', { status: 404 })
     },
-    websocket: {
-      data: {} as WebSocketData,
-      open(ws) {
-        if (ws.data.path === '/automerge') {
-          const wrapper = {
-            data: { isAlive: true },
-            get readyState() { return ws.readyState; },
-            ping() { ws.ping(); },
-            close() { ws.close(); },
-            send(data: ArrayBuffer) { ws.send(data); },
-            terminate() { ws.terminate(); },
-          };
-          automergeConnections.set(ws, wrapper);
-          wsAdapter.open(wrapper);
-        }
-      },
-      message(ws, message) {
-        if (ws.data.path === '/automerge') {
-          const wrapper = automergeConnections.get(ws);
-          if (!wrapper) return;
-          wrapper.data.isAlive = true;
+      websocket: {
+        data: {} as WebSocketData,
+        open(ws) {
+          if (ws.data.path === '/automerge') {
+            const wrapper = {
+              data: { isAlive: true },
+              get readyState() { return ws.readyState; },
+              ping() { ws.ping(); },
+              close() { ws.close(); },
+              send(data: ArrayBuffer) { ws.send(data); },
+              terminate() { ws.terminate(); },
+            };
+            automergeConnections.set(ws, wrapper);
+            wsAdapter.open(wrapper);
+          }
+        },
+        message(ws, message) {
+          if (ws.data.path === '/automerge') {
+            const wrapper = automergeConnections.get(ws);
+            if (!wrapper) return;
+            wrapper.data.isAlive = true;
 
-          // Handle potential binary-to-string coercion in websocket payloads
-          let bufferMessage: Buffer;
-          if (typeof message === 'string') {
-            try {
-              const textEncoder = new TextEncoder();
-              bufferMessage = Buffer.from(textEncoder.encode(message));
-            } catch (err) {
-              console.error('[WS:automerge] Failed to convert string to Buffer:', err);
-              return;
+            // Handle potential binary-to-string coercion in websocket payloads
+            let bufferMessage: Buffer;
+            if (typeof message === 'string') {
+              try {
+                const textEncoder = new TextEncoder();
+                bufferMessage = Buffer.from(textEncoder.encode(message));
+              } catch (err) {
+                console.error('[WS:automerge] Failed to convert string to Buffer:', err);
+                return;
+              }
+            } else {
+              bufferMessage = message as Buffer;
             }
-          } else {
-            bufferMessage = message as Buffer;
-          }
 
-          try {
-            wsAdapter.message(wrapper, bufferMessage);
-          } catch (err) {
-            console.error('[WS:automerge] adapter.message() error:', err);
+            try {
+              wsAdapter.message(wrapper, bufferMessage);
+            } catch (err) {
+              console.error('[WS:automerge] adapter.message() error:', err);
+            }
           }
-        }
-      },
-      pong(ws, data) {
-        if (ws.data.path !== '/automerge') return;
-        const wrapper = automergeConnections.get(ws);
-        if (!wrapper) return;
-
-        const pongData = data
-          ? Buffer.from(data.buffer, data.byteOffset, data.byteLength)
-          : Buffer.alloc(0);
-        wsAdapter.pong(wrapper, pongData);
-      },
-      close(ws, code, reason) {
-        if (ws.data.path === '/automerge') {
+        },
+        pong(ws, data) {
+          if (ws.data.path !== '/automerge') return;
           const wrapper = automergeConnections.get(ws);
           if (!wrapper) return;
-          wsAdapter.close(wrapper, code ?? 1000, reason ?? '');
-          automergeConnections.delete(ws);
-        }
+
+          const pongData = data
+            ? Buffer.from(data.buffer, data.byteOffset, data.byteLength)
+            : Buffer.alloc(0);
+          wsAdapter.pong(wrapper, pongData);
+        },
+        close(ws, code, reason) {
+          if (ws.data.path === '/automerge') {
+            const wrapper = automergeConnections.get(ws);
+            if (!wrapper) return;
+            wsAdapter.close(wrapper, code ?? 1000, reason ?? '');
+            automergeConnections.delete(ws);
+          }
+        },
       },
-    },
-  }), preferredPort)
+    })
+  }, preferredPort)
 
   maybePublishUpdateNotification()
 
