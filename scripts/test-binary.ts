@@ -2,6 +2,10 @@
 
 import path from "path"
 import { Glob } from "bun"
+import { createORPCClient } from "@orpc/client"
+import { RPCLink } from "@orpc/client/fetch"
+import { inferRPCMethodFromContractRouter } from "@orpc/contract"
+import { apiContract } from "@vibecanvas/core-contract"
 
 type TArgs = {
   binaryPath?: string
@@ -147,6 +151,20 @@ async function assertWsOpen(url: string, timeoutMs: number): Promise<WebSocket> 
   )
 }
 
+async function assertHttpApi(baseUrl: string, timeoutMs: number): Promise<void> {
+  const link = new RPCLink({
+    url: baseUrl,
+    method: inferRPCMethodFromContractRouter(apiContract),
+  })
+
+  const client = createORPCClient(link)
+  const canvases = await withTimeout(client.api.canvas.list(), timeoutMs, "rpc api.canvas.list")
+
+  if (!Array.isArray(canvases)) {
+    throw new Error("api.canvas.list did not return an array")
+  }
+}
+
 async function main() {
   const args = parseArgs()
   const binaryPath = await resolveBinaryPath(args.binaryPath)
@@ -199,9 +217,8 @@ async function main() {
       console.log(`[test-binary] PASS asset ${assetUrl}`)
     }
 
-    const apiWs = await assertWsOpen(`ws://127.0.0.1:${args.port}/api`, args.requestTimeoutMs)
-    apiWs.close(1000, "test done")
-    console.log("[test-binary] PASS ws /api")
+    await assertHttpApi(baseUrl, args.requestTimeoutMs)
+    console.log("[test-binary] PASS http /api")
 
     const automergeWs = await assertWsOpen(`ws://127.0.0.1:${args.port}/automerge`, args.requestTimeoutMs)
     await Bun.sleep(250)
