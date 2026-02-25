@@ -724,6 +724,16 @@ export function createChatContextLogic(args: TCreateChatContextArgs) {
     setStore("chatSlice", "backendChats", args.canvas.id, (chats) => [...chats, newChat])
   }
 
+  const resetSession = () => {
+    setChatState({
+      messages: {},
+      parts: {},
+      messageOrder: [],
+      sessionStatus: { type: "idle" },
+    })
+    args.setConnectionState(CONNECTION_STATE.READY)
+  }
+
   const handleSetFolder = () => {
     setIsPathDialogOpen(true)
   }
@@ -823,6 +833,7 @@ export function createChatContextLogic(args: TCreateChatContextArgs) {
     searchFileSuggestionsWithOptions,
     handleFileSuggestionUsed,
     renameChat,
+    resetSession,
     sendMessage,
     statusLineMeta,
     availableAgents,

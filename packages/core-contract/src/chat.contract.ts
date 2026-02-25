@@ -30,6 +30,10 @@ export default oc.router({
     .input(z.object({ params: z.object({ id: z.string() }), body: updateChatBodySchema }))
     .output(ZChatsSelect),
 
+  newSession: oc
+    .input(z.object({ params: z.object({ id: z.string() }) }))
+    .output(ZChatsSelect),
+
   remove: oc
     .input(z.object({ params: z.object({ id: z.string() }) }))
     .output(z.void()),

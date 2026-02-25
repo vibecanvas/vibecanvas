@@ -104,6 +104,7 @@ type TAgentLogRow = {
 - `chat.list -> TChat[]`
 - `chat.create` input: `{ canvas_id, title, local_path?: string | null, x, y }`
 - `chat.update` input: `{ params: { id }, body: { title? } }`
+- `chat.newSession` input: `{ params: { id } }` — creates a new OpenCode session and replaces `session_id` on the chat row.
 - `chat.remove` input: `{ params: { id } }`
 
 ### OpenCode Contract (`packages/core-contract/src/opencode.contract.ts`)
@@ -273,6 +274,7 @@ Additional exposed OpenCode API surface (currently available to SPA):
 - `/exit`: delete widget.
 - `/copy`: copies formatted transcript from local message graph.
 - `/init`: calls `api.opencode.session.init`.
+- `/new`: creates a new OpenCode session on the same chat widget, replaces `session_id` in the `chats` row, and clears all local message state to present a clean chat.
 - Dialog commands:
   - `/agents`: opens dynamic agents picker dialog.
   - `/test-menu`: opens static demo dialog.
@@ -281,7 +283,7 @@ Additional exposed OpenCode API surface (currently available to SPA):
 
 Autocomplete advertises commands including:
 
-- `/compact`, `/models`, `/new`, `/rename`, `/sessions`, `/skills`, `/timeline`, `/undo`.
+- `/compact`, `/models`, `/rename`, `/sessions`, `/skills`, `/timeline`, `/undo`.
 
 Current behavior for unhandled commands is toast-based "not implemented" feedback.
 
@@ -352,6 +354,7 @@ Manual smoke checklist:
 ### Functional Core
 
 - `packages/functional-core/src/chat/ctrl.create-chat.ts`
+- `packages/functional-core/src/chat/ctrl.new-session.ts`
 - `packages/functional-core/src/chat/ctrl.update-chat.ts`
 - `packages/functional-core/src/chat/ctrl.delete-chat.ts`
 
@@ -433,4 +436,13 @@ flowchart TD
   D2 --> A3[CRDT delete element]
   D2 --> API2[api.chat.remove]
   API2 --> D3[Delete chats row + close OpenCode client]
+
+  U6[/new slash command] --> N1[SPA calls api.chat.newSession]
+  N1 --> N2[Server ctrlNewSession]
+  N2 --> N3[OpenCode session.create with existing local_path]
+  N2 --> N4[UPDATE chats SET session_id = new]
+  N2 --> N5[Publish dbUpdatePublisher event]
+  N5 --> N6[SPA updates store backendChats with new session_id]
+  N6 --> N7[chatLogic.resetSession clears messages/parts/status]
+  N7 --> N8[handleOpenCodeEvent filters by new session_id reactively]
 ```

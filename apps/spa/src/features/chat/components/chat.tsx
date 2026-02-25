@@ -5,7 +5,7 @@ import { applyChangesToCRDT } from "@/features/canvas-crdt/changes"
 import { AElement } from "@/features/canvas-crdt/renderables/element.abstract"
 import { CONNECTION_STATE } from "@/features/canvas-crdt/renderables/elements/chat/chat.state-machine"
 import { createChatContextLogic } from "@/features/chat/context/chat.context"
-import { store } from "@/store"
+import { setStore, store } from "@/store"
 import { toTildePath } from "@/utils/path-display"
 import type { TCanvas } from "@vibecanvas/core/canvas/ctrl.create-canvas"
 import type { Accessor, Setter } from "solid-js"
@@ -82,6 +82,22 @@ export function Chat(props: TChatProps) {
         console.error("Failed to copy transcript:", error)
         showToast("Copy failed", "Could not access clipboard")
       }
+      return
+    }
+
+    if (command === "new") {
+      const [error, updatedChat] = await orpcWebsocketService.safeClient.api.chat.newSession({
+        params: { id: props.chatId },
+      })
+      if (error || !updatedChat) {
+        showToast("New session failed", "Could not create new session")
+        return
+      }
+      setStore("chatSlice", "backendChats", props.canvas.id,
+        (chats) => chats.map(c => c.id === props.chatId ? updatedChat : c),
+      )
+      chatLogic.resetSession()
+      showToast("New session", "Started a fresh session")
       return
     }
 
