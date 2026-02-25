@@ -351,6 +351,7 @@ export default oc.router({
 
   events: oc
     .input(eventsInputSchema)
+    .route({ method: "GET" })
     .output(eventIterator(type<OpenCodeEvent>())),
 
   app: oc.router({

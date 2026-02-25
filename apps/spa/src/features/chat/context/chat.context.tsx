@@ -802,11 +802,7 @@ export function createChatContextLogic(args: TCreateChatContextArgs) {
   ))
 
   onMount(async () => {
-    if (orpcWebsocketService.websocket.readyState === WebSocket.OPEN) {
-      args.setConnectionState(CONNECTION_STATE.READY)
-    } else {
-      return
-    }
+    args.setConnectionState(CONNECTION_STATE.READY)
 
     await loadSessionInfo()
     await loadPreviousMessages()

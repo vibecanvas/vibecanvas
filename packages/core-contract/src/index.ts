@@ -1,4 +1,4 @@
-import { oc } from "@orpc/contract";
+import { oc, populateContractRouterPaths } from "@orpc/contract";
 import canvasContract from "./canvas.contract";
 import chatContract from "./chat.contract";
 import dbContract from "./db.contract";
@@ -24,5 +24,9 @@ export const contract = oc.router({
   db: dbContract,
   notification: notificationContract,
 });
+
+export const apiContract = populateContractRouterPaths(
+  oc.router({ api: contract }),
+);
 
 export default contract;

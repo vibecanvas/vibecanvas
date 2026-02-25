@@ -26,5 +26,6 @@ export const ZDbEventSchema = z.object({
 export default oc.router({
   events: oc
     .input(z.object({ canvasId: z.string() }))
+    .route({ method: 'GET' })
     .output(eventIterator(ZDbEventSchema)),
 });

@@ -1,7 +1,7 @@
 /// <reference path="./build-constants.d.ts" />
 // Initialize global functions (tExternal, tInternal, executeRollbacks)
 import { onError } from '@orpc/server';
-import { RPCHandler } from '@orpc/server/bun-ws';
+import { RPCHandler } from '@orpc/server/fetch';
 import { OpencodeService } from '@vibecanvas/shell/opencode/srv.opencode';
 import db from "@vibecanvas/shell/database/db";
 import { existsSync } from 'fs';
@@ -87,6 +87,8 @@ function getPublicAssetPath(pathname: string): string | null {
 
 export async function startServer(options: StartServerOptions): Promise<void> {
   const { port: preferredPort } = options;
+  const currentVersion = getServerVersion();
+  let hasCheckedLatestVersion = false;
 
   // Stable wrapper per connection.
   // We keep a separate wrapper object to avoid mutating websocket internals.
@@ -108,6 +110,24 @@ export async function startServer(options: StartServerOptions): Promise<void> {
     ],
   })
 
+  const maybePublishUpdateNotification = () => {
+    if (hasCheckedLatestVersion) return;
+    hasCheckedLatestVersion = true;
+
+    fetch('https://registry.npmjs.org/vibecanvas/latest')
+      .then(res => res.json())
+      .then((data: { version?: string }) => {
+        if (data.version && data.version !== currentVersion) {
+          publishNotification({
+            type: 'info',
+            title: 'Update Available',
+            description: `v${data.version} is available (current: v${currentVersion})`,
+          });
+        }
+      })
+      .catch(() => { });
+  }
+
   let opencodeService!: OpencodeService
 
   const closeOpencodeServer = () => {
@@ -128,16 +148,22 @@ export async function startServer(options: StartServerOptions): Promise<void> {
 
   const httpPort = serveWithPortFallback((port) => Bun.serve<WebSocketData>({
     port,
-    fetch(req, server) {
+    async fetch(req, server) {
       const url = new URL(req.url)
 
-      const isWebSocketEndpoint = url.pathname === '/api' || url.pathname === '/automerge'
-      if (isWebSocketEndpoint) {
+      if (url.pathname === '/automerge') {
         if (server.upgrade(req, { data: { path: url.pathname } })) {
           return
         }
 
         return new Response('Upgrade failed', { status: 500 })
+      }
+
+      const rpcResult = await handler.handle(req, {
+        context: { db, opencodeService },
+      })
+      if (rpcResult.matched) {
+        return rpcResult.response
       }
 
       if (req.method === 'GET' && url.pathname.startsWith('/files/')) {
@@ -214,28 +240,10 @@ export async function startServer(options: StartServerOptions): Promise<void> {
           };
           automergeConnections.set(ws, wrapper);
           wsAdapter.open(wrapper);
-        } else if (ws.data.path === '/api') {
-          const currentVersion = getServerVersion();
-          fetch('https://registry.npmjs.org/vibecanvas/latest')
-            .then(res => res.json())
-            .then((data: { version?: string }) => {
-              if (data.version && data.version !== currentVersion) {
-                publishNotification({
-                  type: 'info',
-                  title: 'Update Available',
-                  description: `v${data.version} is available (current: v${currentVersion})`,
-                });
-              }
-            })
-            .catch(() => { });
         }
       },
       message(ws, message) {
-        if (ws.data.path === '/api') {
-          handler.message(ws, message, {
-            context: { db, opencodeService },
-          })
-        } else if (ws.data.path === '/automerge') {
+        if (ws.data.path === '/automerge') {
           const wrapper = automergeConnections.get(ws);
           if (!wrapper) return;
           wrapper.data.isAlive = true;
@@ -277,12 +285,12 @@ export async function startServer(options: StartServerOptions): Promise<void> {
           if (!wrapper) return;
           wsAdapter.close(wrapper, code ?? 1000, reason ?? '');
           automergeConnections.delete(ws);
-        } else if (ws.data.path === '/api') {
-          handler.close(ws)
         }
       },
     },
   }), preferredPort)
+
+  maybePublishUpdateNotification()
 
   console.log(`Server verion ${VIBECANVAS_VERSION} listening on http://localhost:${httpPort}`);
 
