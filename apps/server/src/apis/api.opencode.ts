@@ -6,6 +6,10 @@ import type db from "@vibecanvas/shell/database/db";
 
 function getErrorMessage(error: unknown): string {
   if (typeof error === "object" && error !== null) {
+    if ("errors" in error && Array.isArray(error.errors) && error.errors.length > 0) {
+      return JSON.stringify(error.errors[0]);
+    }
+
     if ("data" in error && typeof error.data === "object" && error.data !== null && "message" in error.data && typeof error.data.message === "string") {
       return error.data.message;
     }
@@ -24,7 +28,7 @@ function throwFromOpencodeError(error: unknown): never {
   }
 
   if (typeof error === "object" && error !== null && "success" in error && error.success === false) {
-    throw new ORPCError("BAD_REQUEST", { message: "Bad request" });
+    throw new ORPCError("BAD_REQUEST", { message: getErrorMessage(error) });
   }
 
   throw new ORPCError("OPENCODE_ERROR", { message: getErrorMessage(error) });
@@ -244,6 +248,32 @@ const sessionShell = baseOs.api.opencode.session.shell.handler(async ({ input, c
   return data;
 });
 
+const sessionInit = baseOs.api.opencode.session.init.handler(async ({ input, context: { db, opencodeService } }) => {
+  const { chat, client } = requireChatContext(db, opencodeService, input.chatId);
+
+  const initParams: {
+    sessionID: string;
+    directory: string;
+    modelID?: string;
+    providerID?: string;
+    messageID?: string;
+  } = {
+    sessionID: chat.session_id,
+    directory: input.body?.path ?? chat.local_path,
+  };
+
+  if (typeof input.body?.modelID === "string") initParams.modelID = input.body.modelID;
+  if (typeof input.body?.providerID === "string") initParams.providerID = input.body.providerID;
+  if (typeof input.body?.messageID === "string") initParams.messageID = input.body.messageID;
+
+  const { data, error } = await client.session.init(initParams);
+
+  if (error) throwFromOpencodeError(error);
+  if (typeof data !== "boolean") throw new ORPCError("OPENCODE_ERROR", { message: "Missing OpenCode response data" });
+
+  return data;
+});
+
 const sessionUpdate = baseOs.api.opencode.session.update.handler(async ({ input, context: { db, opencodeService } }) => {
   const { chat, client } = requireChatContext(db, opencodeService, input.chatId);
 
@@ -335,6 +365,7 @@ export const opencode = {
     providers: configProviders,
   },
   session: {
+    init: sessionInit,
     command: sessionCommand,
     shell: sessionShell,
     update: sessionUpdate,

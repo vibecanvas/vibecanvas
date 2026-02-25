@@ -103,10 +103,29 @@ export function Chat(props: TChatProps) {
 
     if (command === "init") {
       try {
-        await orpcWebsocketService.client.api.opencode.session.init({
-          chatId: props.chatId,
-          body: {},
-        })
+        const localPath = chatLogic.chat()?.local_path
+        const statusMeta = chatLogic.statusLineMeta()
+        const lastMessageID = chatLogic.orderedMessages().at(-1)?.message.id
+        await orpcWebsocketService.client.api.opencode.session.init(
+          typeof localPath === "string"
+            ? {
+              chatId: props.chatId,
+              body: {
+                path: localPath,
+                modelID: statusMeta.modelID,
+                providerID: statusMeta.providerID,
+                messageID: lastMessageID,
+              },
+            }
+            : {
+              chatId: props.chatId,
+              body: {
+                modelID: statusMeta.modelID,
+                providerID: statusMeta.providerID,
+                messageID: lastMessageID,
+              },
+            },
+        )
         showToast("Initializing...", "Project context initialized")
       } catch (error) {
         console.error("Init failed:", error)

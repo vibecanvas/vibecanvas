@@ -68,6 +68,9 @@ const sessionInitInputSchema = z.object({
   chatId: z.string(),
   body: z.object({
     path: z.string().optional(),
+    modelID: z.string().optional(),
+    providerID: z.string().optional(),
+    messageID: z.string().optional(),
   }).optional(),
 });
 type TSessionAbortInput = TMethodInput<OpencodeClient["session"]["abort"]>;
