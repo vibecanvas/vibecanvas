@@ -4,7 +4,6 @@ import type db from "@vibecanvas/shell/database/db";
 import * as schema from "@vibecanvas/shell/database/schema";
 import { type OpencodeService } from "@vibecanvas/shell/opencode/srv.opencode";
 import { eq } from "drizzle-orm";
-import { homedir } from 'os';
 import { createElement } from "../automerge/fn.create-element";
 
 type TPortal = {
