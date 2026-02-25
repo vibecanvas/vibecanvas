@@ -1,5 +1,6 @@
 import { ctrlCreateChat } from "@vibecanvas/core/chat/ctrl.create-chat";
 import { ctrlDeleteChat } from "@vibecanvas/core/chat/ctrl.delete-chat";
+import { ctrlNewSession } from "@vibecanvas/core/chat/ctrl.new-session";
 import { ctrlUpdateChat } from "@vibecanvas/core/chat/ctrl.update-chat";
 import { repo } from "@vibecanvas/server/automerge-repo";
 import { homedir } from 'os';
@@ -42,6 +43,15 @@ const update = baseOs.api.chat.update.handler(async ({ input, context: { db } })
   return chat;
 });
 
+const newSession = baseOs.api.chat.newSession.handler(async ({ input, context: { db, opencodeService } }) => {
+  const [result, error] = await ctrlNewSession({ db, opencodeService }, { id: input.params.id });
+  if (error) throw error
+
+  dbUpdatePublisher.publish(result.canvas_id, { data: { change: 'update', id: result.id, table: 'chats', record: result } })
+
+  return result;
+});
+
 const remove = baseOs.api.chat.remove.handler(async ({ input, context: { db, opencodeService } }) => {
   const [, error] = ctrlDeleteChat({ db, opencodeService }, { id: input.params.id });
   if (error) throw error
@@ -51,5 +61,6 @@ export const chat = {
   list,
   create,
   update,
+  newSession,
   remove,
 };

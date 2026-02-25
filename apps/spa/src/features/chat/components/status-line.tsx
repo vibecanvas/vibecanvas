@@ -1,8 +1,32 @@
+import { Show } from "solid-js"
+import { Badge } from "@kobalte/core/badge"
 import { CONNECTION_STATE } from "@/features/canvas-crdt/renderables/elements/chat/chat.state-machine"
 import type { Accessor } from "solid-js"
 
 type TStatusLineProps = {
   state: Accessor<CONNECTION_STATE>
+  agentName?: string | null
+  agentColor?: string | null
+  modelID?: string | null
+  providerID?: string | null
+}
+
+const AGENT_COLOR_CLASS: Record<string, string> = {
+  primary: "text-primary border-primary/40 bg-primary/15",
+  secondary: "text-secondary-foreground border-secondary/40 bg-secondary/40",
+  accent: "text-accent-foreground border-accent/50 bg-accent/40",
+  success: "text-emerald-700 border-emerald-300 bg-emerald-100",
+  warning: "text-amber-700 border-amber-300 bg-amber-100",
+  error: "text-red-700 border-red-300 bg-red-100",
+  info: "text-sky-700 border-sky-300 bg-sky-100",
+}
+
+function resolveAgentColorClass(color?: string | null): string {
+  const fallback = "text-blue-700 border-blue-300 bg-blue-100"
+  if (!color) return fallback
+  const trimmed = color.trim()
+  if (!trimmed) return fallback
+  return AGENT_COLOR_CLASS[trimmed.toLowerCase()] ?? fallback
 }
 
 const STATE_COLORS: Record<CONNECTION_STATE, string> = {
@@ -34,9 +58,29 @@ const STATE_LABELS: Record<CONNECTION_STATE, string> = {
 }
 
 export function StatusLine(props: TStatusLineProps) {
+  const agentColorClass = () => resolveAgentColorClass(props.agentColor)
+
+  const modelWithProvider = () => {
+    if (!props.modelID) return null
+    if (!props.providerID) return props.modelID
+    return `${props.providerID}/${props.modelID}`
+  }
+
   return (
     <div class="px-2 py-1 bg-muted border-t border-border text-muted-foreground text-xs font-mono flex items-center justify-between">
-      <span>{STATE_LABELS[props.state()]}</span>
+      <div class="flex items-center gap-3 min-w-0">
+        <span>{STATE_LABELS[props.state()]}</span>
+        <Show when={props.agentName}>
+          <Badge
+            class={`px-1.5 py-0.5 border truncate max-w-40 ${agentColorClass()}`}
+          >
+            {props.agentName}
+          </Badge>
+        </Show>
+        <Show when={modelWithProvider()}>
+          <span class="text-emerald-700 truncate">{modelWithProvider()}</span>
+        </Show>
+      </div>
       <span class={`w-3 h-3 rounded-full ${STATE_COLORS[props.state()]}`} />
     </div>
   )

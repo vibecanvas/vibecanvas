@@ -1,116 +1,80 @@
-# Chat Fullstack Spec
+# Chat Fullstack Spec (OpenCode + Canvas Widget)
 
 ## Table of Contents
 
 1. [Overview](#overview)
 2. [Requirements](#requirements)
-3. [Assumptions](#assumptions)
-4. [User Flow](#user-flow)
-5. [Composer and ProseMirror](#composer-and-prosemirror)
-6. [Data Contracts and Shapes](#data-contracts-and-shapes)
-7. [Backend Implementation](#backend-implementation)
-8. [SPA Implementation](#spa-implementation)
-9. [State, Sync, and Event Lifecycle](#state-sync-and-event-lifecycle)
-10. [Performance and UX Behavior](#performance-and-ux-behavior)
+3. [Current Assumptions and Constraints](#current-assumptions-and-constraints)
+4. [End-to-End User Flow](#end-to-end-user-flow)
+5. [Contracts and Data Shapes](#contracts-and-data-shapes)
+6. [Backend Implementation](#backend-implementation)
+7. [SPA Implementation](#spa-implementation)
+8. [Composer, Autocomplete, and Drag-Drop](#composer-autocomplete-and-drag-drop)
+9. [Dialog Menu and Slash Command System](#dialog-menu-and-slash-command-system)
+10. [State and Sync Lifecycle](#state-and-sync-lifecycle)
 11. [Error Handling](#error-handling)
-12. [Testing and Verification](#testing-and-verification)
-13. [File Map](#file-map)
-14. [Data Flow Diagram](#data-flow-diagram)
+12. [Performance and UX Notes](#performance-and-ux-notes)
+13. [Testing and Verification](#testing-and-verification)
+14. [File Map](#file-map)
+15. [Data Flow Diagram](#data-flow-diagram)
 
 ## Overview
 
-The Chat feature is a canvas widget that embeds an AI conversation UI directly on the CRDT canvas.
+Chat is a CRDT-backed canvas widget that embeds an OpenCode session UI directly into the drawing surface.
 
-It is implemented as:
+Architecture summary:
 
-- A CRDT element (`type: "chat"`) for placement, resize, rotation, and delete behavior.
-- A backend database row (`chats` table) for widget metadata (`title`, `session_id`, `local_path`, `canvas_id`).
-- An OpenCode session per chat ID, managed server-side via `OpencodeService`.
-- A ProseMirror-based input composer that supports multiline text, image tokens, paste-image handling, and autocomplete.
-- Event streaming (`ai.events`) for live agent output plus persisted history replay from `agent_logs`.
+- Geometry and transforms (`x/y/w/h/angle/scale`) live in the Automerge canvas doc as `elements[id].data.type = "chat"`.
+- Persistent metadata (`title`, `session_id`, `local_path`, `canvas_id`) lives in SQLite `chats`.
+- Message history snapshots live in SQLite `agent_logs` (`info + parts`).
+- Live runtime behavior comes from OpenCode SDK streams and RPC calls under `api.opencode.*`.
+- Composer is ProseMirror-based and supports text, pasted images, slash commands, `@` path mentions, and filetree drag-drop.
 
-The feature uses a hybrid model: geometry lives in Automerge CRDT, while chat/session metadata and message history live in SQLite and OpenCode runtime.
+The design is hybrid local-first: CRDT handles visual placement/collaboration, while chat runtime and transcripts are persisted and streamed through server APIs.
 
 ## Requirements
 
-- Users can create chat widgets from the canvas drawing tool (`chat`).
-- Widget supports move/resize/rotate/select/delete like other CRDT elements.
+- Users can create a chat widget from toolbar tool `chat`.
+- Chat widgets support standard canvas interactions: select, move, resize, rotate, clone, delete.
 - Creating a chat must create:
-  - a `chats` DB row,
-  - an OpenCode session (`session_id`),
-  - and a CRDT element in the active canvas doc.
-- Composer supports:
-  - Enter to send,
-  - Shift+Enter for newline,
-  - image paste as file parts,
-  - autocomplete for slash commands (`/`) and file mentions (`@`),
-  - drag-drop filetree rows into composer to insert `@relative/path ` mentions (relative to chat local path).
-- Prompt sends structured parts (`text` and/or `file`) to backend `ai.prompt`.
-- Event stream updates message/part state in real time.
-- Previous messages load from `agent_logs` on mount.
-- Folder selection changes working directory by creating a new chat/session.
+  - OpenCode session (`session_id`),
+  - `chats` row,
+  - CRDT chat element.
+- Chat input supports:
+  - Enter send,
+  - Shift+Enter newline,
+  - image paste -> file parts,
+  - `/` command autocomplete,
+  - `@` file/directory autocomplete,
+  - filetree drag-drop mention insertion with path-scope validation.
+- Sending a prompt uses structured parts against `api.opencode.prompt`.
+- Live updates come from `api.opencode.events` and are applied incrementally.
+- History rehydrates from `agent-logs.getBySession`.
+- Changing folder path creates a new chat/session near current widget (does not mutate existing chat session path).
 
-## Assumptions
+## Current Assumptions and Constraints
 
-- Chat metadata is globally mirrored in `store.chatSlice.backendChats[canvasId]`.
-- Message bodies are not mirrored in global store; they are local component state (`chatState`).
-- A chat's local path is treated as session-scoped context; changing path starts a new session instead of mutating existing session directory.
-- ProseMirror serialized output sends file parts first, then combined text part.
-- `ai.events` stream may include cross-session events for same directory; client filters by `sessionID` before applying.
+- Chat rows are globally mirrored by canvas in `store.chatSlice.backendChats[canvasId]`.
+- Message/part graph is widget-local state in `createChatContextLogic`, not in global store.
+- Events stream is directory-based on the server side; client filters by `sessionID` to isolate the active chat session.
+- Slash command autocomplete lists more commands than currently implemented behavior (some commands show "not implemented" toast).
+- Chat delete applies CRDT removal immediately; backend delete is asynchronous best effort.
 
-## User Flow
+## End-to-End User Flow
 
 1. User selects `chat` tool and clicks canvas.
-2. SPA calls `api.chat.create({ canvas_id, x, y, title, local_path })`.
-3. Server creates OpenCode session + `chats` row + CRDT chat element.
-4. Chat renderable mounts overlay and renders `Chat` Solid component.
-5. `Chat` loads persisted logs via `agent-logs.getBySession` and subscribes to `ai.events`.
-6. User composes message in ProseMirror editor, optionally adding images/autocomplete tokens.
-7. On send, SPA adds optimistic user message locally and calls `ai.prompt`.
-8. Streamed events update message parts and status until session returns idle.
-9. User can remove widget (CRDT delete + `chat.remove`) or select new folder (creates new chat/session).
+2. SPA `cmd.draw-new` calls `api.chat.create({ canvas_id, x, y, title, local_path })`.
+3. Server `ctrlCreateChat` validates canvas, creates OpenCode session, inserts chat row, writes CRDT element.
+4. Chat renderable mounts DOM overlay and renders `Chat` component.
+5. `Chat` context loads prior logs and available agents, then subscribes to `api.opencode.events`.
+6. User composes via ProseMirror (`text` + optional `file` parts), optionally using `@` suggestions or drag-drop.
+7. On send, UI inserts optimistic user message and calls `api.opencode.prompt`.
+8. Stream events (`message.updated`, `message.part.updated/delta`, `session.status`, `session.idle`) reconcile optimistic state and drive status line.
+9. User can run slash actions (copy transcript, init context, open agents menu), switch folder (new chat), or delete widget.
 
-## Composer and ProseMirror
+## Contracts and Data Shapes
 
-### Schema (`apps/spa/src/features/chat/prosemirror/schema.ts`)
-
-- `doc` -> `paragraph+`
-- Inline nodes:
-  - `text`
-  - `hard_break`
-  - `image_token` (atom node with `id`, `filename`, `mime`, `url`)
-
-### Plugins and key behavior (`chat-input.tsx`)
-
-- `history()` + undo/redo keybinds (`Mod-z`, `Mod-Shift-z`).
-- `pasteImagePlugin` intercepts paste events, filters image MIME types, converts to data URL, inserts `image_token` node.
-- Composer `handleDOMEvents` accepts drag payload `application/x-vibecanvas-filetree-node` and inserts mention text at drop caret via `posAtCoords`.
-- Drag-dropped file references are accepted only when source path is inside chat local path; otherwise composer shows an error toast and skips insertion.
-- Placeholder plugin sets `data-placeholder` while doc is empty.
-- Enter behavior:
-  - if autocomplete open -> select highlighted item,
-  - else send message if non-empty,
-  - else no-op.
-- `Shift-Enter` inserts `hard_break`.
-
-### Autocomplete model
-
-- Triggers:
-  - `/` for command suggestions (`fix`, `plan`, `explain`, `test`, `review`),
-  - `@` for file suggestions derived from `file.files` traversal.
-- Matching uses current textblock caret context and regex `/(^|\\s)([@/])([^\\s@/]*)$/`.
-- Menu positioning uses `coordsAtPos` and composer host offset.
-- Keyboard navigation: ArrowUp/ArrowDown, Tab, Enter, Escape.
-
-### Serialization (`serialize.ts`)
-
-- Collects `image_token` nodes into `file` parts.
-- Collects paragraph/hard-break content into a single trimmed `text` part.
-- Final payload order is `[...fileParts, ...textParts]`.
-
-## Data Contracts and Shapes
-
-### Database schema
+### Database (`packages/imperative-shell/src/database/schema.ts`)
 
 ```ts
 type TChatRow = {
@@ -135,188 +99,294 @@ type TAgentLogRow = {
 };
 ```
 
-### Chat contract (`packages/core-contract/src/chat.contract.ts`)
+### Chat Contract (`packages/core-contract/src/chat.contract.ts`)
 
-- `chat.list` -> `TChat[]`
-- `chat.create` input:
-  - `canvas_id: string`
-  - `title: string`
-  - `local_path?: string | null`
-  - `x: number`
-  - `y: number`
+- `chat.list -> TChat[]`
+- `chat.create` input: `{ canvas_id, title, local_path?: string | null, x, y }`
 - `chat.update` input: `{ params: { id }, body: { title? } }`
+- `chat.newSession` input: `{ params: { id } }` — creates a new OpenCode session and replaces `session_id` on the chat row.
 - `chat.remove` input: `{ params: { id } }`
 
-### AI contract (`packages/core-contract/src/ai.contract.ts`)
+### OpenCode Contract (`packages/core-contract/src/opencode.contract.ts`)
 
-- `ai.prompt` input: `{ chatId, parts[] }` where parts include `text`, `file`, `agent`, `subtask`.
-- `ai.prompt` output: `{ info: AssistantMessage, parts: Part[] }`.
-- `ai.events` input: `{ chatId }`, output: async event iterator of OpenCode events.
+Primary chat-facing endpoints:
 
-### Agent logs contract (`packages/core-contract/src/agent-logs.contract.ts`)
+- `opencode.prompt`: send structured parts + optional `agent`; output `{ info, parts }`.
+- `opencode.events`: async iterator of OpenCode events.
+- `opencode.app.agents`: fetch agent list scoped by chat path.
+- `opencode.session.init`: initialize project/session context.
+- `opencode.session.command`: execute OpenCode command payloads.
+- `opencode.find.files`: backend fuzzy path search for `@` autocomplete.
 
-- `agent-logs.getBySession` input: `{ params: { sessionId } }`
-- output: `TAgentLog[] | { type: "ERROR", message: "Failed to get agent logs" }`
+Additional exposed OpenCode API surface (currently available to SPA):
+
+- `opencode.app.log`, `opencode.path.get`, `opencode.config.get`, `opencode.config.providers`,
+- `opencode.find.text`, `opencode.file.read`, `opencode.auth.set`, `opencode.session.shell`.
+
+### Agent Logs Contract (`packages/core-contract/src/agent-logs.contract.ts`)
+
+- `agent-logs.getBySession`: `{ params: { sessionId } }`
+- Output union: `TAgentLog[] | { type: "ERROR"; message: "Failed to get agent logs" }`
 
 ## Backend Implementation
 
-### Functional core (`packages/functional-core/src/chat/`)
+### Functional Core (`packages/functional-core/src/chat/`)
 
-#### `ctrl.create-chat.ts`
+`ctrl.create-chat.ts`
+
 - Validates target canvas exists.
-- Creates OpenCode session using provided `local_path`.
-- Inserts `chats` row.
-- Appends CRDT `chat` element to canvas doc with default dimensions (`w: 360`, `h: 460`).
+- Creates OpenCode session (`session.create`) using requested `local_path`.
+- Inserts `chats` row and writes CRDT chat element (`w: 360`, `h: 460`, `isCollapsed: false`).
 - On CRDT failure, deletes inserted chat row (compensating rollback).
 
-#### `ctrl.update-chat.ts`
-- Supports title update only.
-- Returns NOT_FOUND when no row updated.
+`ctrl.update-chat.ts`
 
-#### `ctrl.delete-chat.ts`
-- Deletes chat row by ID.
-- Closes cached OpenCode client for that chat ID.
+- Updates chat title only.
+- Returns `CTRL.CHAT.UPDATE_CHAT.NOT_FOUND` when row missing.
+
+`ctrl.delete-chat.ts`
+
+- Deletes chat row by id.
+- Calls `opencodeService.closeClient(chatId)`.
 
 ### Server APIs (`apps/server/src/apis/`)
 
-#### `api.chat.ts`
-- `create`: wraps controller, defaults `local_path` to `os.homedir()` when input is null/undefined, returns fresh row.
-- `update`: applies title update, publishes DB update event (`table: "chats"`).
-- `remove`: deletes chat and closes client.
+`api.chat.ts`
 
-#### `api.ai.ts`
+- `create`: defaults `local_path` to `os.homedir()` if null/undefined.
+- `update`: updates row and publishes `dbUpdatePublisher` event (`table: chats`, `change: update`).
+- `remove`: deletes row and closes cached client.
+
+`api.opencode.ts`
+
+- `requireChatContext(chatId)` resolves chat row and gets/creates OpenCode client.
 - `prompt`:
-  - resolves chat row and OpenCode client,
-  - sends `session.prompt({ sessionID, parts, directory })`,
-  - fetches full user message via `session.message(...)`,
-  - persists both user+assistant messages in `agent_logs` transaction.
+  - sends `client.session.prompt({ sessionID, agent, parts, directory })`,
+  - fetches user message by `parentID` with `session.message`,
+  - stores user + assistant entries in `agent_logs` transaction.
 - `events`:
-  - subscribes to OpenCode event stream (`client.event.subscribe({ directory })`),
-  - yields events to SPA iterator.
+  - subscribes to `client.event.subscribe({ directory: chat.local_path })`,
+  - streams raw OpenCode events to client.
+- Includes error translation (`NotFound`, bad request, generic OpenCode error).
 
-#### `api.agent-logs.ts`
-- Fetches all logs by `session_id` for hydration on widget mount.
+`api.agent-logs.ts`
+
+- Retrieves all log rows for `session_id`.
+- Returns contract-safe error union on failure.
+
+### OpenCode Service (`packages/imperative-shell/src/opencode/srv.opencode.ts`)
+
+- Singleton service.
+- Reuses healthy daemon across watch restarts when possible.
+- Spawns new daemon on available port when needed.
+- Caches OpenCode clients by key (`getClient(key, directory?)`), supports disposal by `closeClient`.
 
 ## SPA Implementation
 
-### Canvas renderable integration
+### Canvas Integration
 
-#### `chat.class.ts`
-- Extends `AElement<'chat'>`.
-- Reuses standard transform actions (`move`, `resize`, `rotate`, `scale`, `delete`, `clone`, selection).
-- Creates DOM overlay under `#canvas-overlay-entrypoint` and keeps bounds synced each ticker frame.
-- Renders `Chat` component with reactive `bounds` and connection state signal.
+`cmd.draw-new.ts`
 
-#### `chat.apply-delete.ts`
-- Removes renderable from canvas and emits CRDT delete change.
-- Calls `api.chat.remove` asynchronously; shows toast on backend failure.
+- Chat tool click calls `api.chat.create`.
+- Uses `localStorage['vibecanvas-filetree-last-path']` as optional default folder.
+- Pushes returned chat row into `store.chatSlice.backendChats[canvasId]`.
 
-### Chat component behavior (`chat.tsx`)
+`chat.class.ts`
 
-- Resolves current chat metadata from `store.chatSlice.backendChats[canvasId]`.
-- Maintains local message graph:
-  - `messages: Record<id, Message>`
-  - `parts: Record<id, Part>`
-  - `messageOrder: string[]`
-  - `sessionStatus`
-- Loads history from `agent_logs` and sorts by timestamp ascending.
-- Subscribes to `ai.events` and applies event updates with session filtering.
-- Implements optimistic user message before `ai.prompt` response arrives.
-- Supports auto-scroll while user is near bottom (`SCROLL_THRESHOLD = 50`).
+- Chat renderable extends `AElement<'chat'>` and supports standard transform actions.
+- Mounts DOM overlay into `#canvas-overlay-entrypoint`.
+- Computes screen-space bounds from stage transform and updates Solid signal only when changed (epsilon check).
 
-### File suggestions for `@` autocomplete
+`chat.apply-delete.ts`
 
-- Loads with `api.file.files({ path: local_path, max_depth: 4 })`.
-- Flattens nested directory tree into file list, sorts by path, caps to 300 suggestions.
-- Refreshes when `chat.local_path` changes.
+- Removes element and emits CRDT delete change.
+- Calls `api.chat.remove` asynchronously; toasts on API failure.
 
-### Header and status UI
+### Chat View + Context
 
-- `ChatHeader` handles drag pointer events and widget actions (set folder, collapse placeholder, remove).
-- Chat folder subtitle uses `~` display when local path is inside home directory.
-- `StatusLine` maps `CONNECTION_STATE` to labels/colors.
-- `PathPickerDialog` action currently creates a new chat with offset position (`+30,+30`) and selected path.
+`chat.tsx`
 
-## State, Sync, and Event Lifecycle
+- Header shows title + session id.
+- Folder subtitle shown as tilde path when under home directory.
+- Wires slash command handling and dialog rendering.
+- Opens `PathPickerDialog` for folder change flow.
 
-- Global store bootstraps chat metadata from `canvas.get` (`response.chats`).
-- Canvas-level DB event subscription (`api.db.events`) updates/removes chat rows in store for live sync.
-- Chat content stream is independent from DB events and handled via `ai.events` + local `chatState`.
-- On `session.idle`, UI moves to `FINISHED`; focusing input resets to `READY`.
+`chat.context.tsx`
 
-## Performance and UX Behavior
+- Maintains normalized local graph:
+  - `messages`,
+  - `parts`,
+  - `messageOrder`,
+  - `sessionStatus`.
+- Rehydrates history from `agent-logs` by timestamp.
+- Subscribes to `opencode.events` and applies session-filtered updates.
+- Inserts optimistic user message and parts before prompt request returns.
+- Loads and manages selectable agents from `opencode.app.agents`.
+- Computes status metadata (`agent/model/provider`) from latest assistant message payload.
 
-- Overlay bounds update every ticker frame to keep DOM widget aligned during pan/zoom/transform.
-- Message rendering derives grouped view via memo (`orderedMessages`) from normalized local store.
-- Auto-scroll only triggers when user is already near bottom to avoid stealing scroll.
-- Autocomplete items are capped (`MAX_AUTOCOMPLETE_ITEMS = 8`) and menu is keyboard navigable.
-- File autocomplete payload is bounded (`max_depth: 4`, max 300 flattened results).
+### Message Rendering
+
+`chat-message.tsx` supports part rendering for:
+
+- `text`, `file`, `tool`, `reasoning`, `step-start`, `step-finish`, `agent`, `retry`.
+- Hidden/skipped part types: `snapshot`, `patch`, `compaction`, `subtask`.
+
+## Composer, Autocomplete, and Drag-Drop
+
+### ProseMirror
+
+- Schema: `doc -> paragraph+` with inline `text`, `hard_break`, `image_token`.
+- `pasteImagePlugin` converts pasted image files into data-url `file` tokens.
+- Custom `image_token` nodeview shows removable chip + hover preview.
+
+### Sending Behavior
+
+- Enter:
+  - selects autocomplete item if menu open,
+  - otherwise sends if non-empty.
+- Shift+Enter inserts hard break.
+- Serialization order: file parts first, then one trimmed text part.
+
+### Slash and Mention Autocomplete
+
+- `/` autocomplete uses local command catalog + fuzzysort.
+- `@` autocomplete calls `opencode.find.files` (directory + file lookups), then client-side ranks using:
+  - hidden-path heuristics,
+  - mention frecency,
+  - path depth,
+  - lexical tie-break.
+- Mention insertion always writes `@path ` token.
+- Tab/Shift+Tab:
+  - when autocomplete open -> select next/prev item,
+  - when closed -> cycle selected agent.
+
+### Filetree Drag-Drop into Composer
+
+- Accepts `application/x-vibecanvas-filetree-node` payload.
+- Converts dropped path to chat-relative path using `toRelativePathWithinBase`.
+- Rejects out-of-scope paths with explicit error toast.
+- Inserts mention at drop caret (`posAtCoords`).
+
+## Dialog Menu and Slash Command System
+
+### Implemented Slash Actions in `chat.tsx`
+
+- `/exit`: delete widget.
+- `/copy`: copies formatted transcript from local message graph.
+- `/init`: calls `api.opencode.session.init`.
+- `/new`: creates a new OpenCode session on the same chat widget, replaces `session_id` in the `chats` row, and clears all local message state to present a clean chat.
+- Dialog commands:
+  - `/agents`: opens dynamic agents picker dialog.
+
+### Suggested but Not Yet Implemented Commands
+
+Autocomplete advertises commands including:
+
+- `/compact`, `/models`, `/rename`, `/sessions`, `/skills`, `/timeline`, `/undo`.
+
+Current behavior for unhandled commands is toast-based "not implemented" feedback.
+
+### Chat Dialog UI (`chat-dialog.tsx`)
+
+- In-chat overlay (not global modal).
+- Supports nested submenus, searchable lists, keyboard navigation, section headers, and inline input rows.
+- Keybindings: Up/Down, Tab/Shift+Tab, Enter, Escape, type-to-focus-search.
+
+## State and Sync Lifecycle
+
+- Store bootstrap:
+  - `store.ts` loads `chatSlice.backendChats[canvasId]` from `canvas.get` response.
+- Canvas-level DB events:
+  - `Canvas.tsx` subscribes to `api.db.events`.
+  - `chats` update events patch existing rows.
+  - `chats` delete events remove rows from all canvas buckets.
+- Message stream:
+  - handled independently via `opencode.events` and local widget state.
+- Connection state:
+  - session busy -> `STREAMING`,
+  - retry -> `RETRYING`,
+  - idle -> `FINISHED`,
+  - focus input while finished -> `READY`.
 
 ## Error Handling
 
-- Prompt and log load errors are logged and reflected via connection state when relevant.
-- Event stream init failure sets chat state to `ERROR`.
+- Prompt errors are logged; optimistic UI remains and later stream reconciliation can replace it.
+- Event subscription failure sets chat connection state to `ERROR`.
 - `session.error` events also set `ERROR`.
-- Delete backend failure surfaces toast; CRDT deletion already applied locally.
-- `agent-logs.getBySession` returns explicit error union for contract-safe handling.
+- Drag-drop mention rejects paths outside chat folder.
+- Delete API failure shows toast after local CRDT removal.
+- `agent-logs.getBySession` uses explicit success/error union for safe UI handling.
+
+## Performance and UX Notes
+
+- Overlay bounds updates are throttled by change detection (`BOUNDS_EPSILON`) to avoid unnecessary signal churn.
+- Auto-scroll triggers only when user is near bottom (`SCROLL_THRESHOLD = 50`).
+- File search in autocomplete is debounced (`180ms`) and request-id guarded to avoid stale UI races.
+- Autocomplete list is capped (`MAX_AUTOCOMPLETE_ITEMS = 10`).
+- Mention candidate fetches are bounded (`MAX_FILE_SUGGESTION_LIMIT = 200`).
 
 ## Testing and Verification
 
 - `bun --filter @vibecanvas/spa build`
-  - validates SPA compile with ProseMirror integration.
 - `bun --filter @vibecanvas/server test`
-  - validates API/controller behavior where tests exist.
-- Manual smoke:
-  - run `bun server:dev` + `bun client:dev`,
-  - create chat widget,
-  - send plain text, multiline (`Shift+Enter`), and pasted image,
-  - verify optimistic user message then streamed assistant parts,
-  - test `/` and `@` autocomplete behavior,
-  - drag file and folder rows from filetree widget into composer and confirm mention insertion at drop position,
-  - switch chat folder via PATH and confirm new chat/session,
-  - delete widget and verify chat row/session cleanup behavior.
+
+Manual smoke checklist:
+
+- Create chat widget and verify CRDT presence + chat row creation.
+- Send plain text, multiline (`Shift+Enter`), and pasted images.
+- Verify optimistic user bubble then streamed assistant parts/tool blocks.
+- Verify `/copy`, `/init`, and `/agents`.
+- Verify unimplemented slash command shows feedback.
+- Verify `@` suggestions, Tab/Shift+Tab navigation, and drag-drop mentions from filetree.
+- Change folder via PATH dialog and confirm new offset chat/session appears.
+- Delete chat and confirm local widget removal + backend row removal.
 
 ## File Map
 
 ### Contracts
 
 - `packages/core-contract/src/chat.contract.ts`
-- `packages/core-contract/src/ai.contract.ts`
+- `packages/core-contract/src/opencode.contract.ts`
 - `packages/core-contract/src/agent-logs.contract.ts`
 - `packages/core-contract/src/db.contract.ts`
 
 ### Functional Core
 
 - `packages/functional-core/src/chat/ctrl.create-chat.ts`
+- `packages/functional-core/src/chat/ctrl.new-session.ts`
 - `packages/functional-core/src/chat/ctrl.update-chat.ts`
 - `packages/functional-core/src/chat/ctrl.delete-chat.ts`
 
 ### Imperative Shell
 
-- `packages/imperative-shell/src/database/schema.ts` (`chats`, `agent_logs`)
+- `packages/imperative-shell/src/database/schema.ts`
 - `packages/imperative-shell/src/opencode/srv.opencode.ts`
 
-### Server
+### Server APIs
 
 - `apps/server/src/apis/api.chat.ts`
-- `apps/server/src/apis/api.ai.ts`
+- `apps/server/src/apis/api.opencode.ts`
 - `apps/server/src/apis/api.agent-logs.ts`
 - `apps/server/src/apis/api.db.ts`
 
-### SPA (Chat feature)
+### SPA Chat
 
 - `apps/spa/src/features/chat/components/chat.tsx`
 - `apps/spa/src/features/chat/components/chat-input.tsx`
 - `apps/spa/src/features/chat/components/chat-message.tsx`
 - `apps/spa/src/features/chat/components/chat-header.tsx`
 - `apps/spa/src/features/chat/components/status-line.tsx`
+- `apps/spa/src/features/chat/components/chat-dialog.tsx`
+- `apps/spa/src/features/chat/components/chat-dialog-commands.ts`
+- `apps/spa/src/features/chat/components/chat-dialog.cmd.agents.ts`
+- `apps/spa/src/features/chat/context/chat.context.tsx`
 - `apps/spa/src/features/chat/prosemirror/schema.ts`
 - `apps/spa/src/features/chat/prosemirror/serialize.ts`
 - `apps/spa/src/features/chat/prosemirror/plugins/paste-image.ts`
 - `apps/spa/src/features/chat/prosemirror/nodeviews/image-token-view.ts`
-- `apps/spa/src/features/chat/store/chat.slice.ts`
+- `apps/spa/src/features/chat/utils/format-transcript.ts`
 
-### SPA (Canvas integration)
+### SPA Canvas + Store Integration
 
 - `apps/spa/src/features/canvas-crdt/input-commands/cmd.draw-new.ts`
 - `apps/spa/src/features/canvas-crdt/renderables/elements/chat/chat.class.ts`
@@ -324,35 +394,54 @@ type TAgentLogRow = {
 - `apps/spa/src/features/canvas-crdt/renderables/elements/chat/chat.state-machine.ts`
 - `apps/spa/src/features/canvas-crdt/Canvas.tsx`
 - `apps/spa/src/store.ts`
-- `apps/spa/src/index.css` (composer/token/autocomplete styles)
+- `apps/spa/src/index.css`
+- `apps/spa/src/components/path-picker-dialog.tsx`
 
 ## Data Flow Diagram
 
 ```mermaid
 flowchart TD
-  U[User picks chat tool] --> C1[SPA cmd.draw-new calls api.chat.create]
+  U1[User picks chat tool] --> C1[SPA cmd.draw-new calls api.chat.create]
   C1 --> S1[Server ctrlCreateChat]
   S1 --> O1[OpenCode session.create(directory)]
   S1 --> D1[Insert chats row]
   S1 --> A1[Automerge add chat element]
-  A1 --> R1[ChatElement overlay mounts Chat component]
+  A1 --> W1[ChatElement mounts DOM overlay + Chat component]
 
-  R1 --> H1[Load agent-logs by session]
-  R1 --> E1[Subscribe ai.events stream]
+  W1 --> H1[Load history from agent-logs.getBySession]
+  W1 --> G1[Load agents via opencode.app.agents]
+  W1 --> E1[Subscribe opencode.events iterator]
 
-  U2[User composes in ProseMirror] --> P1[Serialize to parts text/file]
-  P1 --> P2[Optimistic local user message]
-  P1 --> AP[api.ai.prompt]
-  AP --> O2[OpenCode session.prompt]
-  O2 --> L1[Persist user and assistant records in agent_logs]
-  O2 --> AP
+  U2[User composes in ProseMirror] --> P1[Serialize to file/text parts]
+  P1 --> P2[Optimistic user message in local chatState]
+  P1 --> API1[api.opencode.prompt]
+  API1 --> O2[OpenCode session.prompt]
+  O2 --> O3[OpenCode session.message for parent user msg]
+  O2 --> L1[Persist user + assistant rows to agent_logs]
 
-  E1 --> EV[message/session events]
-  EV --> M1[Update local chatState messages/parts/status]
-  M1 --> UI[ChatMessages render]
+  E1 --> EV1[message/session events]
+  EV1 --> F1[Client filters by session_id]
+  F1 --> S2[Update local messages/parts/status]
+  S2 --> UI1[ChatMessages + StatusLine rerender]
 
-  U3[User deletes widget] --> X1[chat.apply-delete]
-  X1 --> A2[CRDT delete chat element]
-  X1 --> S2[api.chat.remove]
-  S2 --> D2[Delete chats row + close OpenCode client]
+  U3[/agents slash command] --> M1[Open dynamic ChatDialog]
+  M1 --> A2[Select agent]
+  A2 --> P3[Next prompt includes selected agent]
+
+  U4[PATH folder change] --> P4[PathPickerDialog]
+  P4 --> C2[Create new chat offset + new OpenCode session]
+
+  U5[Delete widget] --> D2[chat.apply-delete]
+  D2 --> A3[CRDT delete element]
+  D2 --> API2[api.chat.remove]
+  API2 --> D3[Delete chats row + close OpenCode client]
+
+  U6[/new slash command] --> N1[SPA calls api.chat.newSession]
+  N1 --> N2[Server ctrlNewSession]
+  N2 --> N3[OpenCode session.create with existing local_path]
+  N2 --> N4[UPDATE chats SET session_id = new]
+  N2 --> N5[Publish dbUpdatePublisher event]
+  N5 --> N6[SPA updates store backendChats with new session_id]
+  N6 --> N7[chatLogic.resetSession clears messages/parts/status]
+  N7 --> N8[handleOpenCodeEvent filters by new session_id reactively]
 ```

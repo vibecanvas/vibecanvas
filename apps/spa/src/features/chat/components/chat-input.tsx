@@ -1,4 +1,5 @@
 import { baseKeymap } from "prosemirror-commands"
+import fuzzysort from "fuzzysort"
 import { history, redo, undo } from "prosemirror-history"
 import type { Node as ProseMirrorNode } from "prosemirror-model"
 import { Plugin } from "prosemirror-state"
@@ -20,14 +21,18 @@ export type TInputPart =
 type TChatInputProps = {
   canSend: boolean
   onSend: (content: TInputPart[]) => void
+  onCycleAgent?: (direction: 1 | -1) => void
   onInputFocus?: () => void
-  fileSuggestions?: TFileSuggestion[]
+  onFileSearch?: (query: string, options?: { limit?: number }) => Promise<TFileSuggestion[]>
+  onFileSuggestionUsed?: (path: string) => void
+  onSlashCommand?: (command: string) => void
   workingDirectoryPath?: string | null
 }
 
 type TFileSuggestion = {
   name: string
   path: string
+  isDirectory: boolean
 }
 
 type TAutocompleteMatch = {
@@ -42,6 +47,8 @@ type TAutocompleteItem = {
   label: string
   detail: string
   value: string
+  aliases: string
+  type: "file" | "command"
 }
 
 type TAutocompleteState = {
@@ -56,16 +63,24 @@ type TAutocompleteState = {
   items: TAutocompleteItem[]
 }
 
-const MAX_AUTOCOMPLETE_ITEMS = 8
+const MAX_AUTOCOMPLETE_ITEMS = 10
 const AUTOCOMPLETE_VERTICAL_OFFSET = 10
+const FILE_SEARCH_DEBOUNCE_MS = 180
 const FILETREE_DND_MIME = "application/x-vibecanvas-filetree-node"
 
 const COMMAND_SUGGESTIONS: TAutocompleteItem[] = [
-  { key: "fix", label: "/fix", detail: "Ask assistant to fix current issue", value: "fix" },
-  { key: "plan", label: "/plan", detail: "Ask assistant to draft an implementation plan", value: "plan" },
-  { key: "explain", label: "/explain", detail: "Ask assistant to explain selected code", value: "explain" },
-  { key: "test", label: "/test", detail: "Ask assistant to add or run tests", value: "test" },
-  { key: "review", label: "/review", detail: "Ask assistant to review current changes", value: "review" },
+  { key: "agents", label: "/agents", detail: "List and pick available agents", value: "agents", aliases: "", type: "command" },
+  { key: "compact", label: "/compact", detail: "Compact current session context", value: "compact", aliases: "", type: "command" },
+  { key: "copy", label: "/copy", detail: "Copy latest assistant output", value: "copy", aliases: "", type: "command" },
+  { key: "exit", label: "/exit", detail: "Exit current chat session", value: "exit", aliases: "", type: "command" },
+  { key: "init", label: "/init", detail: "Initialize project assistant context", value: "init", aliases: "", type: "command" },
+  { key: "models", label: "/models", detail: "Show or switch available models", value: "models", aliases: "", type: "command" },
+  { key: "new", label: "/new", detail: "Start a new session", value: "new", aliases: "", type: "command" },
+  { key: "rename", label: "/rename", detail: "Rename current session", value: "rename", aliases: "", type: "command" },
+  { key: "sessions", label: "/sessions", detail: "Browse and switch sessions", value: "sessions", aliases: "", type: "command" },
+  { key: "skills", label: "/skills", detail: "Open skills picker", value: "skills", aliases: "", type: "command" },
+  { key: "timeline", label: "/timeline", detail: "Jump to a previous message", value: "timeline", aliases: "", type: "command" },
+  { key: "undo", label: "/undo", detail: "Undo last assistant action", value: "undo", aliases: "", type: "command" },
 ]
 
 const SUPPORTED_IMAGE_TYPES = new Set([
@@ -188,76 +203,119 @@ function getAutocompleteMatch(view: EditorView): TAutocompleteMatch | null {
   if (!$from.parent.isTextblock) return null
 
   const textBefore = $from.parent.textBetween(0, $from.parentOffset, "\n", "\n")
-  const match = /(^|\s)([@/])([^\s@/]*)$/.exec(textBefore)
-  if (!match) return null
 
-  const leadingSpaceLength = match[1]?.length ?? 0
-  const trigger = match[2] as "@" | "/"
-  const query = match[3] ?? ""
+  const slashMatch = /^\/([^\s/]*)$/.exec(textBefore)
+  if (slashMatch) {
+    return {
+      trigger: "/",
+      from: $from.start(),
+      to: $from.pos,
+      query: slashMatch[1] ?? "",
+    }
+  }
+
+  const mentionMatch = /(^|\s)@([^\s@/]*)$/.exec(textBefore)
+  if (!mentionMatch) return null
+
+  const leadingSpaceLength = mentionMatch[1]?.length ?? 0
   const parentStart = $from.start()
-  const from = parentStart + (match.index ?? 0) + leadingSpaceLength
+  const from = parentStart + (mentionMatch.index ?? 0) + leadingSpaceLength
   const to = $from.pos
 
-  return { trigger, from, to, query }
+  return {
+    trigger: "@",
+    from,
+    to,
+    query: mentionMatch[2] ?? "",
+  }
 }
 
-function sortByRelevance(items: TAutocompleteItem[], query: string): TAutocompleteItem[] {
-  if (!query) return items
+function buildCommandAutocompleteItems(query: string): TAutocompleteItem[] {
+  const commandQuery = query.toLowerCase()
 
-  const lower = query.toLowerCase()
+  if (!commandQuery) {
+    return [...COMMAND_SUGGESTIONS]
+      .sort((a, b) => a.label.localeCompare(b.label))
+  }
 
-  return [...items].sort((a, b) => {
-    const aLabel = a.label.toLowerCase()
-    const bLabel = b.label.toLowerCase()
-    const aStarts = aLabel.startsWith(lower) ? 0 : 1
-    const bStarts = bLabel.startsWith(lower) ? 0 : 1
-    if (aStarts !== bStarts) return aStarts - bStarts
-    return aLabel.localeCompare(bLabel)
+  const fuzzyResults = fuzzysort.go(commandQuery, COMMAND_SUGGESTIONS, {
+    keys: ["label", "detail", "aliases"],
   })
+
+  const prefix = `/${commandQuery}`
+  const prioritized = [
+    ...fuzzyResults.filter((result) => result.obj.label.toLowerCase().startsWith(prefix)),
+    ...fuzzyResults.filter((result) => !result.obj.label.toLowerCase().startsWith(prefix)),
+  ]
+
+  const deduped = new Map<string, TAutocompleteItem>()
+  for (const result of prioritized) {
+    if (!deduped.has(result.obj.key)) {
+      deduped.set(result.obj.key, result.obj)
+    }
+  }
+
+  return Array.from(deduped.values())
 }
 
-function buildAutocompleteItems(
-  trigger: "@" | "/",
-  query: string,
+function normalizeSuggestionPath(path: string, workingDirectoryPath: string | null): string | null {
+  const normalizedPath = path.trim().replaceAll("\\", "/")
+  if (!normalizedPath) return null
+
+  const isAbsolute = normalizedPath.startsWith("/") || /^[A-Za-z]:\//.test(normalizedPath)
+  if (isAbsolute) {
+    return toRelativePathWithinBase(normalizedPath, workingDirectoryPath)
+  }
+
+  if (normalizedPath === ".") return "."
+
+  const stripped = normalizedPath.replace(/^\.\//, "").replace(/^\/+/, "")
+  return stripped.length > 0 ? stripped : null
+}
+
+function buildFileAutocompleteItems(
   fileSuggestions: TFileSuggestion[],
   workingDirectoryPath: string | null,
 ): TAutocompleteItem[] {
-  if (trigger === "/") {
-    const commandQuery = query.toLowerCase()
-    const filtered = COMMAND_SUGGESTIONS.filter((item) => {
-      if (!commandQuery) return true
-      return item.label.toLowerCase().includes(commandQuery)
-    })
-    return sortByRelevance(filtered, commandQuery).slice(0, MAX_AUTOCOMPLETE_ITEMS)
-  }
-
-  const fileQuery = query.toLowerCase()
   const fileItems = fileSuggestions
     .map((file) => {
-      const relativePath = toRelativePathWithinBase(file.path, workingDirectoryPath)
+      const relativePath = normalizeSuggestionPath(file.path, workingDirectoryPath)
       if (!relativePath) return null
 
+      const displayPath = file.isDirectory && !relativePath.endsWith("/")
+        ? `${relativePath}/`
+        : relativePath
+
       return {
-        key: file.path,
-        label: `@${relativePath}`,
-        detail: relativePath,
-        value: relativePath,
+        key: `${file.isDirectory ? "d" : "f"}:${file.path}`,
+        label: `@${displayPath}`,
+        detail: file.isDirectory ? `${relativePath} (dir)` : relativePath,
+        value: displayPath,
+        aliases: "",
+        type: "file",
       }
     })
     .filter((item): item is TAutocompleteItem => item !== null)
 
-  const filtered = fileItems.filter((item) => {
-    if (!fileQuery) return true
-    return item.label.toLowerCase().includes(fileQuery) || item.detail.toLowerCase().includes(fileQuery)
-  })
+  return fileItems.slice(0, MAX_AUTOCOMPLETE_ITEMS)
+}
 
-  return sortByRelevance(filtered, fileQuery).slice(0, MAX_AUTOCOMPLETE_ITEMS)
+function parseSlashCommand(parts: TInputPart[]): string | null {
+  if (parts.length !== 1) return null
+
+  const [part] = parts
+  if (part.type !== "text") return null
+
+  const match = /^\/([a-z][a-z0-9-]*)\s*$/i.exec(part.text.trim())
+  return match?.[1]?.toLowerCase() ?? null
 }
 
 export function ChatInput(props: TChatInputProps) {
   let editorRef: HTMLDivElement | undefined
   let menuRef: HTMLDivElement | undefined
   let view: EditorView | undefined
+  let fileSearchTimer: ReturnType<typeof setTimeout> | undefined
+  let fileSearchRequestId = 0
   const [autocomplete, setAutocomplete] = createSignal<TAutocompleteState>(emptyAutocompleteState())
   const [isFiletreeDragOver, setIsFiletreeDragOver] = createSignal(false)
 
@@ -272,7 +330,15 @@ export function ChatInput(props: TChatInputProps) {
     })
   }
 
+  const clearFileSearchTimer = () => {
+    if (!fileSearchTimer) return
+    clearTimeout(fileSearchTimer)
+    fileSearchTimer = undefined
+  }
+
   const closeAutocomplete = () => {
+    clearFileSearchTimer()
+    fileSearchRequestId += 1
     setAutocomplete(emptyAutocompleteState())
   }
 
@@ -288,33 +354,95 @@ export function ChatInput(props: TChatInputProps) {
       return
     }
 
-    const items = buildAutocompleteItems(
-      match.trigger,
-      match.query,
-      props.fileSuggestions ?? [],
-      props.workingDirectoryPath ?? null,
-    )
-    if (items.length === 0) {
+    if (match.trigger === "/") {
+      clearFileSearchTimer()
+
+      const items = buildCommandAutocompleteItems(match.query)
+      if (items.length === 0) {
+        closeAutocomplete()
+        return
+      }
+
+      const coords = view.coordsAtPos(match.to)
+      const hostRect = editorRef.getBoundingClientRect()
+
+      setAutocomplete((prev) => ({
+        open: true,
+        trigger: match.trigger,
+        from: match.from,
+        to: match.to,
+        query: match.query,
+        selectedIndex: Math.min(prev.selectedIndex, items.length - 1),
+        left: Math.max(0, coords.left - hostRect.left),
+        top: Math.max(0, coords.bottom - hostRect.top + AUTOCOMPLETE_VERTICAL_OFFSET),
+        items,
+      }))
+
+      ensureSelectedItemVisible(Math.min(autocomplete().selectedIndex, items.length - 1))
+      return
+    }
+
+    if (!props.onFileSearch) {
       closeAutocomplete()
       return
     }
 
-    const coords = view.coordsAtPos(match.to)
-    const hostRect = editorRef.getBoundingClientRect()
+    const requestId = ++fileSearchRequestId
+    clearFileSearchTimer()
 
-    setAutocomplete((prev) => ({
-      open: true,
-      trigger: match.trigger,
-      from: match.from,
-      to: match.to,
-      query: match.query,
-      selectedIndex: Math.min(prev.selectedIndex, items.length - 1),
-      left: Math.max(0, coords.left - hostRect.left),
-      top: Math.max(0, coords.bottom - hostRect.top + AUTOCOMPLETE_VERTICAL_OFFSET),
-      items,
-    }))
+    fileSearchTimer = setTimeout(async () => {
+      if (!view || !editorRef) return
 
-    ensureSelectedItemVisible(Math.min(autocomplete().selectedIndex, items.length - 1))
+      const activeMatch = getAutocompleteMatch(view)
+      if (!activeMatch || activeMatch.trigger !== "@") {
+        if (requestId === fileSearchRequestId) {
+          setAutocomplete(emptyAutocompleteState())
+        }
+        return
+      }
+
+      const fileSuggestions = await props.onFileSearch?.(activeMatch.query, {
+        limit: MAX_AUTOCOMPLETE_ITEMS,
+      })
+      if (requestId !== fileSearchRequestId || !fileSuggestions) return
+
+      const latestMatch = getAutocompleteMatch(view)
+      if (!latestMatch || latestMatch.trigger !== "@") {
+        if (requestId === fileSearchRequestId) {
+          setAutocomplete(emptyAutocompleteState())
+        }
+        return
+      }
+
+      const items = buildFileAutocompleteItems(
+        fileSuggestions,
+        props.workingDirectoryPath ?? null,
+      )
+
+      if (items.length === 0) {
+        if (requestId === fileSearchRequestId) {
+          setAutocomplete(emptyAutocompleteState())
+        }
+        return
+      }
+
+      const coords = view.coordsAtPos(latestMatch.to)
+      const hostRect = editorRef.getBoundingClientRect()
+
+      setAutocomplete((prev) => ({
+        open: true,
+        trigger: latestMatch.trigger,
+        from: latestMatch.from,
+        to: latestMatch.to,
+        query: latestMatch.query,
+        selectedIndex: Math.min(prev.selectedIndex, items.length - 1),
+        left: Math.max(0, coords.left - hostRect.left),
+        top: Math.max(0, coords.bottom - hostRect.top + AUTOCOMPLETE_VERTICAL_OFFSET),
+        items,
+      }))
+
+      ensureSelectedItemVisible(Math.min(autocomplete().selectedIndex, items.length - 1))
+    }, FILE_SEARCH_DEBOUNCE_MS)
   }
 
   const moveAutocompleteSelection = (delta: number) => {
@@ -339,6 +467,16 @@ export function ChatInput(props: TChatInputProps) {
     const replacement = `${state.trigger}${item.value} `
     const tr = view.state.tr.insertText(replacement, state.from, state.to)
     view.dispatch(tr)
+
+    if (state.trigger === "@") {
+      props.onFileSuggestionUsed?.(item.value)
+    }
+
+    if (state.trigger === "/" && item.type === "command") {
+      clearEditor(view)
+      props.onSlashCommand?.(item.value)
+    }
+
     closeAutocomplete()
     view.focus()
     return true
@@ -354,16 +492,30 @@ export function ChatInput(props: TChatInputProps) {
       : view.state.tr.insertText(mentionText, from, to)
 
     view.dispatch(tr.scrollIntoView())
+
+    props.onFileSuggestionUsed?.(path)
+
     closeAutocomplete()
     view.focus()
     return true
   }
 
   const handleSend = () => {
-    if (!props.canSend || !view) return
+    if (!view) return
 
     const parts = serializeDoc(view.state.doc)
     if (parts.length === 0) return
+
+    const slashCommand = parseSlashCommand(parts)
+    if (slashCommand) {
+      clearEditor(view)
+      closeAutocomplete()
+      props.onSlashCommand?.(slashCommand)
+      view.focus()
+      return
+    }
+
+    if (!props.canSend) return
 
     props.onSend(parts)
     clearEditor(view)
@@ -397,9 +549,24 @@ export function ChatInput(props: TChatInputProps) {
         moveAutocompleteSelection(-1)
         return true
       },
+      "Shift-Tab": () => {
+        if (autocomplete().open) {
+          moveAutocompleteSelection(-1)
+          return true
+        }
+
+        if (!props.onCycleAgent) return false
+        props.onCycleAgent(-1)
+        return true
+      },
       Tab: () => {
-        if (!autocomplete().open) return false
-        selectAutocompleteItem()
+        if (autocomplete().open) {
+          selectAutocompleteItem()
+          return true
+        }
+
+        if (!props.onCycleAgent) return false
+        props.onCycleAgent(1)
         return true
       },
       Escape: () => {
@@ -515,6 +682,7 @@ export function ChatInput(props: TChatInputProps) {
   })
 
   onCleanup(() => {
+    clearFileSearchTimer()
     view?.destroy()
     view = undefined
   })

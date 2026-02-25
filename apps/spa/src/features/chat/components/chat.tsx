@@ -1,20 +1,25 @@
 // @refresh reload
 import { PathPickerDialog } from "@/components/path-picker-dialog"
+import { showToast } from "@/components/ui/Toast"
 import { applyChangesToCRDT } from "@/features/canvas-crdt/changes"
 import { AElement } from "@/features/canvas-crdt/renderables/element.abstract"
 import { CONNECTION_STATE } from "@/features/canvas-crdt/renderables/elements/chat/chat.state-machine"
-import { orpcWebsocketService } from "@/services/orpc-websocket"
+import { createChatContextLogic } from "@/features/chat/context/chat.context"
 import { setStore, store } from "@/store"
 import { toTildePath } from "@/utils/path-display"
 import type { TCanvas } from "@vibecanvas/core/canvas/ctrl.create-canvas"
-import type { Event as OpenCodeEvent, Message, Part } from "@opencode-ai/sdk/v2"
 import type { Accessor, Setter } from "solid-js"
-import { ErrorBoundary, createEffect, createMemo, createSignal, on, onMount } from "solid-js"
-import { createStore as createSolidStore } from "solid-js/store"
+import { ErrorBoundary, Show, createSignal } from "solid-js"
+import { ChatDialog } from "./chat-dialog"
+import { getDialogView, hasDialogCommand } from "./chat-dialog-commands"
+import { createAgentsDialogView } from "./chat-dialog.cmd.agents"
+import { createModelsDialogView } from "./chat-dialog.cmd.models"
 import { ChatHeader } from "./chat-header"
-import { ChatInput, type TInputPart } from "./chat-input"
-import { ChatMessages, type TMessageGroup } from "./chat-message"
+import { ChatInput } from "./chat-input"
+import { ChatMessages } from "./chat-message"
 import { StatusLine } from "./status-line"
+import { formatTranscript } from "../utils/format-transcript"
+import { orpcWebsocketService } from "@/services/orpc-websocket"
 
 export type TChatBounds = {
   x: number
@@ -29,7 +34,7 @@ type TChatProps = {
   bounds: Accessor<TChatBounds>
   state: Accessor<CONNECTION_STATE>
   setState: Setter<CONNECTION_STATE>
-  chatClass: AElement<'chat'>
+  chatClass: AElement<"chat">
   canvas: TCanvas
   chatId: string
   onSelect: () => void
@@ -38,423 +43,122 @@ type TChatProps = {
   onDragEnd: () => void
 }
 
-type TChatState = {
-  messages: Record<string, Message>
-  parts: Record<string, Part>
-  messageOrder: string[]
-  sessionStatus: { type: "idle" | "busy" | "retry" }
-}
-
-type TFileSuggestion = {
-  name: string
-  path: string
-}
-
-type TTreeNode = {
-  name: string
-  path: string
-  is_dir: boolean
-  children: TTreeNode[]
-}
-
-function flattenFileSuggestions(nodes: TTreeNode[], acc: TFileSuggestion[] = []): TFileSuggestion[] {
-  for (const node of nodes) {
-    if (!node.is_dir) {
-      acc.push({ name: node.name, path: node.path })
-    }
-    if (node.children.length > 0) {
-      flattenFileSuggestions(node.children, acc)
-    }
-  }
-
-  return acc
-}
-
 export function Chat(props: TChatProps) {
-  const SCROLL_THRESHOLD = 50
-  const ENABLED_INPUT_STATES = [
-    CONNECTION_STATE.READY,
-    CONNECTION_STATE.REQUESTING_HUMAN_INPUT,
-    CONNECTION_STATE.STREAMING,
-    CONNECTION_STATE.PROCESS_REQUEST,
-    CONNECTION_STATE.FINISHED,
-  ]
+  const [dialogCommand, setDialogCommand] = createSignal<string | null>(null)
 
-  let isDragging = false
-  let lastPos = { x: 0, y: 0 }
-  let scrollContainerRef: HTMLDivElement | undefined
+  const removeChat = () => {
+    const handle = store.canvasSlice.canvas?.handle
+    if (!handle) return
+    const changes = props.chatClass.dispatch({ type: "delete" })
+    if (changes) applyChangesToCRDT(handle, [changes])
+  }
 
-  const chat = () => store.chatSlice.backendChats[props.canvas.id]?.find((c) => c.id === props.chatId)
-
-  const [chatState, setChatState] = createSolidStore<TChatState>({
-    messages: {},
-    parts: {},
-    messageOrder: [],
-    sessionStatus: { type: "idle" },
-  })
-
-  const [isAtBottom, setIsAtBottom] = createSignal(true)
-  const [isPathDialogOpen, setIsPathDialogOpen] = createSignal(false)
-  const [fileSuggestions, setFileSuggestions] = createSignal<TFileSuggestion[]>([])
-  const [homePath, setHomePath] = createSignal<string | null>(null)
-
-  // Derived memo for rendering
-  const orderedMessages = createMemo((): TMessageGroup[] =>
-    chatState.messageOrder.map(msgId => ({
-      message: chatState.messages[msgId],
-      parts: Object.values(chatState.parts)
-        .filter((p): p is Part => p != null && p.messageID === msgId),
-    })).filter(m => m.message != null)
-  )
-
-  const isBusy = () => chatState.sessionStatus.type === "busy"
-
-  const resetToReadyIfFinished = () => {
-    if (props.state() === CONNECTION_STATE.FINISHED) {
-      props.setState(CONNECTION_STATE.READY)
+  const handleSlashCommand = async (command: string) => {
+    if (command === "exit") {
+      removeChat()
+      return
     }
-  }
 
-  const canSendMessage = () => ENABLED_INPUT_STATES.includes(props.state())
-
-  const checkIsAtBottom = () => {
-    if (!scrollContainerRef) return true
-    const { scrollTop, scrollHeight, clientHeight } = scrollContainerRef
-    return scrollHeight - scrollTop - clientHeight <= SCROLL_THRESHOLD
-  }
-
-  const scrollToBottom = () => {
-    if (scrollContainerRef) {
-      scrollContainerRef.scrollTop = scrollContainerRef.scrollHeight
-    }
-  }
-
-  const handleScroll = () => {
-    setIsAtBottom(checkIsAtBottom())
-  }
-
-  // Auto-scroll when messages change, but only if user was at bottom
-  createEffect(on(
-    () => chatState.messageOrder.length,
-    () => {
-      if (isAtBottom()) {
-        requestAnimationFrame(() => scrollToBottom())
+    if (command === "copy") {
+      const transcriptData = chatLogic.getTranscriptData()
+      if (!transcriptData) {
+        showToast("Copy failed", "No chat session found")
+        return
       }
-    }
-  ))
 
-  // Also auto-scroll on part text deltas when at bottom
-  createEffect(on(
-    () => {
-      // Track the text of the last part for scroll triggering
-      const lastMsgId = chatState.messageOrder[chatState.messageOrder.length - 1]
-      if (!lastMsgId) return ""
-      const parts = Object.values(chatState.parts).filter(
-        (p): p is Part => p != null && p.messageID === lastMsgId && p.type === "text"
+      if (transcriptData.messages.length === 0) {
+        showToast("Copy failed", "No messages to copy")
+        return
+      }
+
+      try {
+        const transcript = formatTranscript(
+          transcriptData.session,
+          transcriptData.messages,
+        )
+        await navigator.clipboard.writeText(transcript)
+        showToast("Copied!", "Chat transcript copied to clipboard")
+      } catch (error) {
+        console.error("Failed to copy transcript:", error)
+        showToast("Copy failed", "Could not access clipboard")
+      }
+      return
+    }
+
+    if (command === "new") {
+      const [error, updatedChat] = await orpcWebsocketService.safeClient.api.chat.newSession({
+        params: { id: props.chatId },
+      })
+      if (error || !updatedChat) {
+        showToast("New session failed", "Could not create new session")
+        return
+      }
+      setStore("chatSlice", "backendChats", props.canvas.id,
+        (chats) => chats.map(c => c.id === props.chatId ? updatedChat : c),
       )
-      const lastPart = parts[parts.length - 1]
-      return lastPart && "text" in lastPart ? String(lastPart.text ?? "").length : 0
-    },
-    () => {
-      if (isAtBottom()) {
-        requestAnimationFrame(() => scrollToBottom())
-      }
-    }
-  ))
-
-  function handleOpenCodeEvent(event: OpenCodeEvent) {
-    const sessionId = chat()?.session_id
-    if (!sessionId) return
-
-    switch (event.type) {
-      case "message.updated": {
-        const msg = event.properties.info
-        if (msg.sessionID !== sessionId) return
-
-        // Replace optimistic message if this is a user message
-        if (msg.role === "user") {
-          const optimistic = chatState.messageOrder.find(id => id.startsWith("optimistic-"))
-          if (optimistic) {
-            setChatState("messages", optimistic, undefined!)
-            setChatState("messageOrder", prev => prev.filter(id => id !== optimistic))
-            // Clean up optimistic parts
-            for (const [pid, p] of Object.entries(chatState.parts)) {
-              if (p?.messageID === optimistic) setChatState("parts", pid, undefined!)
-            }
-          }
-        }
-
-        setChatState("messages", msg.id, msg)
-        if (!chatState.messageOrder.includes(msg.id)) {
-          setChatState("messageOrder", prev => [...prev, msg.id])
-        }
-        break
-      }
-
-      case "message.part.updated": {
-        const { part } = event.properties
-        if (part.sessionID !== sessionId) return
-        setChatState("parts", part.id, part)
-        break
-      }
-
-      case "message.part.delta": {
-        const { sessionID, partID, field, delta } = event.properties
-        if (sessionID !== sessionId) return
-        if (field === "text" && chatState.parts[partID]) {
-          setChatState("parts", partID, "text" as never, ((prev: string) => (prev ?? "") + delta) as never)
-        }
-        break
-      }
-
-      case "message.part.removed": {
-        const { sessionID, partID } = event.properties
-        if (sessionID !== sessionId) return
-        setChatState("parts", partID, undefined!)
-        break
-      }
-
-      case "session.status": {
-        const { sessionID, status } = event.properties
-        if (sessionID !== sessionId) return
-        setChatState("sessionStatus", { type: status.type })
-        if (status.type === "busy") props.setState(CONNECTION_STATE.STREAMING)
-        else if (status.type === "retry") props.setState(CONNECTION_STATE.RETRYING)
-        break
-      }
-
-      case "session.idle": {
-        const { sessionID } = event.properties
-        if (sessionID !== sessionId) return
-        setChatState("sessionStatus", { type: "idle" })
-        props.setState(CONNECTION_STATE.FINISHED)
-        break
-      }
-
-      case "session.error": {
-        if (event.properties.sessionID && event.properties.sessionID !== sessionId) return
-        props.setState(CONNECTION_STATE.ERROR)
-        break
-      }
-    }
-  }
-
-  const loadPreviousMessages = async () => {
-    const sessionId = chat()?.session_id
-    if (!sessionId) return
-
-    const [logsError, logsResult] = await orpcWebsocketService.safeClient.api["agent-logs"].getBySession({
-      params: { sessionId },
-    })
-
-    if (logsError) {
-      console.error("Failed to load previous messages", logsError)
+      chatLogic.resetSession()
+      showToast("New session", "Started a fresh session")
       return
     }
 
-    if (!Array.isArray(logsResult)) {
-      console.error("Failed to load previous messages", logsResult.message)
-      return
-    }
+    if (command === "init") {
+      try {
+        const localPath = chatLogic.chat()?.local_path
+        const statusMeta = chatLogic.statusLineMeta()
+        const lastMessageID = chatLogic.orderedMessages().at(-1)?.message.id
+        const body: {
+          path?: string
+          modelID?: string
+          providerID?: string
+          messageID?: string
+        } = {}
 
-    const logsByTime = [...logsResult].sort((a, b) => {
-      const aTime = new Date(a.timestamp).getTime()
-      const bTime = new Date(b.timestamp).getTime()
-      return aTime - bTime
-    })
+        if (typeof localPath === "string") body.path = localPath
+        if (typeof statusMeta.modelID === "string") body.modelID = statusMeta.modelID
+        if (typeof statusMeta.providerID === "string") body.providerID = statusMeta.providerID
+        if (typeof lastMessageID === "string") body.messageID = lastMessageID
 
-    const messages: Record<string, Message> = {}
-    const parts: Record<string, Part> = {}
-    const messageOrder: string[] = []
-
-    for (const log of logsByTime) {
-      const message = log.data?.info
-      if (!message) continue
-
-      messages[message.id] = message
-      if (!messageOrder.includes(message.id)) {
-        messageOrder.push(message.id)
+        await orpcWebsocketService.client.api.opencode.session.init(
+          Object.keys(body).length > 0
+            ? { chatId: props.chatId, body }
+            : { chatId: props.chatId },
+        )
+        showToast("Initializing...", "Project context initialized")
+      } catch (error) {
+        console.error("Init failed:", error)
+        showToast("Init failed", "Could not initialize project context")
       }
-
-      for (const part of log.data?.parts ?? []) {
-        parts[part.id] = part
-      }
-    }
-
-    setChatState({
-      messages,
-      parts,
-      messageOrder,
-    })
-    requestAnimationFrame(() => scrollToBottom())
-  }
-
-  const loadFileSuggestions = async () => {
-    const localPath = chat()?.local_path
-    if (!localPath) {
-      setFileSuggestions([])
       return
     }
 
-    const [listError, listResult] = await orpcWebsocketService.safeClient.api.file.files({
-      query: {
-        path: localPath,
-        max_depth: 4,
-      },
-    })
-
-    if (listError || !listResult || "type" in listResult) {
-      setFileSuggestions([])
-      return
-    }
-
-    const flattened = flattenFileSuggestions(listResult.children as TTreeNode[])
-    flattened.sort((a, b) => a.path.localeCompare(b.path))
-    setFileSuggestions(flattened.slice(0, 300))
-  }
-
-  const loadHomePath = async () => {
-    const [homeError, homeResult] = await orpcWebsocketService.safeClient.api.file.home()
-    if (homeError || !homeResult || "type" in homeResult) return
-    setHomePath(homeResult.path)
-  }
-
-  onMount(async () => {
-    if (orpcWebsocketService.websocket.readyState === WebSocket.OPEN) {
-      props.setState(CONNECTION_STATE.READY)
+    if (hasDialogCommand(command)) {
+      setDialogCommand(command)
     } else {
-      return
+      showToast("Slash command not implemented", `/${command} is not implemented yet.`)
     }
+  }
 
-    await loadPreviousMessages()
-    await loadHomePath()
-    await loadFileSuggestions()
-
-    const [err, it] = await orpcWebsocketService.safeClient.api.opencode.events({
-      chatId: props.chatId,
-    })
-    if (err) {
-      console.error("Events subscription error", err)
-      props.setState(CONNECTION_STATE.ERROR)
-      return
-    }
-
-    for await (const event of it) {
-      handleOpenCodeEvent(event)
-    }
+  const chatLogic = createChatContextLogic({
+    chatId: props.chatId,
+    canvas: props.canvas,
+    chatClass: props.chatClass,
+    getConnectionState: props.state,
+    setConnectionState: props.setState,
+    getScale: () => props.bounds().scale,
+    onSelect: props.onSelect,
+    onDragStart: props.onDragStart,
+    onDrag: props.onDrag,
+    onDragEnd: props.onDragEnd,
   })
 
-  const handlePointerDown = (e: PointerEvent) => {
-    e.preventDefault()
-    e.stopPropagation()
-    isDragging = true
-    lastPos = { x: e.clientX, y: e.clientY }
-    props.onSelect()
-    props.onDragStart()
-      ; (e.target as HTMLElement).setPointerCapture(e.pointerId)
-  }
+  const statusAgentName = () => chatLogic.selectedAgentName() ?? chatLogic.statusLineMeta().agentName
 
-  const handlePointerMove = (e: PointerEvent) => {
-    if (!isDragging) return
-    e.preventDefault()
+  const statusAgentColor = () => {
+    const selectedName = statusAgentName()
+    if (!selectedName) return null
 
-    const scale = props.bounds().scale
-    const dx = (e.clientX - lastPos.x) / scale
-    const dy = (e.clientY - lastPos.y) / scale
-
-    lastPos = { x: e.clientX, y: e.clientY }
-    props.onDrag({ x: dx, y: dy })
-  }
-
-  const handlePointerUp = (e: PointerEvent) => {
-    if (!isDragging) return
-    isDragging = false
-    props.onDragEnd()
-      ; (e.target as HTMLElement).releasePointerCapture(e.pointerId)
-  }
-
-  const sendMessage = async (parts: TInputPart[]) => {
-    const sessionId = chat()?.session_id
-    if (!sessionId) return
-
-    // Optimistic user message
-    const optMsgId = `optimistic-${Date.now()}`
-    setChatState("messages", optMsgId, {
-      id: optMsgId,
-      sessionID: sessionId,
-      role: "user" as const,
-      time: { created: Date.now() },
-      agent: "",
-      model: { providerID: "", modelID: "" },
-    } satisfies Message & { role: "user" })
-    setChatState("messageOrder", prev => [...prev, optMsgId])
-
-    // Optimistic parts
-    for (const [i, part] of parts.entries()) {
-      const partId = `optimistic-part-${Date.now()}-${i}`
-      const basePart = {
-        id: partId,
-        sessionID: sessionId,
-        messageID: optMsgId,
-      }
-      if (part.type === "text") {
-        setChatState("parts", partId, { ...basePart, type: "text", text: part.text } as Part)
-      } else {
-        setChatState("parts", partId, {
-          ...basePart,
-          type: "file",
-          mime: part.mime,
-          url: part.url,
-          filename: part.filename,
-        } as Part)
-      }
-    }
-
-    setIsAtBottom(true)
-    requestAnimationFrame(() => scrollToBottom())
-
-    const [promptError] = await orpcWebsocketService.safeClient.api.opencode.prompt({
-      chatId: props.chatId,
-      parts,
-    })
-    if (promptError) {
-      console.error("Prompt error:", promptError)
-    }
-  }
-
-  const updateLocalPath = async (nextLocalPath: string) => {
-    const normalizedPath = nextLocalPath.trim()
-    if (!normalizedPath) return
-
-    // Get world coordinates from the element
-    const worldX = props.chatClass.element.x
-    const worldY = props.chatClass.element.y
-
-    const [createError, newChat] = await orpcWebsocketService.safeClient.api.chat.create({
-      canvas_id: props.canvas.id,
-      x: worldX + 30,
-      y: worldY + 30,
-      title: `Chat - ${normalizedPath.split("/").pop()}`,
-      local_path: normalizedPath,
-    })
-
-    if (createError || !newChat) {
-      console.error("Failed to create new chat", createError)
-      return
-    }
-
-    setStore("chatSlice", "backendChats", props.canvas.id, (chats) => [...chats, newChat])
-  }
-
-  createEffect(on(
-    () => chat()?.local_path,
-    () => {
-      void loadFileSuggestions()
-    },
-  ))
-
-  const handleSetFolder = () => {
-    setIsPathDialogOpen(true)
+    const selectedAgent = chatLogic.availableAgents().find((agent) => agent.name === selectedName)
+    return selectedAgent?.color ?? null
   }
 
   return (
@@ -470,46 +174,97 @@ export function Chat(props: TChatProps) {
       }}
     >
       <ChatHeader
-        title={(chat()?.title) + ' ' + chat()?.session_id}
-        subtitle={toTildePath(chat()?.local_path ?? "", homePath())}
-        onSetFolder={handleSetFolder}
+        title={`${chatLogic.chat()?.title ?? ""} ${chatLogic.chat()?.session_id ?? ""}`}
+        subtitle={toTildePath(chatLogic.chat()?.local_path ?? "", chatLogic.homePath())}
+        onSetFolder={chatLogic.handleSetFolder}
         onCollapse={() => {
           // TODO: Implement collapse logic
         }}
-        onRemove={() => {
-          const handle = store.canvasSlice.canvas?.handle
-          if (!handle) return // should never happen
-          const changes = props.chatClass.dispatch({ type: 'delete' })
-          if (changes) applyChangesToCRDT(handle, [changes])
-        }}
-        onPointerDown={handlePointerDown}
-        onPointerMove={handlePointerMove}
-        onPointerUp={handlePointerUp}
+        onRemove={removeChat}
+        onPointerDown={chatLogic.handlePointerDown}
+        onPointerMove={chatLogic.handlePointerMove}
+        onPointerUp={chatLogic.handlePointerUp}
       />
+
       <div
-        ref={scrollContainerRef}
-        onScroll={handleScroll}
+        ref={chatLogic.setScrollContainer}
+        onScroll={chatLogic.handleScroll}
         class="p-2 text-muted-foreground text-sm flex-1 overflow-y-auto"
       >
         <ErrorBoundary fallback={(err) => <div class="text-red-500">{err.message}</div>}>
-          <ChatMessages messages={orderedMessages()} isBusy={isBusy()} />
+          <ChatMessages messages={chatLogic.orderedMessages()} isBusy={chatLogic.isBusy()} />
         </ErrorBoundary>
       </div>
+
+      <Show when={dialogCommand()}>
+        <ChatDialog
+          view={(() => {
+            const cmd = dialogCommand()!
+            if (cmd === "agents") {
+              return createAgentsDialogView({
+                agents: chatLogic.availableAgents() as any,
+                selectedAgentName: chatLogic.selectedAgentName(),
+                onSelectAgent: chatLogic.setSelectedAgent,
+              })
+            }
+            if (cmd === "models") {
+              return createModelsDialogView({
+                providers: chatLogic.availableProviders(),
+                recentModels: chatLogic.loadRecentModels(),
+                selectedModel: chatLogic.selectedModel(),
+                onSelectModel: chatLogic.setSelectedModelAndRecord,
+              })
+            }
+            if (cmd === "rename") {
+              return {
+                id: "rename-dialog",
+                title: "Rename Chat",
+                items: [{
+                  id: "rename-input",
+                  label: "New title",
+                  inputPlaceholder: "Enter new chat title...",
+                  inputValue: chatLogic.chat()?.title ?? "",
+                  onInputSubmit: (value) => {
+                    if (value.trim()) {
+                      chatLogic.renameChat(value.trim())
+                      setDialogCommand(null)
+                    }
+                  }
+                }]
+              }
+            }
+            return getDialogView(cmd)
+          })()}
+          onClose={() => setDialogCommand(null)}
+        />
+      </Show>
+
       <ChatInput
-        canSend={canSendMessage()}
-        onInputFocus={resetToReadyIfFinished}
-        onSend={sendMessage}
-        fileSuggestions={fileSuggestions()}
-        workingDirectoryPath={chat()?.local_path ?? null}
+        canSend={chatLogic.canSendMessage()}
+        onInputFocus={chatLogic.resetToReadyIfFinished}
+        onSend={chatLogic.sendMessage}
+        onCycleAgent={chatLogic.cycleAgent}
+        onFileSearch={chatLogic.searchFileSuggestionsWithOptions}
+        onFileSuggestionUsed={chatLogic.handleFileSuggestionUsed}
+        onSlashCommand={handleSlashCommand}
+        workingDirectoryPath={chatLogic.chat()?.local_path ?? null}
       />
-      <StatusLine state={props.state} />
+
+      <StatusLine
+        state={props.state}
+        agentName={statusAgentName()}
+        agentColor={statusAgentColor()}
+        modelID={chatLogic.statusLineMeta().modelID}
+        providerID={chatLogic.statusLineMeta().providerID}
+      />
+
       <PathPickerDialog
-        open={isPathDialogOpen()}
-        onOpenChange={setIsPathDialogOpen}
-        initialPath={chat()?.local_path ?? null}
+        open={chatLogic.isPathDialogOpen()}
+        onOpenChange={chatLogic.setIsPathDialogOpen}
+        initialPath={chatLogic.chat()?.local_path ?? null}
         onPathSelected={async (path) => {
-          await updateLocalPath(path)
-          setIsPathDialogOpen(false)
+          await chatLogic.updateLocalPath(path)
+          chatLogic.setIsPathDialogOpen(false)
         }}
         title="Select Chat Folder"
         description="Path change starts a new session."

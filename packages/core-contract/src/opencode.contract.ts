@@ -1,4 +1,4 @@
-import type { Event as OpenCodeEvent } from "@opencode-ai/sdk/v2";
+import type { Event as OpenCodeEvent, OpencodeClient } from "@opencode-ai/sdk/v2";
 import { eventIterator, oc, type } from "@orpc/contract";
 import { z } from "zod";
 
@@ -40,92 +40,47 @@ const filePartSourceSchema = z.discriminatedUnion("type", [
   }),
 ]);
 
-const modelSchema = z.object({
-  id: z.string(),
-  providerID: z.string(),
-  api: z.object({
-    id: z.string(),
-    url: z.string(),
-    npm: z.string(),
-  }),
-  name: z.string(),
-  capabilities: z.object({
-    temperature: z.boolean(),
-    reasoning: z.boolean(),
-    attachment: z.boolean(),
-    toolcall: z.boolean(),
-    input: z.object({
-      text: z.boolean(),
-      audio: z.boolean(),
-      image: z.boolean(),
-      video: z.boolean(),
-      pdf: z.boolean(),
-    }),
-    output: z.object({
-      text: z.boolean(),
-      audio: z.boolean(),
-      image: z.boolean(),
-      video: z.boolean(),
-      pdf: z.boolean(),
-    }),
-  }),
-  cost: z.object({
-    input: z.number(),
-    output: z.number(),
-    cache: z.object({
-      read: z.number(),
-      write: z.number(),
-    }),
-    experimentalOver200K: z
-      .object({
-        input: z.number(),
-        output: z.number(),
-        cache: z.object({
-          read: z.number(),
-          write: z.number(),
-        }),
-      })
-      .optional(),
-  }),
-  limit: z.object({
-    context: z.number(),
-    output: z.number(),
-  }),
-  status: z.enum(["alpha", "beta", "deprecated", "active"]),
-  options: z.record(z.string(), z.unknown()),
-  headers: z.record(z.string(), z.string()),
-});
+type TConfigGetOutput = Awaited<ReturnType<OpencodeClient["config"]["get"]>> extends { data: infer TData }
+  ? NonNullable<TData>
+  : never;
 
-const providerSchema = z.object({
-  id: z.string(),
-  name: z.string(),
-  source: z.enum(["env", "config", "custom", "api"]),
-  env: z.array(z.string()),
-  key: z.string().optional(),
-  options: z.record(z.string(), z.unknown()),
-  models: z.record(z.string(), modelSchema),
-});
+type TMethodData<TMethod> = TMethod extends (...args: any[]) => Promise<infer TResult>
+  ? TResult extends { data: infer TData }
+    ? NonNullable<TData>
+    : never
+  : never;
 
-const agentSchema = z.object({
-  name: z.string(),
-  description: z.string().optional(),
-  mode: z.enum(["subagent", "primary", "all"]),
-  builtIn: z.boolean().optional(),
-  topP: z.number().optional(),
-  temperature: z.number().optional(),
-  color: z.string().optional(),
-  permission: z.unknown(),
-  model: z
-    .object({
-      modelID: z.string(),
-      providerID: z.string(),
-    })
-    .optional(),
-  prompt: z.string().optional(),
-  tools: z.record(z.string(), z.boolean()).optional(),
-  options: z.record(z.string(), z.unknown()).optional(),
-  maxSteps: z.number().optional(),
-}).passthrough();
+type TMethodInput<TMethod> = TMethod extends (input: infer TInput, ...args: any[]) => unknown
+  ? TInput
+  : never;
+
+type TAppLogInput = TMethodInput<OpencodeClient["app"]["log"]>;
+type TAppLogOutput = TMethodData<OpencodeClient["app"]["log"]>;
+type TAppAgentsOutput = TMethodData<OpencodeClient["app"]["agents"]>;
+type TConfigProvidersOutput = TMethodData<OpencodeClient["config"]["providers"]>;
+
+type TSessionListOutput = TMethodData<OpencodeClient["session"]["list"]>;
+type TSessionOutput = TMethodData<OpencodeClient["session"]["get"]>;
+type TSessionGetInput = TMethodInput<OpencodeClient["session"]["get"]>;
+type TSessionChildrenInput = TMethodInput<OpencodeClient["session"]["children"]>;
+type TSessionCreateInput = TMethodInput<OpencodeClient["session"]["create"]>;
+const sessionInitInputSchema = z.object({
+  chatId: z.string(),
+  body: z.object({
+    path: z.string().optional(),
+    modelID: z.string().optional(),
+    providerID: z.string().optional(),
+    messageID: z.string().optional(),
+  }).optional(),
+});
+type TSessionAbortInput = TMethodInput<OpencodeClient["session"]["abort"]>;
+type TSessionAbortOutput = TMethodData<OpencodeClient["session"]["abort"]>;
+type TSessionSummarizeInput = TMethodInput<OpencodeClient["session"]["summarize"]>;
+type TSessionSummarizeOutput = TMethodData<OpencodeClient["session"]["summarize"]>;
+type TSessionRevertInput = TMethodInput<OpencodeClient["session"]["revert"]>;
+type TSessionUnrevertInput = TMethodInput<OpencodeClient["session"]["unrevert"]>;
+type TSessionUpdateInput = TMethodInput<OpencodeClient["session"]["update"]>;
+type TSessionUpdateOutput = TMethodData<OpencodeClient["session"]["update"]>;
 
 const pathInfoSchema = z.object({
   state: z.string(),
@@ -282,6 +237,13 @@ const sessionShellInputSchema = z.object({
   }),
 });
 
+const sessionUpdateInputSchema = z.object({
+  chatId: z.string(),
+  body: z.object({
+    title: z.string().optional(),
+  }),
+});
+
 const findTextInputSchema = z.object({
   chatId: z.string(),
   query: z.object({
@@ -319,6 +281,11 @@ const chatScopedInputSchema = z.object({
 
 const promptInputSchema = z.object({
   chatId: z.string(),
+  agent: z.string().optional(),
+  model: z.object({
+    providerID: z.string(),
+    modelID: z.string(),
+  }).optional(),
   parts: z.array(z.discriminatedUnion("type", [
     z.object({
       id: z.string().optional(),
@@ -379,9 +346,13 @@ export default oc.router({
     .output(eventIterator(type<OpenCodeEvent>())),
 
   app: oc.router({
+    log: oc
+      .input(type<TAppLogInput>())
+      .output(type<TAppLogOutput>()),
+
     agents: oc
       .input(chatScopedInputSchema)
-      .output(z.array(agentSchema)),
+      .output(type<TAppAgentsOutput>()),
   }),
 
   path: oc.router({
@@ -391,17 +362,55 @@ export default oc.router({
   }),
 
   config: oc.router({
+    get: oc
+      .input(chatScopedInputSchema)
+      .output(type<TConfigGetOutput>()),
+
     providers: oc
       .input(chatScopedInputSchema)
-      .output(
-        z.object({
-          providers: z.array(providerSchema),
-          default: z.record(z.string(), z.string()),
-        }),
-      ),
+      .output(type<TConfigProvidersOutput>()),
   }),
 
   session: oc.router({
+    list: oc
+      .output(type<TSessionListOutput>()),
+
+    get: oc
+      .input(type<TSessionGetInput>())
+      .output(type<TSessionOutput>()),
+
+    children: oc
+      .input(type<TSessionChildrenInput>())
+      .output(type<TSessionListOutput>()),
+
+    create: oc
+      .input(type<TSessionCreateInput>())
+      .output(type<TSessionOutput>()),
+
+    init: oc
+      .input(sessionInitInputSchema)
+      .output(z.boolean()),
+
+    abort: oc
+      .input(type<TSessionAbortInput>())
+      .output(type<TSessionAbortOutput>()),
+
+    summarize: oc
+      .input(type<TSessionSummarizeInput>())
+      .output(type<TSessionSummarizeOutput>()),
+
+    revert: oc
+      .input(type<TSessionRevertInput>())
+      .output(type<TSessionOutput>()),
+
+    unrevert: oc
+      .input(type<TSessionUnrevertInput>())
+      .output(type<TSessionOutput>()),
+
+    update: oc
+      .input(sessionUpdateInputSchema)
+      .output(type<TSessionUpdateOutput>()),
+
     command: oc
       .input(sessionCommandInputSchema)
       .output(sessionCommandOutputSchema),
