@@ -76,6 +76,8 @@ type TSessionSummarizeInput = TMethodInput<OpencodeClient["session"]["summarize"
 type TSessionSummarizeOutput = TMethodData<OpencodeClient["session"]["summarize"]>;
 type TSessionRevertInput = TMethodInput<OpencodeClient["session"]["revert"]>;
 type TSessionUnrevertInput = TMethodInput<OpencodeClient["session"]["unrevert"]>;
+type TSessionUpdateInput = TMethodInput<OpencodeClient["session"]["update"]>;
+type TSessionUpdateOutput = TMethodData<OpencodeClient["session"]["update"]>;
 
 const pathInfoSchema = z.object({
   state: z.string(),
@@ -229,6 +231,13 @@ const sessionShellInputSchema = z.object({
         modelID: z.string(),
       })
       .optional(),
+  }),
+});
+
+const sessionUpdateInputSchema = z.object({
+  chatId: z.string(),
+  body: z.object({
+    title: z.string().optional(),
   }),
 });
 
@@ -394,6 +403,10 @@ export default oc.router({
     unrevert: oc
       .input(type<TSessionUnrevertInput>())
       .output(type<TSessionOutput>()),
+
+    update: oc
+      .input(sessionUpdateInputSchema)
+      .output(type<TSessionUpdateOutput>()),
 
     command: oc
       .input(sessionCommandInputSchema)

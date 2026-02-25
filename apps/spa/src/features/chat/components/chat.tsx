@@ -173,6 +173,24 @@ export function Chat(props: TChatProps) {
                 onSelectModel: chatLogic.setSelectedModelAndRecord,
               })
             }
+            if (cmd === "rename") {
+              return {
+                id: "rename-dialog",
+                title: "Rename Chat",
+                items: [{
+                  id: "rename-input",
+                  label: "New title",
+                  inputPlaceholder: "Enter new chat title...",
+                  inputValue: chatLogic.chat()?.title ?? "",
+                  onInputSubmit: (value) => {
+                    if (value.trim()) {
+                      chatLogic.renameChat(value.trim())
+                      setDialogCommand(null)
+                    }
+                  }
+                }]
+              }
+            }
             return getDialogView(cmd)
           })()}
           onClose={() => setDialogCommand(null)}

@@ -136,9 +136,19 @@ export function ChatDialog(props: TChatDialogProps) {
     requestAnimationFrame(() => {
       if (currentView().searchable) {
         searchRef?.focus()
-      } else {
-        wrapperRef?.focus()
+        return
       }
+      // If there's only one item and it has an input, focus the input
+      const items = filteredItems()
+      if (items.length === 1 && items[0]?.inputPlaceholder != null) {
+        const input = listRef?.querySelector(`[data-input-id="${items[0].id}"]`) as HTMLInputElement | null
+        if (input) {
+          input.focus()
+          input.select()
+          return
+        }
+      }
+      wrapperRef?.focus()
     })
   }
 
@@ -338,7 +348,10 @@ export function ChatDialog(props: TChatDialogProps) {
               </Show>
               <div
                 class="chat-dialog-item"
-                classList={{ "chat-dialog-item--active": i() === selectedIndex() }}
+                classList={{
+                  "chat-dialog-item--active": i() === selectedIndex(),
+                  "chat-dialog-item--input": item.inputPlaceholder != null,
+                }}
                 data-dialog-index={i()}
                 onMouseEnter={() => setSelectedIndex(i())}
                 onMouseDown={(e) => {

@@ -620,6 +620,32 @@ export function createChatContextLogic(args: TCreateChatContextArgs) {
     recordMentionUsage(args.chatId, path)
   }
 
+  const renameChat = async (newTitle: string) => {
+    const currentChat = chat()
+    if (!currentChat) return
+
+    // Update our database
+    const [updateError] = await orpcWebsocketService.safeClient.api.chat.update({
+      params: { id: currentChat.id },
+      body: { title: newTitle },
+    })
+
+    if (updateError) {
+      console.error("Failed to update chat title in DB", updateError)
+      return
+    }
+
+    // Update OpenCode session
+    const [sessionError] = await orpcWebsocketService.safeClient.api.opencode.session.update({
+      chatId: args.chatId,
+      body: { title: newTitle },
+    })
+
+    if (sessionError) {
+      console.error("Failed to update session title", sessionError)
+    }
+  }
+
   const loadHomePath = async () => {
     const [homeError, homeResult] = await orpcWebsocketService.safeClient.api.file.home()
     if (homeError || !homeResult || "type" in homeResult) return
@@ -796,6 +822,7 @@ export function createChatContextLogic(args: TCreateChatContextArgs) {
     resetToReadyIfFinished,
     searchFileSuggestionsWithOptions,
     handleFileSuggestionUsed,
+    renameChat,
     sendMessage,
     statusLineMeta,
     availableAgents,
