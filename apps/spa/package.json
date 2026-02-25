@@ -1,6 +1,6 @@
 {
   "name": "@vibecanvas/spa",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "private": true,
   "description": "SolidJS SPA with canvas",
   "type": "module",

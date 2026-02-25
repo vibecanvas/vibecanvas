@@ -46,6 +46,12 @@ type TChatProps = {
 export function Chat(props: TChatProps) {
   const [dialogCommand, setDialogCommand] = createSignal<string | null>(null)
 
+  const formattedSessionLabel = () => {
+    const sessionId = chatLogic.chat()?.session_id
+    if (!sessionId) return ""
+    return sessionId.length > 10 ? `${sessionId.slice(0, 10)}` : `session:${sessionId}`
+  }
+
   const removeChat = () => {
     const handle = store.canvasSlice.canvas?.handle
     if (!handle) return
@@ -174,7 +180,7 @@ export function Chat(props: TChatProps) {
       }}
     >
       <ChatHeader
-        title={`${chatLogic.chat()?.title ?? ""} ${chatLogic.chat()?.session_id ?? ""}`}
+        title={`${chatLogic.sessionTitle()}${formattedSessionLabel() ? ` · ${formattedSessionLabel()}` : ""}`}
         subtitle={toTildePath(chatLogic.chat()?.local_path ?? "", chatLogic.homePath())}
         onSetFolder={chatLogic.handleSetFolder}
         onCollapse={() => {
@@ -223,7 +229,7 @@ export function Chat(props: TChatProps) {
                   id: "rename-input",
                   label: "New title",
                   inputPlaceholder: "Enter new chat title...",
-                  inputValue: chatLogic.chat()?.title ?? "",
+                  inputValue: chatLogic.sessionTitle(),
                   onInputSubmit: (value) => {
                     if (value.trim()) {
                       chatLogic.renameChat(value.trim())

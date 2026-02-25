@@ -1,7 +1,6 @@
 import { sqliteTable, text, integer, real, blob, index } from "drizzle-orm/sqlite-core";
 import { createSelectSchema } from 'drizzle-zod';
 import { sql } from "drizzle-orm";
-import type { Message, Part } from "@opencode-ai/sdk/v2";
 
 /**
  * @llm-hint DRIZZLE JSON DEFAULTS
@@ -28,23 +27,9 @@ export const canvas = sqliteTable("canvas", {
 
 export const ZCanvasSelect = createSelectSchema(canvas);
 
-export const agent_logs = sqliteTable("agent_logs", {
-  id: text("id").primaryKey(),
-  canvas_id: text("canvas_id").notNull().references(() => canvas.id, { onDelete: "cascade" }),
-  session_id: text("session_id").notNull(),
-  timestamp: integer({ mode: "timestamp" }).notNull(),
-  data: text("data", { mode: "json" }).$type<{
-    info: Message;
-    parts: Array<Part>;
-  }>(),
-});
-
-export const ZAgentLogsSelect = createSelectSchema(agent_logs);
-
 export const chats = sqliteTable("chats", {
   id: text("id").primaryKey(),
   canvas_id: text("canvas_id").notNull().references(() => canvas.id, { onDelete: "cascade" }),
-  title: text("title").notNull(),
   session_id: text("session_id").notNull(),
   local_path: text("local_path").notNull(),
   created_at: integer("created_at", { mode: "timestamp" }).notNull().default(sql`(unixepoch())`),

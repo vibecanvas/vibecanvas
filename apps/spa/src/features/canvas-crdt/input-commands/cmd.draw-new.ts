@@ -344,7 +344,6 @@ function handleUp(ctx: Parameters<InputCommand>[0]): boolean {
       canvas_id: ctx.canvas.canvasId,
       x: dragStartWorld.x,
       y: dragStartWorld.y,
-      title: 'New Chat',
       local_path: lastFiletreePath ?? null,
     }).then(([err, chat]) => {
       if (err) {
