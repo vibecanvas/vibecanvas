@@ -49,7 +49,7 @@ export function Chat(props: TChatProps) {
   const formattedSessionLabel = () => {
     const sessionId = chatLogic.chat()?.session_id
     if (!sessionId) return ""
-    return sessionId.length > 10 ? `session:${sessionId.slice(0, 10)}` : `session:${sessionId}`
+    return sessionId.length > 10 ? `${sessionId.slice(0, 10)}` : `session:${sessionId}`
   }
 
   const removeChat = () => {
@@ -180,7 +180,7 @@ export function Chat(props: TChatProps) {
       }}
     >
       <ChatHeader
-        title={`${chatLogic.chat()?.title ?? ""}${formattedSessionLabel() ? ` · ${formattedSessionLabel()}` : ""}`}
+        title={`${chatLogic.sessionTitle()}${formattedSessionLabel() ? ` · ${formattedSessionLabel()}` : ""}`}
         subtitle={toTildePath(chatLogic.chat()?.local_path ?? "", chatLogic.homePath())}
         onSetFolder={chatLogic.handleSetFolder}
         onCollapse={() => {
@@ -229,7 +229,7 @@ export function Chat(props: TChatProps) {
                   id: "rename-input",
                   label: "New title",
                   inputPlaceholder: "Enter new chat title...",
-                  inputValue: chatLogic.chat()?.title ?? "",
+                  inputValue: chatLogic.sessionTitle(),
                   onInputSubmit: (value) => {
                     if (value.trim()) {
                       chatLogic.renameChat(value.trim())

@@ -25,7 +25,7 @@ Chat is a CRDT-backed canvas widget that embeds an OpenCode session UI directly 
 Architecture summary:
 
 - Geometry and transforms (`x/y/w/h/angle/scale`) live in the Automerge canvas doc as `elements[id].data.type = "chat"`.
-- Persistent metadata (`title`, `session_id`, `local_path`, `canvas_id`) lives in SQLite `chats`.
+- Persistent metadata (`session_id`, `local_path`, `canvas_id`) lives in SQLite `chats`.
 - Message history lives in OpenCode sessions and is loaded via `opencode.session.messages`.
 - Live runtime behavior comes from OpenCode SDK streams and RPC calls under `api.opencode.*`.
 - Composer is ProseMirror-based and supports text, pasted images, slash commands, `@` path mentions, and filetree drag-drop.
@@ -63,7 +63,7 @@ The design is hybrid local-first: CRDT handles visual placement/collaboration, w
 ## End-to-End User Flow
 
 1. User selects `chat` tool and clicks canvas.
-2. SPA `cmd.draw-new` calls `api.chat.create({ canvas_id, x, y, title, local_path })`.
+2. SPA `cmd.draw-new` calls `api.chat.create({ canvas_id, x, y, local_path })`.
 3. Server `ctrlCreateChat` validates canvas, creates OpenCode session, inserts chat row, writes CRDT element.
 4. Chat renderable mounts DOM overlay and renders `Chat` component.
 5. `Chat` context loads prior logs and available agents, then subscribes to `api.opencode.events`.
@@ -80,7 +80,6 @@ The design is hybrid local-first: CRDT handles visual placement/collaboration, w
 type TChatRow = {
   id: string;
   canvas_id: string;
-  title: string;
   session_id: string;
   local_path: string;
   created_at: Date;
@@ -94,8 +93,7 @@ type TChatRow = {
 ### Chat Contract (`packages/core-contract/src/chat.contract.ts`)
 
 - `chat.list -> TChat[]`
-- `chat.create` input: `{ canvas_id, title, local_path?: string | null, x, y }`
-- `chat.update` input: `{ params: { id }, body: { title? } }`
+- `chat.create` input: `{ canvas_id, local_path?: string | null, x, y }`
 - `chat.newSession` input: `{ params: { id } }` — creates a new OpenCode session and replaces `session_id` on the chat row.
 - `chat.remove` input: `{ params: { id } }`
 
@@ -131,10 +129,9 @@ Additional exposed OpenCode API surface (currently available to SPA):
 - Inserts `chats` row and writes CRDT chat element (`w: 360`, `h: 460`, `isCollapsed: false`).
 - On CRDT failure, deletes inserted chat row (compensating rollback).
 
-`ctrl.update-chat.ts`
+`ctrl.new-session.ts`
 
-- Updates chat title only.
-- Returns `CTRL.CHAT.UPDATE_CHAT.NOT_FOUND` when row missing.
+- Creates a new OpenCode session and updates `chats.session_id`.
 
 `ctrl.delete-chat.ts`
 
@@ -197,7 +194,7 @@ Additional exposed OpenCode API surface (currently available to SPA):
 
 `chat.tsx`
 
-- Header shows title + session id.
+- Header shows OpenCode `session.title` + session id.
 - Folder subtitle shown as tilde path when under home directory.
 - Wires slash command handling and dialog rendering.
 - Opens `PathPickerDialog` for folder change flow.
@@ -344,7 +341,6 @@ Manual smoke checklist:
 
 - `packages/functional-core/src/chat/ctrl.create-chat.ts`
 - `packages/functional-core/src/chat/ctrl.new-session.ts`
-- `packages/functional-core/src/chat/ctrl.update-chat.ts`
 - `packages/functional-core/src/chat/ctrl.delete-chat.ts`
 
 ### Imperative Shell

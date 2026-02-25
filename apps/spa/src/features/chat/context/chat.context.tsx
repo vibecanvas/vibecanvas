@@ -35,6 +35,7 @@ type TStatusMeta = {
 }
 
 type TAgent = Awaited<ReturnType<typeof orpcWebsocketService.client.api.opencode.app.agents>>[number]
+type TSessionInfo = Awaited<ReturnType<typeof orpcWebsocketService.client.api.opencode.session.current>>
 
 type TConfigProvidersOutput = Awaited<ReturnType<typeof orpcWebsocketService.client.api.opencode.config.providers>>
 type TProvider = TConfigProvidersOutput extends { providers: Array<infer P> } ? P : never
@@ -219,6 +220,7 @@ export function createChatContextLogic(args: TCreateChatContextArgs) {
   const [selectedAgentName, setSelectedAgentName] = createSignal<string | null>(null)
   const [availableProviders, setAvailableProviders] = createSignal<TProvider[]>([])
   const [selectedModel, setSelectedModel] = createSignal<{ providerID: string; modelID: string } | null>(null)
+  const [sessionInfo, setSessionInfo] = createSignal<TSessionInfo | null>(null)
 
   let isDragging = false
   let lastPos = { x: 0, y: 0 }
@@ -347,7 +349,27 @@ export function createChatContextLogic(args: TCreateChatContextArgs) {
         args.setConnectionState(CONNECTION_STATE.ERROR)
         break
       }
+
+      case "session.updated": {
+        const updatedSession = event.properties.info
+        if (updatedSession.id !== sessionId) return
+        setSessionInfo(updatedSession)
+        break
+      }
     }
+  }
+
+  const loadSessionInfo = async () => {
+    const [sessionError, sessionResult] = await orpcWebsocketService.safeClient.api.opencode.session.current({
+      chatId: args.chatId,
+    })
+
+    if (sessionError || !sessionResult) {
+      console.error("Failed to load session info", sessionError)
+      return
+    }
+
+    setSessionInfo(sessionResult)
   }
 
   const loadPreviousMessages = async () => {
@@ -616,29 +638,17 @@ export function createChatContextLogic(args: TCreateChatContextArgs) {
   }
 
   const renameChat = async (newTitle: string) => {
-    const currentChat = chat()
-    if (!currentChat) return
-
-    // Update our database
-    const [updateError] = await orpcWebsocketService.safeClient.api.chat.update({
-      params: { id: currentChat.id },
-      body: { title: newTitle },
-    })
-
-    if (updateError) {
-      console.error("Failed to update chat title in DB", updateError)
-      return
-    }
-
-    // Update OpenCode session
-    const [sessionError] = await orpcWebsocketService.safeClient.api.opencode.session.update({
+    const [sessionError, updatedSession] = await orpcWebsocketService.safeClient.api.opencode.session.update({
       chatId: args.chatId,
       body: { title: newTitle },
     })
 
-    if (sessionError) {
+    if (sessionError || !updatedSession) {
       console.error("Failed to update session title", sessionError)
+      return
     }
+
+    setSessionInfo(updatedSession)
   }
 
   const loadHomePath = async () => {
@@ -707,7 +717,6 @@ export function createChatContextLogic(args: TCreateChatContextArgs) {
       canvas_id: args.canvas.id,
       x: worldX + 30,
       y: worldY + 30,
-      title: `Chat - ${normalizedPath.split("/").pop()}`,
       local_path: normalizedPath,
     })
 
@@ -799,6 +808,7 @@ export function createChatContextLogic(args: TCreateChatContextArgs) {
       return
     }
 
+    await loadSessionInfo()
     await loadPreviousMessages()
     await loadAvailableAgents()
     await loadAvailableProviders()
@@ -817,6 +827,14 @@ export function createChatContextLogic(args: TCreateChatContextArgs) {
       handleOpenCodeEvent(event)
     }
   })
+
+  createEffect(on(
+    () => chat()?.session_id,
+    () => {
+      setSessionInfo(null)
+      void loadSessionInfo()
+    },
+  ))
 
   return {
     chat,
@@ -838,6 +856,7 @@ export function createChatContextLogic(args: TCreateChatContextArgs) {
     availableProviders,
     selectedModel,
     setSelectedModelAndRecord,
+    sessionTitle: () => sessionInfo()?.title ?? "Untitled Session",
     loadRecentModels,
     loadAvailableProviders,
     isPathDialogOpen,
@@ -861,7 +880,7 @@ export function createChatContextLogic(args: TCreateChatContextArgs) {
       return {
         session: {
           id: currentChat.session_id,
-          title: currentChat.title,
+          title: sessionInfo()?.title ?? "Untitled Session",
           time: {
             created: new Date(currentChat.created_at).getTime(),
             updated: new Date(currentChat.updated_at).getTime(),

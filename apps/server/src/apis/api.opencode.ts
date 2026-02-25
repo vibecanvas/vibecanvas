@@ -257,6 +257,20 @@ const sessionUpdate = baseOs.api.opencode.session.update.handler(async ({ input,
   return data;
 });
 
+const sessionCurrent = baseOs.api.opencode.session.current.handler(async ({ input, context: { db, opencodeService } }) => {
+  const { chat, client } = requireChatContext(db, opencodeService, input.chatId);
+
+  const { data, error } = await client.session.get({
+    sessionID: chat.session_id,
+    directory: chat.local_path,
+  });
+
+  if (error) throwFromOpencodeError(error);
+  if (!data) throw new ORPCError("OPENCODE_ERROR", { message: "Missing OpenCode response data" });
+
+  return data;
+});
+
 const sessionMessages = baseOs.api.opencode.session.messages.handler(async ({ input, context: { db, opencodeService } }) => {
   const { chat, client } = requireChatContext(db, opencodeService, input.chatId);
 
@@ -352,6 +366,7 @@ export const opencode = {
     command: sessionCommand,
     shell: sessionShell,
     update: sessionUpdate,
+    current: sessionCurrent,
     messages: sessionMessages,
   },
   find: {

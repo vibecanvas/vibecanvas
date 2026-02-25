@@ -419,6 +419,10 @@ export default oc.router({
       .input(sessionUpdateInputSchema)
       .output(type<TSessionUpdateOutput>()),
 
+    current: oc
+      .input(chatScopedInputSchema)
+      .output(type<TSessionOutput>()),
+
     messages: oc
       .input(sessionMessagesInputSchema)
       .output(type<TSessionMessagesOutput>()),

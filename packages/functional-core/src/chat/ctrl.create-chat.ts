@@ -12,7 +12,7 @@ type TPortal = {
   opencodeService: OpencodeService;
 };
 
-type TArgs = Pick<TChat, 'canvas_id' | 'title' | 'local_path'> & { x: number, y: number };
+type TArgs = Pick<TChat, 'canvas_id' | 'local_path'> & { x: number, y: number };
 
 type TChat = typeof schema.chats.$inferSelect;
 
@@ -49,7 +49,6 @@ export async function ctrlCreateChat(portal: TPortal, args: TArgs): Promise<TErr
     const chatData: typeof schema.chats.$inferInsert = {
       id: chatId,
       canvas_id: args.canvas_id,
-      title: args.title,
       session_id: newSession.data.id,
       local_path: args.local_path,
     } as const;

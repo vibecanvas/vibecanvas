@@ -30,7 +30,6 @@ export const ZCanvasSelect = createSelectSchema(canvas);
 export const chats = sqliteTable("chats", {
   id: text("id").primaryKey(),
   canvas_id: text("canvas_id").notNull().references(() => canvas.id, { onDelete: "cascade" }),
-  title: text("title").notNull(),
   session_id: text("session_id").notNull(),
   local_path: text("local_path").notNull(),
   created_at: integer("created_at", { mode: "timestamp" }).notNull().default(sql`(unixepoch())`),
