@@ -151,6 +151,16 @@ export function Chat(props: TChatProps) {
     onDragEnd: props.onDragEnd,
   })
 
+  const statusAgentName = () => chatLogic.selectedAgentName() ?? chatLogic.statusLineMeta().agentName
+
+  const statusAgentColor = () => {
+    const selectedName = statusAgentName()
+    if (!selectedName) return null
+
+    const selectedAgent = chatLogic.availableAgents().find((agent) => agent.name === selectedName)
+    return selectedAgent?.color ?? null
+  }
+
   return (
     <div
       class="flex flex-col bg-card text-card-foreground border border-border absolute pointer-events-auto"
@@ -242,7 +252,8 @@ export function Chat(props: TChatProps) {
 
       <StatusLine
         state={props.state}
-        agentName={chatLogic.selectedAgentName() ?? chatLogic.statusLineMeta().agentName}
+        agentName={statusAgentName()}
+        agentColor={statusAgentColor()}
         modelID={chatLogic.statusLineMeta().modelID}
         providerID={chatLogic.statusLineMeta().providerID}
       />

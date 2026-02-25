@@ -6,8 +6,27 @@ import type { Accessor } from "solid-js"
 type TStatusLineProps = {
   state: Accessor<CONNECTION_STATE>
   agentName?: string | null
+  agentColor?: string | null
   modelID?: string | null
   providerID?: string | null
+}
+
+const AGENT_COLOR_CLASS: Record<string, string> = {
+  primary: "text-primary border-primary/40 bg-primary/15",
+  secondary: "text-secondary-foreground border-secondary/40 bg-secondary/40",
+  accent: "text-accent-foreground border-accent/50 bg-accent/40",
+  success: "text-emerald-700 border-emerald-300 bg-emerald-100",
+  warning: "text-amber-700 border-amber-300 bg-amber-100",
+  error: "text-red-700 border-red-300 bg-red-100",
+  info: "text-sky-700 border-sky-300 bg-sky-100",
+}
+
+function resolveAgentColorClass(color?: string | null): string {
+  const fallback = "text-blue-700 border-blue-300 bg-blue-100"
+  if (!color) return fallback
+  const trimmed = color.trim()
+  if (!trimmed) return fallback
+  return AGENT_COLOR_CLASS[trimmed.toLowerCase()] ?? fallback
 }
 
 const STATE_COLORS: Record<CONNECTION_STATE, string> = {
@@ -39,6 +58,8 @@ const STATE_LABELS: Record<CONNECTION_STATE, string> = {
 }
 
 export function StatusLine(props: TStatusLineProps) {
+  const agentColorClass = () => resolveAgentColorClass(props.agentColor)
+
   const modelWithProvider = () => {
     if (!props.modelID) return null
     if (!props.providerID) return props.modelID
@@ -50,7 +71,9 @@ export function StatusLine(props: TStatusLineProps) {
       <div class="flex items-center gap-3 min-w-0">
         <span>{STATE_LABELS[props.state()]}</span>
         <Show when={props.agentName}>
-          <Badge class="px-1.5 py-0.5 border border-blue-300 bg-blue-100 text-blue-700 truncate max-w-40">
+          <Badge
+            class={`px-1.5 py-0.5 border truncate max-w-40 ${agentColorClass()}`}
+          >
             {props.agentName}
           </Badge>
         </Show>
