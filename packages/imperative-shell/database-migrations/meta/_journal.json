@@ -43,6 +43,13 @@
       "when": 1771804723838,
       "tag": "0005_puzzling_jubilee",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "6",
+      "when": 1772021014864,
+      "tag": "0006_opposite_puck",
+      "breakpoints": true
     }
   ]
 }

@@ -46,6 +46,12 @@ type TChatProps = {
 export function Chat(props: TChatProps) {
   const [dialogCommand, setDialogCommand] = createSignal<string | null>(null)
 
+  const formattedSessionLabel = () => {
+    const sessionId = chatLogic.chat()?.session_id
+    if (!sessionId) return ""
+    return sessionId.length > 10 ? `session:${sessionId.slice(0, 10)}` : `session:${sessionId}`
+  }
+
   const removeChat = () => {
     const handle = store.canvasSlice.canvas?.handle
     if (!handle) return
@@ -174,7 +180,7 @@ export function Chat(props: TChatProps) {
       }}
     >
       <ChatHeader
-        title={`${chatLogic.chat()?.title ?? ""} ${chatLogic.chat()?.session_id ?? ""}`}
+        title={`${chatLogic.chat()?.title ?? ""}${formattedSessionLabel() ? ` · ${formattedSessionLabel()}` : ""}`}
         subtitle={toTildePath(chatLogic.chat()?.local_path ?? "", chatLogic.homePath())}
         onSetFolder={chatLogic.handleSetFolder}
         onCollapse={() => {

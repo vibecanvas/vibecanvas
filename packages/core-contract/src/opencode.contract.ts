@@ -81,6 +81,7 @@ type TSessionRevertInput = TMethodInput<OpencodeClient["session"]["revert"]>;
 type TSessionUnrevertInput = TMethodInput<OpencodeClient["session"]["unrevert"]>;
 type TSessionUpdateInput = TMethodInput<OpencodeClient["session"]["update"]>;
 type TSessionUpdateOutput = TMethodData<OpencodeClient["session"]["update"]>;
+type TSessionMessagesOutput = TMethodData<OpencodeClient["session"]["messages"]>;
 
 const pathInfoSchema = z.object({
   state: z.string(),
@@ -242,6 +243,13 @@ const sessionUpdateInputSchema = z.object({
   body: z.object({
     title: z.string().optional(),
   }),
+});
+
+const sessionMessagesInputSchema = z.object({
+  chatId: z.string(),
+  query: z.object({
+    limit: z.number().int().positive().optional(),
+  }).optional(),
 });
 
 const findTextInputSchema = z.object({
@@ -410,6 +418,10 @@ export default oc.router({
     update: oc
       .input(sessionUpdateInputSchema)
       .output(type<TSessionUpdateOutput>()),
+
+    messages: oc
+      .input(sessionMessagesInputSchema)
+      .output(type<TSessionMessagesOutput>()),
 
     command: oc
       .input(sessionCommandInputSchema)

@@ -26,7 +26,7 @@ Architecture summary:
 
 - Geometry and transforms (`x/y/w/h/angle/scale`) live in the Automerge canvas doc as `elements[id].data.type = "chat"`.
 - Persistent metadata (`title`, `session_id`, `local_path`, `canvas_id`) lives in SQLite `chats`.
-- Message history snapshots live in SQLite `agent_logs` (`info + parts`).
+- Message history lives in OpenCode sessions and is loaded via `opencode.session.messages`.
 - Live runtime behavior comes from OpenCode SDK streams and RPC calls under `api.opencode.*`.
 - Composer is ProseMirror-based and supports text, pasted images, slash commands, `@` path mentions, and filetree drag-drop.
 
@@ -49,7 +49,7 @@ The design is hybrid local-first: CRDT handles visual placement/collaboration, w
   - filetree drag-drop mention insertion with path-scope validation.
 - Sending a prompt uses structured parts against `api.opencode.prompt`.
 - Live updates come from `api.opencode.events` and are applied incrementally.
-- History rehydrates from `agent-logs.getBySession`.
+- History rehydrates from `opencode.session.messages`.
 - Changing folder path creates a new chat/session near current widget (does not mutate existing chat session path).
 
 ## Current Assumptions and Constraints
@@ -87,16 +87,8 @@ type TChatRow = {
   updated_at: Date;
 };
 
-type TAgentLogRow = {
-  id: string;
-  canvas_id: string;
-  session_id: string;
-  timestamp: Date;
-  data: {
-    info: Message;
-    parts: Part[];
-  };
-};
+// Removed: local `agent_logs` table.
+// Transcript source-of-truth is OpenCode session storage.
 ```
 
 ### Chat Contract (`packages/core-contract/src/chat.contract.ts`)
@@ -123,10 +115,10 @@ Additional exposed OpenCode API surface (currently available to SPA):
 - `opencode.app.log`, `opencode.path.get`, `opencode.config.get`, `opencode.config.providers`,
 - `opencode.find.text`, `opencode.file.read`, `opencode.auth.set`, `opencode.session.shell`.
 
-### Agent Logs Contract (`packages/core-contract/src/agent-logs.contract.ts`)
+### OpenCode Session History Contract (`packages/core-contract/src/opencode.contract.ts`)
 
-- `agent-logs.getBySession`: `{ params: { sessionId } }`
-- Output union: `TAgentLog[] | { type: "ERROR"; message: "Failed to get agent logs" }`
+- `opencode.session.messages`: input `{ chatId, query?: { limit?: number } }`
+- Output: `Array<{ info: Message; parts: Part[] }>`
 
 ## Backend Implementation
 
@@ -163,16 +155,15 @@ Additional exposed OpenCode API surface (currently available to SPA):
 - `prompt`:
   - sends `client.session.prompt({ sessionID, agent, parts, directory })`,
   - fetches user message by `parentID` with `session.message`,
-  - stores user + assistant entries in `agent_logs` transaction.
+  - no local transcript persistence; OpenCode stores transcript history internally.
 - `events`:
   - subscribes to `client.event.subscribe({ directory: chat.local_path })`,
   - streams raw OpenCode events to client.
 - Includes error translation (`NotFound`, bad request, generic OpenCode error).
 
-`api.agent-logs.ts`
+`api.opencode.ts` (`session.messages`)
 
-- Retrieves all log rows for `session_id`.
-- Returns contract-safe error union on failure.
+- Retrieves transcript entries directly from `client.session.messages({ sessionID, directory })`.
 
 ### OpenCode Service (`packages/imperative-shell/src/opencode/srv.opencode.ts`)
 
@@ -218,7 +209,7 @@ Additional exposed OpenCode API surface (currently available to SPA):
   - `parts`,
   - `messageOrder`,
   - `sessionStatus`.
-- Rehydrates history from `agent-logs` by timestamp.
+- Rehydrates history from `opencode.session.messages` sorted by `info.time.created`.
 - Subscribes to `opencode.events` and applies session-filtered updates.
 - Inserts optimistic user message and parts before prompt request returns.
 - Loads and manages selectable agents from `opencode.app.agents`.
@@ -315,7 +306,7 @@ Current behavior for unhandled commands is toast-based "not implemented" feedbac
 - `session.error` events also set `ERROR`.
 - Drag-drop mention rejects paths outside chat folder.
 - Delete API failure shows toast after local CRDT removal.
-- `agent-logs.getBySession` uses explicit success/error union for safe UI handling.
+- History fetch uses `opencode.session.messages`; failures are handled through oRPC error flow.
 
 ## Performance and UX Notes
 
@@ -347,7 +338,6 @@ Manual smoke checklist:
 
 - `packages/core-contract/src/chat.contract.ts`
 - `packages/core-contract/src/opencode.contract.ts`
-- `packages/core-contract/src/agent-logs.contract.ts`
 - `packages/core-contract/src/db.contract.ts`
 
 ### Functional Core
@@ -366,7 +356,6 @@ Manual smoke checklist:
 
 - `apps/server/src/apis/api.chat.ts`
 - `apps/server/src/apis/api.opencode.ts`
-- `apps/server/src/apis/api.agent-logs.ts`
 - `apps/server/src/apis/api.db.ts`
 
 ### SPA Chat
@@ -408,7 +397,7 @@ flowchart TD
   S1 --> A1[Automerge add chat element]
   A1 --> W1[ChatElement mounts DOM overlay + Chat component]
 
-  W1 --> H1[Load history from agent-logs.getBySession]
+  W1 --> H1[Load history from opencode.session.messages]
   W1 --> G1[Load agents via opencode.app.agents]
   W1 --> E1[Subscribe opencode.events iterator]
 
@@ -417,7 +406,7 @@ flowchart TD
   P1 --> API1[api.opencode.prompt]
   API1 --> O2[OpenCode session.prompt]
   O2 --> O3[OpenCode session.message for parent user msg]
-  O2 --> L1[Persist user + assistant rows to agent_logs]
+  O2 --> L1[OpenCode persists transcript internally]
 
   E1 --> EV1[message/session events]
   EV1 --> F1[Client filters by session_id]

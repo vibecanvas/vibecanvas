@@ -110,6 +110,18 @@ export async function startServer(options: StartServerOptions): Promise<void> {
 
   let opencodeService!: OpencodeService
 
+  const closeOpencodeServer = () => {
+    try {
+      ;(opencodeService as any)?.opencodeServer?.close?.()
+    } catch (error) {
+      console.error('[Opencode] close failed:', error)
+    }
+  }
+
+  process.once('exit', closeOpencodeServer)
+  process.once('SIGINT', closeOpencodeServer)
+  process.once('SIGTERM', closeOpencodeServer)
+
   type WebSocketData = {
     path: string;
   };

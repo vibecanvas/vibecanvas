@@ -351,26 +351,21 @@ export function createChatContextLogic(args: TCreateChatContextArgs) {
   }
 
   const loadPreviousMessages = async () => {
-    const sessionId = chat()?.session_id
-    if (!sessionId) return
+    const currentChat = chat()
+    if (!currentChat) return
 
-    const [logsError, logsResult] = await orpcWebsocketService.safeClient.api["agent-logs"].getBySession({
-      params: { sessionId },
+    const [messagesError, messagesResult] = await orpcWebsocketService.safeClient.api.opencode.session.messages({
+      chatId: args.chatId,
     })
 
-    if (logsError) {
-      console.error("Failed to load previous messages", logsError)
+    if (messagesError || !messagesResult) {
+      console.error("Failed to load previous messages", messagesError)
       return
     }
 
-    if (!Array.isArray(logsResult)) {
-      console.error("Failed to load previous messages", logsResult.message)
-      return
-    }
-
-    const logsByTime = [...logsResult].sort((a, b) => {
-      const aTime = new Date(a.timestamp).getTime()
-      const bTime = new Date(b.timestamp).getTime()
+    const messagesByTime = [...messagesResult].sort((a, b) => {
+      const aTime = Number(a.info.time.created ?? 0)
+      const bTime = Number(b.info.time.created ?? 0)
       return aTime - bTime
     })
 
@@ -378,8 +373,8 @@ export function createChatContextLogic(args: TCreateChatContextArgs) {
     const parts: Record<string, Part> = {}
     const messageOrder: string[] = []
 
-    for (const log of logsByTime) {
-      const message = log.data?.info
+    for (const entry of messagesByTime) {
+      const message = entry.info
       if (!message) continue
 
       messages[message.id] = message
@@ -387,7 +382,7 @@ export function createChatContextLogic(args: TCreateChatContextArgs) {
         messageOrder.push(message.id)
       }
 
-      for (const part of log.data?.parts ?? []) {
+      for (const part of entry.parts ?? []) {
         parts[part.id] = part
       }
     }

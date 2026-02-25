@@ -1,5 +1,4 @@
 import { ORPCError } from "@orpc/server";
-import { agent_logs } from "@vibecanvas/shell/database/schema";
 import { baseOs } from "../orpc.base";
 import type { OpencodeService } from "@vibecanvas/shell/opencode/srv.opencode";
 import type db from "@vibecanvas/shell/database/db";
@@ -118,37 +117,6 @@ const prompt = baseOs.api.opencode.prompt.handler(async ({ input, context: { db,
       message: "Bad request",
     });
   }
-
-  const userMessageID = data.info.parentID;
-  const { data: userMessage, error: userMessageError } = await client.session.message({
-    sessionID: chat.session_id,
-    messageID: userMessageID,
-  });
-
-  if (userMessageError) {
-    console.error("opencode message bad request " + JSON.stringify(userMessageError, null, 2));
-    throw new ORPCError("BAD_REQUEST", {
-      message: "Bad request",
-    });
-  }
-
-  db.transaction((tx) => {
-    tx.insert(agent_logs).values({
-      id: data.info.parentID,
-      canvas_id: chat.canvas_id,
-      session_id: data.info.sessionID,
-      timestamp: new Date(),
-      data: userMessage,
-    }).run();
-
-    tx.insert(agent_logs).values({
-      id: data.info.id,
-      canvas_id: chat.canvas_id,
-      session_id: data.info.sessionID,
-      timestamp: new Date(),
-      data,
-    }).run();
-  });
 
   return data;
 });
@@ -289,6 +257,21 @@ const sessionUpdate = baseOs.api.opencode.session.update.handler(async ({ input,
   return data;
 });
 
+const sessionMessages = baseOs.api.opencode.session.messages.handler(async ({ input, context: { db, opencodeService } }) => {
+  const { chat, client } = requireChatContext(db, opencodeService, input.chatId);
+
+  const { data, error } = await client.session.messages({
+    sessionID: chat.session_id,
+    directory: chat.local_path,
+    limit: input.query?.limit,
+  });
+
+  if (error) throwFromOpencodeError(error);
+  if (!data) throw new ORPCError("OPENCODE_ERROR", { message: "Missing OpenCode response data" });
+
+  return data;
+});
+
 const findText = baseOs.api.opencode.find.text.handler(async ({ input, context: { db, opencodeService } }) => {
   const { chat, client } = requireChatContext(db, opencodeService, input.chatId);
 
@@ -369,6 +352,7 @@ export const opencode = {
     command: sessionCommand,
     shell: sessionShell,
     update: sessionUpdate,
+    messages: sessionMessages,
   },
   find: {
     text: findText,

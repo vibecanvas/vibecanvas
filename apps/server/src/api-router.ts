@@ -1,4 +1,3 @@
-import { agentLogs } from './apis/api.agent-logs';
 import { canvas } from './apis/api.canvas';
 import { chat } from './apis/api.chat';
 import { db } from './apis/api.db';
@@ -13,7 +12,6 @@ export const router = {
     chat,
     file,
     filetree,
-    "agent-logs": agentLogs,
     opencode,
     db,
     notification,

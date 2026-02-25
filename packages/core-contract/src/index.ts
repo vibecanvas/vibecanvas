@@ -1,5 +1,4 @@
 import { oc } from "@orpc/contract";
-import agentLogsContract from "./agent-logs.contract";
 import canvasContract from "./canvas.contract";
 import chatContract from "./chat.contract";
 import dbContract from "./db.contract";
@@ -8,7 +7,6 @@ import filetreeContract from "./filetree.contract";
 import notificationContract from "./notification.contract";
 import opencodeContract from "./opencode.contract";
 
-export * from "./agent-logs.contract";
 export * from "./canvas.contract";
 export * from "./chat.contract";
 export * from "./file.contract";
@@ -22,7 +20,6 @@ export const contract = oc.router({
   chat: chatContract,
   file: fileContract,
   filetree: filetreeContract,
-  "agent-logs": agentLogsContract,
   opencode: opencodeContract,
   db: dbContract,
   notification: notificationContract,
