@@ -35,7 +35,7 @@ describe("api.opencode pty helpers", () => {
   });
 
   test("requireChatContext returns chat and client", () => {
-    const expectedChat = { id: "chat-1", local_path: "/tmp/project" };
+    const expectedChat = { id: "chat-1", local_path: "/tmp/project" } as any;
     const expectedClient = { pty: {} };
 
     const dbClient = {

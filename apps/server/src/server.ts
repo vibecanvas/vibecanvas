@@ -297,26 +297,26 @@ export async function startServer(options: StartServerOptions): Promise<void> {
               return;
             }
 
-          const query = new URLSearchParams(ws.data.query);
-          const workingDirectory = query.get('workingDirectory');
-          if (!workingDirectory) {
-            ws.close(1008, 'Missing workingDirectory');
-            return;
-          }
+            const query = new URLSearchParams(ws.data.query);
+            const workingDirectory = query.get('workingDirectory');
+            if (!workingDirectory) {
+              ws.close(1008, 'Missing workingDirectory');
+              return;
+            }
 
-          const cursor = query.get('cursor') ?? undefined;
+            const cursor = query.get('cursor') ?? undefined;
 
-          let targetUrl: string;
-          try {
-            targetUrl = buildPtyConnectUrl({
-              opencodeService,
-              ptyID,
-              directory: workingDirectory,
-              cursor,
-            });
-          } catch {
-            ws.close(1011, 'Failed to build PTY target URL');
-            return;
+            let targetUrl: string;
+            try {
+              targetUrl = buildPtyConnectUrl({
+                opencodeService,
+                ptyID,
+                directory: workingDirectory,
+                cursor,
+              });
+            } catch {
+              ws.close(1011, 'Failed to build PTY target URL');
+              return;
             }
 
             const backend = new WebSocket(targetUrl);

@@ -1,4 +1,4 @@
-import { Terminal } from "@/components/terminal";
+import { TerminalWidget } from "@/features/terminal/components/terminal-widget";
 
 type TTerminalPanelProps = {
   terminalKey: string;
@@ -8,7 +8,7 @@ type TTerminalPanelProps = {
 export function TerminalPanel(props: TTerminalPanelProps) {
   return (
     <section class="h-full w-full bg-background p-3">
-      <Terminal terminalKey={props.terminalKey} workingDirectory={props.workingDirectory} />
+      <TerminalWidget terminalKey={props.terminalKey} workingDirectory={props.workingDirectory} />
     </section>
   );
 }

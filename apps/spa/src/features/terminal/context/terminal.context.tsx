@@ -11,11 +11,10 @@ import { orpcWebsocketService } from "@/services/orpc-websocket";
 import { init as initGhostty, Terminal as GhosttyTerminal } from "ghostty-web";
 import { createMemo, createSignal, onCleanup, onMount } from "solid-js";
 
-type TTerminalProps = {
+type TCreateTerminalContextArgs = {
   terminalKey: string;
   workingDirectory: string;
   title?: string;
-  showChrome?: boolean;
 };
 
 const DEFAULT_ROWS = 24;
@@ -72,7 +71,7 @@ function calculateTerminalSize(
   return { rows, cols };
 }
 
-export function Terminal(props: TTerminalProps) {
+export function createTerminalContextLogic(args: TCreateTerminalContextArgs) {
   const [status, setStatus] = createSignal<"idle" | "connecting" | "connected" | "error">("idle");
   const [errorMessage, setErrorMessage] = createSignal<string | null>(null);
   const [pty, setPty] = createSignal<TPty | null>(null);
@@ -88,15 +87,15 @@ export function Terminal(props: TTerminalProps) {
   let connection: ReturnType<typeof opencodePtyService.connect> | null = null;
   let hasAuthoritativeCursor = false;
 
-  const terminalTitle = createMemo(() => pty()?.title ?? props.title ?? "Terminal");
+  const terminalTitle = createMemo(() => pty()?.title ?? args.title ?? "Terminal");
 
   const persistState = () => {
     const current = pty();
     if (!current) return;
 
     saveTerminalSessionState({
-      terminalKey: props.terminalKey,
-      workingDirectory: props.workingDirectory,
+      terminalKey: args.terminalKey,
+      workingDirectory: args.workingDirectory,
       ptyID: current.id,
       cursor: cursor(),
       rows: term?.rows ?? size().rows,
@@ -118,7 +117,7 @@ export function Terminal(props: TTerminalProps) {
       const current = pty();
       if (!current) return;
 
-      await opencodePtyService.update(props.workingDirectory, current.id, {
+      await opencodePtyService.update(args.workingDirectory, current.id, {
         size: { rows, cols },
       });
     }, 120);
@@ -170,7 +169,7 @@ export function Terminal(props: TTerminalProps) {
     setStatus("connecting");
 
     connection = opencodePtyService.connect({
-      workingDirectory: props.workingDirectory,
+      workingDirectory: args.workingDirectory,
       ptyID,
       cursor: cursorValue,
       onOpen: () => {
@@ -225,11 +224,11 @@ export function Terminal(props: TTerminalProps) {
   };
 
   const ensurePty = async () => {
-    const restored = loadTerminalSessionState(props.terminalKey);
+    const restored = loadTerminalSessionState(args.terminalKey);
 
     if (restored?.ptyID) {
       const [getError, existing] = await orpcWebsocketService.safeClient.api.opencode.pty.get({
-        workingDirectory: props.workingDirectory,
+        workingDirectory: args.workingDirectory,
         path: { ptyID: restored.ptyID },
       });
 
@@ -247,19 +246,16 @@ export function Terminal(props: TTerminalProps) {
           }
         }
 
-        // Always replay from start of backend PTY buffer on mount.
-        // We do not persist a local terminal buffer snapshot anymore, so using
-        // a saved cursor can skip essential prompt/context when cursor drifted.
         connect(existing.id, 0);
         return;
       }
 
-      clearTerminalSessionState(props.terminalKey);
+      clearTerminalSessionState(args.terminalKey);
     }
 
     const [createError, created] = await orpcWebsocketService.safeClient.api.opencode.pty.create({
-      workingDirectory: props.workingDirectory,
-      body: { title: props.title ?? "Terminal" },
+      workingDirectory: args.workingDirectory,
+      body: { title: args.title ?? "Terminal" },
     });
 
     if (createError || !created) {
@@ -272,8 +268,8 @@ export function Terminal(props: TTerminalProps) {
     setCursor(0);
     setSize({ rows: DEFAULT_ROWS, cols: DEFAULT_COLS });
     saveTerminalSessionState({
-      terminalKey: props.terminalKey,
-      workingDirectory: props.workingDirectory,
+      terminalKey: args.terminalKey,
+      workingDirectory: args.workingDirectory,
       ptyID: created.id,
       cursor: 0,
       rows: DEFAULT_ROWS,
@@ -289,11 +285,19 @@ export function Terminal(props: TTerminalProps) {
     if (!current) return;
 
     closeConnection();
-    await opencodePtyService.remove(props.workingDirectory, current.id);
-    clearTerminalSessionState(props.terminalKey);
+    await opencodePtyService.remove(args.workingDirectory, current.id);
+    clearTerminalSessionState(args.terminalKey);
     term?.clear();
     setPty(null);
     setStatus("idle");
+  };
+
+  const setTerminalRootRef = (el: HTMLDivElement) => {
+    terminalRootRef = el;
+  };
+
+  const setResizeHostRef = (el: HTMLDivElement) => {
+    resizeHostRef = el;
   };
 
   onMount(async () => {
@@ -364,30 +368,12 @@ export function Terminal(props: TTerminalProps) {
     term = null;
   });
 
-  return (
-    <div class="flex h-full w-full flex-col border border-border bg-background font-mono text-sm" ref={resizeHostRef}>
-      {props.showChrome !== false ? (
-        <div class="flex items-center justify-between border-b border-border bg-muted px-2 py-1 text-xs">
-          <div class="truncate">{terminalTitle()}</div>
-          <div class="flex items-center gap-2 text-muted-foreground">
-            <span>{status()}</span>
-            <button
-              class="border border-border px-1 py-0.5 text-[10px] hover:bg-background"
-              onClick={() => {
-                void removeTerminal();
-              }}
-            >
-              CLOSE
-            </button>
-          </div>
-        </div>
-      ) : null}
-
-      <div ref={terminalRootRef} class="h-full w-full flex-1 overflow-hidden bg-[#111214]" />
-
-      {errorMessage() ? (
-        <div class="border-t border-border px-2 py-1 text-xs text-destructive">{errorMessage()}</div>
-      ) : null}
-    </div>
-  );
+  return {
+    status,
+    errorMessage,
+    terminalTitle,
+    removeTerminal,
+    setTerminalRootRef,
+    setResizeHostRef,
+  };
 }

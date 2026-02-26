@@ -141,10 +141,10 @@ export class TerminalElement extends AElement<"terminal"> {
       (event.target as HTMLElement).releasePointerCapture(event.pointerId);
     };
 
-    const terminalModule = await import("@/features/terminal/components/terminal-widget");
-    const TerminalWidget = terminalModule.TerminalWidget;
+    const terminalModule = await import("@/features/terminal/components/terminal-canvas-widget");
+    const TerminalCanvasWidget = terminalModule.TerminalCanvasWidget;
 
-    render(() => createComponent(TerminalWidget, {
+    render(() => createComponent(TerminalCanvasWidget, {
       title: "Terminal",
       terminalKey: this.element.id,
       workingDirectory: this.element.data.workingDirectory,
