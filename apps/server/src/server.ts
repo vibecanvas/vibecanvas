@@ -152,6 +152,23 @@ export async function startServer(options: StartServerOptions): Promise<void> {
 
   let opencodeService!: OpencodeService
 
+  console.log('[Opencode] Starting OpenCode...')
+  try {
+    opencodeService = await OpencodeService.init()
+  } catch (err) {
+    console.error('[Opencode] init failed:', err)
+    throw err
+  }
+
+  const opencodeServerUrl = (opencodeService as unknown as {
+    opencodeServer?: { url?: string }
+  }).opencodeServer?.url
+  if (opencodeServerUrl) {
+    console.log(`[Opencode] OpenCode ready on ${opencodeServerUrl}`)
+  } else {
+    console.log('[Opencode] OpenCode ready')
+  }
+
   const closeOpencodeServer = () => {
     try {
       ;(opencodeService as any)?.opencodeServer?.close?.()
@@ -428,13 +445,6 @@ export async function startServer(options: StartServerOptions): Promise<void> {
   maybePublishUpdateNotification()
 
   console.log(`Server verion ${VIBECANVAS_VERSION} listening on http://localhost:${httpPort}`);
-
-  // Initialize opencode service after the HTTP server is listening.
-  // This prevents slow opencode startup (port scanning, daemon spawn) from
-  // blocking the server health-check in CI and production.
-  OpencodeService.init()
-    .then((svc) => { opencodeService = svc })
-    .catch((err) => { console.error('[Opencode] init failed:', err) })
 
   setTimeout(() => {
     checkForUpgrade()
