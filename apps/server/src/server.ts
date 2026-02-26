@@ -14,7 +14,7 @@ import './preload/patch-negative-timeout';
 import { getServerVersion } from './runtime';
 import checkForUpgrade from './update';
 import { wsAdapter } from './automerge-repo';
-import { buildPtyConnectUrl, requireChatContext } from './apis/api.opencode';
+import { buildPtyConnectUrl } from './apis/api.opencode';
 
 // Export API type for Eden client
 export type App = any;
@@ -297,32 +297,26 @@ export async function startServer(options: StartServerOptions): Promise<void> {
               return;
             }
 
-            const query = new URLSearchParams(ws.data.query);
-            const chatId = query.get('chatId');
-            if (!chatId) {
-              ws.close(1008, 'Missing chatId');
-              return;
-            }
+          const query = new URLSearchParams(ws.data.query);
+          const workingDirectory = query.get('workingDirectory');
+          if (!workingDirectory) {
+            ws.close(1008, 'Missing workingDirectory');
+            return;
+          }
 
-            try {
-              requireChatContext(db, opencodeService, chatId);
-            } catch {
-              ws.close(1008, 'Invalid chat context');
-              return;
-            }
+          const cursor = query.get('cursor') ?? undefined;
 
-            const cursor = query.get('cursor') ?? undefined;
-
-            let targetUrl: string;
-            try {
-              targetUrl = buildPtyConnectUrl({
-                opencodeService,
-                ptyID,
-                cursor,
-              });
-            } catch {
-              ws.close(1011, 'Failed to build PTY target URL');
-              return;
+          let targetUrl: string;
+          try {
+            targetUrl = buildPtyConnectUrl({
+              opencodeService,
+              ptyID,
+              directory: workingDirectory,
+              cursor,
+            });
+          } catch {
+            ws.close(1011, 'Failed to build PTY target URL');
+            return;
             }
 
             const backend = new WebSocket(targetUrl);

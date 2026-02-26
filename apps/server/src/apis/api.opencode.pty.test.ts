@@ -10,9 +10,10 @@ describe("api.opencode pty helpers", () => {
       } as any,
       ptyID: "pty/abc",
       cursor: "42",
+      directory: "/tmp/project",
     });
 
-    expect(url).toBe("http://127.0.0.1:4096/pty/pty%2Fabc/connect?cursor=42");
+    expect(url).toBe("http://127.0.0.1:4096/pty/pty%2Fabc/connect?directory=%2Ftmp%2Fproject&cursor=42");
   });
 
   test("requireChatContext throws when chat is missing", () => {

@@ -36,6 +36,7 @@ export type {
   // Widget data types
   TChatData,
   TFiletreeData,
+  TTerminalData,
   TWidgetType,
   // Geometry
   TPoint2D,

@@ -288,8 +288,12 @@ const authSetInputSchema = z.object({
   body: authSchema,
 });
 
+const ptyScopedInputSchema = z.object({
+  workingDirectory: z.string(),
+});
+
 const ptyCreateInputSchema = z.object({
-  chatId: z.string(),
+  workingDirectory: z.string(),
   body: z.object({
     command: z.string().optional(),
     args: z.array(z.string()).optional(),
@@ -300,14 +304,14 @@ const ptyCreateInputSchema = z.object({
 });
 
 const ptyPathInputSchema = z.object({
-  chatId: z.string(),
+  workingDirectory: z.string(),
   path: z.object({
     ptyID: z.string(),
   }),
 });
 
 const ptyUpdateInputSchema = z.object({
-  chatId: z.string(),
+  workingDirectory: z.string(),
   path: z.object({
     ptyID: z.string(),
   }),
@@ -498,7 +502,7 @@ export default oc.router({
 
   pty: oc.router({
     list: oc
-      .input(chatScopedInputSchema)
+      .input(ptyScopedInputSchema)
       .output(type<TPtyListOutput>()),
 
     create: oc

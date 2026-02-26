@@ -164,6 +164,14 @@ export type TFiletreeData = {
   globPattern: string | null
 }
 
+export type TTerminalData = {
+  type: 'terminal'
+  w: number
+  h: number
+  isCollapsed: boolean
+  workingDirectory: string
+}
+
 // ============================================================================
 // UNIFIED ELEMENT
 // ============================================================================
@@ -179,6 +187,7 @@ export type TElementData =
   | TImageData
   | TChatData
   | TFiletreeData
+  | TTerminalData
 
 export type TElementStyle = {
   backgroundColor?: string
@@ -235,7 +244,7 @@ export type TElementType = TElementData['type']
 export type TDrawingType = 'rect' | 'ellipse' | 'diamond' | 'arrow' | 'line' | 'pen' | 'text' | 'image'
 
 /** Widget types */
-export type TWidgetType = 'chat' | 'filetree'
+export type TWidgetType = 'chat' | 'filetree' | 'terminal'
 
 /** Type guard for drawings */
 export function isDrawing(element: TElement): boolean {
@@ -245,7 +254,7 @@ export function isDrawing(element: TElement): boolean {
 
 /** Type guard for widgets */
 export function isWidget(element: TElement): boolean {
-  const widgetTypes: TWidgetType[] = ['chat', 'filetree']
+  const widgetTypes: TWidgetType[] = ['chat', 'filetree', 'terminal']
   return widgetTypes.includes(element.data.type as TWidgetType)
 }
 
