@@ -1,5 +1,5 @@
 import { implement, onError, ORPCError } from "@orpc/server";
-import contract from "@vibecanvas/core-contract";
+import { apiContract } from "@vibecanvas/core-contract";
 import db from "@vibecanvas/shell/database/db";
 import { OpencodeService } from "@vibecanvas/shell/opencode/srv.opencode";
 import { tExternal, tInternal } from "./error-fn";
@@ -19,7 +19,7 @@ function isORPCError(value: unknown): value is ORPCError<string, unknown> {
   return value instanceof ORPCError
 }
 
-export const baseOs = implement({ api: contract })
+export const baseOs = implement(apiContract)
   .$context<{ db: typeof db, opencodeService: OpencodeService }>()
   .use(onError((error) => {
     if (isErrorEntry(error)) {
@@ -36,4 +36,3 @@ export const baseOs = implement({ api: contract })
       throw new ORPCError('UNKNOWN', { message: 'Unknown error' })
     }
   }))
-

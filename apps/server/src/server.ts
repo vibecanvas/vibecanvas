@@ -1,7 +1,7 @@
 /// <reference path="./build-constants.d.ts" />
 // Initialize global functions (tExternal, tInternal, executeRollbacks)
 import { onError } from '@orpc/server';
-import { RPCHandler } from '@orpc/server/bun-ws';
+import { RPCHandler } from '@orpc/server/fetch';
 import { OpencodeService } from '@vibecanvas/shell/opencode/srv.opencode';
 import db from "@vibecanvas/shell/database/db";
 import { existsSync } from 'fs';
@@ -87,6 +87,10 @@ function getPublicAssetPath(pathname: string): string | null {
 
 export async function startServer(options: StartServerOptions): Promise<void> {
   const { port: preferredPort } = options;
+  const currentVersion = getServerVersion();
+  let hasCheckedLatestVersion = false;
+  let isShuttingDown = false;
+  let bunServer: ReturnType<typeof Bun.serve<WebSocketData>> | null = null;
 
   // Stable wrapper per connection.
   // We keep a separate wrapper object to avoid mutating websocket internals.
@@ -108,6 +112,24 @@ export async function startServer(options: StartServerOptions): Promise<void> {
     ],
   })
 
+  const maybePublishUpdateNotification = () => {
+    if (hasCheckedLatestVersion) return;
+    hasCheckedLatestVersion = true;
+
+    fetch('https://registry.npmjs.org/vibecanvas/latest')
+      .then(res => res.json())
+      .then((data: { version?: string }) => {
+        if (data.version && data.version !== currentVersion) {
+          publishNotification({
+            type: 'info',
+            title: 'Update Available',
+            description: `v${data.version} is available (current: v${currentVersion})`,
+          });
+        }
+      })
+      .catch(() => { });
+  }
+
   let opencodeService!: OpencodeService
 
   const closeOpencodeServer = () => {
@@ -118,26 +140,48 @@ export async function startServer(options: StartServerOptions): Promise<void> {
     }
   }
 
+  const shutdownServer = () => {
+    if (isShuttingDown) return;
+    isShuttingDown = true;
+
+    closeOpencodeServer();
+
+    try {
+      bunServer?.stop();
+    } catch (error) {
+      console.error('[Server] stop failed:', error)
+    }
+
+    process.exit(0)
+  }
+
   process.once('exit', closeOpencodeServer)
-  process.once('SIGINT', closeOpencodeServer)
-  process.once('SIGTERM', closeOpencodeServer)
+  process.once('SIGINT', shutdownServer)
+  process.once('SIGTERM', shutdownServer)
 
   type WebSocketData = {
     path: string;
   };
 
-  const httpPort = serveWithPortFallback((port) => Bun.serve<WebSocketData>({
-    port,
-    fetch(req, server) {
+  const httpPort = serveWithPortFallback((port) => {
+    bunServer = Bun.serve<WebSocketData>({
+      port,
+      async fetch(req, server) {
       const url = new URL(req.url)
 
-      const isWebSocketEndpoint = url.pathname === '/api' || url.pathname === '/automerge'
-      if (isWebSocketEndpoint) {
+      if (url.pathname === '/automerge') {
         if (server.upgrade(req, { data: { path: url.pathname } })) {
           return
         }
 
         return new Response('Upgrade failed', { status: 500 })
+      }
+
+      const rpcResult = await handler.handle(req, {
+        context: { db, opencodeService },
+      })
+      if (rpcResult.matched) {
+        return rpcResult.response
       }
 
       if (req.method === 'GET' && url.pathname.startsWith('/files/')) {
@@ -200,89 +244,72 @@ export async function startServer(options: StartServerOptions): Promise<void> {
 
       return new Response('Not Found', { status: 404 })
     },
-    websocket: {
-      data: {} as WebSocketData,
-      open(ws) {
-        if (ws.data.path === '/automerge') {
-          const wrapper = {
-            data: { isAlive: true },
-            get readyState() { return ws.readyState; },
-            ping() { ws.ping(); },
-            close() { ws.close(); },
-            send(data: ArrayBuffer) { ws.send(data); },
-            terminate() { ws.terminate(); },
-          };
-          automergeConnections.set(ws, wrapper);
-          wsAdapter.open(wrapper);
-        } else if (ws.data.path === '/api') {
-          const currentVersion = getServerVersion();
-          fetch('https://registry.npmjs.org/vibecanvas/latest')
-            .then(res => res.json())
-            .then((data: { version?: string }) => {
-              if (data.version && data.version !== currentVersion) {
-                publishNotification({
-                  type: 'info',
-                  title: 'Update Available',
-                  description: `v${data.version} is available (current: v${currentVersion})`,
-                });
+      websocket: {
+        data: {} as WebSocketData,
+        open(ws) {
+          if (ws.data.path === '/automerge') {
+            const wrapper = {
+              data: { isAlive: true },
+              get readyState() { return ws.readyState; },
+              ping() { ws.ping(); },
+              close() { ws.close(); },
+              send(data: ArrayBuffer) { ws.send(data); },
+              terminate() { ws.terminate(); },
+            };
+            automergeConnections.set(ws, wrapper);
+            wsAdapter.open(wrapper);
+          }
+        },
+        message(ws, message) {
+          if (ws.data.path === '/automerge') {
+            const wrapper = automergeConnections.get(ws);
+            if (!wrapper) return;
+            wrapper.data.isAlive = true;
+
+            // Handle potential binary-to-string coercion in websocket payloads
+            let bufferMessage: Buffer;
+            if (typeof message === 'string') {
+              try {
+                const textEncoder = new TextEncoder();
+                bufferMessage = Buffer.from(textEncoder.encode(message));
+              } catch (err) {
+                console.error('[WS:automerge] Failed to convert string to Buffer:', err);
+                return;
               }
-            })
-            .catch(() => { });
-        }
-      },
-      message(ws, message) {
-        if (ws.data.path === '/api') {
-          handler.message(ws, message, {
-            context: { db, opencodeService },
-          })
-        } else if (ws.data.path === '/automerge') {
-          const wrapper = automergeConnections.get(ws);
-          if (!wrapper) return;
-          wrapper.data.isAlive = true;
-
-          // Handle potential binary-to-string coercion in websocket payloads
-          let bufferMessage: Buffer;
-          if (typeof message === 'string') {
-            try {
-              const textEncoder = new TextEncoder();
-              bufferMessage = Buffer.from(textEncoder.encode(message));
-            } catch (err) {
-              console.error('[WS:automerge] Failed to convert string to Buffer:', err);
-              return;
+            } else {
+              bufferMessage = message as Buffer;
             }
-          } else {
-            bufferMessage = message as Buffer;
-          }
 
-          try {
-            wsAdapter.message(wrapper, bufferMessage);
-          } catch (err) {
-            console.error('[WS:automerge] adapter.message() error:', err);
+            try {
+              wsAdapter.message(wrapper, bufferMessage);
+            } catch (err) {
+              console.error('[WS:automerge] adapter.message() error:', err);
+            }
           }
-        }
-      },
-      pong(ws, data) {
-        if (ws.data.path !== '/automerge') return;
-        const wrapper = automergeConnections.get(ws);
-        if (!wrapper) return;
-
-        const pongData = data
-          ? Buffer.from(data.buffer, data.byteOffset, data.byteLength)
-          : Buffer.alloc(0);
-        wsAdapter.pong(wrapper, pongData);
-      },
-      close(ws, code, reason) {
-        if (ws.data.path === '/automerge') {
+        },
+        pong(ws, data) {
+          if (ws.data.path !== '/automerge') return;
           const wrapper = automergeConnections.get(ws);
           if (!wrapper) return;
-          wsAdapter.close(wrapper, code ?? 1000, reason ?? '');
-          automergeConnections.delete(ws);
-        } else if (ws.data.path === '/api') {
-          handler.close(ws)
-        }
+
+          const pongData = data
+            ? Buffer.from(data.buffer, data.byteOffset, data.byteLength)
+            : Buffer.alloc(0);
+          wsAdapter.pong(wrapper, pongData);
+        },
+        close(ws, code, reason) {
+          if (ws.data.path === '/automerge') {
+            const wrapper = automergeConnections.get(ws);
+            if (!wrapper) return;
+            wsAdapter.close(wrapper, code ?? 1000, reason ?? '');
+            automergeConnections.delete(ws);
+          }
+        },
       },
-    },
-  }), preferredPort)
+    })
+  }, preferredPort)
+
+  maybePublishUpdateNotification()
 
   console.log(`Server verion ${VIBECANVAS_VERSION} listening on http://localhost:${httpPort}`);
 

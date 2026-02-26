@@ -147,6 +147,24 @@ async function assertWsOpen(url: string, timeoutMs: number): Promise<WebSocket> 
   )
 }
 
+async function assertHttpApi(baseUrl: string, timeoutMs: number): Promise<void> {
+  const response = await withTimeout(
+    fetch(`${baseUrl}/api/canvas/list`, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+      },
+      body: "{}",
+    }),
+    timeoutMs,
+    "fetch /api/canvas/list",
+  )
+
+  if (response.status === 404) {
+    throw new Error("HTTP /api route was not matched (404)")
+  }
+}
+
 async function main() {
   const args = parseArgs()
   const binaryPath = await resolveBinaryPath(args.binaryPath)
@@ -199,9 +217,8 @@ async function main() {
       console.log(`[test-binary] PASS asset ${assetUrl}`)
     }
 
-    const apiWs = await assertWsOpen(`ws://127.0.0.1:${args.port}/api`, args.requestTimeoutMs)
-    apiWs.close(1000, "test done")
-    console.log("[test-binary] PASS ws /api")
+    await assertHttpApi(baseUrl, args.requestTimeoutMs)
+    console.log("[test-binary] PASS http /api")
 
     const automergeWs = await assertWsOpen(`ws://127.0.0.1:${args.port}/automerge`, args.requestTimeoutMs)
     await Bun.sleep(250)

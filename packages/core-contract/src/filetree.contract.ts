@@ -32,6 +32,7 @@ export default oc.router({
 
   watch: oc
     .input(z.object({ params: z.object({ uuid: z.string(), path: z.string() }) }))
+    .route({ method: 'GET' })
     .output(eventIterator(z.object({ eventType: z.enum(['rename', 'change']), fileName: z.string() }))),
 
   unwatch: oc

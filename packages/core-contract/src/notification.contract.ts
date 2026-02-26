@@ -10,5 +10,6 @@ export const ZNotificationEvent = z.object({
 export default oc.router({
   events: oc
     .input(z.object({}))
+    .route({ method: 'GET' })
     .output(eventIterator(ZNotificationEvent)),
 });
