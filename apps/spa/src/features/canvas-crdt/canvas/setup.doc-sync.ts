@@ -16,6 +16,7 @@ import { TextElement } from "../renderables/elements/text/text.class";
 import type { Canvas } from "./canvas";
 import { applyPatches } from "./element.patch";
 import { PenElement } from "../renderables/elements/pen/pen.class";
+import { TerminalElement } from "../renderables/elements/terminal/terminal.class";
 
 // Binding schema
 const bindingSchema = z.object({
@@ -53,7 +54,7 @@ const baseElementSchema = z.object({
 
 // Element data schema (discriminated by type)
 const elementDataSchema = z.object({
-  type: z.enum(['rect', 'ellipse', 'diamond', 'arrow', 'line', 'pen', 'text', 'image', 'chat', 'filetree']),
+  type: z.enum(['rect', 'ellipse', 'diamond', 'arrow', 'line', 'pen', 'text', 'image', 'chat', 'filetree', 'terminal']),
 }).passthrough()
 
 // Full element schema
@@ -118,6 +119,10 @@ export function setupDocSync(canvas: Canvas, handle: DocHandle<TCanvasDoc>) {
     else if (element.data.type === 'filetree') {
       const filetreeElement = new FiletreeElement(element as TBackendElementOf<'filetree'>, canvas)
       canvas.addElement(filetreeElement)
+    }
+    else if (element.data.type === 'terminal') {
+      const terminalElement = new TerminalElement(element as TBackendElementOf<'terminal'>, canvas)
+      canvas.addElement(terminalElement)
     }
   }
 
@@ -238,7 +243,7 @@ const listenLocalStore = (canvas: Canvas) => {
       if (activeTool === 'select') {
         canvas.app.canvas.style.cursor = 'default'
         canvas.app.stage.cursor = 'default'
-      } else if (activeTool === 'rectangle' || activeTool === 'diamond' || activeTool === 'ellipse' || activeTool === 'line' || activeTool === 'arrow' || activeTool === 'pen' || activeTool === 'text' || activeTool === 'image' || activeTool === 'filesystem') {
+      } else if (activeTool === 'rectangle' || activeTool === 'diamond' || activeTool === 'ellipse' || activeTool === 'line' || activeTool === 'arrow' || activeTool === 'pen' || activeTool === 'text' || activeTool === 'image' || activeTool === 'filesystem' || activeTool === 'terminal') {
         canvas.app.canvas.style.cursor = 'crosshair'
         canvas.app.stage.cursor = 'crosshair'
       } else if (activeTool === 'hand') {

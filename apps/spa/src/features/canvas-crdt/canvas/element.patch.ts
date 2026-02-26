@@ -12,6 +12,7 @@ import { ImageElement } from "../renderables/elements/image/image.class";
 import { LineElement } from "../renderables/elements/line/line.class";
 import { PenElement } from "../renderables/elements/pen/pen.class";
 import { RectElement } from "../renderables/elements/rect/rect.class";
+import { TerminalElement } from "../renderables/elements/terminal/terminal.class";
 import { TextElement } from "../renderables/elements/text/text.class";
 
 // ─────────────────────────────────────────────────────────────
@@ -180,6 +181,8 @@ function createElementRenderable(element: TElement, canvas: Canvas): AElement | 
       return new ChatElement(element as TBackendElementOf<'chat'>, canvas)
     case 'filetree':
       return new FiletreeElement(element as TBackendElementOf<'filetree'>, canvas)
+    case 'terminal':
+      return new TerminalElement(element as TBackendElementOf<'terminal'>, canvas)
     default:
       // @ts-ignore
       console.warn(`Unknown element type: ${element?.data?.type}`)

@@ -125,6 +125,7 @@ vi.mock("../renderables/elements/image/image.class", () => ({ ImageElement: crea
 vi.mock("../renderables/elements/line/line.class", () => ({ LineElement: createElementClassMock() }))
 vi.mock("../renderables/elements/pen/pen.class", () => ({ PenElement: createElementClassMock() }))
 vi.mock("../renderables/elements/text/text.class", () => ({ TextElement: createElementClassMock() }))
+vi.mock("../renderables/elements/terminal/terminal.class", () => ({ TerminalElement: createElementClassMock() }))
 
 // Mock RectElement with a proper class
 vi.mock("../renderables/elements/rect/rect.class", () => ({

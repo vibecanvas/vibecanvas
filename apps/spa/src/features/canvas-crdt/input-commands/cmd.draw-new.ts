@@ -20,11 +20,14 @@ import { showErrorToast } from "@/components/ui/Toast"
 
 
 
-const DRAWING_TOOLS = ['rectangle', 'diamond', 'ellipse', 'arrow', 'line', 'pen', 'text', 'image', 'chat', 'filesystem'] as const
+const DRAWING_TOOLS = ['rectangle', 'diamond', 'ellipse', 'arrow', 'line', 'pen', 'text', 'image', 'chat', 'filesystem', 'terminal'] as const
 const DRAG_THRESHOLD = 5
+const LAST_WORKING_DIRECTORY_KEY = 'vibecanvas-last-working-directory'
+const LAST_FILETREE_PATH_KEY = 'vibecanvas-filetree-last-path'
 
 let isDragging = false
 let dragStartWorld: Point | null = null
+let homeDirectoryCache: string | null = null
 
 export const cmdDrawNew: InputCommand = (ctx) => {
   const tool = store.toolbarSlice.activeTool
@@ -337,19 +340,22 @@ function handleUp(ctx: Parameters<InputCommand>[0]): boolean {
       renderable.dispatch({ type: 'enter' })
     })
   } else if (tool === 'chat') {
+    const startX = dragStartWorld.x
+    const startY = dragStartWorld.y
 
-    // BASED: [[A2]] Add undo for chat
-    const lastFiletreePath = localStorage.getItem('vibecanvas-filetree-last-path');
-    orpcWebsocketService.safeClient.api.chat.create({
-      canvas_id: ctx.canvas.canvasId,
-      x: dragStartWorld.x,
-      y: dragStartWorld.y,
-      local_path: lastFiletreePath ?? null,
+    void resolveWorkingDirectory().then((workingDirectory) => {
+      return orpcWebsocketService.safeClient.api.chat.create({
+        canvas_id: ctx.canvas.canvasId,
+        x: startX,
+        y: startY,
+        local_path: workingDirectory,
+      })
     }).then(([err, chat]) => {
       if (err) {
         showErrorToast(err.message)
         return
       }
+      setLastWorkingDirectory(chat.local_path)
       setStore('chatSlice', 'backendChats', ctx.canvas.canvasId, (prev) => [...(prev ?? []), chat])
       // Record undo entry
       // ctx.canvas.undoManager.record({
@@ -373,7 +379,7 @@ function handleUp(ctx: Parameters<InputCommand>[0]): boolean {
     setStore('toolbarSlice', 'activeTool', 'select')
   } else if (tool === 'filesystem') {
     // BASED: [[A1]] Add undo for filetree
-    const lastFiletreePath = localStorage.getItem('vibecanvas-filetree-last-path');
+    const lastFiletreePath = localStorage.getItem(LAST_FILETREE_PATH_KEY);
     orpcWebsocketService.safeClient.api.filetree.create({
       canvas_id: ctx.canvas.canvasId,
       x: dragStartWorld.x,
@@ -383,6 +389,9 @@ function handleUp(ctx: Parameters<InputCommand>[0]): boolean {
       if (err) {
         showErrorToast(err.message)
         return
+      }
+      if (typeof filetree.path === 'string' && filetree.path.length > 0) {
+        setLastWorkingDirectory(filetree.path)
       }
       // ctx.canvas.undoManager.record({
       //   label: 'Create File Tree',
@@ -399,6 +408,37 @@ function handleUp(ctx: Parameters<InputCommand>[0]): boolean {
       // })
     })
 
+
+    setStore('toolbarSlice', 'activeTool', 'select')
+  } else if (tool === 'terminal') {
+    const startX = dragStartWorld.x
+    const startY = dragStartWorld.y
+
+    void resolveWorkingDirectory().then((workingDirectory) => {
+      const { data, style } = createTerminalElementDataAndStyle(workingDirectory)
+      const terminalId = crypto.randomUUID()
+      const element = createElement(terminalId, startX, startY, data, style)
+
+      ctx.canvas.handle.change(doc => {
+        doc.elements[terminalId] = element
+      })
+
+      ctx.canvas.undoManager.record({
+        label: 'Create Terminal',
+        undo: () => {
+          ctx.canvas.handle.change(doc => {
+            delete doc.elements[terminalId]
+          })
+        },
+        redo: () => {
+          ctx.canvas.handle.change(doc => {
+            doc.elements[terminalId] = structuredClone(element)
+          })
+        },
+      })
+    }).catch(() => {
+      showErrorToast('Failed to resolve working directory')
+    })
 
     setStore('toolbarSlice', 'activeTool', 'select')
   } else {
@@ -576,6 +616,48 @@ function createChatElementDataAndStyle(): {
       opacity: 1,
     },
   }
+}
+
+function createTerminalElementDataAndStyle(workingDirectory: string): {
+  data: ExtractElementData<'terminal'>
+  style: TElementStyle
+} {
+  return {
+    data: {
+      type: 'terminal',
+      w: 720,
+      h: 420,
+      isCollapsed: false,
+      workingDirectory,
+    },
+    style: {
+      backgroundColor: '#0f1115',
+      strokeColor: '#2d3748',
+      strokeWidth: 1,
+      opacity: 1,
+    },
+  }
+}
+
+async function resolveWorkingDirectory(): Promise<string> {
+  const last = localStorage.getItem(LAST_WORKING_DIRECTORY_KEY) ?? localStorage.getItem(LAST_FILETREE_PATH_KEY)
+  if (last && last.length > 0) return last
+
+  if (homeDirectoryCache) return homeDirectoryCache
+
+  const [err, home] = await orpcWebsocketService.safeClient.api.file.home()
+  if (err) throw new Error(err.message)
+  if (!home || typeof home !== 'object' || !('path' in home) || typeof home.path !== 'string') {
+    throw new Error('Home directory unavailable')
+  }
+
+  homeDirectoryCache = home.path
+  setLastWorkingDirectory(home.path)
+  return home.path
+}
+
+function setLastWorkingDirectory(path: string) {
+  localStorage.setItem(LAST_WORKING_DIRECTORY_KEY, path)
 }
 
 // ─────────────────────────────────────────────────────────────
