@@ -24,24 +24,30 @@ type THelpers = typeof import("./opencode-pty");
 let helpers: THelpers;
 
 beforeAll(async () => {
-  vi.stubGlobal("window", {
-    location: {
-      protocol: "http:",
-      host: "localhost:3001",
+  Object.defineProperty(globalThis, "window", {
+    value: {
+      location: {
+        protocol: "http:",
+        host: "localhost:3001",
+      },
     },
+    configurable: true,
   });
 
-  vi.stubGlobal("localStorage", {
-    getItem: (key: string) => storage.get(key) ?? null,
-    setItem: (key: string, value: string) => {
-      storage.set(key, value);
+  Object.defineProperty(globalThis, "localStorage", {
+    value: {
+      getItem: (key: string) => storage.get(key) ?? null,
+      setItem: (key: string, value: string) => {
+        storage.set(key, value);
+      },
+      removeItem: (key: string) => {
+        storage.delete(key);
+      },
+      clear: () => {
+        storage.clear();
+      },
     },
-    removeItem: (key: string) => {
-      storage.delete(key);
-    },
-    clear: () => {
-      storage.clear();
-    },
+    configurable: true,
   });
 
   helpers = await import("./opencode-pty");
