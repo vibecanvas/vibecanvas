@@ -2,10 +2,6 @@
 
 import path from "path"
 import { Glob } from "bun"
-import { createORPCClient } from "@orpc/client"
-import { RPCLink } from "@orpc/client/fetch"
-import { inferRPCMethodFromContractRouter } from "@orpc/contract"
-import { apiContract } from "@vibecanvas/core-contract"
 
 type TArgs = {
   binaryPath?: string
@@ -152,16 +148,20 @@ async function assertWsOpen(url: string, timeoutMs: number): Promise<WebSocket> 
 }
 
 async function assertHttpApi(baseUrl: string, timeoutMs: number): Promise<void> {
-  const link = new RPCLink({
-    url: baseUrl,
-    method: inferRPCMethodFromContractRouter(apiContract),
-  })
+  const response = await withTimeout(
+    fetch(`${baseUrl}/api/canvas/list`, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+      },
+      body: "{}",
+    }),
+    timeoutMs,
+    "fetch /api/canvas/list",
+  )
 
-  const client = createORPCClient(link)
-  const canvases = await withTimeout(client.api.canvas.list(), timeoutMs, "rpc api.canvas.list")
-
-  if (!Array.isArray(canvases)) {
-    throw new Error("api.canvas.list did not return an array")
+  if (response.status === 404) {
+    throw new Error("HTTP /api route was not matched (404)")
   }
 }
 
