@@ -20,8 +20,8 @@ function parseArgs(): TArgs {
 
   const binaryPath = getArg("--binary")
   const port = Number(getArg("--port") ?? "3339")
-  const startupTimeoutMs = Number(getArg("--startup-timeout") ?? "15000")
-  const requestTimeoutMs = Number(getArg("--request-timeout") ?? "8000")
+  const startupTimeoutMs = Number(getArg("--startup-timeout") ?? "45000")
+  const requestTimeoutMs = Number(getArg("--request-timeout") ?? "15000")
 
   return { binaryPath, port, startupTimeoutMs, requestTimeoutMs }
 }

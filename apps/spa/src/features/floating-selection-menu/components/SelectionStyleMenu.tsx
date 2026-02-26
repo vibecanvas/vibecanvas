@@ -85,7 +85,7 @@ function getVisibleSections(canvas: Canvas, selectedIds: string[]): TVisibleSect
   const hasLineTypes = [...types].some(t => LINE_TYPES_SET.has(t))
   const hasArrowTypes = [...types].some(t => ARROW_TYPES.has(t))
   const hasTextTypes = [...types].some(t => TEXT_TYPES.has(t))
-  const hasOpacityTypes = [...types].some(t => t !== 'chat' && t !== 'filetree')
+  const hasOpacityTypes = [...types].some(t => t !== 'chat' && t !== 'filetree' && t !== 'terminal')
 
   return {
     // Fill picker: only for shapes (rect/ellipse/diamond) - lines don't have fill
@@ -138,6 +138,7 @@ function getSelectedNonWidgetElementIds(canvas: Canvas, selectedIds: string[]): 
     if (!element) continue
     if (element.element.data.type === 'chat') continue
     if (element.element.data.type === 'filetree') continue
+    if (element.element.data.type === 'terminal') continue
     elementIds.add(id)
   }
 

@@ -34,3 +34,6 @@ coverage/
 
 # Dev database
 local-volume/
+
+# AI
+.claude/

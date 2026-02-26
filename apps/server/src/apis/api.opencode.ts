@@ -33,6 +33,35 @@ function throwFromOpencodeError(error: unknown): never {
   throw new ORPCError("OPENCODE_ERROR", { message: getErrorMessage(error) });
 }
 
+function getOpencodeBaseUrl(opencodeService: OpencodeService): string {
+  const url = (opencodeService as unknown as {
+    opencodeServer?: { url?: string }
+  }).opencodeServer?.url;
+
+  if (!url) {
+    throw new ORPCError("SERVICE_UNAVAILABLE", { message: "OpenCode service unavailable" });
+  }
+
+  return url;
+}
+
+function buildPtyConnectUrl(args: {
+  opencodeService: OpencodeService;
+  ptyID: string;
+  cursor?: string;
+  directory?: string;
+}) {
+  const baseUrl = getOpencodeBaseUrl(args.opencodeService);
+  const url = new URL(`/pty/${encodeURIComponent(args.ptyID)}/connect`, baseUrl);
+  if (args.directory && args.directory.length > 0) {
+    url.searchParams.set("directory", args.directory);
+  }
+  if (args.cursor && args.cursor.length > 0) {
+    url.searchParams.set("cursor", args.cursor);
+  }
+  return url.toString();
+}
+
 function requireChatContext(
   dbClient: typeof db,
   opencodeService: OpencodeService,
@@ -43,6 +72,10 @@ function requireChatContext(
 
   const client = opencodeService.getClient(chat.id, chat.local_path);
   return { chat, client };
+}
+
+function getPtyClient(opencodeService: OpencodeService, workingDirectory: string) {
+  return opencodeService.getClient(`pty:${workingDirectory}`, workingDirectory);
 }
 
 // Base64 Images
@@ -347,6 +380,69 @@ const authSet = baseOs.api.opencode.auth.set.handler(async ({ input, context: { 
   return data;
 });
 
+const ptyList = baseOs.api.opencode.pty.list.handler(async ({ input, context: { opencodeService } }) => {
+  const client = getPtyClient(opencodeService, input.workingDirectory);
+
+  const { data, error } = await client.pty.list({ directory: input.workingDirectory });
+  if (error) throwFromOpencodeError(error);
+  if (!data) throw new ORPCError("OPENCODE_ERROR", { message: "Missing OpenCode response data" });
+
+  return data;
+});
+
+const ptyCreate = baseOs.api.opencode.pty.create.handler(async ({ input, context: { opencodeService } }) => {
+  const client = getPtyClient(opencodeService, input.workingDirectory);
+
+  const { data, error } = await client.pty.create({
+    directory: input.workingDirectory,
+    ...(input.body ?? {}),
+  });
+  if (error) throwFromOpencodeError(error);
+  if (!data) throw new ORPCError("OPENCODE_ERROR", { message: "Missing OpenCode response data" });
+
+  return data;
+});
+
+const ptyGet = baseOs.api.opencode.pty.get.handler(async ({ input, context: { opencodeService } }) => {
+  const client = getPtyClient(opencodeService, input.workingDirectory);
+
+  const { data, error } = await client.pty.get({
+    ptyID: input.path.ptyID,
+    directory: input.workingDirectory,
+  });
+  if (error) throwFromOpencodeError(error);
+  if (!data) throw new ORPCError("OPENCODE_ERROR", { message: "Missing OpenCode response data" });
+
+  return data;
+});
+
+const ptyUpdate = baseOs.api.opencode.pty.update.handler(async ({ input, context: { opencodeService } }) => {
+  const client = getPtyClient(opencodeService, input.workingDirectory);
+
+  const { data, error } = await client.pty.update({
+    ptyID: input.path.ptyID,
+    directory: input.workingDirectory,
+    ...(input.body ?? {}),
+  });
+  if (error) throwFromOpencodeError(error);
+  if (!data) throw new ORPCError("OPENCODE_ERROR", { message: "Missing OpenCode response data" });
+
+  return data;
+});
+
+const ptyRemove = baseOs.api.opencode.pty.remove.handler(async ({ input, context: { opencodeService } }) => {
+  const client = getPtyClient(opencodeService, input.workingDirectory);
+
+  const { data, error } = await client.pty.remove({
+    ptyID: input.path.ptyID,
+    directory: input.workingDirectory,
+  });
+  if (error) throwFromOpencodeError(error);
+  if (typeof data !== "boolean") throw new ORPCError("OPENCODE_ERROR", { message: "Missing OpenCode response data" });
+
+  return data;
+});
+
 export const opencode = {
   prompt,
   events,
@@ -379,4 +475,13 @@ export const opencode = {
   auth: {
     set: authSet,
   },
+  pty: {
+    list: ptyList,
+    create: ptyCreate,
+    get: ptyGet,
+    update: ptyUpdate,
+    remove: ptyRemove,
+  },
 };
+
+export { buildPtyConnectUrl, requireChatContext, throwFromOpencodeError };

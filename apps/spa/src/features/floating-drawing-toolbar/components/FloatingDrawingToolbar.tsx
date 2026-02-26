@@ -16,6 +16,7 @@ import Type from "lucide-solid/icons/type";
 import Image from "lucide-solid/icons/image";
 import MessageCircle from "lucide-solid/icons/message-circle";
 import FolderTree from "lucide-solid/icons/folder-tree";
+import SquareTerminal from "lucide-solid/icons/square-terminal";
 import PanelLeft from "lucide-solid/icons/panel-left";
 import { Tooltip } from "@kobalte/core/tooltip";
 import { For, Show, createMemo } from "solid-js";
@@ -37,6 +38,7 @@ const TOOL_ICONS: Record<Tool, () => JSX.Element> = {
   image: () => <Image size={14} />,
   chat: () => <MessageCircle size={14} />,
   filesystem: () => <FolderTree size={14} />,
+  terminal: () => <SquareTerminal size={14} />,
 };
 
 const TOOL_CONFIG: { tool: Tool; shortcut?: string; letterShortcut?: string }[] = [
@@ -52,6 +54,7 @@ const TOOL_CONFIG: { tool: Tool; shortcut?: string; letterShortcut?: string }[] 
   { tool: "image", shortcut: "9" },
   { tool: "chat", letterShortcut: "c" },
   { tool: "filesystem", letterShortcut: "f" },
+  { tool: "terminal", letterShortcut: "j" },
 ];
 
 // Detect Mac for keyboard shortcut display

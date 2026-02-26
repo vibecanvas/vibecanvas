@@ -14,6 +14,7 @@ import './preload/patch-negative-timeout';
 import { getServerVersion } from './runtime';
 import checkForUpgrade from './update';
 import { wsAdapter } from './automerge-repo';
+import { buildPtyConnectUrl } from './apis/api.opencode';
 
 // Export API type for Eden client
 export type App = any;
@@ -57,6 +58,25 @@ type EmbeddedAssetsModule = {
   getEmbeddedAsset(pathname: string): string | null;
   getSpaFallbackAsset(): string | null;
 };
+
+type TPtyProxyMessage = string | Buffer | ArrayBuffer | Uint8Array;
+
+function isPtyConnectPath(pathname: string): boolean {
+  return /^\/api\/opencode\/pty\/[^/]+\/connect$/.test(pathname);
+}
+
+function extractPtyIdFromPath(pathname: string): string | null {
+  const match = pathname.match(/^\/api\/opencode\/pty\/([^/]+)\/connect$/);
+  if (!match) return null;
+  return decodeURIComponent(match[1]);
+}
+
+function asProxyMessage(message: string | Buffer | ArrayBuffer | Uint8Array): TPtyProxyMessage {
+  if (typeof message === 'string') return message;
+  if (message instanceof ArrayBuffer) return message;
+  if (message instanceof Uint8Array) return message;
+  return message as Buffer;
+}
 
 let getEmbeddedAsset = (_pathname: string): string | null => null;
 let getSpaFallbackAsset = (): string | null => null;
@@ -161,7 +181,13 @@ export async function startServer(options: StartServerOptions): Promise<void> {
 
   type WebSocketData = {
     path: string;
+    query: string;
   };
+
+  const ptyProxyConnections = new Map<unknown, {
+    backend: WebSocket;
+    queue: TPtyProxyMessage[];
+  }>();
 
   const httpPort = serveWithPortFallback((port) => {
     bunServer = Bun.serve<WebSocketData>({
@@ -169,8 +195,9 @@ export async function startServer(options: StartServerOptions): Promise<void> {
       async fetch(req, server) {
       const url = new URL(req.url)
 
-      if (url.pathname === '/automerge') {
-        if (server.upgrade(req, { data: { path: url.pathname } })) {
+      const isWebSocketEndpoint = url.pathname === '/automerge' || isPtyConnectPath(url.pathname)
+      if (isWebSocketEndpoint) {
+        if (server.upgrade(req, { data: { path: url.pathname, query: url.search } })) {
           return
         }
 
@@ -258,6 +285,73 @@ export async function startServer(options: StartServerOptions): Promise<void> {
             };
             automergeConnections.set(ws, wrapper);
             wsAdapter.open(wrapper);
+          } else if (isPtyConnectPath(ws.data.path)) {
+            if (!opencodeService) {
+              ws.close(1013, 'OpenCode service not ready');
+              return;
+            }
+
+            const ptyID = extractPtyIdFromPath(ws.data.path);
+            if (!ptyID) {
+              ws.close(1008, 'Invalid PTY path');
+              return;
+            }
+
+            const query = new URLSearchParams(ws.data.query);
+            const workingDirectory = query.get('workingDirectory');
+            if (!workingDirectory) {
+              ws.close(1008, 'Missing workingDirectory');
+              return;
+            }
+
+            const cursor = query.get('cursor') ?? undefined;
+
+            let targetUrl: string;
+            try {
+              targetUrl = buildPtyConnectUrl({
+                opencodeService,
+                ptyID,
+                directory: workingDirectory,
+                cursor,
+              });
+            } catch {
+              ws.close(1011, 'Failed to build PTY target URL');
+              return;
+            }
+
+            const backend = new WebSocket(targetUrl);
+            backend.binaryType = 'arraybuffer';
+
+            const queue: TPtyProxyMessage[] = [];
+            ptyProxyConnections.set(ws, { backend, queue });
+
+            backend.onopen = () => {
+              const state = ptyProxyConnections.get(ws);
+              if (!state) return;
+
+              while (state.queue.length > 0 && backend.readyState === WebSocket.OPEN) {
+                const queued = state.queue.shift();
+                if (queued !== undefined) backend.send(queued);
+              }
+            };
+
+            backend.onmessage = (event) => {
+              if (ws.readyState !== WebSocket.OPEN) return;
+              ws.send(event.data as TPtyProxyMessage);
+            };
+
+            backend.onerror = () => {
+              if (ws.readyState === WebSocket.OPEN) {
+                ws.close(1011, 'PTY backend error');
+              }
+            };
+
+            backend.onclose = (event) => {
+              ptyProxyConnections.delete(ws);
+              if (ws.readyState === WebSocket.OPEN) {
+                ws.close(event.code || 1000, event.reason || 'PTY closed');
+              }
+            };
           }
         },
         message(ws, message) {
@@ -285,6 +379,17 @@ export async function startServer(options: StartServerOptions): Promise<void> {
             } catch (err) {
               console.error('[WS:automerge] adapter.message() error:', err);
             }
+          } else if (isPtyConnectPath(ws.data.path)) {
+            const state = ptyProxyConnections.get(ws);
+            if (!state) return;
+
+            const payload = asProxyMessage(message as string | Buffer | ArrayBuffer | Uint8Array);
+
+            if (state.backend.readyState === WebSocket.OPEN) {
+              state.backend.send(payload);
+            } else {
+              state.queue.push(payload);
+            }
           }
         },
         pong(ws, data) {
@@ -303,6 +408,17 @@ export async function startServer(options: StartServerOptions): Promise<void> {
             if (!wrapper) return;
             wsAdapter.close(wrapper, code ?? 1000, reason ?? '');
             automergeConnections.delete(ws);
+          } else if (isPtyConnectPath(ws.data.path)) {
+            const state = ptyProxyConnections.get(ws);
+            if (!state) return;
+            ptyProxyConnections.delete(ws);
+            try {
+              if (state.backend.readyState === WebSocket.OPEN || state.backend.readyState === WebSocket.CONNECTING) {
+                state.backend.close(code ?? 1000, reason ?? 'client closed');
+              }
+            } catch {
+              // ignore close propagation failures
+            }
           }
         },
       },

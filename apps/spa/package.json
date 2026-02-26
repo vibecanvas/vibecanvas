@@ -1,6 +1,6 @@
 {
   "name": "@vibecanvas/spa",
-  "version": "0.1.5",
+  "version": "0.1.6",
   "private": true,
   "description": "SolidJS SPA with canvas",
   "type": "module",
@@ -49,6 +49,7 @@
     "@vibecanvas/server": "workspace:*",
     "@vibecanvas/shell": "workspace:*",
     "fuzzysort": "^3.1.0",
+    "ghostty-web": "^0.4.0",
     "localforage": "^1.10.0",
     "lucide-solid": "^0.562.0",
     "partysocket": "^1.1.13",

@@ -82,6 +82,11 @@ type TSessionUnrevertInput = TMethodInput<OpencodeClient["session"]["unrevert"]>
 type TSessionUpdateInput = TMethodInput<OpencodeClient["session"]["update"]>;
 type TSessionUpdateOutput = TMethodData<OpencodeClient["session"]["update"]>;
 type TSessionMessagesOutput = TMethodData<OpencodeClient["session"]["messages"]>;
+type TPtyListOutput = TMethodData<OpencodeClient["pty"]["list"]>;
+type TPtyCreateOutput = TMethodData<OpencodeClient["pty"]["create"]>;
+type TPtyGetOutput = TMethodData<OpencodeClient["pty"]["get"]>;
+type TPtyUpdateOutput = TMethodData<OpencodeClient["pty"]["update"]>;
+type TPtyRemoveOutput = TMethodData<OpencodeClient["pty"]["remove"]>;
 
 const pathInfoSchema = z.object({
   state: z.string(),
@@ -283,6 +288,42 @@ const authSetInputSchema = z.object({
   body: authSchema,
 });
 
+const ptyScopedInputSchema = z.object({
+  workingDirectory: z.string(),
+});
+
+const ptyCreateInputSchema = z.object({
+  workingDirectory: z.string(),
+  body: z.object({
+    command: z.string().optional(),
+    args: z.array(z.string()).optional(),
+    cwd: z.string().optional(),
+    title: z.string().optional(),
+    env: z.record(z.string(), z.string()).optional(),
+  }).optional(),
+});
+
+const ptyPathInputSchema = z.object({
+  workingDirectory: z.string(),
+  path: z.object({
+    ptyID: z.string(),
+  }),
+});
+
+const ptyUpdateInputSchema = z.object({
+  workingDirectory: z.string(),
+  path: z.object({
+    ptyID: z.string(),
+  }),
+  body: z.object({
+    title: z.string().optional(),
+    size: z.object({
+      rows: z.number().int().positive(),
+      cols: z.number().int().positive(),
+    }).optional(),
+  }),
+});
+
 const chatScopedInputSchema = z.object({
   chatId: z.string(),
 });
@@ -457,5 +498,27 @@ export default oc.router({
     set: oc
       .input(authSetInputSchema)
       .output(z.boolean()),
+  }),
+
+  pty: oc.router({
+    list: oc
+      .input(ptyScopedInputSchema)
+      .output(type<TPtyListOutput>()),
+
+    create: oc
+      .input(ptyCreateInputSchema)
+      .output(type<TPtyCreateOutput>()),
+
+    get: oc
+      .input(ptyPathInputSchema)
+      .output(type<TPtyGetOutput>()),
+
+    update: oc
+      .input(ptyUpdateInputSchema)
+      .output(type<TPtyUpdateOutput>()),
+
+    remove: oc
+      .input(ptyPathInputSchema)
+      .output(type<TPtyRemoveOutput>()),
   }),
 });
