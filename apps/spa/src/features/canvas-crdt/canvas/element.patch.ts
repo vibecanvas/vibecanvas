@@ -183,6 +183,8 @@ function createElementRenderable(element: TElement, canvas: Canvas): AElement | 
       return new FiletreeElement(element as TBackendElementOf<'filetree'>, canvas)
     case 'terminal':
       return new TerminalElement(element as TBackendElementOf<'terminal'>, canvas)
+    case 'file':
+      throw new Error('File element not implemented yet')
     default:
       // @ts-ignore
       console.warn(`Unknown element type: ${element?.data?.type}`)

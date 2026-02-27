@@ -54,8 +54,8 @@ const baseElementSchema = z.object({
 
 // Element data schema (discriminated by type)
 const elementDataSchema = z.object({
-  type: z.enum(['rect', 'ellipse', 'diamond', 'arrow', 'line', 'pen', 'text', 'image', 'chat', 'filetree', 'terminal']),
-}).passthrough()
+  type: z.enum(['rect', 'ellipse', 'diamond', 'arrow', 'line', 'pen', 'text', 'image', 'chat', 'filetree', 'terminal', 'file']),
+}).loose()
 
 // Full element schema
 const elementSchema = baseElementSchema.extend({
@@ -123,6 +123,9 @@ export function setupDocSync(canvas: Canvas, handle: DocHandle<TCanvasDoc>) {
     else if (element.data.type === 'terminal') {
       const terminalElement = new TerminalElement(element as TBackendElementOf<'terminal'>, canvas)
       canvas.addElement(terminalElement)
+    }
+    else if (element.data.type === 'file') {
+      throw new Error('File element not implemented yet')
     }
   }
 
