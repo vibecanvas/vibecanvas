@@ -6,7 +6,7 @@ describe("api.opencode pty helpers", () => {
   test("buildPtyConnectUrl includes encoded pty id and cursor", () => {
     const url = buildPtyConnectUrl({
       opencodeService: {
-        opencodeServer: { url: "http://127.0.0.1:4096" },
+        getServerUrl: () => "http://127.0.0.1:4096",
       } as any,
       ptyID: "pty/abc",
       cursor: "42",

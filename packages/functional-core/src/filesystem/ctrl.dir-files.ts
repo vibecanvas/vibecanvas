@@ -1,5 +1,6 @@
 import { readdirSync, existsSync, statSync, type Dirent } from "fs";
 import { join } from "path";
+import { FilesystemErr } from "./err.codes";
 
 export type TPortal = {
   fs: {
@@ -55,26 +56,19 @@ function createMatcher(globPattern: string | undefined): ((relativePath: string,
   };
 }
 
-/**
- * Recursively lists all files and directories under a given path, optionally filtered by a glob pattern.
- * Performs a depth-first traversal and returns both files and directories with their metadata.
- * @param portal - File system access portal
- * @param args - Arguments containing path and optional glob_pattern
- * @returns Directory contents with root path and list of files/directories
- */
 export function ctrlDirFiles(portal: TPortal, args: TArgs): TErrTuple<TDirFiles> {
   const rootPath = args.path;
 
   if (!portal.fs.existsSync(rootPath)) {
-    return [null, { code: "CTRL.PROJECT_FS.DIR_FILES.NOT_FOUND", statusCode: 404, externalMessage: { en: "Directory not found" } }];
+    return [null, { code: FilesystemErr.DIR_FILES_NOT_FOUND, statusCode: 404, externalMessage: { en: "Directory not found" } }];
   }
 
   try {
     if (!portal.fs.statSync(rootPath).isDirectory()) {
-      return [null, { code: "CTRL.PROJECT_FS.DIR_FILES.NOT_DIRECTORY", statusCode: 400, externalMessage: { en: "Path must be a directory" } }];
+      return [null, { code: FilesystemErr.DIR_FILES_NOT_DIRECTORY, statusCode: 400, externalMessage: { en: "Path must be a directory" } }];
     }
   } catch {
-    return [null, { code: "CTRL.PROJECT_FS.DIR_FILES.STAT_FAILED", statusCode: 403, externalMessage: { en: "Cannot read directory" } }];
+    return [null, { code: FilesystemErr.DIR_FILES_STAT_FAILED, statusCode: 403, externalMessage: { en: "Cannot read directory" } }];
   }
 
   const matcher = createMatcher(args.glob_pattern);

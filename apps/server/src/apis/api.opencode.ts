@@ -34,9 +34,7 @@ function throwFromOpencodeError(error: unknown): never {
 }
 
 function getOpencodeBaseUrl(opencodeService: OpencodeService): string {
-  const url = (opencodeService as unknown as {
-    opencodeServer?: { url?: string }
-  }).opencodeServer?.url;
+  const url = opencodeService.getServerUrl();
 
   if (!url) {
     throw new ORPCError("SERVICE_UNAVAILABLE", { message: "OpenCode service unavailable" });

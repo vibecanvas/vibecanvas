@@ -108,7 +108,9 @@ function getPublicAssetPath(pathname: string): string | null {
 export async function startServer(options: StartServerOptions): Promise<void> {
   const { port: preferredPort } = options;
   const currentVersion = getServerVersion();
+  const isWatchMode = process.execArgv.includes('--watch');
   let hasCheckedLatestVersion = false;
+  let hasClosedOpencodeServer = false;
   let isShuttingDown = false;
   let bunServer: ReturnType<typeof Bun.serve<WebSocketData>> | null = null;
 
@@ -160,18 +162,19 @@ export async function startServer(options: StartServerOptions): Promise<void> {
     throw err
   }
 
-  const opencodeServerUrl = (opencodeService as unknown as {
-    opencodeServer?: { url?: string }
-  }).opencodeServer?.url
+  const opencodeServerUrl = opencodeService.getServerUrl()
   if (opencodeServerUrl) {
     console.log(`[Opencode] OpenCode ready on ${opencodeServerUrl}`)
   } else {
     console.log('[Opencode] OpenCode ready')
   }
 
-  const closeOpencodeServer = () => {
+  const closeOpencodeServer = (signal?: NodeJS.Signals | 'exit') => {
     try {
-      ;(opencodeService as any)?.opencodeServer?.close?.()
+      if (hasClosedOpencodeServer) return
+      if (isWatchMode && signal === 'SIGTERM') return
+      hasClosedOpencodeServer = true
+      opencodeService.closeServer()
     } catch (error) {
       console.error('[Opencode] close failed:', error)
     }
@@ -180,8 +183,6 @@ export async function startServer(options: StartServerOptions): Promise<void> {
   const shutdownServer = () => {
     if (isShuttingDown) return;
     isShuttingDown = true;
-
-    closeOpencodeServer();
 
     try {
       bunServer?.stop();
@@ -192,9 +193,17 @@ export async function startServer(options: StartServerOptions): Promise<void> {
     process.exit(0)
   }
 
-  process.once('exit', closeOpencodeServer)
-  process.once('SIGINT', shutdownServer)
-  process.once('SIGTERM', shutdownServer)
+  if (!isWatchMode) {
+    process.once('exit', () => closeOpencodeServer('exit'))
+  }
+  process.once('SIGINT', () => {
+    closeOpencodeServer('SIGINT')
+    shutdownServer()
+  })
+  process.once('SIGTERM', () => {
+    closeOpencodeServer('SIGTERM')
+    shutdownServer()
+  })
 
   type WebSocketData = {
     path: string;

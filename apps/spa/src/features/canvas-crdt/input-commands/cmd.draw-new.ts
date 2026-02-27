@@ -645,7 +645,7 @@ async function resolveWorkingDirectory(): Promise<string> {
 
   if (homeDirectoryCache) return homeDirectoryCache
 
-  const [err, home] = await orpcWebsocketService.safeClient.api.file.home()
+  const [err, home] = await orpcWebsocketService.safeClient.api.filesystem.home()
   if (err) throw new Error(err.message)
   if (!home || typeof home !== 'object' || !('path' in home) || typeof home.path !== 'string') {
     throw new Error('Home directory unavailable')

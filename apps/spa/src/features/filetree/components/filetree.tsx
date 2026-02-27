@@ -127,7 +127,7 @@ export function Filetree(props: TFiletreeProps) {
   );
 
   const fetchTreeData = async (path: string, globPattern: string | null) => {
-    const [listError, listResult] = await orpcWebsocketService.safeClient.api.file.files({
+    const [listError, listResult] = await orpcWebsocketService.safeClient.api.filesystem.files({
       query: {
         path,
         glob_pattern: globPattern ?? undefined,
@@ -144,7 +144,7 @@ export function Filetree(props: TFiletreeProps) {
   };
 
   const loadHomePath = async () => {
-    const [homeError, homeResult] = await orpcWebsocketService.safeClient.api.file.home();
+    const [homeError, homeResult] = await orpcWebsocketService.safeClient.api.filesystem.home();
     if (homeError || !homeResult || "type" in homeResult) return;
     setHomePath(homeResult.path);
   };
@@ -318,7 +318,7 @@ export function Filetree(props: TFiletreeProps) {
   };
 
   const moveNodeIntoFolder = async (node: TDraggedFiletreeNode, destinationFolderPath: string) => {
-    const [moveError, moveResult] = await orpcWebsocketService.safeClient.api.file.move({
+    const [moveError, moveResult] = await orpcWebsocketService.safeClient.api.filesystem.move({
       body: {
         source_path: node.path,
         destination_dir_path: destinationFolderPath,
@@ -342,7 +342,7 @@ export function Filetree(props: TFiletreeProps) {
 
     let initialPath = localStorage.getItem('vibecanvas-filetree-last-path');
     if (!initialPath) {
-      const [homeError, homeResult] = await orpcWebsocketService.safeClient.api.file.home();
+      const [homeError, homeResult] = await orpcWebsocketService.safeClient.api.filesystem.home();
       if (homeError || !homeResult || "type" in homeResult) {
         setErrorMessage(homeError?.message ?? "Failed to resolve home directory");
         return;
@@ -389,7 +389,7 @@ export function Filetree(props: TFiletreeProps) {
   };
 
   const handleSetHome = async () => {
-    const [homeError, homeResult] = await orpcWebsocketService.safeClient.api.file.home();
+    const [homeError, homeResult] = await orpcWebsocketService.safeClient.api.filesystem.home();
     if (homeError || !homeResult || "type" in homeResult) {
       setErrorMessage(homeError?.message ?? "Failed to resolve home directory");
       return;
@@ -401,7 +401,7 @@ export function Filetree(props: TFiletreeProps) {
 
   const handleSetParentPath = async () => {
     if (!currentPath()) return;
-    const [listError, listResult] = await orpcWebsocketService.safeClient.api.file.list({
+    const [listError, listResult] = await orpcWebsocketService.safeClient.api.filesystem.list({
       query: { path: currentPath() },
     });
 
