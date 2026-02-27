@@ -19,6 +19,7 @@ import type{ VirtualGroup } from "../renderables/virtual-group.class"
 import type { TCanvasViewData } from "../store/canvas.slice"
 import { createDebugRect, createDebugShapes, destroyDebugGraphics, type TDebugShape } from "./canvas.debug"
 import { setupDocSync } from "./setup.doc-sync"
+import { setupFileDropHandling } from "./setup.file-drop"
 import { setupImageHandling } from "./setup.image"
 import { setupResizeObserver } from "./setup.resize-observer"
 
@@ -117,6 +118,10 @@ export class Canvas {
 
     // Setup input handling via helper functions
     this.setupInputHandling()
+
+    // File drop handling (filetree DnD -> file/filetree widgets)
+    const cleanupFileDropHandling = setupFileDropHandling({ canvas: this })
+    this.cleanupFns.push(cleanupFileDropHandling)
 
     // Image handling (toolbar file picker, drag-drop, paste)
     const cleanupImageHandling = setupImageHandling({ canvas: this })

@@ -17,6 +17,7 @@ import type { Canvas } from "./canvas";
 import { applyPatches } from "./element.patch";
 import { PenElement } from "../renderables/elements/pen/pen.class";
 import { TerminalElement } from "../renderables/elements/terminal/terminal.class";
+import { FileElement } from "../renderables/elements/file/file.class";
 
 // Binding schema
 const bindingSchema = z.object({
@@ -125,7 +126,8 @@ export function setupDocSync(canvas: Canvas, handle: DocHandle<TCanvasDoc>) {
       canvas.addElement(terminalElement)
     }
     else if (element.data.type === 'file') {
-      throw new Error('File element not implemented yet')
+      const fileElement = new FileElement(element as TBackendElementOf<'file'>, canvas)
+      canvas.addElement(fileElement)
     }
   }
 
