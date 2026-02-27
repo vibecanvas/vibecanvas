@@ -7,6 +7,8 @@ import { ctrlFileRead } from "@vibecanvas/core/filesystem/ctrl.file-read";
 import { existsSync, readFileSync, readdirSync, renameSync, statSync } from "fs";
 import { homedir } from "os";
 import { basename, dirname, extname, join, resolve, sep } from "path";
+import { EventPublisher } from "@orpc/server";
+import { FileSystemWatcher } from "@vibecanvas/shell/filesystem-watcher/srv.filesystem-watcher";
 import { baseOs } from "../orpc.base";
 
 const dirPortal = {
@@ -74,6 +76,21 @@ const read = baseOs.api.filesystem.read.handler(async ({ input }) => {
   return result;
 });
 
+const fsPublisher = new EventPublisher<{ [path: string]: { eventType: 'rename' | 'change', fileName: string } }>();
+const fileSystemWatcher = new FileSystemWatcher(fsPublisher);
+
+const watch = baseOs.api.filesystem.watch.handler(async function* ({ input: { path } }) {
+  const uuid = crypto.randomUUID();
+  fileSystemWatcher.registerPath(uuid, path);
+  try {
+    for await (const event of fsPublisher.subscribe(path)) {
+      yield event;
+    }
+  } finally {
+    fileSystemWatcher.unregisterPath(uuid);
+  }
+});
+
 export const filesystem = {
   home,
   list,
@@ -81,4 +98,5 @@ export const filesystem = {
   move,
   inspect,
   read,
+  watch,
 };

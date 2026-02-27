@@ -1,5 +1,7 @@
+import { orpcWebsocketService } from "@/services/orpc-websocket";
 import FileIcon from "lucide-solid/icons/file";
-import type { Accessor } from "solid-js";
+import AlertTriangle from "lucide-solid/icons/alert-triangle";
+import { type Accessor, createSignal, onCleanup, onMount, Show } from "solid-js";
 
 type TFileBounds = {
   x: number;
@@ -23,10 +25,46 @@ type TFileCanvasWidgetProps = {
 
 export function FileCanvasWidget(props: TFileCanvasWidgetProps) {
   const filename = () => props.path.split('/').pop() ?? props.path;
+  const [isDeleted, setIsDeleted] = createSignal(false);
+
+  let watchAbort: AbortController | null = null;
+
+  const startWatching = async () => {
+    watchAbort?.abort();
+    const abort = new AbortController();
+    watchAbort = abort;
+
+    const [err, iterator] = await orpcWebsocketService.safeClient.api.filesystem.watch(
+      { path: props.path },
+      { signal: abort.signal },
+    );
+    if (err || !iterator || abort.signal.aborted) return;
+
+    try {
+      for await (const event of iterator) {
+        if (abort.signal.aborted) break;
+        if (event.eventType === 'rename') {
+          setIsDeleted(true);
+        }
+      }
+    } catch {
+      // stream ended or aborted
+    }
+  };
+
+  onMount(() => {
+    void startWatching();
+  });
+
+  onCleanup(() => {
+    watchAbort?.abort();
+    watchAbort = null;
+  });
 
   return (
     <div
       class="absolute pointer-events-auto flex flex-col border border-border bg-card text-card-foreground"
+      classList={{ "opacity-60": isDeleted() }}
       style={{
         left: `${props.bounds().x}px`,
         top: `${props.bounds().y}px`,
@@ -63,13 +101,18 @@ export function FileCanvasWidget(props: TFileCanvasWidgetProps) {
 
       <div class="flex-1 flex items-center justify-center p-4">
         <div class="flex flex-col items-center gap-3 text-center">
-          <FileIcon size={48} class="text-muted-foreground" />
+          <Show when={isDeleted()} fallback={<FileIcon size={48} class="text-muted-foreground" />}>
+            <AlertTriangle size={48} class="text-destructive" />
+            <div class="text-destructive text-xs font-mono">File deleted</div>
+          </Show>
           <div class="text-muted-foreground text-xs font-mono truncate max-w-full">
             {props.path}
           </div>
-          <div class="text-muted-foreground text-[10px] uppercase tracking-wide">
-            {props.renderer}
-          </div>
+          <Show when={!isDeleted()}>
+            <div class="text-muted-foreground text-[10px] uppercase tracking-wide">
+              {props.renderer}
+            </div>
+          </Show>
         </div>
       </div>
     </div>

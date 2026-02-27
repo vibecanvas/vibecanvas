@@ -1,4 +1,4 @@
-import { oc } from "@orpc/contract";
+import { eventIterator, oc } from "@orpc/contract";
 import { z } from "zod";
 
 // ── Directory schemas (extracted from file.contract.ts) ──────────────────────
@@ -122,4 +122,9 @@ export default oc.router({
   read: oc
     .input(z.object({ query: z.object({ path: z.string(), maxBytes: z.number().optional() }) }))
     .output(readOutputSchema),
+
+  watch: oc
+    .input(z.object({ path: z.string() }))
+    .route({ method: 'GET' })
+    .output(eventIterator(z.object({ eventType: z.enum(['rename', 'change']), fileName: z.string() }))),
 });

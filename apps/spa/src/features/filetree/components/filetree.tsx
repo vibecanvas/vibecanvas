@@ -65,15 +65,10 @@ export function Filetree(props: TFiletreeProps) {
   const lazyLoadedFolderPaths = new Set<string>();
 
   let watchAbort: AbortController | null = null;
-  let currentWatchUuid: string | null = null;
 
   const stopWatching = () => {
     watchAbort?.abort();
     watchAbort = null;
-    if (currentWatchUuid) {
-      void orpcWebsocketService.safeClient.api.filetree.unwatch({ params: { uuid: currentWatchUuid } });
-      currentWatchUuid = null;
-    }
   };
 
   const [currentPath, setCurrentPath] = createSignal("");
@@ -168,14 +163,13 @@ export function Filetree(props: TFiletreeProps) {
   const startWatching = async (path: string) => {
     stopWatching();
 
-    const uuid = crypto.randomUUID();
-    currentWatchUuid = uuid;
     const abort = new AbortController();
     watchAbort = abort;
 
-    const [err, iterator] = await orpcWebsocketService.safeClient.api.filetree.watch({
-      params: { uuid, path },
-    });
+    const [err, iterator] = await orpcWebsocketService.safeClient.api.filesystem.watch(
+      { path },
+      { signal: abort.signal },
+    );
     if (err || !iterator || abort.signal.aborted) return;
 
     try {
