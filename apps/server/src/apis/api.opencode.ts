@@ -143,7 +143,6 @@ const prompt = baseOs.api.opencode.prompt.handler(async ({ input, context: { db,
       });
     }
 
-    console.error("opencode prompt bad request " + JSON.stringify(error, null, 2));
     throw new ORPCError("BAD_REQUEST", {
       message: "Bad request",
     });

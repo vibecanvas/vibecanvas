@@ -1,7 +1,7 @@
 /// <reference path="./build-constants.d.ts" />
 // Initialize global functions (tExternal, tInternal, executeRollbacks)
 import { onError } from '@orpc/server';
-import { RPCHandler } from '@orpc/server/fetch';
+import { RPCHandler } from '@orpc/server/bun-ws';
 import { OpencodeService } from '@vibecanvas/shell/opencode/srv.opencode';
 import db from "@vibecanvas/shell/database/db";
 import { existsSync } from 'fs';
@@ -208,6 +208,7 @@ export async function startServer(options: StartServerOptions): Promise<void> {
   type WebSocketData = {
     path: string;
     query: string;
+    requestId: string;
   };
 
   const ptyProxyConnections = new Map<unknown, {
@@ -221,20 +222,19 @@ export async function startServer(options: StartServerOptions): Promise<void> {
       async fetch(req, server) {
       const url = new URL(req.url)
 
-      const isWebSocketEndpoint = url.pathname === '/automerge' || isPtyConnectPath(url.pathname)
+      const isWebSocketEndpoint = url.pathname === '/api' || url.pathname === '/automerge' || isPtyConnectPath(url.pathname)
       if (isWebSocketEndpoint) {
-        if (server.upgrade(req, { data: { path: url.pathname, query: url.search } })) {
+        if (server.upgrade(req, {
+          data: {
+            path: url.pathname,
+            query: url.search,
+            requestId: crypto.randomUUID(),
+          },
+        })) {
           return
         }
 
         return new Response('Upgrade failed', { status: 500 })
-      }
-
-      const rpcResult = await handler.handle(req, {
-        context: { db, opencodeService },
-      })
-      if (rpcResult.matched) {
-        return rpcResult.response
       }
 
       if (req.method === 'GET' && url.pathname.startsWith('/files/')) {
@@ -381,7 +381,17 @@ export async function startServer(options: StartServerOptions): Promise<void> {
           }
         },
         message(ws, message) {
-          if (ws.data.path === '/automerge') {
+          if (ws.data.path === '/api') {
+            void handler.message(ws, message, {
+              context: {
+                db,
+                opencodeService,
+                requestId: ws.data.requestId,
+              },
+            }).catch((error) => {
+              console.error(error)
+            })
+          } else if (ws.data.path === '/automerge') {
             const wrapper = automergeConnections.get(ws);
             if (!wrapper) return;
             wrapper.data.isAlive = true;
@@ -429,7 +439,9 @@ export async function startServer(options: StartServerOptions): Promise<void> {
           wsAdapter.pong(wrapper, pongData);
         },
         close(ws, code, reason) {
-          if (ws.data.path === '/automerge') {
+          if (ws.data.path === '/api') {
+            handler.close(ws)
+          } else if (ws.data.path === '/automerge') {
             const wrapper = automergeConnections.get(ws);
             if (!wrapper) return;
             wsAdapter.close(wrapper, code ?? 1000, reason ?? '');
