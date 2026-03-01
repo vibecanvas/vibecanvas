@@ -84,6 +84,11 @@ const readOutputSchema = z.union([
   projectDirErrorSchema,
 ]);
 
+const watchEventSchema = z.object({
+  eventType: z.enum(["rename", "change"]),
+  fileName: z.string(),
+});
+
 // ── Exported types ───────────────────────────────────────────────────────────
 
 export type TDirChild = z.infer<typeof dirChildSchema>;
@@ -124,7 +129,13 @@ export default oc.router({
     .output(readOutputSchema),
 
   watch: oc
-    .input(z.object({ path: z.string() }))
-    .route({ method: 'GET' })
-    .output(eventIterator(z.object({ eventType: z.enum(['rename', 'change']), fileName: z.string() }))),
+    .input(z.object({ path: z.string(), watchId: z.string() }))
+    .output(eventIterator(watchEventSchema)),
+
+  keepaliveWatch: oc
+    .input(z.object({ watchId: z.string() }))
+    .output(z.boolean()),
+
+  unwatch: oc
+    .input(z.object({ watchId: z.string() }))
 });

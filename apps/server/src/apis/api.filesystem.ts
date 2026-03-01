@@ -7,7 +7,7 @@ import { ctrlFileRead } from "@vibecanvas/core/filesystem/ctrl.file-read";
 import { existsSync, readFileSync, readdirSync, renameSync, statSync } from "fs";
 import { homedir } from "os";
 import { basename, dirname, extname, join, resolve, sep } from "path";
-import { EventPublisher } from "@orpc/server";
+import { EventPublisher, ORPCError } from "@orpc/server";
 import { FileSystemWatcher } from "@vibecanvas/shell/filesystem-watcher/srv.filesystem-watcher";
 import { baseOs } from "../orpc.base";
 
@@ -17,7 +17,7 @@ const dirPortal = {
   path: { dirname, join, basename, resolve, sep, extname },
 };
 
-const home = baseOs.api.filesystem.home.handler(async ({}) => {
+const home = baseOs.api.filesystem.home.handler(async ({ }) => {
   const [result, error] = ctrlDirHome(dirPortal, {});
   if (error || !result) {
     return { type: error?.code ?? "ERROR", message: error?.externalMessage?.en ?? "Failed to get home directory" };
@@ -79,16 +79,26 @@ const read = baseOs.api.filesystem.read.handler(async ({ input }) => {
 const fsPublisher = new EventPublisher<{ [path: string]: { eventType: 'rename' | 'change', fileName: string } }>();
 const fileSystemWatcher = new FileSystemWatcher(fsPublisher);
 
-const watch = baseOs.api.filesystem.watch.handler(async function* ({ input: { path } }) {
-  const uuid = crypto.randomUUID();
-  fileSystemWatcher.registerPath(uuid, path);
+const watch = baseOs.api.filesystem.watch.handler(async function* ({ input: { path, watchId } }) {
+  if (fileSystemWatcher.getById(watchId)) throw new ORPCError('CONFLICT', { message: `Watch ${watchId} already exists` })
+  fileSystemWatcher.registerPath(watchId, path);
   try {
     for await (const event of fsPublisher.subscribe(path)) {
       yield event;
     }
   } finally {
-    fileSystemWatcher.unregisterPath(uuid);
+    fileSystemWatcher.unregisterPath(watchId);
   }
+});
+
+const keepaliveWatch = baseOs.api.filesystem.keepaliveWatch.handler(async ({ input: { watchId } }) => {
+  if (!fileSystemWatcher.getById(watchId)) throw new ORPCError('NOT_FOUND', { message: `Watch ${watchId} not found` })
+  return fileSystemWatcher.keepalive(watchId);
+});
+
+const unwatch = baseOs.api.filesystem.unwatch.handler(async ({ input: { watchId } }) => {
+  fileSystemWatcher.unregisterPath(watchId);
+  return;
 });
 
 export const filesystem = {
@@ -99,4 +109,6 @@ export const filesystem = {
   inspect,
   read,
   watch,
+  keepaliveWatch,
+  unwatch,
 };

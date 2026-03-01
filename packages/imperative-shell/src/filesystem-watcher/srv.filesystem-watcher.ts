@@ -2,9 +2,20 @@ import { watch } from "fs"
 import type { EventPublisher } from "@orpc/server";
 
 export class FileSystemWatcher {
-  private watchers: { [path: string]: { watcher: ReturnType<typeof watch>, abortController: AbortController, listeners: Set<string> } } = {}
+  private watchers: { [path: string]: { watcher: ReturnType<typeof watch>, abortController: AbortController, listeners: Set<string>, timeout: NodeJS.Timeout } } = {}
 
   constructor(private eventPublisher: EventPublisher<{ [path: string]: { eventType: 'rename' | 'change', fileName: string } }>) {
+  }
+
+  getById(uuid: string) {
+    const entry = Object.entries(this.watchers).find(([, watcher]) => watcher.listeners.has(uuid));
+    if (!entry) return null;
+    const [path, watcher] = entry;
+    return { path, watcher }
+  }
+
+  getByPath(path: string): typeof this.watchers[string] | null {
+    return this.watchers[path] ?? null;
   }
 
   registerPath(uuid: string, path: string) {
@@ -22,9 +33,12 @@ export class FileSystemWatcher {
       if (typeof fileName !== 'string') return;
       this.eventPublisher.publish(path, { eventType, fileName })
     })
-    watcher.on('close', () => this.cleanupPath(path));
-    watcher.on('error', () => this.cleanupPath(path));
-    this.watchers[path] = { watcher, abortController, listeners: new Set([uuid]) };
+    watcher.on('close', () => this.unregisterPath(uuid));
+    watcher.on('error', () => this.unregisterPath(uuid));
+    const timeout = setTimeout(() => {
+      this.unregisterPath(uuid);
+    }, 60 * 1000)
+    this.watchers[path] = { watcher, abortController, listeners: new Set([uuid]), timeout };
   }
 
   unregisterPath(uuid: string) {
@@ -40,10 +54,14 @@ export class FileSystemWatcher {
     }
   }
 
-  private cleanupPath(path: string) {
-    const entry = this.watchers[path];
-    if (!entry) return;
-    entry.abortController.abort();
-    delete this.watchers[path];
+  keepalive(uuid: string) {
+    const entry = this.getById(uuid);
+    if (!entry) return false;
+    clearTimeout(entry.watcher.timeout);
+    entry.watcher.timeout = setTimeout(() => {
+      this.unregisterPath(uuid);
+    }, 60 * 1000)
+    return true;
   }
+
 }
