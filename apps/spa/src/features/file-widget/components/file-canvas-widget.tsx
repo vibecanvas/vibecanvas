@@ -3,6 +3,8 @@ import FileIcon from "lucide-solid/icons/file";
 import AlertTriangle from "lucide-solid/icons/alert-triangle";
 import { type Accessor, createSignal, onCleanup, onMount, Show } from "solid-js";
 
+const WATCH_KEEPALIVE_INTERVAL_MS = 10_000;
+
 type TFileBounds = {
   x: number;
   y: number;
@@ -28,27 +30,73 @@ export function FileCanvasWidget(props: TFileCanvasWidgetProps) {
   const [isDeleted, setIsDeleted] = createSignal(false);
 
   let watchAbort: AbortController | null = null;
+  let activeWatchId: string | null = null;
+  let keepaliveInterval: ReturnType<typeof setInterval> | null = null;
+
+  const clearKeepaliveInterval = () => {
+    if (!keepaliveInterval) return;
+    clearInterval(keepaliveInterval);
+    keepaliveInterval = null;
+  };
+
+  const stopWatching = () => {
+    const watchId = activeWatchId;
+    activeWatchId = null;
+    clearKeepaliveInterval();
+    watchAbort?.abort();
+    watchAbort = null;
+
+    if (!watchId) return;
+    void orpcWebsocketService.safeClient.api.filesystem.unwatch({ watchId });
+  };
 
   const startWatching = async () => {
-    watchAbort?.abort();
+    stopWatching();
+
     const abort = new AbortController();
+    const watchId = crypto.randomUUID();
     watchAbort = abort;
+    activeWatchId = watchId;
 
     const [err, iterator] = await orpcWebsocketService.safeClient.api.filesystem.watch(
-      { path: props.path },
+      { path: props.path, watchId },
       { signal: abort.signal },
     );
-    if (err || !iterator || abort.signal.aborted) return;
+    if (err || !iterator || abort.signal.aborted) {
+      if (activeWatchId === watchId) {
+        activeWatchId = null;
+        watchAbort = null;
+        clearKeepaliveInterval();
+      }
+      return;
+    }
+
+    keepaliveInterval = setInterval(async () => {
+      if (activeWatchId !== watchId || abort.signal.aborted) return;
+      const [keepaliveError, keepaliveResult] = await orpcWebsocketService.safeClient.api.filesystem.keepaliveWatch({ watchId });
+      if (keepaliveError || !keepaliveResult) {
+        if (activeWatchId === watchId) {
+          stopWatching();
+        }
+      }
+    }, WATCH_KEEPALIVE_INTERVAL_MS);
 
     try {
       for await (const event of iterator) {
-        if (abort.signal.aborted) break;
+        if (abort.signal.aborted || activeWatchId !== watchId) break;
         if (event.eventType === 'rename') {
           setIsDeleted(true);
         }
       }
     } catch {
       // stream ended or aborted
+    } finally {
+      if (activeWatchId === watchId) {
+        activeWatchId = null;
+        watchAbort = null;
+        clearKeepaliveInterval();
+        void orpcWebsocketService.safeClient.api.filesystem.unwatch({ watchId });
+      }
     }
   };
 
@@ -57,8 +105,7 @@ export function FileCanvasWidget(props: TFileCanvasWidgetProps) {
   });
 
   onCleanup(() => {
-    watchAbort?.abort();
-    watchAbort = null;
+    stopWatching();
   });
 
   return (
