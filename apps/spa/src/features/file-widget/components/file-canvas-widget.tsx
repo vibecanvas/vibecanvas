@@ -1,7 +1,8 @@
 import { orpcWebsocketService } from "@/services/orpc-websocket";
-import FileIcon from "lucide-solid/icons/file";
-import AlertTriangle from "lucide-solid/icons/alert-triangle";
-import { type Accessor, createSignal, onCleanup, onMount, Show } from "solid-js";
+import { useFileContent } from "../hooks/use-file-content";
+import { CodeEditor } from "./viewers/code-editor";
+import { PlaceholderViewer } from "./viewers/placeholder-viewer";
+import { type Accessor, createSignal, Match, onCleanup, onMount, Show, Switch } from "solid-js";
 
 const WATCH_KEEPALIVE_INTERVAL_MS = 10_000;
 
@@ -28,6 +29,8 @@ type TFileCanvasWidgetProps = {
 export function FileCanvasWidget(props: TFileCanvasWidgetProps) {
   const filename = () => props.path.split('/').pop() ?? props.path;
   const [isDeleted, setIsDeleted] = createSignal(false);
+  const [hasConflict, setHasConflict] = createSignal(false);
+  const { content, loading, error, dirty, saving, setDirty, refetch, save } = useFileContent(() => props.path);
 
   let watchAbort: AbortController | null = null;
   let activeWatchId: string | null = null;
@@ -86,6 +89,14 @@ export function FileCanvasWidget(props: TFileCanvasWidgetProps) {
         if (abort.signal.aborted || activeWatchId !== watchId) break;
         if (event.eventType === 'rename') {
           setIsDeleted(true);
+        } else if (event.eventType === 'change') {
+          if (dirty()) {
+            setHasConflict(true);
+          } else {
+            setHasConflict(false);
+            setIsDeleted(false);
+            void refetch({ background: true });
+          }
         }
       }
     } catch {
@@ -101,12 +112,20 @@ export function FileCanvasWidget(props: TFileCanvasWidgetProps) {
   };
 
   onMount(() => {
+    void refetch();
     void startWatching();
   });
 
   onCleanup(() => {
     stopWatching();
   });
+
+  const saveContent = async (nextContent: string) => {
+    const didSave = await save(nextContent);
+    if (didSave) {
+      setHasConflict(false);
+    }
+  };
 
   return (
     <div
@@ -131,6 +150,15 @@ export function FileCanvasWidget(props: TFileCanvasWidgetProps) {
           <span class="font-semibold text-[10px] uppercase tracking-wide text-muted-foreground">
             {props.renderer}
           </span>
+          <Show when={dirty()}>
+            <span class="font-semibold text-[10px] uppercase tracking-wide text-amber-600 dark:text-amber-400">dirty</span>
+          </Show>
+          <Show when={saving()}>
+            <span class="font-semibold text-[10px] uppercase tracking-wide text-muted-foreground">saving</span>
+          </Show>
+          <Show when={hasConflict()}>
+            <span class="font-semibold text-[10px] uppercase tracking-wide text-destructive">conflict</span>
+          </Show>
           <span class="truncate">{filename()}</span>
         </div>
         <button
@@ -146,22 +174,31 @@ export function FileCanvasWidget(props: TFileCanvasWidgetProps) {
         </button>
       </div>
 
-      <div class="flex-1 flex items-center justify-center p-4">
-        <div class="flex flex-col items-center gap-3 text-center">
-          <Show when={isDeleted()} fallback={<FileIcon size={48} class="text-muted-foreground" />}>
-            <AlertTriangle size={48} class="text-destructive" />
-            <div class="text-destructive text-xs font-mono">File deleted</div>
-          </Show>
-          <div class="text-muted-foreground text-xs font-mono truncate max-w-full">
-            {props.path}
+      <Switch fallback={<PlaceholderViewer path={props.path} renderer={props.renderer} isDeleted={isDeleted()} />}>
+        <Match when={loading()}>
+          <div class="flex-1 flex items-center justify-center">
+            <span class="font-mono text-xs text-muted-foreground">Loading...</span>
           </div>
-          <Show when={!isDeleted()}>
-            <div class="text-muted-foreground text-[10px] uppercase tracking-wide">
-              {props.renderer}
+        </Match>
+
+        <Match when={error()}>
+          {(message) => (
+            <div class="flex-1 flex items-center justify-center p-4">
+              <span class="break-all font-mono text-xs text-destructive">{message()}</span>
             </div>
-          </Show>
-        </div>
-      </div>
+          )}
+        </Match>
+
+        <Match when={(props.renderer === "code" || props.renderer === "markdown" || props.renderer === "text") && content()?.kind === "text"}>
+          <CodeEditor
+            content={(content() as { kind: "text"; content: string; truncated: boolean }).content}
+            path={props.path}
+            truncated={(content() as { kind: "text"; content: string; truncated: boolean }).truncated}
+            onSave={saveContent}
+            onDirty={setDirty}
+          />
+        </Match>
+      </Switch>
     </div>
   );
 }

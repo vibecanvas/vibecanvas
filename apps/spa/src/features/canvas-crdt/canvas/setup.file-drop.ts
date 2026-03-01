@@ -70,8 +70,8 @@ export function setupFileDropHandling({ canvas }: { canvas: Canvas }): () => voi
     }
 
     const renderer = getRenderer(node.path)
-    const w = 360
-    const h = 300
+    const w = 560
+    const h = 500
 
     const element = createElement(
       crypto.randomUUID(),

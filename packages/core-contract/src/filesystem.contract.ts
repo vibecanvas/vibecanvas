@@ -84,6 +84,13 @@ const readOutputSchema = z.union([
   projectDirErrorSchema,
 ]);
 
+const writeOutputSchema = z.union([
+  z.object({
+    success: z.literal(true),
+  }),
+  projectDirErrorSchema,
+]);
+
 const watchEventSchema = z.object({
   eventType: z.enum(["rename", "change"]),
   fileName: z.string(),
@@ -101,6 +108,7 @@ export type TMoveFileOutput = z.infer<typeof moveFileOutputSchema>;
 export type TFileKind = z.infer<typeof fileKindSchema>;
 export type TInspectOutput = z.infer<typeof inspectOutputSchema>;
 export type TReadOutput = z.infer<typeof readOutputSchema>;
+export type TWriteOutput = z.infer<typeof writeOutputSchema>;
 
 // ── Contract router ──────────────────────────────────────────────────────────
 
@@ -127,6 +135,10 @@ export default oc.router({
   read: oc
     .input(z.object({ query: z.object({ path: z.string(), maxBytes: z.number().optional() }) }))
     .output(readOutputSchema),
+
+  write: oc
+    .input(z.object({ query: z.object({ path: z.string(), content: z.string() }) }))
+    .output(writeOutputSchema),
 
   watch: oc
     .input(z.object({ path: z.string(), watchId: z.string() }))

@@ -4,7 +4,7 @@ import { ctrlDirList } from "@vibecanvas/core/filesystem/ctrl.dir-list";
 import { ctrlFileMove } from "@vibecanvas/core/filesystem/ctrl.file-move";
 import { ctrlFileInspect } from "@vibecanvas/core/filesystem/ctrl.file-inspect";
 import { ctrlFileRead } from "@vibecanvas/core/filesystem/ctrl.file-read";
-import { existsSync, readFileSync, readdirSync, renameSync, statSync } from "fs";
+import { existsSync, readFileSync, readdirSync, renameSync, statSync, writeFileSync } from "fs";
 import { homedir } from "os";
 import { basename, dirname, extname, join, resolve, sep } from "path";
 import { EventPublisher, ORPCError } from "@orpc/server";
@@ -76,6 +76,16 @@ const read = baseOs.api.filesystem.read.handler(async ({ input }) => {
   return result;
 });
 
+const write = baseOs.api.filesystem.write.handler(async ({ input }) => {
+  try {
+    writeFileSync(input.query.path, input.query.content, "utf8");
+    return { success: true as const };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Failed to write file";
+    return { type: "ERROR", message };
+  }
+});
+
 const fsPublisher = new EventPublisher<{ [path: string]: { eventType: 'rename' | 'change', fileName: string } }>();
 const fileSystemWatcher = new FileSystemWatcher(fsPublisher);
 
@@ -108,6 +118,7 @@ export const filesystem = {
   move,
   inspect,
   read,
+  write,
   watch,
   keepaliveWatch,
   unwatch,

@@ -16,6 +16,7 @@ import checkForUpgrade from './update';
 import { wsAdapter } from './automerge-repo';
 import { buildPtyConnectUrl } from './apis/api.opencode';
 
+
 // Export API type for Eden client
 export type App = any;
 
@@ -222,7 +223,10 @@ export async function startServer(options: StartServerOptions): Promise<void> {
       async fetch(req, server) {
       const url = new URL(req.url)
 
-      const isWebSocketEndpoint = url.pathname === '/api' || url.pathname === '/automerge' || isPtyConnectPath(url.pathname)
+       const isWebSocketEndpoint =
+          url.pathname === '/api' ||
+          url.pathname === '/automerge' ||
+          isPtyConnectPath(url.pathname)
       if (isWebSocketEndpoint) {
         if (server.upgrade(req, {
           data: {
