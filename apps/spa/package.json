@@ -9,8 +9,7 @@
     "dev": "vite",
     "build": "vite build",
     "serve": "vite preview",
-    "test": "vitest",
-    "postinstall": "cp node_modules/pdfjs-dist/build/pdf.worker.min.mjs public/pdf.worker.min.mjs"
+    "test": "vitest"
   },
   "license": "MIT",
   "devDependencies": {
@@ -81,7 +80,6 @@
     "prosemirror-state": "^1.4.4",
     "prosemirror-view": "^1.41.3",
     "solid-js": "^1.9.9",
-    "pdfjs-dist": "^4.9.155",
     "zod": "catalog:"
   }
 }

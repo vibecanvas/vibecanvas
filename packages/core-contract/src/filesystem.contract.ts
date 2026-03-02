@@ -61,7 +61,7 @@ const projectDirErrorSchema = z.object({
 
 const fileKindSchema = z.enum(["pdf", "text", "image", "binary", "video"]);
 
-const contentTypeSchema = z.enum(["text", "base64", "binary", "arraybuffer", "none"]);
+const contentTypeSchema = z.enum(["text", "base64", "binary", "none"]);
 
 const inspectOutputSchema = z.object({
   name: z.string(),
