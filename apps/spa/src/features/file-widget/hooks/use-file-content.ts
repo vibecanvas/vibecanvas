@@ -25,7 +25,7 @@ type TUseFileContent = {
   dirty: Accessor<boolean>;
   saving: Accessor<boolean>;
   setDirty: (next: boolean) => void;
-  refetch: (options?: { background?: boolean; contentType?: "text" | "base64" | "binary" | "none" }) => Promise<void>;
+  refetch: (options?: { background?: boolean; contentType?: "text" | "base64" | "binary" | "arraybuffer" | "none" }) => Promise<void>;
   save: (nextContent: string) => Promise<boolean>;
 };
 
@@ -36,34 +36,47 @@ export function useFileContent(path: Accessor<string>): TUseFileContent {
   const [dirty, setDirty] = createSignal(false);
   const [saving, setSaving] = createSignal(false);
 
-  const refetch = async (options?: { background?: boolean; contentType?: "text" | "base64" | "binary" | "none" }) => {
+  const refetch = async (options?: { background?: boolean; contentType?: "text" | "base64" | "binary" | "arraybuffer" | "none" }) => {
     const isBackgroundRefresh = options?.background === true && content() !== null;
     const contentType = options?.contentType ?? "text";
+
+    console.log("[useFileContent] refetch:", { path: path(), contentType });
 
     if (!isBackgroundRefresh) {
       setLoading(true);
     }
     setError(null);
 
-    const [readError, readResult] = await orpcWebsocketService.safeClient.api.filesystem.read({
-      query: { path: path(), content: contentType },
-    });
+    try {
+      const [readError, readResult] = await orpcWebsocketService.safeClient.api.filesystem.read({
+        query: { path: path(), content: contentType },
+      });
 
-    if (readError || !readResult || "type" in readResult) {
-      const message =
-        readError?.message ??
-        (readResult && "message" in readResult ? readResult.message : "Failed to read file");
-      setError(message);
+      console.log("[useFileContent] result:", { readError, readResult });
+
+      if (readError || !readResult || "type" in readResult) {
+        const message =
+          readError?.message ??
+          (readResult && "message" in readResult ? readResult.message : "Failed to read file");
+        console.log("[useFileContent] error:", message);
+        setError(message);
+        if (!isBackgroundRefresh) {
+          setLoading(false);
+        }
+        return;
+      }
+
+      setContent(readResult);
+      setDirty(false);
       if (!isBackgroundRefresh) {
         setLoading(false);
       }
-      return;
-    }
-
-    setContent(readResult);
-    setDirty(false);
-    if (!isBackgroundRefresh) {
-      setLoading(false);
+    } catch (e) {
+      console.log("[useFileContent] exception:", e);
+      setError(String(e));
+      if (!isBackgroundRefresh) {
+        setLoading(false);
+      }
     }
   };
 
