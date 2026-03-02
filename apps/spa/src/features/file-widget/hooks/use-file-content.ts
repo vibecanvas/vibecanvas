@@ -11,6 +11,8 @@ export type TFileContent =
       kind: "binary";
       content: string | null;
       size: number;
+      mime?: string;
+      encoding?: "base64" | "hex";
     }
   | {
       kind: "none";

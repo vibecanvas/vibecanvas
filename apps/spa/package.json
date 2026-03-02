@@ -70,6 +70,7 @@
     "localforage": "^1.10.0",
     "lucide-solid": "^0.562.0",
     "partysocket": "^1.1.13",
+    "pdfjs-dist": "^4.10.38",
     "perfect-freehand": "^1.2.2",
     "pixi.js": "^8.15.0",
     "polygon-clipping": "^0.15.7",

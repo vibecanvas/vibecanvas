@@ -3,7 +3,12 @@ import { useFileContent } from "../hooks/use-file-content";
 import { CodeEditor } from "./viewers/code-editor";
 import { ImageViewer } from "./viewers/image-viewer";
 import { PlaceholderViewer } from "./viewers/placeholder-viewer";
-import { type Accessor, createSignal, createMemo, createResource, Match, onCleanup, onMount, Show, Switch } from "solid-js";
+import { type Accessor, createSignal, createMemo, createResource, Match, onCleanup, onMount, Show, Suspense, Switch, lazy } from "solid-js";
+
+const PdfViewer = lazy(async () => {
+  const module = await import("./viewers/pdf-viewer");
+  return { default: module.PdfViewer };
+});
 
 const WATCH_KEEPALIVE_INTERVAL_MS = 10_000;
 
@@ -35,6 +40,7 @@ export function FileCanvasWidget(props: TFileCanvasWidgetProps) {
   // Determine content type based on renderer
   const contentType = createMemo(() => {
     if (props.renderer === "image") return "base64" as const;
+    if (props.renderer === "pdf") return "base64" as const;
     return "text" as const;
   });
 
@@ -234,6 +240,23 @@ export function FileCanvasWidget(props: TFileCanvasWidgetProps) {
             path={props.path}
             isDeleted={isDeleted()}
           />
+        </Match>
+
+        <Match when={props.renderer === "pdf" && content()?.kind === "binary"}>
+          <Suspense
+            fallback={
+              <div class="flex-1 flex items-center justify-center">
+                <span class="font-mono text-xs text-muted-foreground">Loading PDF viewer...</span>
+              </div>
+            }
+          >
+            <PdfViewer
+              content={(content() as { kind: "binary"; content: string | null; encoding?: "base64" | "hex" }).content}
+              encoding={(content() as { kind: "binary"; content: string | null; encoding?: "base64" | "hex" }).encoding}
+              path={props.path}
+              isDeleted={isDeleted()}
+            />
+          </Suspense>
         </Match>
       </Switch>
     </div>

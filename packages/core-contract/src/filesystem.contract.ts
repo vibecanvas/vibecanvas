@@ -83,6 +83,8 @@ const readOutputSchema = z.union([
     kind: z.literal("binary"),
     content: z.string().nullable(),
     size: z.number(),
+    mime: z.string().optional(),
+    encoding: z.enum(["base64", "hex"]).optional(),
   }),
   z.object({
     kind: z.literal("none"),

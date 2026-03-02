@@ -28,6 +28,8 @@ type TBinaryReadResult = {
   kind: "binary";
   content: string | null;
   size: number;
+  mime?: string;
+  encoding?: "base64" | "hex";
 };
 
 type TNoneReadResult = {
@@ -39,6 +41,7 @@ type TFileReadResult = TTextReadResult | TBinaryReadResult | TNoneReadResult;
 
 const DEFAULT_MAX_BYTES = 1024 * 512; // 512 KB
 const BINARY_PREVIEW_BYTES = 256;
+const MAX_PDF_BASE64_BYTES = 10 * 1024 * 1024; // 10 MB
 
 const TEXT_EXTENSIONS = new Set([
   ".txt", ".md", ".json", ".js", ".ts", ".tsx", ".jsx", ".css", ".html",
@@ -54,12 +57,18 @@ const IMAGE_EXTENSIONS = new Set([
   ".png", ".jpg", ".jpeg", ".gif", ".webp", ".svg", ".bmp", ".ico", ".avif", ".tiff",
 ]);
 
+const PDF_EXTENSIONS = new Set([".pdf"]);
+
 function isTextFile(ext: string): boolean {
   return TEXT_EXTENSIONS.has(ext.toLowerCase());
 }
 
 function isImageFile(ext: string): boolean {
   return IMAGE_EXTENSIONS.has(ext.toLowerCase());
+}
+
+function isPdfFile(ext: string): boolean {
+  return PDF_EXTENSIONS.has(ext.toLowerCase());
 }
 
 function getMimeType(ext: string): string {
@@ -106,6 +115,26 @@ export function ctrlFileRead(portal: TPortal, args: TArgs): TErrTuple<TFileReadR
 
   const ext = portal.path.extname(filePath);
 
+  if (contentType === "base64") {
+    if (isPdfFile(ext) && stats.size > MAX_PDF_BASE64_BYTES) {
+      return [{
+        kind: "binary",
+        content: null,
+        size: stats.size,
+        mime: "application/pdf",
+        encoding: "base64",
+      }, null];
+    }
+
+    if (!isImageFile(ext) && !isPdfFile(ext)) {
+      return [{
+        kind: "binary",
+        content: null,
+        size: stats.size,
+      }, null];
+    }
+  }
+
   // Handle text files
   if (isTextFile(ext)) {
     // If explicitly requesting binary, return binary format
@@ -117,6 +146,7 @@ export function ctrlFileRead(portal: TPortal, args: TArgs): TErrTuple<TFileReadR
           kind: "binary",
           content: slice.length > 0 ? Buffer.from(slice).toString("hex") : null,
           size: stats.size,
+          encoding: "hex",
         }, null];
       } catch {
         return [null, { code: FilesystemErr.READ_FAILED, statusCode: 500, externalMessage: { en: "Failed to read file" } }];
@@ -154,8 +184,22 @@ export function ctrlFileRead(portal: TPortal, args: TArgs): TErrTuple<TFileReadR
           kind: "binary",
           content: `data:${mimeType};base64,${base64}`,
           size: stats.size,
+          mime: mimeType,
+          encoding: "base64",
         }, null];
       }
+
+      if (isPdfFile(ext)) {
+        const base64 = Buffer.from(buf).toString("base64");
+        return [{
+          kind: "binary",
+          content: base64,
+          size: stats.size,
+          mime: "application/pdf",
+          encoding: "base64",
+        }, null];
+      }
+
       // For non-images, return null content
       return [{
         kind: "binary",
@@ -170,6 +214,7 @@ export function ctrlFileRead(portal: TPortal, args: TArgs): TErrTuple<TFileReadR
       kind: "binary",
       content: slice.length > 0 ? Buffer.from(slice).toString("hex") : null,
       size: stats.size,
+      encoding: "hex",
     }, null];
   } catch {
     return [null, { code: FilesystemErr.READ_FAILED, statusCode: 500, externalMessage: { en: "Failed to read file" } }];
