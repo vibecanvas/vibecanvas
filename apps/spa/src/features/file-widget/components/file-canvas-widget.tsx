@@ -3,7 +3,7 @@ import { useFileContent } from "../hooks/use-file-content";
 import { CodeEditor } from "./viewers/code-editor";
 import { ImageViewer } from "./viewers/image-viewer";
 import { PlaceholderViewer } from "./viewers/placeholder-viewer";
-import { type Accessor, createSignal, createMemo, Match, onCleanup, onMount, Show, Switch } from "solid-js";
+import { type Accessor, createSignal, createMemo, createResource, Match, onCleanup, onMount, Show, Switch } from "solid-js";
 
 const WATCH_KEEPALIVE_INTERVAL_MS = 10_000;
 
@@ -39,6 +39,17 @@ export function FileCanvasWidget(props: TFileCanvasWidgetProps) {
   });
 
   const { content, loading, error, dirty, saving, setDirty, refetch, save } = useFileContent(() => props.path);
+
+  // Fetch inspect data for binary files
+  const [inspectData] = createResource(
+    () => (props.renderer === "pdf" || props.renderer === "audio" || props.renderer === "video" || props.renderer === "unknown") ? props.path : null,
+    async (path) => {
+      if (!path) return null;
+      const [err, result] = await orpcWebsocketService.safeClient.api.filesystem.inspect({ query: { path } });
+      if (err || !result || "type" in result) return null;
+      return result;
+    }
+  );
 
   let watchAbort: AbortController | null = null;
   let activeWatchId: string | null = null;
@@ -182,7 +193,17 @@ export function FileCanvasWidget(props: TFileCanvasWidgetProps) {
         </button>
       </div>
 
-      <Switch fallback={<PlaceholderViewer path={props.path} renderer={props.renderer} isDeleted={isDeleted()} />}>
+      <Switch fallback={
+        <PlaceholderViewer 
+          path={props.path} 
+          renderer={props.renderer} 
+          isDeleted={isDeleted()} 
+          size={content()?.kind === "binary" ? (content() as { kind: "binary"; size: number }).size : undefined}
+          permissions={inspectData()?.permissions}
+          mimeType={inspectData()?.mime ?? undefined}
+          lastModified={inspectData()?.lastModified}
+        />
+      }>
         <Match when={loading()}>
           <div class="flex-1 flex items-center justify-center">
             <span class="font-mono text-xs text-muted-foreground">Loading...</span>

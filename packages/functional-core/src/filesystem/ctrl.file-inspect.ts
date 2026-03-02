@@ -25,6 +25,7 @@ type TFileInspectResult = {
   kind: TFileKind;
   size: number;
   lastModified: number;
+  permissions: string;
 };
 
 const MIME_MAP: Record<string, string> = {
@@ -107,6 +108,16 @@ function lookupMime(ext: string): string | null {
   return MIME_MAP[ext.toLowerCase()] ?? null;
 }
 
+function formatPermissions(mode: number): string {
+  const symbolic = [
+    (mode & 0o400) ? 'r' : '-', (mode & 0o200) ? 'w' : '-', (mode & 0o100) ? 'x' : '-',
+    (mode & 0o040) ? 'r' : '-', (mode & 0o020) ? 'w' : '-', (mode & 0o010) ? 'x' : '-',
+    (mode & 0o004) ? 'r' : '-', (mode & 0o002) ? 'w' : '-', (mode & 0o001) ? 'x' : '-',
+  ].join('');
+  const octal = (mode & 0o777).toString(8);
+  return `${symbolic} (${octal})`;
+}
+
 export function ctrlFileInspect(portal: TPortal, args: TArgs): TErrTuple<TFileInspectResult> {
   const filePath = args.path;
 
@@ -137,5 +148,6 @@ export function ctrlFileInspect(portal: TPortal, args: TArgs): TErrTuple<TFileIn
     kind,
     size: stats.size,
     lastModified: stats.mtimeMs,
+    permissions: formatPermissions(stats.mode),
   }, null];
 }

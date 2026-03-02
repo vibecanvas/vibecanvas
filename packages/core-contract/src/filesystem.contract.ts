@@ -70,6 +70,7 @@ const inspectOutputSchema = z.object({
   kind: fileKindSchema,
   size: z.number(),
   lastModified: z.number(),
+  permissions: z.string(),
 });
 
 const readOutputSchema = z.union([
@@ -140,7 +141,7 @@ export default oc.router({
     .output(z.union([inspectOutputSchema, projectDirErrorSchema])),
 
   read: oc
-    .input(z.object({ query: z.object({ path: z.string(), maxBytes: z.number().optional(), content: contentTypeSchema.optional() }) }))
+    .input(z.object({ query: z.object({ path: z.string(), maxBytes: z.number().optional(), content: z.enum(["text", "base64", "binary", "none"]).optional() }) }))
     .output(readOutputSchema),
 
   write: oc
