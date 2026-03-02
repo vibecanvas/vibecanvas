@@ -15,7 +15,7 @@ type TPortal = {
 type TArgs = {
   path: string;
   maxBytes?: number;
-  content?: "text" | "base64" | "binary" | "none";
+  content?: "text" | "base64" | "binary" | "arraybuffer" | "none";
 };
 
 type TTextReadResult = {
@@ -143,6 +143,16 @@ export function ctrlFileRead(portal: TPortal, args: TArgs): TErrTuple<TFileReadR
   // Handle binary files
   try {
     const buf = portal.fs.readFileSync(filePath, { flag: "r" });
+
+    // Arraybuffer content - return full file as base64 (for PDF.js)
+    if (contentType === "arraybuffer") {
+      const base64 = Buffer.from(buf).toString("base64");
+      return [{
+        kind: "binary",
+        content: base64,
+        size: stats.size,
+      }, null];
+    }
 
     // Base64 content
     if (contentType === "base64") {

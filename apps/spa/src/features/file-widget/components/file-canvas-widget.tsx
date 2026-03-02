@@ -2,6 +2,7 @@ import { orpcWebsocketService } from "@/services/orpc-websocket";
 import { useFileContent } from "../hooks/use-file-content";
 import { CodeEditor } from "./viewers/code-editor";
 import { ImageViewer } from "./viewers/image-viewer";
+import { PDFViewer } from "./viewers/pdf-viewer";
 import { PlaceholderViewer } from "./viewers/placeholder-viewer";
 import { type Accessor, createSignal, createMemo, createResource, Match, onCleanup, onMount, Show, Switch } from "solid-js";
 
@@ -35,6 +36,7 @@ export function FileCanvasWidget(props: TFileCanvasWidgetProps) {
   // Determine content type based on renderer
   const contentType = createMemo(() => {
     if (props.renderer === "image") return "base64" as const;
+    if (props.renderer === "pdf") return "arraybuffer" as const;
     return "text" as const;
   });
 
@@ -230,6 +232,14 @@ export function FileCanvasWidget(props: TFileCanvasWidgetProps) {
 
         <Match when={props.renderer === "image" && content()?.kind === "binary"}>
           <ImageViewer
+            src={(content() as { kind: "binary"; content: string | null }).content}
+            path={props.path}
+            isDeleted={isDeleted()}
+          />
+        </Match>
+
+        <Match when={props.renderer === "pdf" && content()?.kind === "binary"}>
+          <PDFViewer
             src={(content() as { kind: "binary"; content: string | null }).content}
             path={props.path}
             isDeleted={isDeleted()}
