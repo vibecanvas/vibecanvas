@@ -9,7 +9,11 @@ export type TFileContent =
     }
   | {
       kind: "binary";
-      preview: string | null;
+      content: string | null;
+      size: number;
+    }
+  | {
+      kind: "none";
       size: number;
     }
   | null;
@@ -21,7 +25,7 @@ type TUseFileContent = {
   dirty: Accessor<boolean>;
   saving: Accessor<boolean>;
   setDirty: (next: boolean) => void;
-  refetch: (options?: { background?: boolean }) => Promise<void>;
+  refetch: (options?: { background?: boolean; contentType?: "text" | "base64" | "binary" | "none" }) => Promise<void>;
   save: (nextContent: string) => Promise<boolean>;
 };
 
@@ -32,8 +36,9 @@ export function useFileContent(path: Accessor<string>): TUseFileContent {
   const [dirty, setDirty] = createSignal(false);
   const [saving, setSaving] = createSignal(false);
 
-  const refetch = async (options?: { background?: boolean }) => {
+  const refetch = async (options?: { background?: boolean; contentType?: "text" | "base64" | "binary" | "none" }) => {
     const isBackgroundRefresh = options?.background === true && content() !== null;
+    const contentType = options?.contentType ?? "text";
 
     if (!isBackgroundRefresh) {
       setLoading(true);
@@ -41,7 +46,7 @@ export function useFileContent(path: Accessor<string>): TUseFileContent {
     setError(null);
 
     const [readError, readResult] = await orpcWebsocketService.safeClient.api.filesystem.read({
-      query: { path: path() },
+      query: { path: path(), content: contentType },
     });
 
     if (readError || !readResult || "type" in readResult) {

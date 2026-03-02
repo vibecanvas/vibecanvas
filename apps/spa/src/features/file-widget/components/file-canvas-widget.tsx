@@ -1,8 +1,9 @@
 import { orpcWebsocketService } from "@/services/orpc-websocket";
 import { useFileContent } from "../hooks/use-file-content";
 import { CodeEditor } from "./viewers/code-editor";
+import { ImageViewer } from "./viewers/image-viewer";
 import { PlaceholderViewer } from "./viewers/placeholder-viewer";
-import { type Accessor, createSignal, Match, onCleanup, onMount, Show, Switch } from "solid-js";
+import { type Accessor, createSignal, createMemo, Match, onCleanup, onMount, Show, Switch } from "solid-js";
 
 const WATCH_KEEPALIVE_INTERVAL_MS = 10_000;
 
@@ -30,6 +31,13 @@ export function FileCanvasWidget(props: TFileCanvasWidgetProps) {
   const filename = () => props.path.split('/').pop() ?? props.path;
   const [isDeleted, setIsDeleted] = createSignal(false);
   const [hasConflict, setHasConflict] = createSignal(false);
+
+  // Determine content type based on renderer
+  const contentType = createMemo(() => {
+    if (props.renderer === "image") return "base64" as const;
+    return "text" as const;
+  });
+
   const { content, loading, error, dirty, saving, setDirty, refetch, save } = useFileContent(() => props.path);
 
   let watchAbort: AbortController | null = null;
@@ -95,7 +103,7 @@ export function FileCanvasWidget(props: TFileCanvasWidgetProps) {
           } else {
             setHasConflict(false);
             setIsDeleted(false);
-            void refetch({ background: true });
+            void refetch({ background: true, contentType: contentType() });
           }
         }
       }
@@ -112,7 +120,7 @@ export function FileCanvasWidget(props: TFileCanvasWidgetProps) {
   };
 
   onMount(() => {
-    void refetch();
+    void refetch({ contentType: contentType() });
     void startWatching();
   });
 
@@ -196,6 +204,14 @@ export function FileCanvasWidget(props: TFileCanvasWidgetProps) {
             truncated={(content() as { kind: "text"; content: string; truncated: boolean }).truncated}
             onSave={saveContent}
             onDirty={setDirty}
+          />
+        </Match>
+
+        <Match when={props.renderer === "image" && content()?.kind === "binary"}>
+          <ImageViewer
+            src={(content() as { kind: "binary"; content: string | null }).content}
+            path={props.path}
+            isDeleted={isDeleted()}
           />
         </Match>
       </Switch>

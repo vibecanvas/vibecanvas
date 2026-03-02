@@ -61,6 +61,8 @@ const projectDirErrorSchema = z.object({
 
 const fileKindSchema = z.enum(["pdf", "text", "image", "binary", "video"]);
 
+const contentTypeSchema = z.enum(["text", "base64", "binary", "none"]);
+
 const inspectOutputSchema = z.object({
   name: z.string(),
   path: z.string(),
@@ -78,7 +80,11 @@ const readOutputSchema = z.union([
   }),
   z.object({
     kind: z.literal("binary"),
-    preview: z.string().nullable(),
+    content: z.string().nullable(),
+    size: z.number(),
+  }),
+  z.object({
+    kind: z.literal("none"),
     size: z.number(),
   }),
   projectDirErrorSchema,
@@ -106,6 +112,7 @@ export type TDirFilesResponse = z.infer<typeof dirFilesSchema>;
 export type TMoveFileInput = z.infer<typeof moveFileInputSchema>;
 export type TMoveFileOutput = z.infer<typeof moveFileOutputSchema>;
 export type TFileKind = z.infer<typeof fileKindSchema>;
+export type TContentType = z.infer<typeof contentTypeSchema>;
 export type TInspectOutput = z.infer<typeof inspectOutputSchema>;
 export type TReadOutput = z.infer<typeof readOutputSchema>;
 export type TWriteOutput = z.infer<typeof writeOutputSchema>;
@@ -133,7 +140,7 @@ export default oc.router({
     .output(z.union([inspectOutputSchema, projectDirErrorSchema])),
 
   read: oc
-    .input(z.object({ query: z.object({ path: z.string(), maxBytes: z.number().optional() }) }))
+    .input(z.object({ query: z.object({ path: z.string(), maxBytes: z.number().optional(), content: contentTypeSchema.optional() }) }))
     .output(readOutputSchema),
 
   write: oc

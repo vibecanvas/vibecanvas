@@ -69,6 +69,7 @@ const read = baseOs.api.filesystem.read.handler(async ({ input }) => {
   const [result, error] = ctrlFileRead(dirPortal, {
     path: input.query.path,
     maxBytes: input.query.maxBytes,
+    content: input.query.content,
   });
   if (error || !result) {
     return { type: error?.code ?? "ERROR", message: error?.externalMessage?.en ?? "Failed to read file" };
