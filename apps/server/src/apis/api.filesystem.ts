@@ -67,6 +67,7 @@ const inspect = baseOs.api.filesystem.inspect.handler(async ({ input }) => {
 
 const read = baseOs.api.filesystem.read.handler(async ({ input }) => {
   console.log("[api.filesystem.read] input:", input);
+  console.log("[api.filesystem.read] content value:", input.query.content, "type:", typeof input.query.content);
   const [result, error] = ctrlFileRead(dirPortal, {
     path: input.query.path,
     maxBytes: input.query.maxBytes,
