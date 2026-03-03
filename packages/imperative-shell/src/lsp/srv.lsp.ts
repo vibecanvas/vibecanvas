@@ -53,6 +53,10 @@ type TSessionState = {
   attachedClients: Set<string>;
   pid: number | null;
   idleSince: number | null;
+  process: { kill(signal?: NodeJS.Signals | number): boolean } | null;
+  stdin: { write(chunk: string): boolean } | null;
+  stdoutBuffer: string;
+  idleTimer: ReturnType<typeof setTimeout> | null;
 };
 
 type TClientAttachment = {
@@ -74,15 +78,17 @@ export interface ILspService {
 }
 
 export class LspService implements ILspService {
+  private static readonly IDLE_SHUTDOWN_MS = 30_000;
+
   private outboundSender: ((payload: TLspOutboundMessage) => void) | null = null;
   private readonly sessions = new Map<TLspSessionKey, TSessionState>();
   private readonly attachments = new Map<string, TClientAttachment>();
 
-  // TODO: add upstream-request-id remapping table for multiplexed JSON-RPC.
-  private readonly requestMap = new Map<number, string>();
+  private readonly requestMap = new Map<number, { attachmentKey: string; clientRequestId: unknown }>();
+  private nextUpstreamRequestId = 1;
 
   constructor(private vibecanvasDirectory: string) {
-
+    this.vibecanvasDirectory = normalize(vibecanvasDirectory);
   }
 
   setOutboundSender(sender: (payload: TLspOutboundMessage) => void): void {
@@ -95,28 +101,73 @@ export class LspService implements ILspService {
       return;
     }
     const projectRoot = await this.resolveProjectRoot(args);
-    void projectRoot;
+    const session = await this.getOrCreateSession(args.language, projectRoot);
+    this.attachClientToSession(session, args);
 
-    // TODO: resolve root + server flavor, spawn/reuse pooled session, and attach logical client.
-    throw new Error("LspService.openChannel not implemented");
+    this.emitOutbound({
+      requestId: args.requestId,
+      clientId: args.clientId,
+      message: JSON.stringify({
+        type: "lsp.channel.opened",
+        language: args.language,
+        projectRoot,
+      }),
+    });
+
+    return;
   }
 
   handleClientMessage(args: TLspClientMessageArgs): void {
-    // TODO: remap request IDs and forward JSON-RPC payload to the matching pooled LSP session.
-    void args;
-    throw new Error("LspService.handleClientMessage not implemented");
+    const attachmentKey = this.attachmentKey(args);
+    const attachment = this.attachments.get(attachmentKey);
+    if (!attachment) {
+      throw new Error("LspService.handleClientMessage missing attachment");
+    }
+
+    const session = this.sessions.get(attachment.sessionKey);
+    if (!session) {
+      throw new Error("LspService.handleClientMessage missing session");
+    }
+
+    const outboundPayload = this.remapClientMessageForServer(args.message, attachmentKey);
+    if (!session.stdin) {
+      throw new Error("LspService.handleClientMessage missing session stdin");
+    }
+
+    session.stdin.write(this.toLspFrame(outboundPayload));
   }
 
   closeChannel(args: TLspClientRef): void {
-    // TODO: detach logical client from session and schedule idle shutdown when ref-count reaches zero.
-    void args;
-    throw new Error("LspService.closeChannel not implemented");
+    const key = this.attachmentKey(args);
+    const attachment = this.attachments.get(key);
+    if (!attachment) return;
+
+    const session = this.sessions.get(attachment.sessionKey);
+    if (session) {
+      session.attachedClients.delete(key);
+      this.clearSessionIdleTimer(session);
+      if (session.attachedClients.size === 0) {
+        session.idleSince = Date.now();
+        session.idleTimer = setTimeout(() => {
+          this.destroySession(session.key);
+        }, LspService.IDLE_SHUTDOWN_MS);
+      }
+    }
+
+    this.attachments.delete(key);
+    this.cleanupRequestMappingsForAttachment(key);
   }
 
   closeAllForRequest(requestId: string): void {
-    // TODO: detach all logical clients associated with one websocket request context.
-    void requestId;
-    throw new Error("LspService.closeAllForRequest not implemented");
+    const toClose: TLspClientRef[] = [];
+    for (const attachment of this.attachments.values()) {
+      if (attachment.requestId !== requestId) continue;
+      toClose.push({ requestId: attachment.requestId, clientId: attachment.clientId });
+    }
+
+    for (const ref of toClose) {
+      this.closeChannel(ref);
+    }
   }
 
   listSessions(): TLspSessionSnapshot[] {
@@ -131,8 +182,11 @@ export class LspService implements ILspService {
   }
 
   async shutdown(): Promise<void> {
-    // TODO: terminate all child processes, clear timers/maps, and release listeners.
-    throw new Error("LspService.shutdown not implemented");
+    for (const key of this.sessions.keys()) {
+      this.destroySession(key);
+    }
+    this.attachments.clear();
+    this.requestMap.clear();
   }
 
   private attachmentKey(ref: TLspClientRef): string {
@@ -218,5 +272,175 @@ export class LspService implements ILspService {
 
   private getServerInfo(language: TLspLanguage): TLspServerInfo | undefined {
     return LspServerInfoByLanguage[language];
+  }
+
+  private async getOrCreateSession(language: TLspLanguage, projectRoot: string): Promise<TSessionState> {
+    const key = this.toSessionKey(language, projectRoot);
+    const existing = this.sessions.get(key);
+    if (existing) {
+      this.clearSessionIdleTimer(existing);
+      existing.idleSince = null;
+      return existing;
+    }
+
+    const serverInfo = this.getServerInfo(language);
+    if (!serverInfo) {
+      throw new Error(`LspService.getOrCreateSession unsupported language: ${language}`);
+    }
+
+    const handle = await serverInfo.spawn(projectRoot, this.vibecanvasDirectory);
+    if (!handle) {
+      throw new Error(`LspService.getOrCreateSession failed to spawn language server: ${language}`);
+    }
+
+    const session: TSessionState = {
+      key,
+      language,
+      projectRoot,
+      attachedClients: new Set<string>(),
+      pid: handle.process.pid ?? null,
+      idleSince: null,
+      process: handle.process,
+      stdin: handle.process.stdin,
+      stdoutBuffer: "",
+      idleTimer: null,
+    };
+
+    handle.process.stdout.setEncoding("utf8");
+    handle.process.stdout.on("data", (chunk: string) => {
+      this.handleServerStdout(session.key, chunk);
+    });
+    handle.process.on("exit", () => {
+      this.destroySession(session.key);
+    });
+    handle.process.on("error", () => {
+      this.destroySession(session.key);
+    });
+
+    this.sessions.set(key, session);
+    return session;
+  }
+
+  private attachClientToSession(session: TSessionState, args: TLspOpenChannelArgs): void {
+    const key = this.attachmentKey(args);
+    session.attachedClients.add(key);
+    this.attachments.set(key, {
+      requestId: args.requestId,
+      clientId: args.clientId,
+      sessionKey: session.key,
+      language: args.language,
+      filePath: this.normalizePath(args.filePath),
+    });
+  }
+
+  private clearSessionIdleTimer(session: TSessionState): void {
+    if (!session.idleTimer) return;
+    clearTimeout(session.idleTimer);
+    session.idleTimer = null;
+  }
+
+  private destroySession(key: TLspSessionKey): void {
+    const session = this.sessions.get(key);
+    if (!session) return;
+
+    this.clearSessionIdleTimer(session);
+    for (const attachmentKey of session.attachedClients) {
+      this.attachments.delete(attachmentKey);
+      this.cleanupRequestMappingsForAttachment(attachmentKey);
+    }
+
+    try {
+      session.process?.kill();
+    } catch {
+      // ignore process kill errors during shutdown
+    }
+
+    this.sessions.delete(key);
+  }
+
+  private remapClientMessageForServer(rawMessage: string, attachmentKey: string): string {
+    const payload = JSON.parse(rawMessage) as Record<string, unknown>;
+    if (Object.prototype.hasOwnProperty.call(payload, "id") && payload.id !== undefined) {
+      const upstreamId = this.nextUpstreamRequestId++;
+      this.requestMap.set(upstreamId, { attachmentKey, clientRequestId: payload.id });
+      payload.id = upstreamId;
+    }
+    return JSON.stringify(payload);
+  }
+
+  private toLspFrame(json: string): string {
+    const contentLength = Buffer.byteLength(json, "utf8");
+    return `Content-Length: ${contentLength}\r\n\r\n${json}`;
+  }
+
+  private handleServerStdout(sessionKey: TLspSessionKey, chunk: string): void {
+    const session = this.sessions.get(sessionKey);
+    if (!session) return;
+
+    session.stdoutBuffer += chunk;
+    while (true) {
+      const headerEnd = session.stdoutBuffer.indexOf("\r\n\r\n");
+      if (headerEnd === -1) return;
+
+      const header = session.stdoutBuffer.slice(0, headerEnd);
+      const lengthMatch = header.match(/Content-Length:\s*(\d+)/i);
+      if (!lengthMatch) {
+        session.stdoutBuffer = session.stdoutBuffer.slice(headerEnd + 4);
+        continue;
+      }
+
+      const contentLength = Number(lengthMatch[1]);
+      const bodyStart = headerEnd + 4;
+      const bodyEnd = bodyStart + contentLength;
+      if (session.stdoutBuffer.length < bodyEnd) return;
+
+      const body = session.stdoutBuffer.slice(bodyStart, bodyEnd);
+      session.stdoutBuffer = session.stdoutBuffer.slice(bodyEnd);
+      this.routeServerMessage(session, body);
+    }
+  }
+
+  private routeServerMessage(session: TSessionState, rawMessage: string): void {
+    let payload: Record<string, unknown>;
+    try {
+      payload = JSON.parse(rawMessage) as Record<string, unknown>;
+    } catch {
+      return;
+    }
+
+    if (Object.prototype.hasOwnProperty.call(payload, "id") && typeof payload.id === "number") {
+      const mapped = this.requestMap.get(payload.id);
+      if (mapped) {
+        this.requestMap.delete(payload.id);
+        payload.id = mapped.clientRequestId;
+        const attachment = this.attachments.get(mapped.attachmentKey);
+        if (attachment) {
+          this.emitOutbound({
+            requestId: attachment.requestId,
+            clientId: attachment.clientId,
+            message: JSON.stringify(payload),
+          });
+          return;
+        }
+      }
+    }
+
+    const message = JSON.stringify(payload);
+    for (const attachmentKey of session.attachedClients) {
+      const attachment = this.attachments.get(attachmentKey);
+      if (!attachment) continue;
+      this.emitOutbound({
+        requestId: attachment.requestId,
+        clientId: attachment.clientId,
+        message,
+      });
+    }
+  }
+
+  private cleanupRequestMappingsForAttachment(attachmentKey: string): void {
+    for (const [requestId, mapped] of this.requestMap.entries()) {
+      if (mapped.attachmentKey !== attachmentKey) continue;
+      this.requestMap.delete(requestId);
+    }
   }
 }
