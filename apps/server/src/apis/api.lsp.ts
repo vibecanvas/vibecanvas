@@ -47,10 +47,9 @@ lspService.setOutboundSender((payload) => {
   });
 });
 
-function parseLanguage(language: string | undefined): TLspLanguage | undefined {
-  if (!language) return undefined;
+function parseLanguage(language: string): TLspLanguage {
   if (language in LspServerInfoByLanguage) return language as TLspLanguage;
-  return undefined;
+  throw new ORPCError("BAD_REQUEST", { message: "Invalid language" });
 }
 
 const open = baseOs.api.lsp.open.handler(async ({ input, context: { requestId } }) => {

@@ -16,7 +16,7 @@ export type TLspClientRef = {
 };
 
 export type TLspOpenChannelArgs = TLspClientRef & {
-  language?: TLspLanguage;
+  language: TLspLanguage;
   filePath: string;
   // App-level hint (NOT an LSP protocol key). Server may ignore if invalid.
   rootHint?: string;

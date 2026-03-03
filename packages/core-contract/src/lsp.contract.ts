@@ -9,7 +9,7 @@ const lspErrorSchema = z.object({
 const lspOpenInputSchema = z.object({
   channelId: z.string(),
   filePath: z.string(),
-  language: z.string().optional(),
+  language: z.string(),
   rootHint: z.string().optional(),
 });
 
