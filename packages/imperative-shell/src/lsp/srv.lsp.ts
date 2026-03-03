@@ -1,6 +1,7 @@
 import { dirname, isAbsolute, normalize, resolve, sep } from "node:path";
 import {
   LspServerInfoByLanguage,
+  resolveLspLanguageFromPath,
   type TLspLanguage,
   type TLspServerInfo,
 } from "./srv.lsp-server-info";
@@ -96,20 +97,21 @@ export class LspService implements ILspService {
   }
 
   async openChannel(args: TLspOpenChannelArgs): Promise<void> {
-    this.validateOpenChannelArgs(args);
-    if (this.handleOpenChannelIdempotency(args)) {
+    const normalized = this.normalizeOpenArgs(args);
+    this.validateOpenChannelArgs(normalized);
+    if (this.handleOpenChannelIdempotency(normalized)) {
       return;
     }
-    const projectRoot = await this.resolveProjectRoot(args);
-    const session = await this.getOrCreateSession(args.language, projectRoot);
-    this.attachClientToSession(session, args);
+    const projectRoot = await this.resolveProjectRoot(normalized);
+    const session = await this.getOrCreateSession(normalized.language, projectRoot);
+    this.attachClientToSession(session, normalized);
 
     this.emitOutbound({
-      requestId: args.requestId,
-      clientId: args.clientId,
+      requestId: normalized.requestId,
+      clientId: normalized.clientId,
       message: JSON.stringify({
         type: "lsp.channel.opened",
-        language: args.language,
+        language: normalized.language,
         projectRoot,
       }),
     });
@@ -218,6 +220,15 @@ export class LspService implements ILspService {
     if (!this.getServerInfo(args.language)) {
       throw new Error(`LspService.openChannel unsupported language: ${String(args.language)}`);
     }
+  }
+
+  private normalizeOpenArgs(args: TLspOpenChannelArgs): TLspOpenChannelArgs {
+    const inferredLanguage = resolveLspLanguageFromPath(args.filePath);
+    if (!inferredLanguage) return args;
+    return {
+      ...args,
+      language: inferredLanguage,
+    };
   }
 
   private handleOpenChannelIdempotency(args: TLspOpenChannelArgs): boolean {

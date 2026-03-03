@@ -1,144 +1,135 @@
-import { existsSync } from "node:fs";
-import { spawn, type ChildProcessWithoutNullStreams } from "node:child_process";
-import { dirname, join, normalize, resolve, sep } from "node:path";
+import { basename, extname } from "node:path";
+import { LANGUAGE_EXTENSIONS } from "./language";
+import { DenoLspServerInfo } from "./server-info/lsp.deno";
+import { TypeScriptLspServerInfo } from "./server-info/lsp.typescript";
+import { VueLspServerInfo } from "./server-info/lsp.vue";
+import { EslintLspServerInfo } from "./server-info/lsp.eslint";
+import { OxlintLspServerInfo } from "./server-info/lsp.oxlint";
+import { BiomeLspServerInfo } from "./server-info/lsp.biome";
+import { GoplsLspServerInfo } from "./server-info/lsp.gopls";
+import { RubyLspServerInfo } from "./server-info/lsp.ruby-lsp";
+import { TyLspServerInfo } from "./server-info/lsp.ty";
+import { PythonLspServerInfo } from "./server-info/lsp.python";
+import { ElixirLsLspServerInfo } from "./server-info/lsp.elixir-ls";
+import { ZlsLspServerInfo } from "./server-info/lsp.zls";
+import { CSharpLspServerInfo } from "./server-info/lsp.csharp";
+import { FSharpLspServerInfo } from "./server-info/lsp.fsharp";
+import { SourceKitLspServerInfo } from "./server-info/lsp.sourcekit-lsp";
+import { RustLspServerInfo } from "./server-info/lsp.rust";
+import { ClangdLspServerInfo } from "./server-info/lsp.clangd";
+import { SvelteLspServerInfo } from "./server-info/lsp.svelte";
+import { AstroLspServerInfo } from "./server-info/lsp.astro";
+import { JdtlsLspServerInfo } from "./server-info/lsp.jdtls";
+import { KotlinLsLspServerInfo } from "./server-info/lsp.kotlin-ls";
+import { YamlLsLspServerInfo } from "./server-info/lsp.yaml-ls";
+import { LuaLsLspServerInfo } from "./server-info/lsp.lua-ls";
+import { PhpIntelephenseLspServerInfo } from "./server-info/lsp.php-intelephense";
+import { PrismaLspServerInfo } from "./server-info/lsp.prisma";
+import { DartLspServerInfo } from "./server-info/lsp.dart";
+import { OcamlLspServerInfo } from "./server-info/lsp.ocaml-lsp";
+import { BashLspServerInfo } from "./server-info/lsp.bash";
+import { TerraformLspServerInfo } from "./server-info/lsp.terraform";
+import { TexlabLspServerInfo } from "./server-info/lsp.texlab";
+import { DockerfileLspServerInfo } from "./server-info/lsp.dockerfile";
+import { GleamLspServerInfo } from "./server-info/lsp.gleam";
+import { ClojureLspServerInfo } from "./server-info/lsp.clojure-lsp";
+import { NixdLspServerInfo } from "./server-info/lsp.nixd";
+import { TinymistLspServerInfo } from "./server-info/lsp.tinymist";
+import { HaskellLanguageServerLspServerInfo } from "./server-info/lsp.haskell-language-server";
+import { JuliaLsLspServerInfo } from "./server-info/lsp.julials";
 
-export type TLspLanguage = "typescript" | "python";
+export {
+  NearestRoot,
+  type TLspLanguage,
+  type TLspServerHandle,
+  type TRootFunction,
+  type TLspServerInfo,
+} from "./server-info/lsp.shared";
 
-export type TLspServerHandle = {
-  process: ChildProcessWithoutNullStreams;
-  initialization?: Record<string, unknown>;
+export const LspServerInfoByLanguage = {
+  deno: DenoLspServerInfo,
+  typescript: TypeScriptLspServerInfo,
+  vue: VueLspServerInfo,
+  eslint: EslintLspServerInfo,
+  oxlint: OxlintLspServerInfo,
+  biome: BiomeLspServerInfo,
+  gopls: GoplsLspServerInfo,
+  "ruby-lsp": RubyLspServerInfo,
+  ty: TyLspServerInfo,
+  python: PythonLspServerInfo,
+  "elixir-ls": ElixirLsLspServerInfo,
+  zls: ZlsLspServerInfo,
+  csharp: CSharpLspServerInfo,
+  fsharp: FSharpLspServerInfo,
+  "sourcekit-lsp": SourceKitLspServerInfo,
+  rust: RustLspServerInfo,
+  clangd: ClangdLspServerInfo,
+  svelte: SvelteLspServerInfo,
+  astro: AstroLspServerInfo,
+  jdtls: JdtlsLspServerInfo,
+  "kotlin-ls": KotlinLsLspServerInfo,
+  "yaml-ls": YamlLsLspServerInfo,
+  "lua-ls": LuaLsLspServerInfo,
+  "php-intelephense": PhpIntelephenseLspServerInfo,
+  prisma: PrismaLspServerInfo,
+  dart: DartLspServerInfo,
+  "ocaml-lsp": OcamlLspServerInfo,
+  bash: BashLspServerInfo,
+  terraform: TerraformLspServerInfo,
+  texlab: TexlabLspServerInfo,
+  dockerfile: DockerfileLspServerInfo,
+  gleam: GleamLspServerInfo,
+  "clojure-lsp": ClojureLspServerInfo,
+  nixd: NixdLspServerInfo,
+  tinymist: TinymistLspServerInfo,
+  "haskell-language-server": HaskellLanguageServerLspServerInfo,
+  julials: JuliaLsLspServerInfo,
+} as const;
+
+const LANGUAGE_TO_LSP: Record<string, keyof typeof LspServerInfoByLanguage> = {
+  typescript: "typescript",
+  typescriptreact: "typescript",
+  javascript: "typescript",
+  javascriptreact: "typescript",
+  vue: "vue",
+  python: "python",
+  go: "gopls",
+  ruby: "ruby-lsp",
+  elixir: "elixir-ls",
+  zig: "zls",
+  csharp: "csharp",
+  fsharp: "fsharp",
+  swift: "sourcekit-lsp",
+  rust: "rust",
+  c: "clangd",
+  cpp: "clangd",
+  svelte: "svelte",
+  astro: "astro",
+  java: "jdtls",
+  kotlin: "kotlin-ls",
+  yaml: "yaml-ls",
+  lua: "lua-ls",
+  php: "php-intelephense",
+  prisma: "prisma",
+  dart: "dart",
+  ocaml: "ocaml-lsp",
+  shellscript: "bash",
+  terraform: "terraform",
+  "terraform-vars": "terraform",
+  dockerfile: "dockerfile",
+  gleam: "gleam",
+  clojure: "clojure-lsp",
+  nix: "nixd",
+  typst: "tinymist",
+  haskell: "haskell-language-server",
+  julia: "julials",
 };
 
-export type TRootFunction = (filePath: string, stopDirectory: string) => Promise<string | undefined>;
-
-export type TLspServerInfo = {
-  id: TLspLanguage;
-  extensions: string[];
-  root: TRootFunction;
-  spawn: (projectRoot: string, installDirectory: string) => Promise<TLspServerHandle | undefined>;
-};
-
-const DISABLE_LSP_DOWNLOAD_ENV = "VIBECANVAS_DISABLE_LSP_DOWNLOAD";
-
-function isAutoInstallDisabled(): boolean {
-  const value = process.env[DISABLE_LSP_DOWNLOAD_ENV];
-  return value === "1" || value === "true";
+export function resolveLspLanguageFromPath(filePath: string): keyof typeof LspServerInfoByLanguage | null {
+  const normalized = filePath.toLowerCase();
+  const fileName = basename(normalized);
+  const extension = extname(normalized);
+  const languageKey = LANGUAGE_EXTENSIONS[extension] ?? LANGUAGE_EXTENSIONS[fileName] ?? null;
+  if (!languageKey) return null;
+  return LANGUAGE_TO_LSP[languageKey] ?? null;
 }
-
-async function installNodePackages(installDirectory: string, packages: string[]): Promise<boolean> {
-  if (isAutoInstallDisabled()) return false;
-
-  const proc = Bun.spawn([process.execPath, "install", ...packages], {
-    cwd: installDirectory,
-    env: {
-      ...process.env,
-      BUN_BE_BUN: "1",
-    },
-    stdout: "ignore",
-    stderr: "ignore",
-    stdin: "ignore",
-  });
-
-  const exitCode = await proc.exited;
-  return exitCode === 0;
-}
-
-function resolveLocalBin(installDirectory: string, binaryName: string): string | null {
-  const ext = process.platform === "win32" ? ".cmd" : "";
-  const binaryPath = join(installDirectory, "node_modules", ".bin", `${binaryName}${ext}`);
-  return existsSync(binaryPath) ? binaryPath : null;
-}
-
-export const NearestRoot = (includeMarkers: string[], excludeMarkers?: string[]): TRootFunction => {
-  return async (filePath: string, stopDirectory: string) => {
-    const normalizedStop = normalize(stopDirectory);
-    const stopPrefix = normalizedStop.endsWith(sep) ? normalizedStop : `${normalizedStop}${sep}`;
-    let current = dirname(normalize(filePath));
-
-    while (true) {
-      if (excludeMarkers && excludeMarkers.some((marker) => existsSync(resolve(current, marker)))) {
-        return undefined;
-      }
-
-      if (includeMarkers.some((marker) => existsSync(resolve(current, marker)))) {
-        return current;
-      }
-
-      if (current === normalizedStop) {
-        return normalizedStop;
-      }
-
-      const parent = dirname(current);
-      if (parent === current) {
-        return normalizedStop;
-      }
-
-      if (parent !== normalizedStop && !parent.startsWith(stopPrefix)) {
-        return normalizedStop;
-      }
-
-      current = parent;
-    }
-  };
-};
-
-export const LspServerInfoByLanguage: Record<TLspLanguage, TLspServerInfo> = {
-  typescript: {
-    id: "typescript",
-    extensions: [".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs", ".mts", ".cts"],
-    root: NearestRoot(
-      ["package-lock.json", "bun.lockb", "bun.lock", "pnpm-lock.yaml", "yarn.lock"],
-      ["deno.json", "deno.jsonc"],
-    ),
-    async spawn(projectRoot: string, installDirectory: string) {
-      let binary = Bun.which("typescript-language-server") ?? resolveLocalBin(installDirectory, "typescript-language-server");
-      if (!binary) {
-        const installed = await installNodePackages(installDirectory, ["typescript-language-server", "typescript"]);
-        if (!installed) return undefined;
-        binary = resolveLocalBin(installDirectory, "typescript-language-server");
-      }
-      if (!binary) return undefined;
-
-      return {
-        process: spawn(binary, ["--stdio"], {
-          cwd: projectRoot,
-          env: {
-            ...process.env,
-            BUN_BE_BUN: "1",
-          },
-        }),
-      };
-    },
-  },
-  python: {
-    id: "python",
-    extensions: [".py", ".pyi"],
-    root: NearestRoot(["pyproject.toml", "setup.py", "setup.cfg", "requirements.txt", "Pipfile", "pyrightconfig.json"]),
-    async spawn(projectRoot: string, installDirectory: string) {
-      let binary = Bun.which("pyright-langserver");
-      const args = ["--stdio"];
-
-      if (!binary) {
-        let pyrightEntrypoint = join(installDirectory, "node_modules", "pyright", "dist", "pyright-langserver.js");
-        if (!existsSync(pyrightEntrypoint)) {
-          const installed = await installNodePackages(installDirectory, ["pyright"]);
-          if (!installed) return undefined;
-          pyrightEntrypoint = join(installDirectory, "node_modules", "pyright", "dist", "pyright-langserver.js");
-        }
-        if (!existsSync(pyrightEntrypoint)) return undefined;
-        binary = process.execPath;
-        args.unshift("run", pyrightEntrypoint);
-      }
-
-      return {
-        process: spawn(binary, args, {
-          cwd: projectRoot,
-          env: {
-            ...process.env,
-            BUN_BE_BUN: "1",
-          },
-        }),
-      };
-    },
-  },
-};
