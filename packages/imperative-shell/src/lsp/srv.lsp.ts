@@ -16,7 +16,7 @@ export type TLspClientRef = {
 };
 
 export type TLspOpenChannelArgs = TLspClientRef & {
-  language: TLspLanguage;
+  language?: TLspLanguage;
   filePath: string;
   // App-level hint (NOT an LSP protocol key). Server may ignore if invalid.
   rootHint?: string;
@@ -99,19 +99,21 @@ export class LspService implements ILspService {
   async openChannel(args: TLspOpenChannelArgs): Promise<void> {
     const normalized = this.normalizeOpenArgs(args);
     this.validateOpenChannelArgs(normalized);
-    if (this.handleOpenChannelIdempotency(normalized)) {
+    const language = normalized.language as TLspLanguage;
+    const resolvedArgs: TLspOpenChannelArgs & { language: TLspLanguage } = { ...normalized, language };
+    if (this.handleOpenChannelIdempotency(resolvedArgs)) {
       return;
     }
-    const projectRoot = await this.resolveProjectRoot(normalized);
-    const session = await this.getOrCreateSession(normalized.language, projectRoot);
-    this.attachClientToSession(session, normalized);
+    const projectRoot = await this.resolveProjectRoot(resolvedArgs);
+    const session = await this.getOrCreateSession(language, projectRoot);
+    this.attachClientToSession(session, resolvedArgs);
 
     this.emitOutbound({
       requestId: normalized.requestId,
       clientId: normalized.clientId,
       message: JSON.stringify({
         type: "lsp.channel.opened",
-        language: normalized.language,
+        language,
         projectRoot,
       }),
     });
@@ -217,13 +219,13 @@ export class LspService implements ILspService {
       throw new Error("LspService.openChannel invalid filePath");
     }
 
-    if (!this.getServerInfo(args.language)) {
+    if (!args.language || !this.getServerInfo(args.language)) {
       throw new Error(`LspService.openChannel unsupported language: ${String(args.language)}`);
     }
   }
 
   private normalizeOpenArgs(args: TLspOpenChannelArgs): TLspOpenChannelArgs {
-    const inferredLanguage = resolveLspLanguageFromPath(args.filePath);
+    const inferredLanguage = resolveLspLanguageFromPath(args.filePath) ?? args.language;
     if (!inferredLanguage) return args;
     return {
       ...args,

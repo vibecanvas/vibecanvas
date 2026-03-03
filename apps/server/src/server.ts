@@ -8,6 +8,7 @@ import { existsSync } from 'fs';
 import { join, normalize } from 'path';
 import { router } from './api-router';
 import { publishNotification } from './apis/api.notification';
+import { closeLspChannelsForRequest } from './apis/api.lsp';
 import { fileMetaFromPathname } from '@vibecanvas/core/file/fn.file-storage';
 import { baseOs } from './orpc.base';
 import './preload/patch-negative-timeout';
@@ -444,6 +445,7 @@ export async function startServer(options: StartServerOptions): Promise<void> {
         },
         close(ws, code, reason) {
           if (ws.data.path === '/api') {
+            closeLspChannelsForRequest(ws.data.requestId)
             handler.close(ws)
           } else if (ws.data.path === '/automerge') {
             const wrapper = automergeConnections.get(ws);

@@ -5,6 +5,7 @@ import dbContract from "./db.contract";
 import fileContract from "./file.contract";
 import filesystemContract from "./filesystem.contract";
 import filetreeContract from "./filetree.contract";
+import lspContract from "./lsp.contract";
 import notificationContract from "./notification.contract";
 import opencodeContract from "./opencode.contract";
 
@@ -13,6 +14,7 @@ export * from "./chat.contract";
 export * from "./file.contract";
 export * from "./filesystem.contract";
 export * from "./filetree.contract";
+export * from "./lsp.contract";
 export * from "./db.contract";
 export * from "./notification.contract";
 export * from "./opencode.contract";
@@ -23,6 +25,7 @@ export const contract = oc.router({
   file: fileContract,
   filesystem: filesystemContract,
   filetree: filetreeContract,
+  lsp: lspContract,
   opencode: opencodeContract,
   db: dbContract,
   notification: notificationContract,
