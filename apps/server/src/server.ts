@@ -139,14 +139,13 @@ export async function startServer(options: StartServerOptions): Promise<void> {
     if (hasCheckedLatestVersion) return;
     hasCheckedLatestVersion = true;
 
-    fetch('https://registry.npmjs.org/vibecanvas/latest')
-      .then(res => res.json())
-      .then((data: { version?: string }) => {
-        if (data.version && data.version !== currentVersion) {
+    checkForUpgrade({ force: true, checkOnly: true })
+      .then((result) => {
+        if (result.status === 'update-available') {
           publishNotification({
             type: 'info',
             title: 'Update Available',
-            description: `v${data.version} is available (current: v${currentVersion})`,
+            description: `v${result.version} is available (current: v${currentVersion}). Run \`vibecanvas upgrade\` to update.`,
           });
         }
       })
