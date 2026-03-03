@@ -1,3 +1,14 @@
+import { LANGUAGE_EXTENSIONS } from "@vibecanvas/shell/lsp/language";
+
+export function getLanguageId(path: string): string | undefined {
+  const lower = path.toLowerCase();
+  const fileName = lower.split(/[\\/]/).pop() ?? lower;
+  const extensionIndex = fileName.lastIndexOf(".");
+  const extension = extensionIndex >= 0 ? fileName.slice(extensionIndex) : "";
+  const language = LANGUAGE_EXTENSIONS[extension] ?? LANGUAGE_EXTENSIONS[fileName] ?? null;
+  return language ?? undefined;
+}
+
 export async function getLanguageExtension(path: string) {
   const extension = path.split(".").pop()?.toLowerCase() ?? "";
 

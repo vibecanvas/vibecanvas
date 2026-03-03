@@ -10,8 +10,11 @@ import {
 import { search, searchKeymap, highlightSelectionMatches } from "@codemirror/search";
 import { Compartment, EditorState } from "@codemirror/state";
 import { drawSelection, EditorView, highlightSpecialChars, keymap, lineNumbers } from "@codemirror/view";
+import { LSPClient, languageServerExtensions } from "@codemirror/lsp-client";
 import { createEffect, onCleanup, onMount, Show } from "solid-js";
-import { getLanguageExtension } from "../../util/ext-to-language";
+import { getLanguageExtension, getLanguageId } from "../../util/ext-to-language";
+import { lspManagerService } from "@/services/lsp-manager";
+import { LspChannelTransport } from "@/services/lsp-transport";
 
 const SAVE_DEBOUNCE_MS = 1000;
 
@@ -67,9 +70,85 @@ export function CodeEditor(props: TCodeEditorProps) {
   let editorView: EditorView | undefined;
   let isApplyingExternalUpdate = false;
   let saveTimeout: ReturnType<typeof setTimeout> | undefined;
+  let lspClient: LSPClient | undefined;
+  let lspTransport: LspChannelTransport | undefined;
+  let lspChannelId: string | undefined;
+  let lspGeneration = 0;
 
   const languageCompartment = new Compartment();
   const editableCompartment = new Compartment();
+  const lspCompartment = new Compartment();
+
+  function toFileUri(filePath: string): string {
+    if (filePath.startsWith("file://")) return filePath;
+    const normalized = filePath.startsWith("/") ? filePath : `/${filePath}`;
+    return `file://${encodeURI(normalized)}`;
+  }
+
+  function teardownLsp(): void {
+    lspClient?.disconnect();
+    lspTransport?.dispose();
+    if (lspChannelId) {
+      void lspManagerService.closeChannel(lspChannelId);
+    }
+    lspClient = undefined;
+    lspTransport = undefined;
+    lspChannelId = undefined;
+
+    if (!editorView) return;
+    editorView.dispatch({
+      effects: lspCompartment.reconfigure([]),
+    });
+  }
+
+  async function setupLsp(path: string, truncated: boolean): Promise<void> {
+    if (!editorView || truncated) {
+      console.log("[LSP:Editor] setup skipped", { path, truncated });
+      teardownLsp();
+      return;
+    }
+
+    const generation = ++lspGeneration;
+    teardownLsp();
+
+    const channelId = crypto.randomUUID();
+    console.log("[LSP:Editor] opening channel", { path, channelId });
+    const opened = await lspManagerService.openChannel({
+      channelId,
+      filePath: path,
+    });
+
+    if (!opened || generation !== lspGeneration || !editorView) {
+      console.warn("[LSP:Editor] open failed or stale setup", {
+        path,
+        channelId,
+        opened,
+        generation,
+        activeGeneration: lspGeneration,
+      });
+      if (opened) {
+        void lspManagerService.closeChannel(channelId);
+      }
+      return;
+    }
+
+    const transport = new LspChannelTransport(channelId);
+    const client = new LSPClient({
+      extensions: languageServerExtensions(),
+    }).connect(transport);
+
+    lspChannelId = channelId;
+    lspTransport = transport;
+    lspClient = client;
+    console.log("[LSP:Editor] channel connected", { path, channelId });
+
+    const languageId = getLanguageId(path);
+    editorView.dispatch({
+      effects: lspCompartment.reconfigure([
+        client.plugin(toFileUri(path), languageId),
+      ]),
+    });
+  }
 
   onMount(async () => {
     const languageExtension = await getLanguageExtension(props.path);
@@ -96,6 +175,7 @@ export function CodeEditor(props: TCodeEditorProps) {
         ]),
         syntaxHighlighting(defaultHighlightStyle, { fallback: true }),
         languageCompartment.of(languageExtension ? [languageExtension] : []),
+        lspCompartment.of([]),
         editableCompartment.of([
           EditorState.readOnly.of(props.truncated),
           EditorView.editable.of(!props.truncated),
@@ -117,6 +197,8 @@ export function CodeEditor(props: TCodeEditorProps) {
       state,
       parent: containerRef,
     });
+
+    void setupLsp(props.path, props.truncated);
   });
 
   createEffect(() => {
@@ -138,6 +220,7 @@ export function CodeEditor(props: TCodeEditorProps) {
 
   createEffect(() => {
     const nextPath = props.path;
+    const truncated = props.truncated;
     if (!editorView) return;
 
     void (async () => {
@@ -146,6 +229,8 @@ export function CodeEditor(props: TCodeEditorProps) {
       editorView.dispatch({
         effects: languageCompartment.reconfigure(languageExtension ? [languageExtension] : []),
       });
+
+      await setupLsp(nextPath, truncated);
     })();
   });
 
@@ -161,6 +246,9 @@ export function CodeEditor(props: TCodeEditorProps) {
   });
 
   onCleanup(() => {
+    lspGeneration += 1;
+    console.log("[LSP:Editor] cleanup", { path: props.path, channelId: lspChannelId ?? null });
+    teardownLsp();
     if (saveTimeout) clearTimeout(saveTimeout);
     editorView?.destroy();
   });

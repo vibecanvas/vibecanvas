@@ -68,14 +68,14 @@ export class BunWSServerAdapter extends NetworkAdapter {
   connect(peerId: PeerId, peerMetadata?: PeerMetadata): void {
     this.peerId = peerId
     this.peerMetadata = peerMetadata
-    
+
     // Emit ready event for automerge-repo compatibility
     if (!this._isReady) {
       this._isReady = true
       this._resolveReady()
       this.emit("ready")
     }
-    
+
     // Clear any existing keepalive to prevent duplicate intervals
     if (this.keepAliveId) {
       clearInterval(this.keepAliveId)
@@ -141,10 +141,6 @@ export class BunWSServerAdapter extends NetworkAdapter {
       return
     }
 
-    const documentId = "documentId" in message ? "@" + message.documentId : ""
-    const { byteLength } = messageBytes
-    log(`[${senderId}->${myPeerId}${documentId}] ${type} | ${byteLength} bytes`)
-
     if (isJoinMessage(message)) {
       const { peerMetadata, supportedProtocolVersions } = message as FromClientMessage & {
         peerMetadata?: PeerMetadata
@@ -164,7 +160,7 @@ export class BunWSServerAdapter extends NetworkAdapter {
       this.sockets[senderId] = socket as WebSocketWithIsAlive
 
       const selectedProtocolVersion = this.#selectProtocol(supportedProtocolVersions)
-      
+
       if (selectedProtocolVersion === null) {
         console.error('[Adapter] Protocol version mismatch')
         this.send({
@@ -244,12 +240,12 @@ export class BunWSServerAdapter extends NetworkAdapter {
 
   message(ws: WebSocketWithIsAlive, message: string | Buffer): void {
     ws.data.isAlive = true
-    
+
     if (typeof message === "string") {
       log(`Ignoring string message: ${message.slice(0, 50)}`)
       return
     }
-    
+
     this.receiveMessage(new Uint8Array(message), ws)
   }
 }

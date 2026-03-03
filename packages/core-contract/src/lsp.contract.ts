@@ -70,6 +70,6 @@ export default oc.router({
     .output(z.object({ success: z.literal(true) })),
 
   events: oc
-    .input(z.object({}))
+    .input(z.object({})) // TODO: remove
     .output(eventIterator(lspEventSchema)),
 });

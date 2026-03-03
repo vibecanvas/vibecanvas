@@ -85,8 +85,19 @@ class LspManagerService {
 
     const resolvedLanguage = this.resolveLspLanguage(args.filePath);
     if (!resolvedLanguage) {
+      console.warn("[LSP:SPA] openChannel skipped: unable to resolve language", {
+        channelId: args.channelId,
+        filePath: args.filePath,
+      });
       return false;
     }
+
+    console.log("[LSP:SPA] openChannel request", {
+      channelId: args.channelId,
+      filePath: args.filePath,
+      language: resolvedLanguage,
+      rootHint: args.rootHint ?? null,
+    });
 
     const [error, result] = await orpcWebsocketService.safeClient.api.lsp.open({
       channelId: args.channelId,
@@ -95,21 +106,47 @@ class LspManagerService {
       language: resolvedLanguage,
     });
 
-    if (error || !result) return false;
-    return "success" in result && result.success === true;
+    if (error || !result) {
+      console.error("[LSP:SPA] openChannel transport error", {
+        channelId: args.channelId,
+        error,
+      });
+      return false;
+    }
+
+    if ("success" in result && result.success === true) {
+      console.log("[LSP:SPA] openChannel success", { channelId: args.channelId });
+      return true;
+    }
+
+    console.error("[LSP:SPA] openChannel failed", {
+      channelId: args.channelId,
+      result,
+    });
+    return false;
   }
 
   async send(channelId: string, message: string): Promise<boolean> {
     const [error, result] = await orpcWebsocketService.safeClient.api.lsp.send({ channelId, message });
-    if (error || !result) return false;
-    return "success" in result && result.success === true;
+    if (error || !result) {
+      console.error("[LSP:SPA] send failed", { channelId, error });
+      return false;
+    }
+
+    const ok = "success" in result && result.success === true;
+    if (!ok) {
+      console.error("[LSP:SPA] send rejected", { channelId, result });
+    }
+    return ok;
   }
 
   async closeChannel(channelId: string): Promise<void> {
+    console.log("[LSP:SPA] closeChannel request", { channelId });
     await orpcWebsocketService.safeClient.api.lsp.close({ channelId });
     this.messageListeners.delete(channelId);
     this.openedListeners.delete(channelId);
     this.errorListeners.delete(channelId);
+    console.log("[LSP:SPA] closeChannel done", { channelId });
   }
 
   onChannelMessage(channelId: string, handler: (message: string) => void): () => void {
@@ -134,6 +171,7 @@ class LspManagerService {
     if (this.isStreamingEvents) return;
     this.isStreamingEvents = true;
     this.eventsAbortController = new AbortController();
+    console.log("[LSP:SPA] events stream start");
     void this.streamEvents(this.eventsAbortController);
   }
 
@@ -149,14 +187,16 @@ class LspManagerService {
         this.dispatchEvent(event as TLspEvent);
       }
     } catch {
-      // Stream ends on disconnect/reconnect; manager lazily restarts on next demand.
+      console.warn("[LSP:SPA] events stream ended/aborted");
     } finally {
       this.isStreamingEvents = false;
       this.eventsAbortController = null;
+      console.log("[LSP:SPA] events stream stopped");
     }
   }
 
   private dispatchEvent(event: TLspEvent): void {
+    console.log("[LSP:SPA] event", event);
     if (event.type === "message") {
       const listeners = this.messageListeners.get(event.channelId);
       if (!listeners) return;

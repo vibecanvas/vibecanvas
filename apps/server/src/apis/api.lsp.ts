@@ -17,6 +17,12 @@ if (err) {
 const lspService = new LspService(configPath.configDir);
 
 lspService.setOutboundSender((payload) => {
+  console.log("[LSP:API] outbound", {
+    requestId: payload.requestId,
+    channelId: payload.clientId,
+    bytes: payload.message.length,
+    preview: payload.message.slice(0, 120),
+  });
   let parsed: unknown;
   try {
     parsed = JSON.parse(payload.message);
@@ -53,6 +59,13 @@ function parseLanguage(language: string): TLspLanguage {
 }
 
 const open = baseOs.api.lsp.open.handler(async ({ input, context: { requestId } }) => {
+  console.log("[LSP:API] open request", {
+    requestId: requestId ?? null,
+    channelId: input.channelId,
+    filePath: input.filePath,
+    language: input.language,
+    rootHint: input.rootHint ?? null,
+  });
   if (!requestId) {
     return { type: "ERROR", message: "Missing request context" };
   }
@@ -68,6 +81,11 @@ const open = baseOs.api.lsp.open.handler(async ({ input, context: { requestId } 
 
     return { success: true as const };
   } catch (error) {
+    console.error("[LSP:API] open error", {
+      requestId,
+      channelId: input.channelId,
+      error,
+    });
     const message = error instanceof Error ? error.message : "Failed to open LSP channel";
     lspEventPublisher.publish(requestId, {
       type: "error",
@@ -79,6 +97,12 @@ const open = baseOs.api.lsp.open.handler(async ({ input, context: { requestId } 
 });
 
 const send = baseOs.api.lsp.send.handler(async ({ input, context: { requestId } }) => {
+  console.log("[LSP:API] send request", {
+    requestId: requestId ?? null,
+    channelId: input.channelId,
+    bytes: input.message.length,
+    preview: input.message.slice(0, 120),
+  });
   if (!requestId) {
     return { type: "ERROR", message: "Missing request context" };
   }
@@ -92,6 +116,11 @@ const send = baseOs.api.lsp.send.handler(async ({ input, context: { requestId } 
 
     return { success: true as const };
   } catch (error) {
+    console.error("[LSP:API] send error", {
+      requestId,
+      channelId: input.channelId,
+      error,
+    });
     const message = error instanceof Error ? error.message : "Failed to forward LSP message";
     lspEventPublisher.publish(requestId, {
       type: "error",
@@ -103,6 +132,10 @@ const send = baseOs.api.lsp.send.handler(async ({ input, context: { requestId } 
 });
 
 const close = baseOs.api.lsp.close.handler(async ({ input, context: { requestId } }) => {
+  console.log("[LSP:API] close request", {
+    requestId: requestId ?? null,
+    channelId: input.channelId,
+  });
   if (!requestId) {
     return { success: true as const };
   }
@@ -116,6 +149,7 @@ const close = baseOs.api.lsp.close.handler(async ({ input, context: { requestId 
 });
 
 const events = baseOs.api.lsp.events.handler(async function* ({ context: { requestId } }) {
+  console.log("[LSP:API] events subscribe", { requestId: requestId ?? null });
   if (!requestId) {
     throw new ORPCError("BAD_REQUEST", { message: "Missing request context" });
   }
