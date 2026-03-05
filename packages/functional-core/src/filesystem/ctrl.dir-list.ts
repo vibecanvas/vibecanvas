@@ -1,5 +1,6 @@
 import { readdirSync, existsSync, type Dirent } from "fs";
 import { dirname, join } from "path";
+import { FilesystemErr } from "./err.codes";
 
 type TPortal = {
   fs: {
@@ -22,26 +23,17 @@ type TDirList = {
   children: TDirEntry[];
 };
 
-
-/**
- * Lists immediate subdirectories (children only, not recursive) of a given directory path.
- * Filters out hidden directories (starting with ".").
- * @param portal - File system access portal
- * @param args - Arguments containing the directory path
- * @returns Current directory, parent path, and list of immediate subdirectory children
- */
 export function ctrlDirList(portal: TPortal, args: TArgs): TErrTuple<TDirList> {
   const { path: dirPath } = args;
 
   if (!portal.fs.existsSync(dirPath)) {
-    return [null, { code: "CTRL.PROJECT_FS.DIR_LIST.NOT_FOUND", statusCode: 404, externalMessage: { en: "Directory not found" } }];
+    return [null, { code: FilesystemErr.DIR_LIST_NOT_FOUND, statusCode: 404, externalMessage: { en: "Directory not found" } }];
   }
 
   const parent = dirPath === "/" ? null : portal.path.dirname(dirPath);
 
   try {
     const entries = portal.fs.readdirSync(dirPath, { withFileTypes: true }) as Dirent[];
-    console.log(args.omitFiles)
     const children = entries
       .filter((entry) => !entry.name.startsWith(".") && (args.omitFiles ? entry.isDirectory() === true : false))
       .map((entry) => ({
@@ -53,6 +45,6 @@ export function ctrlDirList(portal: TPortal, args: TArgs): TErrTuple<TDirList> {
 
     return [{ current: dirPath, parent, children }, null];
   } catch {
-    return [null, { code: "CTRL.PROJECT_FS.DIR_LIST.FAILED", statusCode: 403, externalMessage: { en: "Cannot read directory" } }];
+    return [null, { code: FilesystemErr.DIR_LIST_FAILED, statusCode: 403, externalMessage: { en: "Cannot read directory" } }];
   }
 }

@@ -13,6 +13,7 @@ import { LineElement } from "../renderables/elements/line/line.class";
 import { PenElement } from "../renderables/elements/pen/pen.class";
 import { RectElement } from "../renderables/elements/rect/rect.class";
 import { TerminalElement } from "../renderables/elements/terminal/terminal.class";
+import { FileElement } from "../renderables/elements/file/file.class";
 import { TextElement } from "../renderables/elements/text/text.class";
 
 // ─────────────────────────────────────────────────────────────
@@ -183,6 +184,8 @@ function createElementRenderable(element: TElement, canvas: Canvas): AElement | 
       return new FiletreeElement(element as TBackendElementOf<'filetree'>, canvas)
     case 'terminal':
       return new TerminalElement(element as TBackendElementOf<'terminal'>, canvas)
+    case 'file':
+      return new FileElement(element as TBackendElementOf<'file'>, canvas)
     default:
       // @ts-ignore
       console.warn(`Unknown element type: ${element?.data?.type}`)

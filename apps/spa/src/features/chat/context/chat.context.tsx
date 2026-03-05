@@ -652,7 +652,7 @@ export function createChatContextLogic(args: TCreateChatContextArgs) {
   }
 
   const loadHomePath = async () => {
-    const [homeError, homeResult] = await orpcWebsocketService.safeClient.api.file.home()
+    const [homeError, homeResult] = await orpcWebsocketService.safeClient.api.filesystem.home()
     if (homeError || !homeResult || "type" in homeResult) return
     setHomePath(homeResult.path)
   }

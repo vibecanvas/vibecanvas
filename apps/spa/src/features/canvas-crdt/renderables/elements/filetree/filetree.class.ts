@@ -66,6 +66,7 @@ const FILETREE_SUPPORTED_ACTIONS: ReadonlySet<TActionType> = new Set([
 export class FiletreeElement extends AElement<"filetree"> {
   private graphics: Graphics = new Graphics();
   private overlayDiv: HTMLDivElement | null = null;
+  private disposeOverlay: (() => void) | null = null;
   private setBounds: ((bounds: TFiletreeBounds) => void) | null = null;
   private cleanupViewportSync: (() => void) | null = null;
   private lastBounds: TFiletreeBounds | null = null;
@@ -112,7 +113,7 @@ export class FiletreeElement extends AElement<"filetree"> {
     const filetreeModule = await import("@/features/filetree/components/filetree");
     const Filetree = filetreeModule.Filetree;
 
-    render(() => Filetree({
+    this.disposeOverlay = render(() => Filetree({
       bounds,
       filetreeClass: this,
       canvasId: canvasActive.id,
@@ -176,6 +177,10 @@ export class FiletreeElement extends AElement<"filetree"> {
     if (this.cleanupViewportSync) {
       this.cleanupViewportSync();
       this.cleanupViewportSync = null;
+    }
+    if (this.disposeOverlay) {
+      this.disposeOverlay();
+      this.disposeOverlay = null;
     }
     if (this.overlayDiv) {
       this.overlayDiv.remove();

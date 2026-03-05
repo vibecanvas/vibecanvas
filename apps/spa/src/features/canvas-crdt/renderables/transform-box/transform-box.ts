@@ -1,4 +1,4 @@
-import { Container, FederatedPointerEvent, Graphics, GraphicsContext, Point, Rectangle } from "pixi.js";
+import { Container, FederatedPointerEvent, Graphics, Point, Rectangle } from "pixi.js";
 import type { Canvas } from "../../canvas/canvas";
 import type { InputCommand } from "../../input-commands/types";
 import type { IRenderable } from "../renderable.interface";
@@ -112,38 +112,42 @@ export class TransformBox implements IRenderable {
     const width = bounds.width + 2 * p
     const height = bounds.height + 2 * p
 
-    // Shared context for horizontal edges (top/bottom)
-    const horizontalCtx = new GraphicsContext()
+    // Top edge
+    this.topEdge = new Graphics()
+    this.topEdge
       .moveTo(0, 0)
       .lineTo(width, 0)
       .stroke({ color: SELECTION_COLOR, pixelLine: true })
-
-    // Shared context for vertical edges (left/right)
-    const verticalCtx = new GraphicsContext()
-      .moveTo(0, 0)
-      .lineTo(0, height)
-      .stroke({ color: SELECTION_COLOR, pixelLine: true })
-
-    // Top edge
-    this.topEdge = new Graphics(horizontalCtx)
     this.topEdge.label = 'top-edge'
     this.topEdge.position.set(-p, -p)
     this.topEdge.hitArea = new Rectangle(0, -EDGE_HIT_THICKNESS / 2, width, EDGE_HIT_THICKNESS)
 
-    // Bottom edge - same context, translated
-    this.bottomEdge = new Graphics(horizontalCtx)
+    // Bottom edge
+    this.bottomEdge = new Graphics()
+    this.bottomEdge
+      .moveTo(0, 0)
+      .lineTo(width, 0)
+      .stroke({ color: SELECTION_COLOR, pixelLine: true })
     this.bottomEdge.label = 'bottom-edge'
     this.bottomEdge.position.set(-p, bounds.height + p)
     this.bottomEdge.hitArea = new Rectangle(0, -EDGE_HIT_THICKNESS / 2, width, EDGE_HIT_THICKNESS)
 
     // Left edge
-    this.leftEdge = new Graphics(verticalCtx)
+    this.leftEdge = new Graphics()
+    this.leftEdge
+      .moveTo(0, 0)
+      .lineTo(0, height)
+      .stroke({ color: SELECTION_COLOR, pixelLine: true })
     this.leftEdge.label = 'left-edge'
     this.leftEdge.position.set(-p, -p)
     this.leftEdge.hitArea = new Rectangle(-EDGE_HIT_THICKNESS / 2, 0, EDGE_HIT_THICKNESS, height)
 
-    // Right edge - same context, translated
-    this.rightEdge = new Graphics(verticalCtx)
+    // Right edge
+    this.rightEdge = new Graphics()
+    this.rightEdge
+      .moveTo(0, 0)
+      .lineTo(0, height)
+      .stroke({ color: SELECTION_COLOR, pixelLine: true })
     this.rightEdge.label = 'right-edge'
     this.rightEdge.position.set(bounds.width + p, -p)
     this.rightEdge.hitArea = new Rectangle(-EDGE_HIT_THICKNESS / 2, 0, EDGE_HIT_THICKNESS, height)

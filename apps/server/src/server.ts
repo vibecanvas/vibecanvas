@@ -1,7 +1,7 @@
 /// <reference path="./build-constants.d.ts" />
 // Initialize global functions (tExternal, tInternal, executeRollbacks)
 import { onError } from '@orpc/server';
-import { RPCHandler } from '@orpc/server/fetch';
+import { RPCHandler } from '@orpc/server/bun-ws';
 import { OpencodeService } from '@vibecanvas/shell/opencode/srv.opencode';
 import db from "@vibecanvas/shell/database/db";
 import { existsSync } from 'fs';
@@ -15,6 +15,7 @@ import { getServerVersion } from './runtime';
 import checkForUpgrade from './update';
 import { wsAdapter } from './automerge-repo';
 import { buildPtyConnectUrl } from './apis/api.opencode';
+
 
 // Export API type for Eden client
 export type App = any;
@@ -108,7 +109,9 @@ function getPublicAssetPath(pathname: string): string | null {
 export async function startServer(options: StartServerOptions): Promise<void> {
   const { port: preferredPort } = options;
   const currentVersion = getServerVersion();
+  const isWatchMode = process.execArgv.includes('--watch');
   let hasCheckedLatestVersion = false;
+  let hasClosedOpencodeServer = false;
   let isShuttingDown = false;
   let bunServer: ReturnType<typeof Bun.serve<WebSocketData>> | null = null;
 
@@ -136,14 +139,13 @@ export async function startServer(options: StartServerOptions): Promise<void> {
     if (hasCheckedLatestVersion) return;
     hasCheckedLatestVersion = true;
 
-    fetch('https://registry.npmjs.org/vibecanvas/latest')
-      .then(res => res.json())
-      .then((data: { version?: string }) => {
-        if (data.version && data.version !== currentVersion) {
+    checkForUpgrade({ force: true, checkOnly: true })
+      .then((result) => {
+        if (result.status === 'update-available') {
           publishNotification({
             type: 'info',
             title: 'Update Available',
-            description: `v${data.version} is available (current: v${currentVersion})`,
+            description: `v${result.version} is available (current: v${currentVersion}). Run \`vibecanvas upgrade\` to update.`,
           });
         }
       })
@@ -160,18 +162,19 @@ export async function startServer(options: StartServerOptions): Promise<void> {
     throw err
   }
 
-  const opencodeServerUrl = (opencodeService as unknown as {
-    opencodeServer?: { url?: string }
-  }).opencodeServer?.url
+  const opencodeServerUrl = opencodeService.getServerUrl()
   if (opencodeServerUrl) {
     console.log(`[Opencode] OpenCode ready on ${opencodeServerUrl}`)
   } else {
     console.log('[Opencode] OpenCode ready')
   }
 
-  const closeOpencodeServer = () => {
+  const closeOpencodeServer = (signal?: NodeJS.Signals | 'exit') => {
     try {
-      ;(opencodeService as any)?.opencodeServer?.close?.()
+      if (hasClosedOpencodeServer) return
+      if (isWatchMode && signal === 'SIGTERM') return
+      hasClosedOpencodeServer = true
+      opencodeService.closeServer()
     } catch (error) {
       console.error('[Opencode] close failed:', error)
     }
@@ -180,8 +183,6 @@ export async function startServer(options: StartServerOptions): Promise<void> {
   const shutdownServer = () => {
     if (isShuttingDown) return;
     isShuttingDown = true;
-
-    closeOpencodeServer();
 
     try {
       bunServer?.stop();
@@ -192,13 +193,22 @@ export async function startServer(options: StartServerOptions): Promise<void> {
     process.exit(0)
   }
 
-  process.once('exit', closeOpencodeServer)
-  process.once('SIGINT', shutdownServer)
-  process.once('SIGTERM', shutdownServer)
+  if (!isWatchMode) {
+    process.once('exit', () => closeOpencodeServer('exit'))
+  }
+  process.once('SIGINT', () => {
+    closeOpencodeServer('SIGINT')
+    shutdownServer()
+  })
+  process.once('SIGTERM', () => {
+    closeOpencodeServer('SIGTERM')
+    shutdownServer()
+  })
 
   type WebSocketData = {
     path: string;
     query: string;
+    requestId: string;
   };
 
   const ptyProxyConnections = new Map<unknown, {
@@ -212,20 +222,22 @@ export async function startServer(options: StartServerOptions): Promise<void> {
       async fetch(req, server) {
       const url = new URL(req.url)
 
-      const isWebSocketEndpoint = url.pathname === '/automerge' || isPtyConnectPath(url.pathname)
+       const isWebSocketEndpoint =
+          url.pathname === '/api' ||
+          url.pathname === '/automerge' ||
+          isPtyConnectPath(url.pathname)
       if (isWebSocketEndpoint) {
-        if (server.upgrade(req, { data: { path: url.pathname, query: url.search } })) {
+        if (server.upgrade(req, {
+          data: {
+            path: url.pathname,
+            query: url.search,
+            requestId: crypto.randomUUID(),
+          },
+        })) {
           return
         }
 
         return new Response('Upgrade failed', { status: 500 })
-      }
-
-      const rpcResult = await handler.handle(req, {
-        context: { db, opencodeService },
-      })
-      if (rpcResult.matched) {
-        return rpcResult.response
       }
 
       if (req.method === 'GET' && url.pathname.startsWith('/files/')) {
@@ -372,7 +384,17 @@ export async function startServer(options: StartServerOptions): Promise<void> {
           }
         },
         message(ws, message) {
-          if (ws.data.path === '/automerge') {
+          if (ws.data.path === '/api') {
+            void handler.message(ws, message, {
+              context: {
+                db,
+                opencodeService,
+                requestId: ws.data.requestId,
+              },
+            }).catch((error) => {
+              console.error(error)
+            })
+          } else if (ws.data.path === '/automerge') {
             const wrapper = automergeConnections.get(ws);
             if (!wrapper) return;
             wrapper.data.isAlive = true;
@@ -420,7 +442,9 @@ export async function startServer(options: StartServerOptions): Promise<void> {
           wsAdapter.pong(wrapper, pongData);
         },
         close(ws, code, reason) {
-          if (ws.data.path === '/automerge') {
+          if (ws.data.path === '/api') {
+            handler.close(ws)
+          } else if (ws.data.path === '/automerge') {
             const wrapper = automergeConnections.get(ws);
             if (!wrapper) return;
             wsAdapter.close(wrapper, code ?? 1000, reason ?? '');

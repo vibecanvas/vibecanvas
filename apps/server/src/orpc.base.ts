@@ -20,7 +20,7 @@ function isORPCError(value: unknown): value is ORPCError<string, unknown> {
 }
 
 export const baseOs = implement(apiContract)
-  .$context<{ db: typeof db, opencodeService: OpencodeService }>()
+  .$context<{ db: typeof db, opencodeService: OpencodeService, requestId?: string }>()
   .use(onError((error) => {
     if (isErrorEntry(error)) {
       const msg = tExternal(error, 'en')

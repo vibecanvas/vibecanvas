@@ -3,14 +3,14 @@ name: Publish Release
 on:
   push:
     branches:
-      - main
+      - 'release/v*'
   workflow_dispatch:
 
 permissions:
   contents: read
 
 concurrency:
-  group: release-main
+  group: release-${{ github.ref }}
   cancel-in-progress: false
 
 jobs:
@@ -160,6 +160,13 @@ jobs:
         env:
           VERSION: ${{ needs.check-version.outputs.version }}
         run: bun run scripts/release.ts --tag "v$VERSION"
+
+      - name: Create and push git tag
+        env:
+          VERSION: ${{ needs.check-version.outputs.version }}
+        run: |
+          git tag "v$VERSION"
+          git push origin "v$VERSION"
 
       - name: Print release summary
         env:

@@ -84,7 +84,7 @@ describe("ctrlFileMove", () => {
       });
 
       expect(result).toBeNull();
-      expect(error?.code).toBe("CTRL.PROJECT_FS.FILE_MOVE.CANNOT_MOVE_INTO_DESCENDANT");
+      expect(error?.code).toBe("CTRL.FILESYSTEM.FILE_MOVE.CANNOT_MOVE_INTO_DESCENDANT");
     });
   });
 
@@ -103,7 +103,7 @@ describe("ctrlFileMove", () => {
       });
 
       expect(result).toBeNull();
-      expect(error?.code).toBe("CTRL.PROJECT_FS.FILE_MOVE.TARGET_EXISTS");
+      expect(error?.code).toBe("CTRL.FILESYSTEM.FILE_MOVE.TARGET_EXISTS");
       expect(existsSync(sourceFile)).toBe(true);
     });
   });

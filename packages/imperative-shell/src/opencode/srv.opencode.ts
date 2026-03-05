@@ -1,6 +1,13 @@
 import { type OpencodeClient, createOpencodeClient, createOpencodeServer } from "@opencode-ai/sdk/v2";
 import { createServer } from "node:net";
 import { color } from "bun";
+import { txConfigPath } from "@vibecanvas/core/vibecanvas-config/tx.config-path";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "fs";
+import { join } from "path";
+
+const OPENCODE_MIN_PORT = 4096
+const OPENCODE_MAX_PORT = 4196
+const OPENCODE_SIDE_CAR_PORT_STATE_FILE = "opencode-sidecar-port.json"
 
 function isOpencodeInstalled(): boolean {
   const result = Bun.spawnSync(["opencode", "--version"], { stdout: "ignore", stderr: "ignore" })
@@ -33,16 +40,49 @@ async function isOpencodeHealthy(port: number): Promise<boolean> {
   }
 }
 
-/**
- * Scans port range for a healthy opencode server to reuse.
- * Prevents port churn when Bun --watch restarts the process.
- */
-async function findHealthyOpencodePort(startPort: number, endPort: number): Promise<number | null> {
-  for (let port = startPort; port <= endPort; port++) {
+function getOpencodeStateFilePath(): string | null {
+  const [config] = txConfigPath({ fs: { existsSync, mkdirSync } })
+  if (!config) return null
+  return join(config.configDir, OPENCODE_SIDE_CAR_PORT_STATE_FILE)
+}
+
+function readRememberedOpencodePort(): number | null {
+  try {
+    const statePath = getOpencodeStateFilePath()
+    if (!statePath || !existsSync(statePath)) return null
+
+    const raw = readFileSync(statePath, "utf8")
+    const parsed = JSON.parse(raw) as { port?: unknown }
+    if (typeof parsed.port !== "number" || !Number.isInteger(parsed.port)) return null
+    if (parsed.port < OPENCODE_MIN_PORT || parsed.port > OPENCODE_MAX_PORT) return null
+    return parsed.port
+  } catch {
+    return null
+  }
+}
+
+function persistRememberedOpencodePort(port: number): void {
+  try {
+    const statePath = getOpencodeStateFilePath()
+    if (!statePath) return
+    writeFileSync(statePath, JSON.stringify({ port }))
+  } catch {
+    // ignore best-effort state persistence failures
+  }
+}
+
+async function findReusableOpencodePort(preferredPort: number | null): Promise<number | null> {
+  if (preferredPort !== null && await isOpencodeHealthy(preferredPort)) {
+    return preferredPort
+  }
+
+  for (let port = OPENCODE_MIN_PORT; port <= OPENCODE_MAX_PORT; port++) {
+    if (preferredPort !== null && port === preferredPort) continue
     if (await isOpencodeHealthy(port)) {
       return port
     }
   }
+
   return null
 }
 
@@ -78,22 +118,13 @@ async function findAvailablePort(startPort: number, endPort: number): Promise<nu
  */
 export class OpencodeService {
   private opencodeClients: { [chatId: string]: OpencodeClient } = {}
+  private readonly ownsServer: boolean
 
   private constructor(
     private opencodeServer: { url: string; close(): void },
     ownsServer: boolean
   ) {
-    if (ownsServer) {
-      process.once('SIGINT', () => {
-        this.opencodeServer.close()
-      })
-      process.once('SIGTERM', () => {
-        this.opencodeServer.close()
-      })
-      process.once('exit', () => {
-        this.opencodeServer.close()
-      })
-    }
+    this.ownsServer = ownsServer
   }
 
   /**
@@ -113,9 +144,12 @@ export class OpencodeService {
         process.exit(1)
       }
 
+      const rememberedPort = readRememberedOpencodePort()
+
       // Try to reuse an existing healthy opencode server
-      const existingPort = await findHealthyOpencodePort(5096, 5196)
+      const existingPort = await findReusableOpencodePort(rememberedPort)
       if (existingPort !== null) {
+        persistRememberedOpencodePort(existingPort)
         return new OpencodeService(
           { url: `http://127.0.0.1:${existingPort}`, close() { } },
           false
@@ -123,11 +157,13 @@ export class OpencodeService {
       }
 
       // No existing server, start a new one
-      const port = await findAvailablePort(4096, 4196)
+      const port = await findAvailablePort(OPENCODE_MIN_PORT, OPENCODE_MAX_PORT)
 
       const opencodeServer = await createOpencodeServer({
         port,
       })
+
+      persistRememberedOpencodePort(port)
 
       return new OpencodeService(opencodeServer, true)
     })().catch((error) => {
@@ -153,5 +189,14 @@ export class OpencodeService {
       this.opencodeClients[chatId].instance.dispose()
       delete this.opencodeClients[chatId];
     }
+  }
+
+  getServerUrl(): string {
+    return this.opencodeServer.url
+  }
+
+  closeServer(): void {
+    if (!this.ownsServer) return
+    this.opencodeServer.close()
   }
 }
