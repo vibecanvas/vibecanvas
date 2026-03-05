@@ -16,7 +16,7 @@ jobs:
         with:
           script: |
             const branch = context.payload.pull_request.head.ref;
-            const prefixMatch = branch.match(/^(feature|feat|fix|refactor|docs|chore|build|ci)\//);
+            const prefixMatch = branch.match(/^(feature|feat|fix|refactor|docs|chore|build|ci|release)\//);
             if (!prefixMatch) {
               console.log(`Branch "${branch}" does not match a known prefix. Skipping.`);
               return;
