@@ -172,6 +172,7 @@
       "version": "0.1.0",
       "dependencies": {
         "@antv/g-device-api": "^1.6.13",
+        "@pixi/math": "^7.4.3",
         "d3-color": "^3.1.0",
       },
       "devDependencies": {
@@ -651,6 +652,8 @@
     "@pixi/colord": ["@pixi/colord@2.9.6", "", {}, "sha512-nezytU2pw587fQstUu1AsJZDVEynjskwOL+kibwcdxsMBFqPsFFNA7xl0ii/gXuDi6M0xj3mfRJj8pBSc2jCfA=="],
 
     "@pixi/devtools": ["@pixi/devtools@2.0.1", "", { "peerDependencies": { "pixi.js": "^7 || ^8" } }, "sha512-TFCqNkJoLNYHDELgQ3bKWvA33twWpoUhQB8Y+hneBdDBunRsqZ5ZzwH7+6E5eVaVn7eeLAXHs9QGRGsxM0fRlw=="],
+
+    "@pixi/math": ["@pixi/math@7.4.3", "", {}, "sha512-/uJOVhR2DOZ+zgdI6Bs/CwcXT4bNRKsS+TqX3ekRIxPCwaLra+Qdm7aDxT5cTToDzdxbKL5+rwiLu3Y1egILDw=="],
 
     "@pixi/ui": ["@pixi/ui@2.3.2", "", { "dependencies": { "tweedle.js": "^2.1.0", "typed-signals": "^2.5.0" }, "peerDependencies": { "pixi.js": "^8.6.2" } }, "sha512-HHQtAHxzirfl6bg9HgzyGGLIHqM/q3i0R+raQ9Wmp3VxLJTUviF655Syf9PWYC690xbS9uo0mRkXykoJNkHKhA=="],
 

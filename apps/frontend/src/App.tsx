@@ -1,11 +1,55 @@
-import { Canvas, Circle } from "@vibecanvas/canvas";
+import { Canvas, Circle, Group } from "@vibecanvas/canvas";
 import { onCleanup, onMount } from "solid-js";
+import shaderCompilerUrl from "../../../packages/canvas/node_modules/@antv/g-device-api/rust/pkg/glsl_wgsl_compiler_bg.wasm?url";
+
+function setup(canvas: Canvas) {
+  const solarSystem = new Group();
+  const earthOrbit = new Group();
+  const moonOrbit = new Group();
+
+  const sun = new Circle({
+    cx: 0,
+    cy: 0,
+    r: 100,
+    fill: "red",
+  });
+  const earth = new Circle({
+    cx: 0,
+    cy: 0,
+    r: 50,
+    fill: "blue",
+  });
+  const moon = new Circle({
+    cx: 0,
+    cy: 0,
+    r: 25,
+    fill: "yellow",
+  });
+
+  solarSystem.appendChild(sun);
+  solarSystem.appendChild(earthOrbit);
+  earthOrbit.appendChild(earth);
+  earthOrbit.appendChild(moonOrbit);
+  moonOrbit.appendChild(moon);
+
+  solarSystem.position.x = 300;
+  solarSystem.position.y = 300;
+  earthOrbit.position.x = 100;
+  moonOrbit.position.x = 100;
+  canvas.appendChild(solarSystem);
+
+  return () => {
+    solarSystem.rotation += 0.01;
+    earthOrbit.rotation += 0.02;
+  }
+}
 
 function App() {
   let canvasRef!: HTMLCanvasElement;
 
   const resize = (width: number, height: number) => {
     if (!canvasRef) return;
+
     canvasRef.width = width * window.devicePixelRatio;
     canvasRef.height = height * window.devicePixelRatio;
     canvasRef.style.width = `${width}px`;
@@ -14,6 +58,7 @@ function App() {
     canvasRef.style.padding = "0px";
     canvasRef.style.margin = "0px";
   };
+
   resize(window.innerWidth, window.innerHeight);
 
   onMount(() => {
@@ -26,38 +71,25 @@ function App() {
     };
 
     const initializeCanvas = async () => {
-      const preferredRenderer = "gpu" in navigator ? "webgpu" : "webgl";
-
-      try {
-        canvas = await new Canvas({
-          canvas: canvasRef,
-          renderer: preferredRenderer,
-        }).initialized;
-      } catch (error) {
-        if (preferredRenderer !== "webgpu") {
-          throw error;
-        }
-
-        console.warn("WebGPU initialization failed, falling back to WebGL.", error);
-        canvas = await new Canvas({
-          canvas: canvasRef,
-          renderer: "webgl",
-        }).initialized;
+      if (!("gpu" in navigator)) {
+        throw new Error("WebGPU is not available in this browser.");
       }
 
-      const circle = new Circle({
-        cx: 100,
-        cy: 100,
-        r: 100,
-        fill: "red",
-        antiAliasingType: 3,
-      });
-      canvas.appendChild(circle);
+      canvas = await new Canvas({
+        canvas: canvasRef,
+        renderer: "webgpu",
+        shaderCompilerPath: shaderCompilerUrl,
+      }).initialized;
+
+      const updateFn = setup(canvas);
 
       const animate = () => {
+        updateFn();
+
         canvas?.render();
         animationFrameId = requestAnimationFrame(animate);
       };
+
 
       animate();
       handleResize();
