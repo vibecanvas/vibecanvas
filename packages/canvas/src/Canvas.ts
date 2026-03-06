@@ -1,7 +1,9 @@
-import { type PluginContext, Renderer } from './plugins';
+import { Camera } from './Camera';
+import { type PluginContext, Renderer, CameraControl } from './plugins';
 import type { Shape } from './shapes';
 import type { CanvasConfig } from './types';
 import { AsyncParallelHook, SyncHook, getGlobalThis, traverse } from './utils';
+
 
 export class Canvas {
   #instancePromise: Promise<this>;
@@ -9,6 +11,11 @@ export class Canvas {
   #pluginContext: PluginContext;
 
   #shapes: Shape[] = [];
+
+  #camera: Camera;
+  get camera() {
+    return this.#camera;
+  }
 
   constructor(config: CanvasConfig) {
     const {
@@ -18,12 +25,18 @@ export class Canvas {
       devicePixelRatio,
     } = config;
     const globalThis = getGlobalThis();
+    const dpr = devicePixelRatio ?? globalThis.devicePixelRatio;
+
+    const { width, height } = canvas;
+    const camera = new Camera(width / dpr, height / dpr);
+    this.#camera = camera;
+
     this.#pluginContext = {
       globalThis,
       canvas,
       renderer,
       shaderCompilerPath,
-      devicePixelRatio: devicePixelRatio ?? globalThis.devicePixelRatio,
+      devicePixelRatio: dpr,
       hooks: {
         init: new SyncHook<[]>(),
         initAsync: new AsyncParallelHook<[]>(),
@@ -33,11 +46,12 @@ export class Canvas {
         destroy: new SyncHook<[]>(),
         resize: new SyncHook<[number, number]>(),
       },
+      camera,
     };
 
     this.#instancePromise = (async () => {
       const { hooks } = this.#pluginContext;
-      [new Renderer()].forEach((plugin) => {
+      [new CameraControl(), new Renderer()].forEach((plugin) => {
         plugin.apply(this.#pluginContext);
       });
       hooks.init.call();
@@ -72,6 +86,7 @@ export class Canvas {
 
   resize(width: number, height: number) {
     const { hooks } = this.#pluginContext;
+    this.#camera.projection(width, height);
     hooks.resize.call(width, height);
   }
 

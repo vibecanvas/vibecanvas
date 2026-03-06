@@ -1,5 +1,6 @@
-import { Shape } from '../shapes';
-import { AsyncParallelHook, SyncHook } from '../utils';
+import type { Camera } from '../Camera';
+import type { Shape } from '../shapes';
+import type { AsyncParallelHook, SyncHook } from '../utils';
 
 export interface Hooks {
   /**
@@ -46,6 +47,7 @@ export interface PluginContext {
    */
   devicePixelRatio: number;
   hooks: Hooks;
+  camera: Camera;
 }
 
 /**

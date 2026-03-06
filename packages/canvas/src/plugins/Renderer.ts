@@ -17,6 +17,7 @@ import type {
 } from '@antv/g-device-api';
 import type { Plugin, PluginContext } from './interfaces';
 import { IDENTITY_TRANSFORM } from '../shapes';
+import { paddingMat3 } from '../utils';
 
 export class Renderer implements Plugin {
   #swapChain: SwapChain;
@@ -26,8 +27,14 @@ export class Renderer implements Plugin {
   #uniformBuffer: Buffer;
 
   apply(context: PluginContext) {
-    const { hooks, canvas, renderer, shaderCompilerPath, devicePixelRatio } =
-      context;
+    const {
+      hooks,
+      canvas,
+      renderer,
+      shaderCompilerPath,
+      devicePixelRatio,
+      camera,
+    } = context;
 
     hooks.initAsync.tapPromise(async () => {
       let deviceContribution: DeviceContribution;
@@ -66,6 +73,8 @@ export class Renderer implements Plugin {
 
       this.#uniformBuffer = this.#device.createBuffer({
         viewOrSize: new Float32Array([
+          ...paddingMat3(camera.projectionMatrix),
+          ...paddingMat3(camera.viewMatrix),
           width / devicePixelRatio,
           height / devicePixelRatio,
         ]),
@@ -108,6 +117,8 @@ export class Renderer implements Plugin {
         0,
         new Uint8Array(
           new Float32Array([
+            ...paddingMat3(camera.projectionMatrix),
+            ...paddingMat3(camera.viewMatrix),
             width / devicePixelRatio,
             height / devicePixelRatio,
           ]).buffer,
