@@ -22,6 +22,8 @@ export class Camera {
   #x = 0;
   #y = 0;
   #rotation = 0;
+  #width = 0;
+  #height = 0;
 
   /**
    * Matrix in world space.
@@ -59,6 +61,8 @@ export class Camera {
   }
 
   projection(width: number, height: number) {
+    this.#width = width;
+    this.#height = height;
     mat3.projection(this.#projectionMatrix, width, height);
     this.updateViewProjectionMatrix();
   }
@@ -142,6 +146,13 @@ export class Camera {
     }
   }
 
+  get width() {
+    return this.#width;
+  }
+  get height() {
+    return this.#height;
+  }
+
   createLandmark(params: Partial<Landmark> = {}): Landmark {
     return {
       zoom: this.#zoom,
@@ -155,7 +166,7 @@ export class Camera {
   gotoLandmark(
     landmark: Landmark,
     options: Partial<{
-      easing: keyof typeof EASING_FUNCTION;
+      easing: string;
       duration: number;
       onframe: (t: number) => void;
       onfinish: () => void;

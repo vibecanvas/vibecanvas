@@ -1,14 +1,21 @@
 import { Camera } from './Camera';
-import { type PluginContext, Renderer, CameraControl } from './plugins';
+import {
+  type PluginContext,
+  Renderer,
+  CameraControl,
+  CheckboardStyle,
+  GridImplementation,
+} from './plugins';
 import type { Shape } from './shapes';
 import type { CanvasConfig } from './types';
 import { AsyncParallelHook, SyncHook, getGlobalThis, traverse } from './utils';
-
 
 export class Canvas {
   #instancePromise: Promise<this>;
 
   #pluginContext: PluginContext;
+
+  #rendererPlugin: Renderer;
 
   #shapes: Shape[] = [];
 
@@ -51,7 +58,8 @@ export class Canvas {
 
     this.#instancePromise = (async () => {
       const { hooks } = this.#pluginContext;
-      [new CameraControl(), new Renderer()].forEach((plugin) => {
+      this.#rendererPlugin = new Renderer();
+      [new CameraControl(), this.#rendererPlugin].forEach((plugin) => {
         plugin.apply(this.#pluginContext);
       });
       hooks.init.call();
@@ -116,5 +124,13 @@ export class Canvas {
     if (index !== -1) {
       this.#shapes.splice(index, 1);
     }
+  }
+
+  setGridImplementation(implementation: GridImplementation) {
+    this.#rendererPlugin.setGridImplementation(implementation);
+  }
+
+  setCheckboardStyle(style: CheckboardStyle) {
+    this.#rendererPlugin.setCheckboardStyle(style);
   }
 }

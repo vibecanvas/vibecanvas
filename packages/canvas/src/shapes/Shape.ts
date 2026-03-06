@@ -9,7 +9,6 @@ import {
 } from '@pixi/math';
 
 export const IDENTITY_TRANSFORM = new Transform();
-export const PADDING = 0;
 
 export abstract class Shape {
   /**

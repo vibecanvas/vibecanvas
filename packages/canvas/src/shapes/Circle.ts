@@ -1,5 +1,4 @@
 import * as d3 from 'd3-color';
-import { PADDING, Shape } from './Shape';
 import {
   type Device,
   type RenderPass,
@@ -16,7 +15,9 @@ import {
   type RenderPipeline,
   VertexStepMode,
 } from '@antv/g-device-api';
+import { Shape } from './Shape';
 import { vert, frag } from '../shaders/sdf';
+import { paddingMat3 } from '../utils';
 
 export class Circle extends Shape {
   #cx: number;
@@ -109,7 +110,7 @@ export class Circle extends Shape {
       });
 
       this.#uniformBuffer = device.createBuffer({
-        viewOrSize: Float32Array.BYTES_PER_ELEMENT * 12, // mat4
+        viewOrSize: Float32Array.BYTES_PER_ELEMENT * 16, // mat4
         usage: BufferUsage.UNIFORM,
         hint: BufferFrequencyHint.DYNAMIC,
       });
@@ -204,25 +205,10 @@ export class Circle extends Shape {
       });
     }
 
-    const { a, b, c, d, tx, ty } = this.worldTransform;
-
     this.#uniformBuffer.setSubData(
       0,
       new Uint8Array(
-        new Float32Array([
-          a,
-          b,
-          0,
-          PADDING,
-          c,
-          d,
-          0,
-          PADDING,
-          tx,
-          ty,
-          1,
-          PADDING,
-        ]).buffer,
+        new Float32Array(paddingMat3(this.worldTransform.toArray(true))).buffer,
       ),
     );
 

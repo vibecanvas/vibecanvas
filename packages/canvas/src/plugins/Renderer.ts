@@ -18,6 +18,19 @@ import type {
 import type { Plugin, PluginContext } from './interfaces';
 import { IDENTITY_TRANSFORM } from '../shapes';
 import { paddingMat3 } from '../utils';
+import { Grid } from '../shapes/Grid';
+import { Grid2 } from '../shapes/Grid2';
+
+export enum GridImplementation {
+  LINE_GEOMETRY,
+  SCREEN_SPACE,
+}
+
+export enum CheckboardStyle {
+  NONE,
+  GRID,
+  DOTS,
+}
 
 export class Renderer implements Plugin {
   #swapChain: SwapChain;
@@ -25,6 +38,11 @@ export class Renderer implements Plugin {
   #renderTarget: RenderTarget;
   #renderPass: RenderPass;
   #uniformBuffer: Buffer;
+
+  #gridImplementation: GridImplementation = GridImplementation.SCREEN_SPACE;
+  #checkboardStyle: CheckboardStyle = CheckboardStyle.GRID;
+  #grid: Grid;
+  #grid2: Grid2;
 
   apply(context: PluginContext) {
     const {
@@ -75,12 +93,21 @@ export class Renderer implements Plugin {
         viewOrSize: new Float32Array([
           ...paddingMat3(camera.projectionMatrix),
           ...paddingMat3(camera.viewMatrix),
-          width / devicePixelRatio,
-          height / devicePixelRatio,
+          ...paddingMat3(camera.viewProjectionMatrixInv),
+          camera.zoom,
+          this.#checkboardStyle,
+          0,
+          0,
         ]),
         usage: BufferUsage.UNIFORM,
         hint: BufferFrequencyHint.DYNAMIC,
       });
+
+      if (this.#gridImplementation === GridImplementation.LINE_GEOMETRY) {
+        this.#grid = new Grid(1 / devicePixelRatio);
+      } else {
+        this.#grid2 = new Grid2();
+      }
     });
 
     hooks.resize.tap((width, height) => {
@@ -103,6 +130,12 @@ export class Renderer implements Plugin {
     });
 
     hooks.destroy.tap(() => {
+      if (this.#gridImplementation === GridImplementation.LINE_GEOMETRY) {
+        this.#grid.destroy();
+      } else {
+        this.#grid2.destroy();
+      }
+
       this.#renderTarget.destroy();
       this.#uniformBuffer.destroy();
       this.#device.destroy();
@@ -119,8 +152,11 @@ export class Renderer implements Plugin {
           new Float32Array([
             ...paddingMat3(camera.projectionMatrix),
             ...paddingMat3(camera.viewMatrix),
-            width / devicePixelRatio,
-            height / devicePixelRatio,
+            ...paddingMat3(camera.viewProjectionMatrixInv),
+            camera.zoom,
+            this.#checkboardStyle,
+            0,
+            0,
           ]).buffer,
         ),
       );
@@ -134,11 +170,30 @@ export class Renderer implements Plugin {
       });
 
       this.#renderPass.setViewport(0, 0, width, height);
+
+      if (this.#gridImplementation === GridImplementation.LINE_GEOMETRY) {
+        if (!this.#grid) {
+          this.#grid = new Grid(1 / devicePixelRatio);
+        }
+
+        this.#grid.render(
+          this.#device,
+          this.#renderPass,
+          this.#uniformBuffer,
+          camera,
+        );
+      } else {
+        this.#grid2.render(this.#device, this.#renderPass, this.#uniformBuffer);
+      }
     });
 
     hooks.endFrame.tap(() => {
       this.#device.submitPass(this.#renderPass);
       this.#device.endFrame();
+
+      if (this.#gridImplementation === GridImplementation.LINE_GEOMETRY) {
+        this.#grid.reset();
+      }
     });
 
     hooks.render.tap((shape) => {
@@ -147,5 +202,13 @@ export class Renderer implements Plugin {
       );
       shape.render(this.#device, this.#renderPass, this.#uniformBuffer);
     });
+  }
+
+  setGridImplementation(implementation: GridImplementation) {
+    this.#gridImplementation = implementation;
+  }
+
+  setCheckboardStyle(style: CheckboardStyle) {
+    this.#checkboardStyle = style;
   }
 }
