@@ -8,7 +8,7 @@ export class SyncHook<T> {
 
   call(...argsArr: AsArray<T>): void {
     this.#callbacks.forEach(function (callback) {
-      /* eslint-disable-next-line prefer-spread */
+       
       callback.apply(void 0, argsArr);
     });
   }

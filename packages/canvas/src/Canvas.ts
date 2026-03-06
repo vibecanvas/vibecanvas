@@ -1,18 +1,22 @@
-import type { CanvasConfig } from './types';
 import { type PluginContext, Renderer } from './plugins';
-import { AsyncParallelHook, SyncHook } from './utils';
-import { getGlobalThis } from './utils/browser';
+import type { Shape } from './shapes';
+import type { CanvasConfig } from './types';
+import { AsyncParallelHook, SyncHook, getGlobalThis } from './utils';
+import { defaultWebGPUShaderCompilerPath } from './webgpu/compiler-url';
 
 export class Canvas {
   #instancePromise: Promise<this>;
 
-  #pluginContext!: PluginContext;
+  #pluginContext: PluginContext;
+
+  #shapes: Shape[] = [];
 
   constructor(config: CanvasConfig) {
     const {
       canvas,
       renderer = 'webgl',
-      shaderCompilerPath = '',
+      shaderCompilerPath =
+        renderer === 'webgpu' ? defaultWebGPUShaderCompilerPath : '',
       devicePixelRatio,
     } = config;
     const globalThis = getGlobalThis();
@@ -26,6 +30,7 @@ export class Canvas {
         init: new SyncHook<[]>(),
         initAsync: new AsyncParallelHook<[]>(),
         beginFrame: new SyncHook<[]>(),
+        render: new SyncHook<[Shape]>(),
         endFrame: new SyncHook<[]>(),
         destroy: new SyncHook<[]>(),
         resize: new SyncHook<[number, number]>(),
@@ -59,6 +64,9 @@ export class Canvas {
   render() {
     const { hooks } = this.#pluginContext;
     hooks.beginFrame.call();
+    this.#shapes.forEach((shape) => {
+      hooks.render.call(shape);
+    });
     hooks.endFrame.call();
   }
 
@@ -72,10 +80,22 @@ export class Canvas {
    */
   destroy() {
     const { hooks } = this.#pluginContext;
+    this.#shapes.forEach((shape) => shape.destroy());
     hooks.destroy.call();
   }
 
   getDOM() {
     return this.#pluginContext.canvas;
+  }
+
+  appendChild(shape: Shape) {
+    this.#shapes.push(shape);
+  }
+
+  removeChild(shape: Shape) {
+    const index = this.#shapes.indexOf(shape);
+    if (index !== -1) {
+      this.#shapes.splice(index, 1);
+    }
   }
 }

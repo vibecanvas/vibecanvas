@@ -1,4 +1,4 @@
-import type { CanvasConfig } from '../types';
+import { Shape } from '../shapes';
 import { AsyncParallelHook, SyncHook } from '../utils';
 
 export interface Hooks {
@@ -18,6 +18,8 @@ export interface Hooks {
    * Called at the end of each frame.
    */
   endFrame: SyncHook<[]>;
+
+  render: SyncHook<[Shape]>;
   /**
    * Called at the destruction stage.
    */
@@ -28,10 +30,10 @@ export interface Hooks {
   resize: SyncHook<[number, number]>;
 }
 
-export type PluginContext = {
-  // canvas: HTMLCanvasElement;
-  // renderer: 'webgl' | 'webgpu';
-  // shaderCompilerPath: string;
+export interface PluginContext {
+  canvas: HTMLCanvasElement;
+  renderer: 'webgl' | 'webgpu';
+  shaderCompilerPath: string;
   /**
    * Contains the global this value.
    * @see https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/globalThis
@@ -42,9 +44,9 @@ export type PluginContext = {
    * in CSS pixels for the current display device.
    * @see https://developer.mozilla.org/en-US/docs/Web/API/Window/devicePixelRatio
    */
-  // devicePixelRatio: number;
+  devicePixelRatio: number;
   hooks: Hooks;
-} & CanvasConfig;
+}
 
 /**
  * Inspired by Webpack plugin system.

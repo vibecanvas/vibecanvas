@@ -1,16 +1,31 @@
 import {
+  BufferFrequencyHint,
+  BufferUsage,
+  Format,
+  TextureUsage,
+  TransparentWhite,
   WebGLDeviceContribution,
   WebGPUDeviceContribution,
 } from '@antv/g-device-api';
-import type { SwapChain, DeviceContribution, Device } from '@antv/g-device-api';
+import type {
+  SwapChain,
+  DeviceContribution,
+  Device,
+  RenderPass,
+  Buffer,
+  RenderTarget,
+} from '@antv/g-device-api';
 import type { Plugin, PluginContext } from './interfaces';
 
 export class Renderer implements Plugin {
-  #swapChain!: SwapChain;
-  #device!: Device;
+  #swapChain: SwapChain;
+  #device: Device;
+  #renderTarget: RenderTarget;
+  #renderPass: RenderPass;
+  #uniformBuffer: Buffer;
 
   apply(context: PluginContext) {
-    const { hooks, canvas, renderer, shaderCompilerPath, devicePixelRatio, globalThis } =
+    const { hooks, canvas, renderer, shaderCompilerPath, devicePixelRatio } =
       context;
 
     hooks.initAsync.tapPromise(async () => {
@@ -21,9 +36,9 @@ export class Renderer implements Plugin {
           antialias: true,
           shaderDebug: true,
           trackResources: true,
-          onContextCreationError: (_e) => { },
-          onContextLost: (_e) => { },
-          onContextRestored(_e) { },
+          onContextCreationError: () => { },
+          onContextLost: () => { },
+          onContextRestored(e) { },
         });
       } else {
         deviceContribution = new WebGPUDeviceContribution({
@@ -38,25 +53,84 @@ export class Renderer implements Plugin {
 
       this.#swapChain = swapChain;
       this.#device = swapChain.getDevice();
+
+      this.#renderTarget = this.#device.createRenderTargetFromTexture(
+        this.#device.createTexture({
+          format: Format.U8_RGBA_RT,
+          width,
+          height,
+          usage: TextureUsage.RENDER_TARGET,
+        }),
+      );
+
+      this.#uniformBuffer = this.#device.createBuffer({
+        viewOrSize: new Float32Array([
+          width / devicePixelRatio,
+          height / devicePixelRatio,
+        ]),
+        usage: BufferUsage.UNIFORM,
+        hint: BufferFrequencyHint.DYNAMIC,
+      });
     });
 
     hooks.resize.tap((width, height) => {
       this.#swapChain.configureSwapChain(
-        width * (devicePixelRatio ?? globalThis.devicePixelRatio),
-        height * (devicePixelRatio ?? globalThis.devicePixelRatio),
+        width * devicePixelRatio,
+        height * devicePixelRatio,
       );
+
+      if (this.#renderTarget) {
+        this.#renderTarget.destroy();
+        this.#renderTarget = this.#device.createRenderTargetFromTexture(
+          this.#device.createTexture({
+            format: Format.U8_RGBA_RT,
+            width: width * devicePixelRatio,
+            height: height * devicePixelRatio,
+            usage: TextureUsage.RENDER_TARGET,
+          }),
+        );
+      }
     });
 
     hooks.destroy.tap(() => {
+      this.#renderTarget.destroy();
+      this.#uniformBuffer.destroy();
       this.#device.destroy();
+      this.#device.checkForLeaks();
     });
 
     hooks.beginFrame.tap(() => {
+      const { width, height } = this.#swapChain.getCanvas();
+      const onscreenTexture = this.#swapChain.getOnscreenTexture();
+
+      this.#uniformBuffer.setSubData(
+        0,
+        new Uint8Array(
+          new Float32Array([
+            width / devicePixelRatio,
+            height / devicePixelRatio,
+          ]).buffer,
+        ),
+      );
+
       this.#device.beginFrame();
+
+      this.#renderPass = this.#device.createRenderPass({
+        colorAttachment: [this.#renderTarget],
+        colorResolveTo: [onscreenTexture],
+        colorClearColor: [TransparentWhite],
+      });
+
+      this.#renderPass.setViewport(0, 0, width, height);
     });
 
     hooks.endFrame.tap(() => {
+      this.#device.submitPass(this.#renderPass);
       this.#device.endFrame();
+    });
+
+    hooks.render.tap((shape) => {
+      shape.render(this.#device, this.#renderPass, this.#uniformBuffer);
     });
   }
 }

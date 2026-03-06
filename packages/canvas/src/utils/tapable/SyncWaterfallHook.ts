@@ -8,7 +8,7 @@ export class SyncWaterfallHook<T> {
 
   call(...argsArr: AsArray<T>): AsArray<T> | null {
     if (this.#callbacks.length) {
-      /* eslint-disable-next-line prefer-spread */
+       
       let result = this.#callbacks[0].apply(void 0, argsArr);
       for (let i = 0; i < this.#callbacks.length - 1; i++) {
         const callback = this.#callbacks[i];
