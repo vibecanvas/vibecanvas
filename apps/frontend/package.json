@@ -9,12 +9,16 @@
     "preview": "vite preview"
   },
   "devDependencies": {
+    "@types/uuid": "^11.0.0",
     "typescript": "~5.9.3",
     "vite": "^7.3.1",
     "vite-plugin-solid": "^2.11.10"
   },
   "dependencies": {
+    "@infinite-canvas-tutorial/ecs": "^0.0.5",
+    "@infinite-canvas-tutorial/webcomponents": "^0.0.7",
     "@vibecanvas/canvas": "workspace:*",
-    "solid-js": "^1.9.11"
+    "solid-js": "^1.9.11",
+    "uuid": "^13.0.0"
   }
 }
