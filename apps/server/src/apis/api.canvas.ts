@@ -50,11 +50,13 @@ const update = baseOs.api.canvas.update.handler(async ({ input, context: { db } 
   return canvas
 })
 
-const remove = baseOs.api.canvas.remove.handler(async ({ input, context: { db } }) => {
-  const [, error] = ctrlDeleteCanvas({ db }, { id: input.params.id })
+const remove = baseOs.api.canvas.remove.handler(async ({ input, context: { db, repo } }) => {
+  const [canvas, error] = ctrlDeleteCanvas({ db, repo }, { id: input.params.id })
   if (error) {
     throw error
   }
+
+  return canvas
 })
 
 export const canvas = {

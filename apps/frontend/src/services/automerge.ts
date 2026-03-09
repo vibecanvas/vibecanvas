@@ -130,43 +130,6 @@ export async function loadPersistedDocuments(): Promise<Array<{ handle: DocHandl
   return results
 }
 
-/**
- * Create a new document with initial data.
- * Returns the document handle.
- */
-export async function createDocument(initialData: { name: string }): Promise<DocHandle<TCanvasDoc>> {
-  const currentRepo = getOrCreateRepo()
-
-  // Create new document
-  const handle = currentRepo.create<TCanvasDoc>({
-    id: 'canvas-placeholder',
-    name: initialData.name,
-    elements: {},
-    groups: {},
-  })
-
-  let data: Awaited<ReturnType<typeof orpcWebsocketService.client.api.canvas.create>>
-  try {
-    data = await orpcWebsocketService.client.api.canvas.create({
-      name: initialData.name,
-      path: "",
-      automerge_url: String(handle.url),
-    })
-  } catch (error) {
-    const message = error instanceof Error ? error.message : "Failed to create document"
-    showErrorToast(message)
-    throw error
-  }
-
-  handle.change((d) => {
-    d.id = data.id
-  })
-
-  // Cache handle
-  handles.set(data.id, handle)
-
-  return handle
-}
 
 /**
  * Find an existing document by its Automerge URL.

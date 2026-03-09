@@ -10,8 +10,6 @@ const getCanvasByIdResponseSchema = z.object({
 
 const createCanvasInputSchema = z.object({
   name: z.string(),
-  path: z.string(),
-  automerge_url: z.string(),
 });
 
 const updateCanvasInputSchema = z.object({
@@ -37,5 +35,5 @@ export default oc.router({
 
   remove: oc
     .input(z.object({ params: z.object({ id: z.string() }) }))
-    .output(z.void()),
+    .output(ZCanvasSelect),
 });

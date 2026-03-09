@@ -1,26 +1,26 @@
+import type { AutomergeUrl, Repo } from "@automerge/automerge-repo";
 import type db from "@vibecanvas/shell/database/db"
 import * as schema from "@vibecanvas/shell/database/schema"
 import { eq } from "drizzle-orm"
 
 export type TPortal = {
-  db: typeof db;
+  db: typeof db,
+  repo: Repo
 };
 
 export type TDeleteArgs = {
   id: string;
 };
 
-type TDeleteResult = {
-  id: string;
-  deleted: boolean;
-};
+export type TCanvas = typeof schema.canvas.$inferSelect;
 
-export function ctrlDeleteCanvas(portal: TPortal, args: TDeleteArgs): TErrTuple<TDeleteResult> {
+
+export function ctrlDeleteCanvas(portal: TPortal, args: TDeleteArgs): TErrTuple<TCanvas> {
   try {
     const result = portal.db
       .delete(schema.canvas)
       .where(eq(schema.canvas.id, args.id))
-      .returning({ id: schema.canvas.id })
+      .returning()
       .all();
 
     if (result.length === 0) {
@@ -31,7 +31,9 @@ export function ctrlDeleteCanvas(portal: TPortal, args: TDeleteArgs): TErrTuple<
       }];
     }
 
-    return [{ id: result[0].id, deleted: true }, null];
+    portal.repo.delete(result[0].automerge_url as AutomergeUrl)
+
+    return [result[0], null];
   } catch (error) {
     console.error(error);
     return [null, {

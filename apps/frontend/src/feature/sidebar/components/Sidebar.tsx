@@ -1,4 +1,3 @@
-import { createDocument } from "@/services/automerge";
 import { Button } from "@kobalte/core/button";
 import { makePersisted } from "@solid-primitives/storage";
 import Plus from "lucide-solid/icons/plus";
@@ -12,13 +11,15 @@ import { CreateCanvasDialog } from "./CreateCanvasDialog";
 import { DeleteCanvasDialog } from "./DeleteCanvasDialog";
 import { RenameDialog } from "./RenameDialog";
 import SidebarItem from "./SidebarItem";
+import { showErrorToast } from "@/components/ui/Toast";
+import { removeFromCache } from "@/services/automerge";
 
 export type SidebarProps = {
   visible?: boolean;
   onSettingsClick?: () => void;
 };
 const Sidebar: Component<SidebarProps> = (props) => {
-  const [data] = createResource(async () => {
+  const [data, actions] = createResource(async () => {
     const [error, result] = await orpcWebsocketService.safeClient.api.canvas.list();
     if (error) throw error;
     return result;
@@ -56,21 +57,31 @@ const Sidebar: Component<SidebarProps> = (props) => {
   const handleRename = async (newName: string) => {
     const canvas = canvasToRename();
     if (canvas) {
-      // TODO:
-      // await updateCanvas(canvas.id, { name: newName });
+      const [err, data] = await orpcWebsocketService.safeClient.api.canvas.update({ params: { id: canvas.id }, body: { name: newName } })
+      if (err) showErrorToast(err.message)
+      if (data) actions.mutate(arr => arr?.map(a => {
+        if (a.id === canvas.id) a = data
+        return a
+      }))
     }
   };
 
   const handleDelete = async () => {
     const canvas = canvasToDelete();
     if (canvas) {
-      // TODO:
-      // await deleteCanvas(canvas.id);
+      const [err, data] = await orpcWebsocketService.safeClient.api.canvas.remove({ params: { id: canvas.id } })
+      if (err) showErrorToast(err.message)
+      if (data) {
+        removeFromCache(data.automerge_url)
+        actions.mutate(arr => arr?.filter(a => a.id !== data.id))
+      }
     }
   };
 
   const handleCreateCanvas = async (title: string) => {
-    await createDocument({ name: title });
+    const [err, data] = await orpcWebsocketService.safeClient.api.canvas.create({ name: title })
+    if (err) showErrorToast(err.message)
+    if (data) actions.mutate(arr => arr ? [...arr, data] : undefined)
   };
 
   return (
