@@ -1,17 +1,17 @@
 import { createDocument } from "@/services/automerge";
 import { Button } from "@kobalte/core/button";
+import { makePersisted } from "@solid-primitives/storage";
 import Plus from "lucide-solid/icons/plus";
 import Settings from "lucide-solid/icons/settings";
 import type { Component } from "solid-js";
-import { ErrorBoundary, For, Show, createResource, createSignal } from "solid-js";
-import { store, setStore } from "../../../store";
+import { ErrorBoundary, For, createResource, createSignal } from "solid-js";
+import { orpcWebsocketService } from "../../../services/orpc-websocket";
+import { setStore, store } from "../../../store";
 import type { TBackendCanvas } from "../../../types/backend.types";
 import { CreateCanvasDialog } from "./CreateCanvasDialog";
 import { DeleteCanvasDialog } from "./DeleteCanvasDialog";
 import { RenameDialog } from "./RenameDialog";
 import SidebarItem from "./SidebarItem";
-import { orpcWebsocketService } from "../../../services/orpc-websocket";
-import { showErrorToast } from "@/components/ui/Toast";
 
 export type SidebarProps = {
   visible?: boolean;
@@ -22,6 +22,11 @@ const Sidebar: Component<SidebarProps> = (props) => {
     const [error, result] = await orpcWebsocketService.safeClient.api.canvas.list();
     if (error) throw error;
     return result;
+  }, {
+    storage: (init) => {
+      const [get, set] = makePersisted(createSignal(init), { name: "sidebar-canvases" });
+      return [get, set];
+    }
   });
 
   // Rename dialog state
