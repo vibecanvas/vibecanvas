@@ -80,6 +80,54 @@ const create = baseOs.api.chat.create.handler(async ({ input, context: { db } })
 - **Functional Core**: Handlers should avoid complex logic; they should build a `TPortal` and call a controller from `@vibecanvas/core`.
 - **WebSocket Multiplexing**: Both oRPC and Automerge use specific paths (`/api` and `/automerge`) over the same server instance.
 
+## Data Storage (XDG Base Directory Spec)
+
+All persistent data follows the [XDG Base Directory Specification](https://specifications.freedesktop.org/basedir/latest/). Path resolution lives in `@vibecanvas/core/vibecanvas-config/fn.xdg-paths.ts`.
+
+### Resolution priority
+1. `VIBECANVAS_CONFIG` env var — all dirs point here (legacy/testing override)
+2. Dev mode (`!isCompiled`) — `<monorepo-root>/local-volume/{data,config,state,cache}/`
+3. Production — `$XDG_*_HOME/vibecanvas` or XDG defaults below
+
+### Production layout
+
+| XDG variable | Default | Path | Contents |
+|---|---|---|---|
+| `XDG_DATA_HOME` | `~/.local/share` | `~/.local/share/vibecanvas/` | `vibecanvas.sqlite` (main DB + Automerge CRDT data) |
+| `XDG_CONFIG_HOME` | `~/.config` | `~/.config/vibecanvas/` | `config.json` (user prefs like autoupdate mode) |
+| `XDG_STATE_HOME` | `~/.local/state` | `~/.local/state/vibecanvas/` | `autoupdate-state.json`, `opencode-sidecar-port.json` |
+| `XDG_CACHE_HOME` | `~/.cache` | `~/.cache/vibecanvas/` | `database-migrations-embedded/` (regeneratable) |
+
+### Dev layout
+
+```
+<monorepo-root>/local-volume/
+├── data/    vibecanvas.sqlite
+├── config/  config.json
+├── state/   autoupdate-state.json, opencode-sidecar-port.json
+└── cache/   database-migrations-embedded/
+```
+
+### Key files
+
+- **`vibecanvas.sqlite`** — Single SQLite database holding Drizzle schema tables (canvases, chats, drawings, files) and the `automerge_repo_data` table for CRDT persistence. Lives in `dataDir`.
+- **`config.json`** — Optional user-created file with settings like `{ "autoupdate": true | false | "notify" }`. Lives in `configDir`.
+- **`autoupdate-state.json`** — Tracks `lastCheckedAt` timestamp for the 24h update check interval. Lives in `stateDir`.
+- **`opencode-sidecar-port.json`** — Remembers the OpenCode sidecar port across restarts to avoid port scanning. Lives in `stateDir`.
+- **`database-migrations-embedded/`** — Extracted from the compiled binary at runtime so Drizzle's `migrate()` can read them from disk. Safe to delete; re-extracted on next startup. Lives in `cacheDir`.
+
+### Usage in code
+
+Callers use `txConfigPath()` which returns both legacy fields and the new `paths` object:
+```ts
+const [config, err] = txConfigPath({ fs: { existsSync, mkdirSync } });
+config.paths.dataDir    // → sqlite, automerge
+config.paths.configDir  // → config.json
+config.paths.stateDir   // → ephemeral state files
+config.paths.cacheDir   // → regeneratable cache
+config.databasePath     // → shortcut to dataDir + /vibecanvas.sqlite
+```
+
 ## Code Quirks (Project-Specific)
 
 - **Filesystem tree endpoint contract**: `project.dir.files` returns a nested tree (`{ root, children[] }`) rather than flat rows. Each node uses `{ name, path, is_dir, children }`.
