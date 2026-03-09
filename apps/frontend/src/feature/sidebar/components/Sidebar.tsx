@@ -1,10 +1,8 @@
 import { Button } from "@kobalte/core/button";
-import { makePersisted } from "@solid-primitives/storage";
 import { useLocation, useNavigate } from "@solidjs/router";
 import Plus from "lucide-solid/icons/plus";
-import Settings from "lucide-solid/icons/settings";
 import type { Component } from "solid-js";
-import { ErrorBoundary, For, createResource, createSignal } from "solid-js";
+import { For, createSignal } from "solid-js";
 import { orpcWebsocketService } from "../../../services/orpc-websocket";
 import type { TBackendCanvas } from "../../../types/backend.types";
 import { CreateCanvasDialog } from "./CreateCanvasDialog";
@@ -13,6 +11,7 @@ import { RenameDialog } from "./RenameDialog";
 import SidebarItem from "./SidebarItem";
 import { showErrorToast } from "@/components/ui/Toast";
 import { removeFromCache } from "@/services/automerge";
+import { store, setStore } from "@/store";
 
 export type SidebarProps = {
   visible?: boolean;
@@ -26,17 +25,6 @@ const Sidebar: Component<SidebarProps> = (props) => {
     const match = location.pathname.match(/^\/c\/(.+)/);
     return match ? match[1] : null;
   };
-
-  const [data, actions] = createResource(async () => {
-    const [error, result] = await orpcWebsocketService.safeClient.api.canvas.list();
-    if (error) throw error;
-    return result;
-  }, {
-    storage: (init) => {
-      const [get, set] = makePersisted(createSignal(init), { name: "sidebar-canvases" });
-      return [get, set];
-    }
-  });
 
   // Rename dialog state
   const [renameDialogOpen, setRenameDialogOpen] = createSignal(false);
@@ -67,10 +55,9 @@ const Sidebar: Component<SidebarProps> = (props) => {
     if (canvas) {
       const [err, data] = await orpcWebsocketService.safeClient.api.canvas.update({ params: { id: canvas.id }, body: { name: newName } })
       if (err) showErrorToast(err.message)
-      if (data) actions.mutate(arr => arr?.map(a => {
-        if (a.id === canvas.id) a = data
-        return a
-      }))
+      if (data) {
+        setStore("canvases", c => c.id === canvas.id, data)
+      }
     }
   };
 
@@ -82,7 +69,7 @@ const Sidebar: Component<SidebarProps> = (props) => {
       if (err) showErrorToast(err.message)
       if (data) {
         removeFromCache(data.automerge_url)
-        actions.mutate(arr => arr?.filter(a => a.id !== data.id))
+        setStore("canvases", prev => prev.filter(c => c.id !== data.id))
         if (isActive) navigate("/");
       }
     }
@@ -92,7 +79,7 @@ const Sidebar: Component<SidebarProps> = (props) => {
     const [err, data] = await orpcWebsocketService.safeClient.api.canvas.create({ name: title })
     if (err) showErrorToast(err.message)
     if (data) {
-      actions.mutate(arr => arr ? [...arr, data] : undefined)
+      setStore("canvases", prev => [...prev, data])
       navigate(`/c/${data.id}`)
     }
   };
@@ -112,23 +99,17 @@ const Sidebar: Component<SidebarProps> = (props) => {
 
         {/* Canvas List */}
         <div class="flex-1 overflow-y-auto">
-          <ErrorBoundary fallback={
-            <div class="px-3 py-4 text-xs text-destructive">
-              Failed to load canvases
-            </div>
-          }>
-            <For each={data()?.filter(canvas => !!canvas)}>
-              {(canvas) => (
-                <SidebarItem
-                  name={canvas.name}
-                  selected={activeCanvasId() === canvas.id}
-                  onClick={() => navigate(`/c/${canvas.id}`)}
-                  onRename={() => handleOpenRenameDialog(canvas.id, canvas.name)}
-                  onDelete={() => handleOpenDeleteDialog(canvas)}
-                />
-              )}
-            </For>
-          </ErrorBoundary>
+          <For each={store.canvases}>
+            {(canvas) => (
+              <SidebarItem
+                name={canvas.name}
+                selected={activeCanvasId() === canvas.id}
+                onClick={() => navigate(`/c/${canvas.id}`)}
+                onRename={() => handleOpenRenameDialog(canvas.id, canvas.name)}
+                onDelete={() => handleOpenDeleteDialog(canvas)}
+              />
+            )}
+          </For>
 
           {/* New Canvas Button */}
           <Button
