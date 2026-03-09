@@ -36,6 +36,14 @@ export class BunSqliteStorageAdapter implements StorageAdapterInterface {
     const tableName = "automerge_repo_data"
     this.separator = options?.separator ?? "."
 
+    this.db.run(`
+      CREATE TABLE IF NOT EXISTS ${tableName} (
+        key TEXT PRIMARY KEY,
+        updated_at TEXT,
+        data BLOB
+      );
+    `)
+
     this.load_stmt = this.db.prepare(
       `SELECT data FROM ${tableName} WHERE key = :key;`
     )
