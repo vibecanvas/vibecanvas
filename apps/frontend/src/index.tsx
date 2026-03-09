@@ -5,9 +5,30 @@ import 'solid-devtools';
 import './services/orpc-websocket';
 
 import { Router, Route } from '@solidjs/router';
+import { Show } from 'solid-js';
+import { useParams } from '@solidjs/router';
 import App from './App';
 import WelcomePage from './pages/welcome';
 import CanvasPage from './pages/canvas';
+import { store } from './store';
+
+const CanvasRoute = () => {
+  const params = useParams<{ id: string }>();
+  const canvas = () => store.canvases.find(c => c.id === params.id);
+
+  return (
+    <Show
+      when={canvas()}
+      fallback={
+        <div class="flex items-center justify-center h-full">
+          <p class="text-xs text-muted-foreground font-mono">Loading canvas...</p>
+        </div>
+      }
+    >
+      {(c) => <CanvasPage canvas={c()} />}
+    </Show>
+  );
+};
 
 const root = document.getElementById('root');
 
@@ -21,7 +42,7 @@ render(
   () => (
     <Router root={App}>
       <Route path="/" component={WelcomePage} />
-      <Route path="/c/:id" component={CanvasPage} />
+      <Route path="/c/:id" component={CanvasRoute} />
     </Router>
   ),
   root!,

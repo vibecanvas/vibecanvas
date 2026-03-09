@@ -1,43 +1,49 @@
-# User Guide
+# Infinite Canvas Tutorial - User Guide
 
-This guide explains how to use the Infinite Canvas Tutorial packages: `@infinite-canvas-tutorial/core` and `@infinite-canvas-tutorial/ecs`.
-
----
-
-## Overview
-
-### `@infinite-canvas-tutorial/core` (Legacy)
-
-The original implementation with an object-oriented approach. **Note**: This package is no longer actively maintained since Lesson 18. Use the ECS package for new projects.
-
--   **Architecture**: Object-oriented
--   **Usage**: Simple, intuitive API suitable for beginners
--   **Status**: Legacy (maintenance mode)
-
-### `@infinite-canvas-tutorial/ecs` (Recommended)
-
-The modern implementation using Entity Component System (ECS) architecture with Becsy.
-
--   **Architecture**: Entity Component System
--   **Usage**: High performance, scalable, suitable for complex applications
--   **Status**: Active development
--   **Features**: Versioning with Epoch Semantic, modular plugins
-
----
-
-## Installation
-
-```bash
-npm install @infinite-canvas-tutorial/ecs
-# OR for legacy usage:
-npm install @infinite-canvas-tutorial/core
-```
+A high-performance 2D canvas library with WebGL/WebGPU rendering, built-in drawing tools, and infinite pan/zoom capabilities.
 
 ---
 
 ## Quick Start
 
-### Using ECS Package (Recommended)
+### Installation
+
+```bash
+npm install @infinite-canvas-tutorial/core
+# OR for ECS architecture (recommended)
+npm install @infinite-canvas-tutorial/ecs
+```
+
+### Basic Usage (Core Package)
+
+```typescript
+import {
+    Canvas,
+    CanvasMode,
+    Rect,
+    Circle,
+} from '@infinite-canvas-tutorial/core';
+
+const canvas = await new Canvas({
+    canvas: document.getElementById('canvas') as HTMLCanvasElement,
+    mode: CanvasMode.SELECT,
+    renderer: 'webgl',
+}).initialized;
+
+// Add shapes
+const rect = new Rect({
+    x: 100,
+    y: 100,
+    width: 100,
+    height: 100,
+    fill: '#FF6B6B',
+});
+canvas.appendChild(rect);
+
+canvas.render();
+```
+
+### Basic Usage (ECS Package - Recommended)
 
 ```typescript
 import {
@@ -87,25 +93,217 @@ const app = new App().addPlugins(...DefaultPlugins, MyPlugin);
 app.run();
 ```
 
-### Using Core Package (Legacy)
+---
+
+## Packages
+
+### Core (Legacy)
+
+The original object-oriented implementation. Simple and intuitive for basic use cases.
 
 ```typescript
-import { Canvas, CanvasMode, Rect } from '@infinite-canvas-tutorial/core';
+import {
+    Canvas,
+    CanvasMode,
+    Rect,
+    Circle,
+    Ellipse,
+    Path,
+    Polyline,
+    Text,
+    Group,
+} from '@infinite-canvas-tutorial/core';
+```
 
+### ECS (Recommended)
+
+Modern implementation using Entity Component System architecture. High performance and scalable.
+
+```typescript
+import {
+    App,
+    System,
+    Commands,
+    DefaultPlugins,
+    system,
+    PreStartUp,
+    StartUp,
+    PostStartUp,
+} from '@infinite-canvas-tutorial/ecs';
+```
+
+---
+
+## Core Package API
+
+### Canvas
+
+```typescript
 const canvas = await new Canvas({
-    canvas: $canvas,
-    mode: CanvasMode.SELECT,
+    canvas: HTMLCanvasElement,
+    mode: CanvasMode.SELECT | CanvasMode.PAN | CanvasMode.DRAW,
+    renderer: 'webgl' | 'webgpu',
+    width: number,
+    height: number,
+    devicePixelRatio: number,
 }).initialized;
 
-const rect = new Rect({
-    x: 300,
-    y: 100,
-    width: 100,
-    height: 100,
-    fill: '#F67676',
-});
-canvas.appendChild(rect);
+// Methods
+canvas.appendChild(shape);
+canvas.removeChild(shape);
 canvas.render();
+canvas.resize(width, height);
+canvas.exportToDataURL();
+canvas.toSVG();
+```
+
+### Canvas Mode
+
+```typescript
+enum CanvasMode {
+    SELECT = 'select', // Select and transform shapes
+    PAN = 'pan', // Pan the canvas
+    DRAW = 'draw', // Draw shapes
+}
+```
+
+---
+
+## Shape Types (Core)
+
+### Rect
+
+```typescript
+const rect = new Rect({
+    x: number,
+    y: number,
+    width: number,
+    height: number,
+    cornerRadius: number,
+    fill: string,
+    stroke: string,
+    strokeWidth: number,
+});
+```
+
+### Circle
+
+```typescript
+const circle = new Circle({
+    cx: number,
+    cy: number,
+    r: number,
+});
+```
+
+### Ellipse
+
+```typescript
+const ellipse = new Ellipse({
+    cx: number,
+    cy: number,
+    rx: number,
+    ry: number,
+});
+```
+
+### Path
+
+```typescript
+const path = new Path({
+    d: string, // SVG path data, e.g., "M10 10 L90 90 L10 90 Z"
+});
+```
+
+### Polyline
+
+```typescript
+const polyline = new Polyline({
+    points: [number, number][],  // [[x1,y1], [x2,y2], ...]
+    fill?: string,
+    stroke?: string,
+    strokeWidth?: number,
+});
+```
+
+### Text
+
+```typescript
+const text = new Text({
+    x: number,
+    y: number,
+    content: string,
+    fontSize: number,
+    fontFamily: string,
+    fontWeight: string,
+    fontStyle: string,
+    textAlign: 'left' | 'center' | 'right',
+    textBaseline: 'alphabetic' | 'middle' | 'top' | 'bottom',
+});
+```
+
+### Group
+
+```typescript
+const group = new Group();
+group.appendChild(shape);
+group.removeChild(shape);
+```
+
+---
+
+## Shape Properties (Core)
+
+### Fill & Stroke
+
+```typescript
+rect.fill = '#FF6B6B';
+rect.fill = 'none';
+rect.fillOpacity = 0.5;
+
+rect.stroke = '#000000';
+rect.strokeWidth = 2;
+rect.strokeOpacity = 0.8;
+```
+
+### Drop Shadow
+
+```typescript
+rect.dropShadowColor = 'rgba(0,0,0,0.5)';
+rect.dropShadowOffsetX = 10;
+rect.dropShadowOffsetY = 10;
+rect.dropShadowBlurRadius = 20;
+```
+
+### Transform
+
+```typescript
+circle.position.x = 100;
+circle.position.y = 100;
+
+circle.scale.x = 2;
+circle.scale.y = 1;
+
+circle.rotation = Math.PI / 4; // radians
+circle.angle = 90; // degrees
+
+circle.pivot.x = 50;
+circle.pivot.y = 50;
+
+circle.skew.x = 0.1;
+circle.skew.y = 0;
+```
+
+### Visibility & Interaction
+
+```typescript
+shape.visible = true;
+shape.cursor = 'pointer';
+shape.pointerEvents = 'visible'; // 'visible' | 'none' | 'auto'
+shape.draggable = true;
+shape.droppable = true;
+shape.cullable = true;
+shape.batchable = true;
 ```
 
 ---
@@ -116,8 +314,6 @@ canvas.render();
 
 #### App
 
-Main application entry point. Initializes the ECS world and runs all systems.
-
 ```typescript
 const app = new App().addPlugins(...DefaultPlugins, MyPlugin);
 app.run();
@@ -125,19 +321,15 @@ app.run();
 
 #### System
 
-Base class for creating game logic systems.
-
 ```typescript
 class MySystem extends System {
     execute(): void {
-        // System logic runs every frame
+        // Runs every frame
     }
 }
 ```
 
 #### Commands
-
-Utility for creating entities and modifying components.
 
 ```typescript
 const commands = new Commands(this);
@@ -148,8 +340,6 @@ commands.execute();
 ### Components
 
 #### Canvas
-
-Configures the rendering canvas.
 
 ```typescript
 new Canvas({
@@ -163,15 +353,11 @@ new Canvas({
 
 #### Camera
 
-Manages the viewport and camera transformations.
-
 ```typescript
 new Camera({ canvas: entity });
 ```
 
 #### Transform
-
-2D transformation (position, scale, rotation).
 
 ```typescript
 new Transform({
@@ -183,15 +369,11 @@ new Transform({
 
 #### Renderable
 
-Marks an entity for rendering.
-
 ```typescript
 new Renderable();
 ```
 
 #### FillSolid
-
-Solid fill color.
 
 ```typescript
 new FillSolid('red');
@@ -199,20 +381,16 @@ new FillSolid('red');
 
 #### Stroke
 
-Stroke styling.
-
 ```typescript
 new Stroke({
-  color: 'black',
-  width: number,
-  alignment: 'center' | 'inner' | 'outer',
-  dasharray: number[]
-})
+    color: 'black',
+    width: number,
+    alignment: 'center' | 'inner' | 'outer',
+    dasharray: number[]
+});
 ```
 
 #### Visibility
-
-Controls visibility with inheritance.
 
 ```typescript
 new Visibility();
@@ -221,8 +399,6 @@ value: 'visible' | 'hidden' | 'inherited';
 
 #### Opacity
 
-Controls transparency.
-
 ```typescript
 new Opacity();
 opacity: number; // 0-1
@@ -230,86 +406,34 @@ opacity: number; // 0-1
 
 #### ZIndex
 
-Controls rendering order.
-
 ```typescript
 new ZIndex();
 value: number;
 ```
 
-### Shape Components
-
-#### Rect
-
-Rectangle shape.
+### Shape Components (ECS)
 
 ```typescript
-new Rect({
-    x: number,
-    y: number,
-    width: number,
-    height: number,
-    cornerRadius: number,
-});
-```
+// Rect
+new Rect({ x: number, y: number, width: number, height: number });
 
-#### Circle
+// Circle
+new Circle({ cx: number, cy: number, r: number });
 
-Circle shape.
+// Path
+new Path({ d: string });
 
-```typescript
-new Circle({
-    cx: number,
-    cy: number,
-    r: number,
-});
-```
+// Polyline
+new Polyline({ points: [number, number][] });
 
-#### Path
+// Text
+new Text({ x: number, y: number, content: string, fontSize: number, fontFamily: string });
 
-SVG-like path.
-
-```typescript
-new Path({
-    d: string, // SVG path data
-});
-```
-
-#### Polyline
-
-Connected line segments.
-
-```typescript
-new Polyline({
-  points: [number, number][]
-})
-```
-
-#### Text
-
-Text rendering.
-
-```typescript
-new Text({
-    x: number,
-    y: number,
-    content: string,
-    fontSize: number,
-    fontFamily: string,
-});
-```
-
-#### Rough
-
-Sketchy/hand-drawn style.
-
-```typescript
+// Rough (hand-drawn style)
 new Rough();
 ```
 
 ### Hierarchy
-
-Entities can be organized in parent-child relationships.
 
 ```typescript
 parent.appendChild(child);
@@ -320,60 +444,18 @@ child.read(Parent).parent;
 ### Reading/Writing Components
 
 ```typescript
-// Read component
+// Read
 const transform = entity.read(Transform);
 
-// Write component
+// Write
 entity.write(Transform).translation = { x: 100, y: 100 };
 ```
 
 ---
 
-## Core Package API
+## System Stages
 
-### Shapes
-
--   **Rect**: Rectangle with x, y, width, height
--   **Circle**: Circle with cx, cy, r
--   **Ellipse**: Ellipse with cx, cy, rx, ry
--   **Path**: SVG path with d attribute
--   **Polyline**: Connected line segments
--   **Text**: Text with font properties
--   **Group**: Container for grouping shapes
--   **RoughCircle, RoughRect, RoughPath**: Hand-drawn style shapes
-
-### Canvas
-
-```typescript
-const canvas = new Canvas({
-    canvas: HTMLCanvasElement,
-    mode: CanvasMode.SELECT | CanvasMode.PAN | CanvasMode.DRAW,
-    renderer: 'webgl' | 'webgpu',
-});
-```
-
-### Common Shape Properties
-
-All shapes support these properties:
-
--   `fill`: Fill color or gradient
--   `stroke`: Stroke color
--   `strokeWidth`: Line width
--   `opacity`: Transparency (0-1)
--   `dropShadow`: Shadow configuration
--   `transform`: Position, scale, rotation
--   `batchable`: Optimize for batch rendering
--   `wireframe`: Show wireframe for debugging
-
----
-
-## System Stages (ECS)
-
-Systems can be scheduled at different stages:
-
--   **PreStartUp**: Before app initializes
--   **StartUp**: During app initialization
--   **PostStartUp**: After app initialization
+Schedule systems at different phases:
 
 ```typescript
 import {
@@ -384,9 +466,9 @@ import {
 } from '@infinite-canvas-tutorial/ecs';
 
 const MyPlugin = () => {
-    system(PreStartUp)(StartUpSystem);
-    system(StartUp)(MainSystem);
-    system(PostStartUp)(FinalSystem);
+    system(PreStartUp)(StartUpSystem); // Before app initializes
+    system(StartUp)(MainSystem); // During initialization
+    system(PostStartUp)(FinalSystem); // After initialization
 };
 ```
 
@@ -394,44 +476,118 @@ const MyPlugin = () => {
 
 ## Built-in Plugins
 
-ECS package includes these plugins:
-
-1. **HierarchyPlugin**: Parent-child relationships
-2. **TransformPlugin**: 2D transformations
-3. **CanvasPlugin**: Canvas rendering
-4. **CameraPlugin**: Camera controls
-5. **EventPlugin**: Event handling
-6. **CullingPlugin**: Viewport culling optimization
-7. **RendererPlugin**: WebGL/WebGPU rendering
-8. **ScreenshotPlugin**: Export to image
-9. **PenPlugin**: Drawing tools
-10. **HTMLPlugin**: HTML overlay support
+| Plugin             | Description                |
+| ------------------ | -------------------------- |
+| `HierarchyPlugin`  | Parent-child relationships |
+| `TransformPlugin`  | 2D transformations         |
+| `CanvasPlugin`     | Canvas rendering           |
+| `CameraPlugin`     | Camera controls            |
+| `EventPlugin`      | Event handling             |
+| `CullingPlugin`    | Viewport culling           |
+| `RendererPlugin`   | WebGL/WebGPU               |
+| `ScreenshotPlugin` | Export to image            |
+| `PenPlugin`        | Drawing tools              |
+| `HTMLPlugin`       | HTML overlay               |
 
 ---
 
-## Common Recipes
-
-### Resize with Window
-
-**ECS:**
+## Camera Control (Core)
 
 ```typescript
-window.addEventListener('resize', () => {
-    const canvasElement = document.getElementById(
-        'canvas',
-    ) as HTMLCanvasElement;
+// Zoom
+canvas.setZoom(2);
+canvas.zoomIn();
+canvas.zoomOut();
 
-    canvasElement.width = window.innerWidth * window.devicePixelRatio;
-    canvasElement.height = window.innerHeight * window.devicePixelRatio;
+// Pan
+canvas.setPan(x, y);
 
-    Object.assign(canvasEntity.write(Canvas), {
-        width: window.innerWidth,
-        height: window.innerHeight,
-    });
+// Fit content
+canvas.fitToScreen();
+
+// Get camera state
+const { zoom, x, y, rotation } = canvas.getCamera();
+```
+
+---
+
+## Gradients
+
+```typescript
+// CSS gradient strings
+rect.fill = 'linear-gradient(to right, red, blue)';
+rect.fill = 'radial-gradient(circle, red, blue)';
+rect.fill = 'conic-gradient(from 0deg, red, blue)';
+```
+
+---
+
+## Arrow Markers
+
+```typescript
+polyline.stroke = '#000';
+polyline.strokeWidth = 2;
+polyline.markerEnd = 'arrow'; // 'arrow' | 'circle' | 'diamond'
+polyline.markerStart = 'none';
+polyline.markerFactor = 3;
+```
+
+---
+
+## Rough Shapes
+
+Hand-drawn/sketchy style:
+
+```typescript
+import {
+    RoughRect,
+    RoughCircle,
+    RoughEllipse,
+    RoughPath,
+} from '@infinite-canvas-tutorial/core';
+
+const roughRect = new RoughRect({
+    x: 100,
+    y: 100,
+    width: 150,
+    height: 100,
+    fill: '#FF6B6B',
+    stroke: '#000',
+    strokeWidth: 2,
+    roughBowing: 2,
+    roughRoughness: 1,
+    roughFillStyle: 'hachure', // 'hachure' | 'solid' | 'zigzag'
 });
 ```
 
-**Core:**
+---
+
+## Events
+
+```typescript
+shape.addEventListener('pointerdown', (e) => {});
+shape.addEventListener('pointermove', (e) => {});
+shape.addEventListener('pointerup', (e) => {});
+shape.addEventListener('drag', (e) => {});
+shape.addEventListener('click', (e) => {});
+shape.addEventListener('dblclick', (e) => {});
+```
+
+---
+
+## Export
+
+```typescript
+// Export to PNG
+const dataURL = canvas.exportToDataURL();
+
+// Export to SVG
+const svg = canvas.toSVG();
+```
+
+---
+
+## Resize Handler
 
 ```typescript
 window.addEventListener('resize', () => {
@@ -439,129 +595,128 @@ window.addEventListener('resize', () => {
 });
 ```
 
-### Pan Camera with Mouse
-
-```typescript
-// Read mouse events and update camera transform
-cameraEntity.write(Transform).translation = { x: newX, y: newY };
-```
-
-### Create Nested Shapes
-
-**ECS:**
-
-```typescript
-const parent = commands.spawn(
-    new Transform(),
-    new FillSolid('red'),
-    new Circle({ cx: 0, cy: 0, r: 100 }),
-);
-const child = commands.spawn(
-    new Transform(),
-    new FillSolid('blue'),
-    new Rect({ x: 50, y: 50, width: 50, height: 50 }),
-);
-
-parent.appendChild(child);
-```
-
-**Core:**
-
-```typescript
-const parent = new Group({ x: 100, y: 100 });
-const child = new Rect({ x: 0, y: 0, width: 50, height: 50, fill: 'red' });
-
-parent.appendChild(child);
-canvas.appendChild(parent);
-```
-
-### Add Drop Shadow
-
-**ECS:**
-
-```typescript
-commands.spawn(
-    new Renderable(),
-    new DropShadow({
-        color: 'rgba(0, 0, 0, 0.5)',
-        blurRadius: 10,
-        offsetX: 10,
-        offsetY: 10,
-    }),
-    new Rect({ x: 0, y: 0, width: 100, height: 100 }),
-    new FillSolid('red'),
-);
-```
-
-**Core:**
-
-```typescript
-new Rect({
-    x: 0,
-    y: 0,
-    width: 100,
-    height: 100,
-    fill: 'red',
-    dropShadowBlurRadius: 10,
-    dropShadowColor: 'rgba(0, 0, 0, 0.5)',
-    dropShadowOffsetX: 10,
-    dropShadowOffsetY: 10,
-});
-```
-
----
-
-## Coordinate Systems
-
-### Available Conversions
-
--   `client2Viewport(clientPoint)`: Convert DOM client coordinates to viewport
--   `viewport2Client(viewportPoint)`: Convert viewport to client coordinates
--   `viewport2Canvas(viewportPoint)`: Convert viewport to canvas coordinates
--   `canvas2Viewport(canvasPoint)`: Convert canvas to viewport coordinates
-
 ---
 
 ## WebGPU Support
 
-Both packages support WebGPU rendering. Enable with:
+Enable WebGPU rendering for better performance:
 
 ```typescript
-renderer: 'webgpu';
-shaderCompilerPath: '/path/to/glsl_wgsl_compiler_bg.wasm';
+// Core
+const canvas = await new Canvas({
+    canvas: element,
+    renderer: 'webgpu',
+    shaderCompilerPath: '/path/to/glsl_wgsl_compiler_bg.wasm',
+}).initialized;
+
+// ECS
+const canvas = this.commands.spawn(
+    new Canvas({
+        element: document.getElementById('canvas'),
+        renderer: 'webgpu',
+        shaderCompilerPath: '/path/to/glsl_wgsl_compiler_bg.wasm',
+    }),
+);
 ```
 
 ---
 
-## Examples
+## WebWorker Support
 
--   **ECS Example**: `packages/ecs/examples/main.ts`
--   **Core Example**: `packages/core/examples/main.ts`
+Run in WebWorker for better performance:
+
+```typescript
+import { DOMAdapter, WebWorkerAdapter } from '@infinite-canvas-tutorial/ecs';
+
+DOMAdapter.set(WebWorkerAdapter);
+
+const app = new App().addPlugins(...DefaultPlugins);
+app.run();
+```
 
 ---
 
-## Project Structure
+## Complete Example
 
-### ECS Package
+```typescript
+import {
+    Canvas,
+    CanvasMode,
+    Rect,
+    Circle,
+    Text,
+    Ellipse,
+} from '@infinite-canvas-tutorial/core';
 
-```
-src/
-├── plugins/          # Built-in system plugins
-├── components/       # Component definitions
-├── systems/          # System implementations
-├── environment/      # Browser/WebWorker environments
-├── shaders/          # GLSL/WGSL shaders
-└── drawcalls/        # Rendering logic
-```
+async function main() {
+    const canvas = await new Canvas({
+        canvas: document.getElementById('canvas') as HTMLCanvasElement,
+        mode: CanvasMode.SELECT,
+        renderer: 'webgl',
+    }).initialized;
 
-### Core Package
+    // Create shapes
+    const rect = new Rect({
+        x: 200,
+        y: 200,
+        width: 150,
+        height: 100,
+        fill: '#FF6B6B',
+        stroke: '#333',
+        strokeWidth: 2,
+        cornerRadius: 8,
+        dropShadowColor: 'rgba(0,0,0,0.3)',
+        dropShadowOffsetX: 5,
+        dropShadowOffsetY: 5,
+        dropShadowBlurRadius: 10,
+    });
 
-```
-src/
-├── shapes/          # Shape implementations
-├── Canvas.ts        # Main canvas class
-├── Camera.ts        # Camera implementation
-└── plugins/         # Feature plugins
+    const circle = new Circle({
+        cx: 500,
+        cy: 250,
+        r: 60,
+        fill: '#4ECDC4',
+    });
+
+    const ellipse = new Ellipse({
+        cx: 700,
+        cy: 250,
+        rx: 80,
+        ry: 40,
+    });
+
+    const text = new Text({
+        x: 200,
+        y: 350,
+        content: 'Infinite Canvas',
+        fontSize: 32,
+        fontFamily: 'Georgia',
+        fill: '#333',
+    });
+
+    canvas.appendChild(rect);
+    canvas.appendChild(circle);
+    canvas.appendChild(ellipse);
+    canvas.appendChild(text);
+
+    // Fit content to screen
+    canvas.fitToScreen();
+
+    // Render
+    canvas.render();
+
+    // Handle resize
+    window.addEventListener('resize', () => {
+        canvas.resize(window.innerWidth, window.innerHeight);
+    });
+
+    // Add interactivity
+    rect.addEventListener('click', () => {
+        console.log('Rectangle clicked!');
+    });
+}
+
+main();
 ```
 
 ---
@@ -575,32 +730,3 @@ src/
 | Transform        | `shape.x, shape.y`            | `entity.write(Transform).translation`  |
 | Styling          | `shape.fill`                  | `entity.read(FillSolid).value`         |
 | Events           | `shape.addEventListener(...)` | EventPlugin/Event system               |
-
----
-
-## Troubleshooting
-
-### System Execution Order
-
-In DEV environment, check console for system execution order to debug dependencies.
-
-### Performance Tips
-
-1. Enable CullingPlugin for large scenes
-2. Use batchable option where possible
-3. Check wireframes for debugging
-4. Monitor Entity count
-
----
-
-## License
-
-MIT
-
----
-
-## Resources
-
--   [GitHub Repository](https://github.com/xiaoiver/infinite-canvas-tutorial)
--   [Becsy ECS Documentation](https://lastolivegames.github.io/becsy/)
--   [WebGPU Documentation](https://webgpu.github.io/webgpu-samples/)
