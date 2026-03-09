@@ -1,0 +1,433 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "@fontsource-variable/jetbrains-mono";
+
+@font-face {
+  font-family: 'Gabriele';
+  src: url('/gabriele-d.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+}
+
+@custom-variant dark (&:is(.dark *));
+
+/* ============================================
+   VIBECANVAS DESIGN SYSTEM
+   Terminal-like, rough, no border radius
+   Base: Stone | Primary: Amber
+   ============================================ */
+
+@theme {
+  /* Typography */
+  --font-mono: 'JetBrains Mono Variable', monospace;
+  --font-display: 'Gabriele', monospace;
+
+  /* Border Radius - Terminal aesthetic (none) */
+  --radius-*: initial;
+  --radius-none: 0px;
+  --radius-sm: 0px;
+  --radius-md: 0px;
+  --radius-lg: 0px;
+  --radius-xl: 0px;
+  --radius-2xl: 0px;
+  --radius-full: 0px;
+}
+
+/* ========================================
+   SEMANTIC TOKENS
+   Light/dark mode switching
+   ======================================== */
+:root {
+  --background: var(--color-stone-50);
+  --foreground: var(--color-stone-900);
+
+  --card: var(--color-stone-100);
+  --card-foreground: var(--color-stone-900);
+
+  --popover: white;
+  --popover-foreground: var(--color-stone-900);
+
+  --muted: var(--color-stone-200);
+  --muted-foreground: var(--color-stone-600);
+
+  --primary: var(--color-amber-500);
+  --primary-foreground: var(--color-stone-950);
+
+  --secondary: var(--color-stone-200);
+  --secondary-foreground: var(--color-stone-900);
+
+  --accent: var(--color-amber-100);
+  --accent-foreground: var(--color-amber-900);
+
+  --destructive: var(--color-red-600);
+  --destructive-foreground: var(--color-stone-50);
+
+  --success: var(--color-green-600);
+  --success-foreground: var(--color-stone-50);
+
+  --warning: var(--color-amber-600);
+  --warning-foreground: var(--color-stone-950);
+
+  --border: var(--color-stone-300);
+  --input: var(--color-stone-300);
+  --ring: var(--color-amber-500);
+}
+
+.dark {
+  --background: var(--color-stone-950);
+  --foreground: var(--color-stone-50);
+
+  --card: var(--color-stone-900);
+  --card-foreground: var(--color-stone-50);
+
+  --popover: var(--color-stone-900);
+  --popover-foreground: var(--color-stone-50);
+
+  --muted: var(--color-stone-800);
+  --muted-foreground: var(--color-stone-400);
+
+  --primary: var(--color-amber-500);
+  --primary-foreground: var(--color-stone-950);
+
+  --secondary: var(--color-stone-800);
+  --secondary-foreground: var(--color-stone-50);
+
+  --accent: var(--color-stone-700);
+  --accent-foreground: var(--color-amber-300);
+
+  --destructive: var(--color-red-500);
+  --destructive-foreground: var(--color-stone-50);
+
+  --success: var(--color-green-500);
+  --success-foreground: var(--color-stone-950);
+
+  --warning: var(--color-amber-400);
+  --warning-foreground: var(--color-stone-950);
+
+  --border: var(--color-stone-800);
+  --input: var(--color-stone-800);
+  --ring: var(--color-amber-500);
+}
+
+/* ========================================
+   SEMANTIC UTILITIES
+   Maps CSS variables → Tailwind classes
+   ======================================== */
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
+  --color-warning: var(--warning);
+  --color-warning-foreground: var(--warning-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+}
+
+/* ========================================
+   BASE STYLES
+   ======================================== */
+* {
+  touch-action: none;
+  overscroll-behavior: none;
+}
+body {
+  font-family: var(--font-mono);
+  background-color: var(--background);
+  color: var(--foreground);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+@layer base {
+  * {
+    border-color: var(--border);
+  }
+}
+
+/* ========================================
+   SHIKI SYNTAX HIGHLIGHTING
+   ======================================== */
+.shiki {
+  background: transparent !important;
+  font-size: 13px !important;
+  line-height: 1.5 !important;
+  white-space: pre-wrap !important;
+  word-break: break-word !important;
+}
+
+.shiki code {
+  background: transparent !important;
+  font-family: var(--font-mono) !important;
+  font-size: 13px !important;
+  line-height: 1.5 !important;
+  color: var(--color-stone-300) !important;
+  white-space: pre-wrap !important;
+  word-break: break-word !important;
+}
+
+.shiki pre {
+  white-space: pre-wrap !important;
+  word-break: break-word !important;
+}
+
+pre {
+  background: transparent !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+/* ========================================
+   PROSEMIRROR CHAT COMPOSER
+   ======================================== */
+.ProseMirror {
+  outline: none;
+  position: relative;
+  min-height: 1.5em;
+  max-height: 120px;
+  overflow-y: auto;
+  font-family: var(--font-mono);
+  font-size: 0.875rem;
+  line-height: 1.35;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.ProseMirror[data-placeholder]:before {
+  content: attr(data-placeholder);
+  color: var(--muted-foreground);
+  pointer-events: none;
+  position: absolute;
+}
+
+.ProseMirror p {
+  margin: 0;
+}
+
+.image-token-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin: 0 2px;
+  padding: 1px 6px;
+  background: color-mix(in oklab, var(--muted) 65%, transparent);
+  border: 1px solid var(--border);
+  font-size: 0.75rem;
+  vertical-align: baseline;
+  cursor: default;
+  user-select: none;
+}
+
+.image-token-label {
+  color: var(--muted-foreground);
+}
+
+.image-token-remove {
+  border: 0;
+  background: transparent;
+  color: var(--muted-foreground);
+  cursor: pointer;
+  font-size: 0.75rem;
+  line-height: 1;
+  padding: 0;
+}
+
+.image-token-remove:hover {
+  color: var(--destructive);
+}
+
+.image-token-tooltip {
+  position: fixed;
+  transform: translateY(-100%);
+  z-index: 60;
+  width: 220px;
+  padding: 4px;
+  background: var(--popover);
+  border: 1px solid var(--border);
+  box-shadow: 0 2px 8px color-mix(in oklab, var(--foreground) 20%, transparent);
+}
+
+.image-token-tooltip-image {
+  max-width: 100%;
+  max-height: 150px;
+  object-fit: contain;
+}
+
+.chat-composer-root {
+  position: relative;
+}
+
+.chat-composer-root--drop-target {
+  background: color-mix(in oklab, var(--accent) 55%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--ring) 70%, transparent);
+}
+
+.chat-autocomplete {
+  position: absolute;
+  z-index: 70;
+  min-width: 320px;
+  max-width: 420px;
+  max-height: 220px;
+  overflow-y: auto;
+  border: 1px solid var(--border);
+  background: var(--popover);
+  box-shadow: 0 2px 8px color-mix(in oklab, var(--foreground) 16%, transparent);
+}
+
+.chat-autocomplete-item {
+  width: 100%;
+  display: grid;
+  grid-template-columns: 1fr;
+  text-align: left;
+  padding: 6px 8px;
+  border-bottom: 1px solid color-mix(in oklab, var(--border) 70%, transparent);
+  background: transparent;
+}
+
+.chat-autocomplete-item:last-child {
+  border-bottom: none;
+}
+
+.chat-autocomplete-item:hover,
+.chat-autocomplete-item--active {
+  background: var(--accent);
+}
+
+.chat-autocomplete-item-label {
+  font-size: 0.8rem;
+  color: var(--foreground);
+}
+
+.chat-autocomplete-item-detail {
+  font-size: 0.75rem;
+  color: var(--muted-foreground);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ========================================
+   CHAT DIALOG (in-chat overlay)
+   ======================================== */
+.chat-dialog-overlay {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  right: 8px;
+  bottom: 120px;
+  z-index: 60;
+  display: flex;
+  flex-direction: column;
+  background: var(--card);
+  border: 1px solid var(--border);
+  box-shadow: 0 4px 16px color-mix(in oklab, var(--foreground) 18%, transparent);
+  outline: none;
+}
+
+.chat-dialog-section {
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: var(--accent-foreground);
+  padding: 6px 12px 2px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.chat-dialog-item {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  text-align: left;
+  padding: 6px 12px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  font-family: var(--font-mono);
+}
+
+.chat-dialog-item:hover,
+.chat-dialog-item--active {
+  background: var(--accent);
+}
+
+.chat-dialog-item-indicator {
+  flex-shrink: 0;
+  font-size: 0.5rem;
+  line-height: 1;
+}
+
+.chat-dialog-item-label {
+  flex-shrink: 0;
+  font-size: 0.8rem;
+  color: var(--foreground);
+  white-space: nowrap;
+}
+
+.chat-dialog-item-detail {
+  flex-shrink: 0;
+  font-size: 0.7rem;
+  color: var(--muted-foreground);
+}
+
+.chat-dialog-item-input {
+  flex: 1;
+  min-width: 0;
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  color: var(--foreground);
+  background: color-mix(in oklab, var(--muted) 50%, transparent);
+  border: 1px solid var(--border);
+  padding: 2px 6px;
+  outline: none;
+}
+
+.chat-dialog-item-input:focus {
+  border-color: var(--ring);
+  background: var(--card);
+}
+
+.chat-dialog-item-input::placeholder {
+  color: var(--muted-foreground);
+}
+
+/* Input row variant: label on top, input below */
+.chat-dialog-item--input {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 6px;
+  padding: 12px;
+}
+
+.chat-dialog-item--input .chat-dialog-item-label {
+  font-size: 0.75rem;
+  color: var(--muted-foreground);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.chat-dialog-item--input .chat-dialog-item-input {
+  width: 100%;
+  padding: 6px 8px;
+}
+
+.chat-dialog-item-arrow {
+  flex-shrink: 0;
+  font-size: 0.75rem;
+  color: var(--muted-foreground);
+}
