@@ -1,12 +1,9 @@
-import { homedir } from "os";
-import { join, dirname } from "path";
 import type { existsSync, mkdirSync } from "fs";
 import { ConfigErr } from "./err.codes";
-
-declare const VIBECANVAS_COMPILED: boolean;
+import { fnXdgPaths, type TVibecanvasPaths, type TXdgPathsArgs } from "./fn.xdg-paths";
 
 export type TPortal = {
-  fs: { existsSync: typeof existsSync, mkdirSync: typeof mkdirSync };
+  fs: { existsSync: typeof existsSync; mkdirSync: typeof mkdirSync };
 };
 
 export type TArgs = {
@@ -18,78 +15,72 @@ type TConfigPath = {
   configDir: string;
   databasePath: string;
   created: boolean;
+  paths: TVibecanvasPaths;
 };
 
-/**
- * Find the monorepo root by walking up from cwd until we find bun.lock
- */
-function findMonorepoRoot(fs: TPortal["fs"], startDir: string): string | null {
-  let current = startDir;
-  while (current !== dirname(current)) {
-    if (fs.existsSync(join(current, "bun.lock"))) {
-      return current;
-    }
-    current = dirname(current);
-  }
-  // Check root directory as well
-  if (fs.existsSync(join(current, "bun.lock"))) {
-    return current;
-  }
-  return null;
-}
-
-export function txConfigPath(portal: TPortal, args: TArgs = {}): TErrTriple<TConfigPath> {
+function txConfigPath(portal: TPortal, args: TArgs = {}): TErrTriple<TConfigPath> {
   const rollbacks: TExternalRollback[] = [];
 
   try {
-    const env = args.env ?? process.env;
-    const envPath = env.VIBECANVAS_CONFIG;
-    const isCompiled = args.isCompiled ?? (typeof VIBECANVAS_COMPILED !== "undefined" && VIBECANVAS_COMPILED);
+    const xdgArgs: TXdgPathsArgs = {
+      env: args.env,
+      isCompiled: args.isCompiled,
+      findMonorepoRoot: (startDir: string) => {
+        const { dirname, join } = require("path");
+        let current = startDir;
+        while (current !== dirname(current)) {
+          if (portal.fs.existsSync(join(current, "bun.lock"))) {
+            return current;
+          }
+          current = dirname(current);
+        }
+        if (portal.fs.existsSync(join(current, "bun.lock"))) {
+          return current;
+        }
+        return null;
+      },
+    };
 
-    // Priority: 1) VIBECANVAS_CONFIG env, 2) Dev mode → ./local-volume/, 3) Production → ~/.vibecanvas/
-    let configDir: string;
-    if (envPath) {
-      configDir = envPath;
-    } else if (!isCompiled) {
-      // Dev mode: use local directory at monorepo root
-      const monorepoRoot = findMonorepoRoot(portal.fs, process.cwd());
-      if (!monorepoRoot) {
-        return [
-          null,
-          {
-            code: ConfigErr.CONFIG_PATH_CREATE_FAILED,
-            statusCode: 500,
-            externalMessage: { en: "Failed to find monorepo root" },
-            internalMessage: "Could not locate bun.lock from " + process.cwd(),
-          },
-          rollbacks,
-        ];
+    const [paths, pathsErr] = fnXdgPaths(xdgArgs);
+    if (pathsErr) {
+      return [null, pathsErr, rollbacks];
+    }
+
+    // Ensure all XDG directories exist
+    const dirs = [paths.dataDir, paths.configDir, paths.stateDir, paths.cacheDir];
+    let created = false;
+
+    for (const dir of dirs) {
+      if (!portal.fs.existsSync(dir)) {
+        portal.fs.mkdirSync(dir, { recursive: true });
+        created = true;
       }
-      configDir = join(monorepoRoot, "local-volume");
-    } else {
-      // Production: use home directory
-      configDir = join(homedir(), ".vibecanvas");
-    }
-    const databasePath = join(configDir, "vibecanvas.sqlite");
-
-    if (!portal.fs.existsSync(configDir)) {
-      portal.fs.mkdirSync(configDir, { recursive: true });
-      return [{ configDir, databasePath, created: true }, null, rollbacks];
     }
 
-    return [{ configDir, databasePath, created: false }, null, rollbacks];
+    return [{
+      // Legacy fields for backwards compatibility:
+      // configDir points to dataDir since most callers used it to locate the DB
+      configDir: paths.dataDir,
+      databasePath: paths.databasePath,
+      created,
+      // New structured paths
+      paths,
+    }, null, rollbacks];
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
 
     return [
       null,
       {
-        code: ConfigErr.CONFIG_PATH_CREATE_FAILED,
+        code: ConfigErr.ENSURE_DIRS_FAILED,
         statusCode: 500,
-        externalMessage: { en: "Failed to create config directory" },
+        externalMessage: { en: "Failed to create config directories" },
         internalMessage: errorMessage,
       },
       rollbacks,
     ];
   }
 }
+
+export { txConfigPath };
+export type { TConfigPath };

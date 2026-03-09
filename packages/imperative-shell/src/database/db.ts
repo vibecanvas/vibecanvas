@@ -23,7 +23,8 @@ sqlite.run(`PRAGMA mmap_size = 268435456`)
 const db = drizzle({ client: sqlite, schema });
 
 fxRunDatabaseMigrations({
-  configDir: config!.configDir,
+  dataDir: config!.paths.dataDir,
+  cacheDir: config!.paths.cacheDir,
   db,
 });
 

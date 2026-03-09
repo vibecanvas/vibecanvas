@@ -4,7 +4,8 @@ import { migrate } from "drizzle-orm/bun-sqlite/migrator";
 import { getEmbeddedMigrationPath, listEmbeddedMigrationFiles } from "./embedded-migrations";
 
 type TArgs = {
-  configDir: string;
+  dataDir: string;
+  cacheDir: string;
   db: Parameters<typeof migrate>[0];
   silent?: boolean;
 };
@@ -26,12 +27,12 @@ function hasEmbeddedMigrationAssets(): boolean {
   return files.length > 0 && files.includes("meta/_journal.json");
 }
 
-function fxExtractEmbeddedMigrations(configDir: string): string | null {
+function fxExtractEmbeddedMigrations(cacheDir: string): string | null {
   if (!hasEmbeddedMigrationAssets()) {
     return null;
   }
 
-  const outputDir = join(configDir, "database-migrations-embedded");
+  const outputDir = join(cacheDir, "database-migrations-embedded");
   const migrationFiles = listEmbeddedMigrationFiles();
 
   for (const relativePath of migrationFiles) {
@@ -48,10 +49,10 @@ function fxExtractEmbeddedMigrations(configDir: string): string | null {
   return hasMigrationJournal(outputDir) ? outputDir : null;
 }
 
-function buildMigrationsFolderCandidates(configDir: string, args: TBuildCandidateArgs = {}): string[] {
+function buildMigrationsFolderCandidates(dataDir: string, cacheDir: string, args: TBuildCandidateArgs = {}): string[] {
   const envOverride = args.envOverride ?? process.env.VIBECANVAS_MIGRATIONS_DIR;
   const isCompiled = args.isCompiled ?? process.env.VIBECANVAS_COMPILED === "true";
-  const embeddedFolder = args.embeddedFolder ?? fxExtractEmbeddedMigrations(configDir);
+  const embeddedFolder = args.embeddedFolder ?? fxExtractEmbeddedMigrations(cacheDir);
   const execPath = args.execPath ?? process.execPath;
   const sourceDir = args.sourceDir ?? resolve(import.meta.dir, "..", "..", "database-migrations");
   const sourceTreeFolder = isCompiled ? null : sourceDir;
@@ -59,14 +60,14 @@ function buildMigrationsFolderCandidates(configDir: string, args: TBuildCandidat
   return [
     envOverride,
     sourceTreeFolder,
-    join(configDir, "database-migrations"),
+    join(dataDir, "database-migrations"),
     resolve(dirname(execPath), "..", "database-migrations"),
     embeddedFolder,
   ].filter(Boolean) as string[];
 }
 
-function resolveMigrationsFolder(configDir: string): string {
-  const candidates = buildMigrationsFolderCandidates(configDir);
+function resolveMigrationsFolder(dataDir: string, cacheDir: string): string {
+  const candidates = buildMigrationsFolderCandidates(dataDir, cacheDir);
 
   for (const candidate of candidates) {
     if (hasMigrationJournal(candidate)) {
@@ -80,7 +81,7 @@ function resolveMigrationsFolder(configDir: string): string {
 }
 
 function fxRunDatabaseMigrations(args: TArgs): void {
-  const migrationsFolder = resolveMigrationsFolder(args.configDir);
+  const migrationsFolder = resolveMigrationsFolder(args.dataDir, args.cacheDir);
 
   if (!args.silent) {
     console.log(`[DB] Applying migrations from ${migrationsFolder}`);

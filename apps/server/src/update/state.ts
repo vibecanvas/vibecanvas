@@ -13,7 +13,7 @@ function stateFilePath(): string | null {
   const isCompiled = typeof VIBECANVAS_COMPILED !== "undefined" ? VIBECANVAS_COMPILED : false;
   const [configPathData] = txConfigPath({ fs: { existsSync, mkdirSync } }, { isCompiled });
   if (!configPathData) return null;
-  return join(configPathData.configDir, "autoupdate-state.json");
+  return join(configPathData.paths.stateDir, "autoupdate-state.json");
 }
 
 function getLastCheckedAt(): number | null {

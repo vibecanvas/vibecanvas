@@ -43,7 +43,7 @@ async function isOpencodeHealthy(port: number): Promise<boolean> {
 function getOpencodeStateFilePath(): string | null {
   const [config] = txConfigPath({ fs: { existsSync, mkdirSync } })
   if (!config) return null
-  return join(config.configDir, OPENCODE_SIDE_CAR_PORT_STATE_FILE)
+  return join(config.paths.stateDir, OPENCODE_SIDE_CAR_PORT_STATE_FILE)
 }
 
 function readRememberedOpencodePort(): number | null {

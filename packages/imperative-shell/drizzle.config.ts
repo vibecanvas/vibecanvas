@@ -9,6 +9,6 @@ export default defineConfig({
   schema: "./src/database/schema.ts",
   out: "./database-migrations",
   dbCredentials: {
-    url: config!.databasePath
+    url: config!.paths.databasePath
   }
 });

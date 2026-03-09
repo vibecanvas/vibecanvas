@@ -17,7 +17,8 @@ const sqlite = new Database(config.databasePath);
 const db = drizzle(sqlite);
 
 fxRunDatabaseMigrations({
-  configDir: config.configDir,
+  dataDir: config.paths.dataDir,
+  cacheDir: config.paths.cacheDir,
   db,
 });
 

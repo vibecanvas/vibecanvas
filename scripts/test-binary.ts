@@ -180,8 +180,7 @@ async function main() {
     stderr: "pipe",
     env: {
       ...process.env,
-      VIBECANVAS_HOME: tempConfigDir,
-      VIBECANVAS_CONFIG_DIR: tempConfigDir,
+      VIBECANVAS_CONFIG: tempConfigDir,
     },
   })
 

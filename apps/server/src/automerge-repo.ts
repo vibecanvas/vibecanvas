@@ -10,6 +10,6 @@ if (configError) {
 }
 
 // Initialize Automerge repo with SQLite storage and WebSocket adapter
-const { wsAdapter, repo } = setupAutomergeServer(config.databasePath);
+const { wsAdapter, repo } = setupAutomergeServer(config.paths.databasePath);
 
 export { repo, wsAdapter };
