@@ -4,7 +4,10 @@ import { render } from 'solid-js/web';
 import 'solid-devtools';
 import './services/orpc-websocket';
 
+import { Router, Route } from '@solidjs/router';
 import App from './App';
+import WelcomePage from './pages/welcome';
+import CanvasPage from './pages/canvas';
 
 const root = document.getElementById('root');
 
@@ -14,4 +17,12 @@ if (import.meta.env.DEV && !(root instanceof HTMLElement)) {
   );
 }
 
-render(() => <App />, root!);
+render(
+  () => (
+    <Router root={App}>
+      <Route path="/" component={WelcomePage} />
+      <Route path="/c/:id" component={CanvasPage} />
+    </Router>
+  ),
+  root!,
+);

@@ -1,11 +1,11 @@
 import { Button } from "@kobalte/core/button";
 import { makePersisted } from "@solid-primitives/storage";
+import { useLocation, useNavigate } from "@solidjs/router";
 import Plus from "lucide-solid/icons/plus";
 import Settings from "lucide-solid/icons/settings";
 import type { Component } from "solid-js";
 import { ErrorBoundary, For, createResource, createSignal } from "solid-js";
 import { orpcWebsocketService } from "../../../services/orpc-websocket";
-import { setStore, store } from "../../../store";
 import type { TBackendCanvas } from "../../../types/backend.types";
 import { CreateCanvasDialog } from "./CreateCanvasDialog";
 import { DeleteCanvasDialog } from "./DeleteCanvasDialog";
@@ -19,6 +19,14 @@ export type SidebarProps = {
   onSettingsClick?: () => void;
 };
 const Sidebar: Component<SidebarProps> = (props) => {
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  const activeCanvasId = () => {
+    const match = location.pathname.match(/^\/c\/(.+)/);
+    return match ? match[1] : null;
+  };
+
   const [data, actions] = createResource(async () => {
     const [error, result] = await orpcWebsocketService.safeClient.api.canvas.list();
     if (error) throw error;
@@ -69,11 +77,13 @@ const Sidebar: Component<SidebarProps> = (props) => {
   const handleDelete = async () => {
     const canvas = canvasToDelete();
     if (canvas) {
+      const isActive = activeCanvasId() === canvas.id;
       const [err, data] = await orpcWebsocketService.safeClient.api.canvas.remove({ params: { id: canvas.id } })
       if (err) showErrorToast(err.message)
       if (data) {
         removeFromCache(data.automerge_url)
         actions.mutate(arr => arr?.filter(a => a.id !== data.id))
+        if (isActive) navigate("/");
       }
     }
   };
@@ -81,7 +91,10 @@ const Sidebar: Component<SidebarProps> = (props) => {
   const handleCreateCanvas = async (title: string) => {
     const [err, data] = await orpcWebsocketService.safeClient.api.canvas.create({ name: title })
     if (err) showErrorToast(err.message)
-    if (data) actions.mutate(arr => arr ? [...arr, data] : undefined)
+    if (data) {
+      actions.mutate(arr => arr ? [...arr, data] : undefined)
+      navigate(`/c/${data.id}`)
+    }
   };
 
   return (
@@ -108,8 +121,8 @@ const Sidebar: Component<SidebarProps> = (props) => {
               {(canvas) => (
                 <SidebarItem
                   name={canvas.name}
-                  selected={store.activeCanvasId === canvas.id}
-                  onClick={() => setStore('activeCanvasId', canvas.id)}
+                  selected={activeCanvasId() === canvas.id}
+                  onClick={() => navigate(`/c/${canvas.id}`)}
                   onRename={() => handleOpenRenameDialog(canvas.id, canvas.name)}
                   onDelete={() => handleOpenDeleteDialog(canvas)}
                 />
@@ -127,7 +140,7 @@ const Sidebar: Component<SidebarProps> = (props) => {
           </Button>
         </div>
 
-        {/* Settings Footer */}
+        {/* TODO: Settings footer — uncomment when implemented
         <div class="border-t border-border">
           <Button
             class="w-full text-left px-3 py-2 flex items-center gap-2 hover:bg-stone-200 dark:hover:bg-stone-800 transition-colors"
@@ -137,6 +150,7 @@ const Sidebar: Component<SidebarProps> = (props) => {
             <span class="font-medium text-xs text-foreground">Settings</span>
           </Button>
         </div>
+        */}
       </aside>
 
       {/* Rename Dialog */}

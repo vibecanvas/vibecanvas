@@ -1,23 +1,17 @@
-import { Show, type Component } from "solid-js";
+import type { RouteSectionProps } from "@solidjs/router";
 import { Toaster, showToast } from "./components/ui/Toast";
-// import { CanvasComponent } from "./features/canvas-crdt/Canvas";
-// import { FloatingDrawingToolbar } from "./features/floating-drawing-toolbar/components/FloatingDrawingToolbar";
-// import { SelectionStyleMenu } from "./features/floating-selection-menu";
-// import { Sidebar } from "./features/sidebar";
 import { onMount } from "solid-js";
 import { Sidebar } from "./feature/sidebar";
 import { store } from "./store";
 
-
-const App: Component = () => {
-
+const App = (props: RouteSectionProps) => {
   onMount(() => {
     document.addEventListener("wheel", (e) => {
       if (e.ctrlKey) {
         e.preventDefault();
       }
-    }, { passive: false })
-  })
+    }, { passive: false });
+  });
 
   return (
     <div class="flex h-screen bg-background">
@@ -25,14 +19,9 @@ const App: Component = () => {
         visible={store.sidebarVisible}
         onSettingsClick={() => showToast("Settings", "Coming soon...")}
       />
-      {/* Main content area */}
+      {/* Main content area - routed pages render here */}
       <main id="main" class="flex-1 relative overflow-hidden">
-        {/* <FloatingDrawingToolbar />
-        <SelectionStyleMenu /> */}
-        {/*<InfoCard />*/}
-        {/* <Show when={selectedCanvas()} keyed>
-          {(data) => <CanvasComponent canvasData={data.canvasData} viewData={data.viewData} />}
-        </Show> */}
+        {props.children}
         <div
           id="canvas-overlay-entrypoint"
           class="absolute inset-0 pointer-events-none overflow-hidden"

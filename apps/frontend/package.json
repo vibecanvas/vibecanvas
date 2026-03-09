@@ -23,22 +23,23 @@
   "dependencies": {
     "@automerge/automerge": "catalog:",
     "@automerge/automerge-repo": "catalog:",
+    "@automerge/automerge-repo-network-broadcastchannel": "^2.5.1",
     "@automerge/automerge-repo-network-websocket": "catalog:",
+    "@automerge/automerge-repo-storage-indexeddb": "^2.5.1",
+    "@infinite-canvas-tutorial/ecs": "^0.0.5",
+    "@kobalte/core": "^0.13.11",
+    "@orpc/client": "catalog:",
+    "@orpc/contract": "catalog:",
+    "@solid-primitives/scheduled": "^1.5.3",
+    "@solid-primitives/storage": "^4.3.4",
+    "@solidjs/router": "^0.15.4",
     "@vibecanvas/core": "workspace:*",
     "@vibecanvas/core-contract": "workspace:*",
     "@vibecanvas/server": "workspace:*",
     "@vibecanvas/shell": "workspace:*",
-    "zod": "catalog:",
-    "@orpc/client": "catalog:",
-    "@orpc/contract": "catalog:",
-    "@automerge/automerge-repo-network-broadcastchannel": "^2.5.1",
-    "@automerge/automerge-repo-storage-indexeddb": "^2.5.1",
-    "@infinite-canvas-tutorial/ecs": "^0.0.5",
-    "@kobalte/core": "^0.13.11",
-    "@solid-primitives/scheduled": "^1.5.3",
-    "@solid-primitives/storage": "^4.3.4",
     "lucide-solid": "^0.577.0",
     "partysocket": "^1.1.16",
-    "solid-js": "^1.9.11"
+    "solid-js": "^1.9.11",
+    "zod": "catalog:"
   }
 }
