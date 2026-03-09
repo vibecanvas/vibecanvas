@@ -9,6 +9,7 @@ import type { Tool } from "./features/floating-drawing-toolbar/types/toolbar.typ
 import { orpcWebsocketService } from "./services/orpc-websocket";
 import type { TBackendCanvas, TBackendChat } from "./types/backend.types";
 import { createDocument } from "./services/automerge";
+import { init } from "ghostty-web";
 
 type TGlobalSlice = {
   theme: "light" | "dark"

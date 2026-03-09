@@ -104,7 +104,8 @@ function removePersistedDoc(id: string): void {
  * Load all persisted documents from storage.
  * Returns handles for all previously created documents.
  */
-export async function loadPersistedDocuments(): Promise<Array<{ handle: DocHandle<TCanvasDoc>; url: AutomergeUrl; doc: TCanvasDoc }>> { const currentRepo = getOrCreateRepo()
+export async function loadPersistedDocuments(): Promise<Array<{ handle: DocHandle<TCanvasDoc>; url: AutomergeUrl; doc: TCanvasDoc }>> {
+  const currentRepo = getOrCreateRepo()
   const persistedDocs = getPersistedDocUrls()
   const results: Array<{ handle: DocHandle<TCanvasDoc>; url: AutomergeUrl; doc: TCanvasDoc }> = []
 

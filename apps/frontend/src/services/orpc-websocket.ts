@@ -32,7 +32,7 @@ class OrpcWebsocketService {
   }
 
   private setupNotifications() {
-    orpcWebsocketService.safeClient.api.notification.events({})
+    this.safeClient.api.notification.events({})
       .then(async ([err, it]) => {
         if (err) return;
         for await (const event of it) {

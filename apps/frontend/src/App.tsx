@@ -4,9 +4,9 @@ import { Toaster, showToast } from "./components/ui/Toast";
 // import { FloatingDrawingToolbar } from "./features/floating-drawing-toolbar/components/FloatingDrawingToolbar";
 // import { SelectionStyleMenu } from "./features/floating-selection-menu";
 // import { Sidebar } from "./features/sidebar";
-import { activeCanvasId, setActiveCanvasId, store } from "./store";
 import { onMount } from "solid-js";
 import { Sidebar } from "./feature/sidebar";
+import { store } from "./store";
 
 
 const App: Component = () => {

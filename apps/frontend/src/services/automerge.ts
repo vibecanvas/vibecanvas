@@ -4,13 +4,12 @@
  * Provides CRDT sync capabilities for the SPA via WebSocket connection to the server.
  * Uses IndexedDB for local persistence.
  */
-import { Repo, type DocHandle, type AutomergeUrl, type PeerId } from "@automerge/automerge-repo"
+import { showErrorToast } from "@/components/ui/Toast"
+import { orpcWebsocketService } from "@/services/orpc-websocket"
+import { Repo, type AutomergeUrl, type DocHandle, type PeerId } from "@automerge/automerge-repo"
 import { BrowserWebSocketClientAdapter } from "@automerge/automerge-repo-network-websocket"
 import { IndexedDBStorageAdapter } from "@automerge/automerge-repo-storage-indexeddb"
 import type { TCanvasDoc } from "@vibecanvas/shell/automerge/index"
-import { showErrorToast } from "@/components/ui/Toast"
-import { setActiveCanvasId, setStore } from "@/store"
-import { orpcWebsocketService } from "@/services/orpc-websocket"
 
 // LocalStorage key for persisting document URLs
 const DOCS_STORAGE_KEY = "vibecanvas-automerge-docs"
@@ -104,7 +103,8 @@ function removePersistedDoc(id: string): void {
  * Load all persisted documents from storage.
  * Returns handles for all previously created documents.
  */
-export async function loadPersistedDocuments(): Promise<Array<{ handle: DocHandle<TCanvasDoc>; url: AutomergeUrl; doc: TCanvasDoc }>> { const currentRepo = getOrCreateRepo()
+export async function loadPersistedDocuments(): Promise<Array<{ handle: DocHandle<TCanvasDoc>; url: AutomergeUrl; doc: TCanvasDoc }>> {
+  const currentRepo = getOrCreateRepo()
   const persistedDocs = getPersistedDocUrls()
   const results: Array<{ handle: DocHandle<TCanvasDoc>; url: AutomergeUrl; doc: TCanvasDoc }> = []
 
@@ -157,8 +157,6 @@ export async function createDocument(initialData: { name: string }): Promise<Doc
     showErrorToast(message)
     throw error
   }
-  setStore('canvasSlice', 'backendCanvas', data.id, data)
-  setActiveCanvasId(data.id)
 
   handle.change((d) => {
     d.id = data.id

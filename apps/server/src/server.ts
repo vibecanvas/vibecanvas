@@ -13,7 +13,7 @@ import { baseOs } from './orpc.base';
 import './preload/patch-negative-timeout';
 import { getServerVersion } from './runtime';
 import checkForUpgrade from './update';
-import { wsAdapter } from './automerge-repo';
+import { wsAdapter, repo } from './automerge-repo';
 import { buildPtyConnectUrl } from './apis/api.opencode';
 
 
@@ -220,86 +220,86 @@ export async function startServer(options: StartServerOptions): Promise<void> {
     bunServer = Bun.serve<WebSocketData>({
       port,
       async fetch(req, server) {
-      const url = new URL(req.url)
+        const url = new URL(req.url)
 
-       const isWebSocketEndpoint =
+        const isWebSocketEndpoint =
           url.pathname === '/api' ||
           url.pathname === '/automerge' ||
           isPtyConnectPath(url.pathname)
-      if (isWebSocketEndpoint) {
-        if (server.upgrade(req, {
-          data: {
-            path: url.pathname,
-            query: url.search,
-            requestId: crypto.randomUUID(),
-          },
-        })) {
-          return
+        if (isWebSocketEndpoint) {
+          if (server.upgrade(req, {
+            data: {
+              path: url.pathname,
+              query: url.search,
+              requestId: crypto.randomUUID(),
+            },
+          })) {
+            return
+          }
+
+          return new Response('Upgrade failed', { status: 500 })
         }
 
-        return new Response('Upgrade failed', { status: 500 })
-      }
+        if (req.method === 'GET' && url.pathname.startsWith('/files/')) {
+          const fileMeta = fileMetaFromPathname(url.pathname)
+          if (!fileMeta) {
+            return new Response('Not Found', { status: 404 })
+          }
 
-      if (req.method === 'GET' && url.pathname.startsWith('/files/')) {
-        const fileMeta = fileMetaFromPathname(url.pathname)
-        if (!fileMeta) {
-          return new Response('Not Found', { status: 404 })
-        }
+          const record = db.query.files.findFirst({
+            where: (table, { eq, and }) => and(
+              eq(table.hash, fileMeta.hash),
+              eq(table.format, fileMeta.format),
+            )
+          }).sync()
+          if (!record) {
+            return new Response('Not Found', { status: 404 })
+          }
 
-        const record = db.query.files.findFirst({
-          where: (table, { eq, and }) => and(
-            eq(table.hash, fileMeta.hash),
-            eq(table.format, fileMeta.format),
-          )
-        }).sync()
-        if (!record) {
-          return new Response('Not Found', { status: 404 })
-        }
+          const etag = `"${record.hash}"`
+          const ifNoneMatch = req.headers.get('if-none-match')
+          if (ifNoneMatch === etag) {
+            return new Response(null, {
+              status: 304,
+              headers: {
+                'ETag': etag,
+                'Cache-Control': 'public, max-age=31536000, immutable',
+              }
+            })
+          }
 
-        const etag = `"${record.hash}"`
-        const ifNoneMatch = req.headers.get('if-none-match')
-        if (ifNoneMatch === etag) {
-          return new Response(null, {
-            status: 304,
+          const bytes = Buffer.from(record.base64, 'base64')
+          return new Response(bytes, {
             headers: {
-              'ETag': etag,
+              'Content-Type': record.format,
               'Cache-Control': 'public, max-age=31536000, immutable',
+              'ETag': etag,
             }
           })
         }
 
-        const bytes = Buffer.from(record.base64, 'base64')
-        return new Response(bytes, {
-          headers: {
-            'Content-Type': record.format,
-            'Cache-Control': 'public, max-age=31536000, immutable',
-            'ETag': etag,
-          }
-        })
-      }
+        const embeddedAsset = getEmbeddedAsset(url.pathname)
+        if (embeddedAsset) {
+          return new Response(Bun.file(embeddedAsset))
+        }
 
-      const embeddedAsset = getEmbeddedAsset(url.pathname)
-      if (embeddedAsset) {
-        return new Response(Bun.file(embeddedAsset))
-      }
+        const publicAsset = getPublicAssetPath(url.pathname)
+        if (publicAsset) {
+          return new Response(Bun.file(publicAsset))
+        }
 
-      const publicAsset = getPublicAssetPath(url.pathname)
-      if (publicAsset) {
-        return new Response(Bun.file(publicAsset))
-      }
+        const spaFallbackAsset = getSpaFallbackAsset()
+        if (spaFallbackAsset) {
+          return new Response(Bun.file(spaFallbackAsset))
+        }
 
-      const spaFallbackAsset = getSpaFallbackAsset()
-      if (spaFallbackAsset) {
-        return new Response(Bun.file(spaFallbackAsset))
-      }
+        const publicSpaFallback = getPublicAssetPath('/')
+        if (publicSpaFallback) {
+          return new Response(Bun.file(publicSpaFallback))
+        }
 
-      const publicSpaFallback = getPublicAssetPath('/')
-      if (publicSpaFallback) {
-        return new Response(Bun.file(publicSpaFallback))
-      }
-
-      return new Response('Not Found', { status: 404 })
-    },
+        return new Response('Not Found', { status: 404 })
+      },
       websocket: {
         data: {} as WebSocketData,
         open(ws) {
@@ -390,6 +390,7 @@ export async function startServer(options: StartServerOptions): Promise<void> {
                 db,
                 opencodeService,
                 requestId: ws.data.requestId,
+                repo
               },
             }).catch((error) => {
               console.error(error)

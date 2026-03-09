@@ -3,22 +3,26 @@ import { Button } from "@kobalte/core/button";
 import Plus from "lucide-solid/icons/plus";
 import Settings from "lucide-solid/icons/settings";
 import type { Component } from "solid-js";
-import { For, createSignal } from "solid-js";
-import { activeCanvasId, setActiveCanvasId, store } from "../../../store";
+import { ErrorBoundary, For, Show, createResource, createSignal } from "solid-js";
+import { store, setStore } from "../../../store";
 import type { TBackendCanvas } from "../../../types/backend.types";
-import { deleteCanvas, updateCanvas } from "../../canvas-crdt/store/canvas.actions";
 import { CreateCanvasDialog } from "./CreateCanvasDialog";
 import { DeleteCanvasDialog } from "./DeleteCanvasDialog";
 import { RenameDialog } from "./RenameDialog";
 import SidebarItem from "./SidebarItem";
+import { orpcWebsocketService } from "../../../services/orpc-websocket";
+import { showErrorToast } from "@/components/ui/Toast";
 
 export type SidebarProps = {
   visible?: boolean;
   onSettingsClick?: () => void;
 };
-
 const Sidebar: Component<SidebarProps> = (props) => {
-  const canvases = () => Object.values(store.canvasSlice.backendCanvas);
+  const [data] = createResource(async () => {
+    const [error, result] = await orpcWebsocketService.safeClient.api.canvas.list();
+    if (error) throw error;
+    return result;
+  });
 
   // Rename dialog state
   const [renameDialogOpen, setRenameDialogOpen] = createSignal(false);
@@ -47,14 +51,16 @@ const Sidebar: Component<SidebarProps> = (props) => {
   const handleRename = async (newName: string) => {
     const canvas = canvasToRename();
     if (canvas) {
-      await updateCanvas(canvas.id, { name: newName });
+      // TODO:
+      // await updateCanvas(canvas.id, { name: newName });
     }
   };
 
   const handleDelete = async () => {
     const canvas = canvasToDelete();
     if (canvas) {
-      await deleteCanvas(canvas.id);
+      // TODO:
+      // await deleteCanvas(canvas.id);
     }
   };
 
@@ -77,17 +83,23 @@ const Sidebar: Component<SidebarProps> = (props) => {
 
         {/* Canvas List */}
         <div class="flex-1 overflow-y-auto">
-          <For each={canvases().filter(canvas => !!canvas)}>
-            {(canvas) => (
-              <SidebarItem
-                name={canvas.name}
-                selected={activeCanvasId() === canvas.id}
-                onClick={() => setActiveCanvasId(canvas.id)}
-                onRename={() => handleOpenRenameDialog(canvas.id, canvas.name)}
-                onDelete={() => handleOpenDeleteDialog(canvas)}
-              />
-            )}
-          </For>
+          <ErrorBoundary fallback={
+            <div class="px-3 py-4 text-xs text-destructive">
+              Failed to load canvases
+            </div>
+          }>
+            <For each={data()?.filter(canvas => !!canvas)}>
+              {(canvas) => (
+                <SidebarItem
+                  name={canvas.name}
+                  selected={store.activeCanvasId === canvas.id}
+                  onClick={() => setStore('activeCanvasId', canvas.id)}
+                  onRename={() => handleOpenRenameDialog(canvas.id, canvas.name)}
+                  onDelete={() => handleOpenDeleteDialog(canvas)}
+                />
+              )}
+            </For>
+          </ErrorBoundary>
 
           {/* New Canvas Button */}
           <Button
