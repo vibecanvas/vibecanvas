@@ -19,10 +19,10 @@ import FolderTree from "lucide-solid/icons/folder-tree";
 import SquareTerminal from "lucide-solid/icons/square-terminal";
 import PanelLeft from "lucide-solid/icons/panel-left";
 import { Tooltip } from "@kobalte/core/tooltip";
-import { For, Show, createMemo, createSignal } from "solid-js";
+import { For, Show, onCleanup, onMount } from "solid-js";
 import type { JSX } from "solid-js";
 import { ToolButton } from "./ToolButton";
-import type { Tool } from "./toolbar.types";
+import { TOOL_SHORTCUTS, type Tool } from "./toolbar.types";
 import { store, setStore } from "@/store";
 import { canvasStore, setCanvasStore } from "../../canvas.store";
 
@@ -62,10 +62,15 @@ const TOOL_CONFIG: { tool: Tool; shortcut?: string; letterShortcut?: string }[] 
 const isMac = typeof navigator !== "undefined" && /Mac|iPod|iPhone|iPad/.test(navigator.platform);
 
 export function FloatingCanvasToolbar() {
+  const setActiveTool = (tool: Tool) => {
+    setCanvasStore("activeTool", tool);
+  };
 
   // Handle tool click - special handling for image tool
   const handleToolClick = (tool: Tool) => {
     if (tool === "image") {
+      setActiveTool(tool);
+
       // Open file picker for image
       const input = document.createElement("input");
       input.type = "file";
@@ -79,9 +84,39 @@ export function FloatingCanvasToolbar() {
       };
       input.click();
     } else {
-      setCanvasStore('activeTool', tool);
+      setActiveTool(tool);
     }
   };
+
+  onMount(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.repeat || event.metaKey || event.ctrlKey || event.altKey) {
+        return;
+      }
+
+      const target = event.target;
+      if (target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement || target instanceof HTMLSelectElement) {
+        return;
+      }
+
+      if (target instanceof HTMLElement && target.isContentEditable) {
+        return;
+      }
+
+      const tool = TOOL_SHORTCUTS[event.key];
+      if (!tool) {
+        return;
+      }
+
+      event.preventDefault();
+      setActiveTool(tool);
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    onCleanup(() => {
+      window.removeEventListener("keydown", handleKeyDown);
+    });
+  });
 
   return (
     <div class="fixed top-3 right-3 pointer-events-none z-50 flex flex-row-reverse items-start gap-1.5">

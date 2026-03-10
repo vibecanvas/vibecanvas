@@ -15,7 +15,6 @@ const tools = [
   "terminal",
 ];
 
-
-export class Tool {
+@component export class Tool {
   @field.staticString(tools) declare activeTool: typeof tools[number];
 }
