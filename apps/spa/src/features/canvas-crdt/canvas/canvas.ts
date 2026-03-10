@@ -15,7 +15,7 @@ import { UndoManager } from "../managers/undo-manger"
 import type { AElement } from "../renderables/element.abstract"
 import { SelectionAreaRenderable } from "../renderables/selection-area/selection-area.class"
 import { MultiTransformBox } from "../renderables/transform-box/multi-transform-box"
-import type{ VirtualGroup } from "../renderables/virtual-group.class"
+import type { VirtualGroup } from "../renderables/virtual-group.class"
 import type { TCanvasViewData } from "../store/canvas.slice"
 import { createDebugRect, createDebugShapes, destroyDebugGraphics, type TDebugShape } from "./canvas.debug"
 import { setupDocSync } from "./setup.doc-sync"
@@ -407,16 +407,16 @@ export class Canvas {
         // Only apply lineType to line and arrow types
         if (isLineOrArrow) {
           if ('lineType' in dataUpdates) {
-            ;(element.data as any).lineType = dataUpdates.lineType
+            ; (element.data as any).lineType = dataUpdates.lineType
           }
         }
         // Only apply startCap/endCap to arrow type
         if (isArrow) {
           if ('startCap' in dataUpdates) {
-            ;(element.data as any).startCap = dataUpdates.startCap
+            ; (element.data as any).startCap = dataUpdates.startCap
           }
           if ('endCap' in dataUpdates) {
-            ;(element.data as any).endCap = dataUpdates.endCap
+            ; (element.data as any).endCap = dataUpdates.endCap
           }
         }
         element.updatedAt = Date.now()
@@ -448,15 +448,15 @@ export class Canvas {
 
             if (isLineOrArrow) {
               if ('lineType' in newData) {
-                ;(element.data as any).lineType = newData.lineType
+                ; (element.data as any).lineType = newData.lineType
               }
             }
             if (isArrow) {
               if ('startCap' in newData) {
-                ;(element.data as any).startCap = newData.startCap
+                ; (element.data as any).startCap = newData.startCap
               }
               if ('endCap' in newData) {
-                ;(element.data as any).endCap = newData.endCap
+                ; (element.data as any).endCap = newData.endCap
               }
             }
             element.updatedAt = Date.now()
@@ -527,7 +527,7 @@ export class Canvas {
         if (!element || element.data.type !== 'text') continue
 
         if ('fontFamily' in dataUpdates) {
-          ;(element.data as any).fontFamily = dataUpdates.fontFamily
+          ; (element.data as any).fontFamily = dataUpdates.fontFamily
         }
         element.updatedAt = Date.now()
       }
@@ -543,7 +543,7 @@ export class Canvas {
             if (!element || element.data.type !== 'text') continue
 
             if ('fontFamily' in oldData) {
-              ;(element.data as any).fontFamily = oldData.fontFamily
+              ; (element.data as any).fontFamily = oldData.fontFamily
             }
             element.updatedAt = Date.now()
           }
@@ -556,7 +556,7 @@ export class Canvas {
             if (!element || element.data.type !== 'text') continue
 
             if ('fontFamily' in newData) {
-              ;(element.data as any).fontFamily = newData.fontFamily
+              ; (element.data as any).fontFamily = newData.fontFamily
             }
             element.updatedAt = Date.now()
           }

@@ -10,6 +10,7 @@
     "isolatedModules": true,
     "module": "ESNext",
     "moduleResolution": "bundler",
+    "experimentalDecorators": true,
     "noEmit": true,
     // Type Checking & Safety
     "baseUrl": ".",
