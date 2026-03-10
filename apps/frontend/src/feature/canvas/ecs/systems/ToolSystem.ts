@@ -2,9 +2,11 @@ import { system, System } from "@lastolivegames/becsy";
 import { Tool } from "../components/Tool";
 
 
-@system export class SystemA extends System {
-  private global = this.singleton.write(Tool);
+export class ToolSystem extends System {
+  private tool = this.singleton.write(Tool);
+  initialize(): void {
+    console.log(`initialize`)
+  }
   execute(): void {
-    // this.global.state = 1;
   }
 }

@@ -1,5 +1,7 @@
 import { World } from "@lastolivegames/becsy"
 import { RenderEngine } from "./engine/engine";
+import { ToolSystem } from "./ecs/systems/ToolSystem";
+import { Tool } from "./ecs/components/Tool";
 
 export class CanvasService {
   #instancePromise!: Promise<this>;
@@ -9,8 +11,11 @@ export class CanvasService {
 
   constructor(canvasRef: HTMLCanvasElement) {
     this.#instancePromise = (async () => {
-      this.#world = await World.create();
+      this.#world = await World.create({
+        defs: [Tool, ToolSystem]
+      });
       this.#engine = new RenderEngine(canvasRef);
+      this.run()
       return this;
     })();
   }
