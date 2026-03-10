@@ -1,18 +1,20 @@
-import { onCleanup, onMount } from "solid-js";
+import { createSignal, onCleanup, onMount } from "solid-js";
 import { CanvasService } from "../canvas.service";
 import { FloatingCanvasToolbar } from "./floating-canvas-toolbar/FloatingCanvasToolbar";
-import { showErrorToast } from "@/components/ui/Toast";
+import { bindCanvasStoreToToolTarget } from "../canvas.store";
 
 export function Canvas() {
   let canvasRef!: HTMLCanvasElement;
-  let canvasService: CanvasService | null = null;
+  const [canvasService, setCanvasService] = createSignal<CanvasService | null>(null);
+
+  bindCanvasStoreToToolTarget(canvasService);
 
   onMount(async () => {
-    canvasService = new CanvasService(canvasRef);
+    setCanvasService(new CanvasService(canvasRef));
   });
 
   onCleanup(() => {
-    canvasService?.destroy();
+    canvasService()?.destroy();
   });
 
   return (
