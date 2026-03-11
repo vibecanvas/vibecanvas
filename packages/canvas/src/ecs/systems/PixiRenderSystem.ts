@@ -1,12 +1,13 @@
 import { System } from "@lastolivegames/becsy";
-import { Application, Container, Graphics, Rectangle, RenderLayer } from "pixi.js";
+import { Application, Assets, Container, Graphics, Rectangle, RenderLayer, Sprite } from "pixi.js";
 
 export class PixiRenderSystem extends System {
     private hostRef!: HTMLDivElement;
     public app!: Application;
-    public contentLayer!: Container;
+    public contentLayer!: RenderLayer;
     public gridRenderLayer!: RenderLayer;
     private gridGraphics!: Graphics;
+    private exampleContainer: Container;
 
     private static readonly GRID_CELL_SIZE = 20;
     private static readonly GRID_COLOR = 0xd1d5db;
@@ -23,6 +24,7 @@ export class PixiRenderSystem extends System {
         });
 
         this.contentLayer = new RenderLayer();
+        this.contentLayer.label = 'content layer'
         this.contentLayer.interactiveChildren = true
         // Set hitArea so stage receives events on empty space (not just on children)
         this.contentLayer.hitArea = new Rectangle(-1e7, -1e7, 2e7, 2e7)
@@ -30,6 +32,7 @@ export class PixiRenderSystem extends System {
 
 
         this.gridRenderLayer = new RenderLayer();
+        this.gridRenderLayer.label = 'grid layer'
         this.gridGraphics = new Graphics({ label: "grid" });
 
         this.app.stage.addChild(this.gridRenderLayer, this.contentLayer);
@@ -37,15 +40,19 @@ export class PixiRenderSystem extends System {
 
         this.hostRef.replaceChildren(this.app.canvas);
 
+        await this.example()
+
     }
 
     initialize(): void {
         this.drawGrid();
         this.app.render();
-
     }
 
     execute(): void {
+        this.app.render();
+
+        this.exampleContainer.rotation -= 0.01
     }
 
 
@@ -74,6 +81,33 @@ export class PixiRenderSystem extends System {
             pixelLine: true,
             alpha: 0.8,
         });
+    }
+
+    private async example() {
+        // Load the bunny texture
+        const texture = await Assets.load('https://pixijs.com/assets/bunny.png');
+        const container = new Container();
+
+        // Create a 5x5 grid of bunnies in the container
+        for (let i = 0; i < 25; i++) {
+            const bunny = new Sprite(texture);
+
+            bunny.x = (i % 5) * 40;
+            bunny.y = Math.floor(i / 5) * 40;
+            container.addChild(bunny);
+        }
+
+        // Move the container to the center
+        container.x = 100;
+        container.y = 100;
+
+        // Center the bunny sprites in local container coordinates
+        container.pivot.x = container.width / 2;
+        container.pivot.y = container.height / 2;
+
+        this.contentLayer.attach(container)
+        this.app.stage.addChild(container)
+        this.exampleContainer = container
     }
 
     finalize(): void {

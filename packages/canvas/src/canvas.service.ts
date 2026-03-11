@@ -1,5 +1,4 @@
 import { World } from "@lastolivegames/becsy"
-import { PointerContact } from "./ecs/components/PointerContact";
 import { ToolSystem } from "./ecs/systems/ToolSystem";
 import { Tool } from "./ecs/components/Tool";
 import type { Tool as CanvasTool } from "./components/floating-canvas-toolbar/toolbar.types";
@@ -26,7 +25,6 @@ export class CanvasService {
       this.#world = await World.create({
         defs: [
           Tool,
-          PointerContact,
           ToolSystem, { bridge: this },
           PixiRenderSystem, { hostRef },
           PixiEventSystem
