@@ -1,4 +1,4 @@
-import { component, field } from "@lastolivegames/becsy";
+import { field } from "@lastolivegames/becsy";
 const tools = [
   "hand",
   "select",
@@ -15,6 +15,6 @@ const tools = [
   "terminal",
 ];
 
-@component export class Tool {
+export class Tool {
   @field.staticString(tools) declare activeTool: typeof tools[number];
 }
