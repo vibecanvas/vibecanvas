@@ -1,12 +1,7 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 
-@font-face {
-  font-family: 'Gabriele';
-  src: url('/gabriele-d.ttf') format('truetype');
-  font-weight: normal;
-  font-style: normal;
-}
+@source "../../../packages/canvas/src";
 
 @custom-variant dark (&:is(.dark *));
 
