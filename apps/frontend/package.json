@@ -37,6 +37,7 @@
     "@vibecanvas/core-contract": "workspace:*",
     "@vibecanvas/server": "workspace:*",
     "@vibecanvas/shell": "workspace:*",
+    "@vibecanvas/canvas": "workspace:*",
     "fabric": "^7.2.0",
     "lucide-solid": "^0.577.0",
     "partysocket": "^1.1.16",

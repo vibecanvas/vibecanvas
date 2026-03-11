@@ -4,9 +4,7 @@ import type { AutomergeUrl } from "@automerge/automerge-repo";
 import { findDocument } from "@/services/automerge";
 import { initBridge, type BridgeHandle } from "@/bridge/sync";
 import { showErrorToast } from "@/components/ui/Toast";
-import { CanvasService } from "@/feature/canvas/canvas.service";
-import { FloatingCanvasToolbar } from "@/feature/canvas/components/floating-canvas-toolbar/FloatingCanvasToolbar";
-import { Canvas } from "@/feature/canvas/components/Canvas";
+import { Canvas } from "@vibecanvas/canvas";
 
 type CanvasPageProps = {
   canvas: TBackendCanvas;
