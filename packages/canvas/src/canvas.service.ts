@@ -5,6 +5,12 @@ import { Tool } from "./ecs/components/Tool";
 import type { Tool as CanvasTool } from "./components/floating-canvas-toolbar/toolbar.types";
 import { FabricRenderSystem } from "./ecs/systems/FabricRenderSystem";
 import { PixiRenderSystem } from "./ecs/systems/PixiRenderSystem";
+import { KonvaRenderSystem } from "./ecs/systems/KonvaRenderSystem";
+import { DEFAULT_CANVAS_RENDERER, type CanvasRenderer } from "./renderer.types";
+
+type TCanvasServiceOptions = {
+  renderer?: CanvasRenderer;
+};
 
 export class CanvasService {
   #instancePromise!: Promise<this>;
@@ -14,7 +20,9 @@ export class CanvasService {
   #pendingActiveTool: CanvasTool | null = null;
 
 
-  constructor(canvasRef: HTMLCanvasElement) {
+  constructor(hostRef: HTMLDivElement, options: TCanvasServiceOptions = {}) {
+    const renderer = options.renderer ?? DEFAULT_CANVAS_RENDERER;
+    const renderSystem = this.getRenderSystem(renderer);
 
     this.#instancePromise = (async () => {
       this.#world = await World.create({
@@ -22,7 +30,7 @@ export class CanvasService {
           Tool,
           PointerContact,
           ToolSystem, { bridge: this },
-          FabricRenderSystem, { canvasRef }
+          renderSystem, { hostRef }
         ]
       });
       this.run()
@@ -54,6 +62,18 @@ export class CanvasService {
     cancelAnimationFrame(this.#animationFrame);
     this.#world.terminate();
     // this.#engine?.destroy();
+  }
+
+  private getRenderSystem(renderer: CanvasRenderer) {
+    switch (renderer) {
+      case "fabric":
+        return FabricRenderSystem;
+      case "pixi":
+        return PixiRenderSystem;
+      case "konva":
+      default:
+        return KonvaRenderSystem;
+    }
   }
 
 

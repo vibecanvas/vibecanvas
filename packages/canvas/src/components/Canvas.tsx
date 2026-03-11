@@ -2,15 +2,30 @@ import { createSignal, onCleanup, onMount } from "solid-js";
 import { CanvasService } from "../canvas.service";
 import { FloatingCanvasToolbar } from "./floating-canvas-toolbar/FloatingCanvasToolbar";
 import { bindCanvasStoreToToolTarget } from "../canvas.store";
+import { DEFAULT_CANVAS_RENDERER, isCanvasRenderer, type CanvasRenderer } from "../renderer.types";
 
-export function Canvas() {
-  let canvasRef!: HTMLCanvasElement;
+type CanvasProps = {
+  renderer?: CanvasRenderer;
+};
+
+function resolveRenderer(renderer: CanvasRenderer | undefined): CanvasRenderer {
+  if (renderer) {
+    return renderer;
+  }
+
+  const rendererParam = new URLSearchParams(window.location.search).get("renderer");
+
+  return isCanvasRenderer(rendererParam) ? rendererParam : DEFAULT_CANVAS_RENDERER;
+}
+
+export function Canvas(props: CanvasProps) {
+  let hostRef!: HTMLDivElement;
   const [canvasService, setCanvasService] = createSignal<CanvasService | null>(null);
 
   bindCanvasStoreToToolTarget(canvasService);
 
   onMount(async () => {
-    setCanvasService(new CanvasService(canvasRef));
+    setCanvasService(new CanvasService(hostRef, { renderer: resolveRenderer(props.renderer) }));
   });
 
   onCleanup(() => {
@@ -20,7 +35,7 @@ export function Canvas() {
   return (
     <>
       <FloatingCanvasToolbar />
-      <canvas class="block size-full" ref={canvasRef} />
+      <div class="block size-full" ref={hostRef} />
     </>
   )
 }
