@@ -22,15 +22,16 @@ export class PixiRenderSystem extends System {
             background: 'white'
         });
 
-        this.contentLayer = new Container({ label: "content-layer" });
+        this.contentLayer = new RenderLayer();
+        this.contentLayer.interactiveChildren = true
+        // Set hitArea so stage receives events on empty space (not just on children)
+        this.contentLayer.hitArea = new Rectangle(-1e7, -1e7, 2e7, 2e7)
+        this.contentLayer.eventMode = "static";
+
+
         this.gridRenderLayer = new RenderLayer();
         this.gridGraphics = new Graphics({ label: "grid" });
-        this.gridGraphics.eventMode = "static";
-        this.gridGraphics.on("pointermove", (event) => {
-            console.log("grid pointerdown", event.global.x, event.global.y);
-        });
 
-        this.contentLayer.addChild(this.gridGraphics);
         this.app.stage.addChild(this.gridRenderLayer, this.contentLayer);
         this.gridRenderLayer.attach(this.gridGraphics);
 

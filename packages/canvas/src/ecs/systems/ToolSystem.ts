@@ -8,7 +8,7 @@ type TToolBridge = {
 };
 
 
-@system export class ToolSystem extends System {
+export class ToolSystem extends System {
   bridge!: TToolBridge;
   private tool = this.singleton.write(Tool);
 
