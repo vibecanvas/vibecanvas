@@ -23,7 +23,6 @@ import { For, Show, onCleanup, onMount } from "solid-js";
 import type { JSX } from "solid-js";
 import { ToolButton } from "./ToolButton";
 import { TOOL_SHORTCUTS, type Tool } from "./toolbar.types";
-import { store, setStore } from "@/store";
 import { canvasStore, setCanvasStore } from "../../canvas.store";
 
 const TOOL_ICONS: Record<Tool, () => JSX.Element> = {
@@ -61,7 +60,12 @@ const TOOL_CONFIG: { tool: Tool; shortcut?: string; letterShortcut?: string }[] 
 // Detect Mac for keyboard shortcut display
 const isMac = typeof navigator !== "undefined" && /Mac|iPod|iPhone|iPad/.test(navigator.platform);
 
-export function FloatingCanvasToolbar() {
+export interface IFloatingCanvasToolbarProps {
+  sidebarVisible: () => boolean,
+  setSidebarVisible: (b: boolean) => void
+}
+
+export function FloatingCanvasToolbar(props: IFloatingCanvasToolbarProps) {
   const setActiveTool = (tool: Tool) => {
     setCanvasStore("activeTool", tool);
   };
@@ -112,10 +116,10 @@ export function FloatingCanvasToolbar() {
       setActiveTool(tool);
     };
 
-    window.addEventListener("keydown", handleKeyDown);
-    onCleanup(() => {
-      window.removeEventListener("keydown", handleKeyDown);
-    });
+    // window.addEventListener("keydown", handleKeyDown);
+    // onCleanup(() => {
+    //   window.removeEventListener("keydown", handleKeyDown);
+    // });
   });
 
   return (
@@ -160,14 +164,14 @@ export function FloatingCanvasToolbar() {
         <button
           type="button"
           onClick={() => {
-            setStore("sidebarVisible", (v) => !v);
+            props.setSidebarVisible(!props.sidebarVisible())
           }}
           class="relative flex h-7 w-full items-center justify-center text-muted-foreground hover:bg-stone-200 dark:hover:bg-stone-800 transition-colors"
-          classList={{ "bg-amber-500/20 text-amber-700 dark:text-amber-400": !store.sidebarVisible }}
+          classList={{ "bg-amber-500/20 text-amber-700 dark:text-amber-400": !props.sidebarVisible() }}
         >
           <PanelLeft size={14} />
           <span
-            class={`absolute bottom-0 left-px text-[7px] font-mono font-medium ${!store.sidebarVisible
+            class={`absolute bottom-0 left-px text-[7px] font-mono font-medium ${!props.sidebarVisible()
               ? "text-amber-600 dark:text-amber-500"
               : "text-stone-400 dark:text-stone-500"
               }`}

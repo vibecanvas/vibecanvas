@@ -7,9 +7,34 @@ export class PixiEventSystem extends System {
 
     private setupListeners() {
         this.renderSystem.contentLayer.on('pointerdown', this.onPointerDown)
+        this.renderSystem.contentLayer.on('pointerup', this.onPointerUp)
+        this.renderSystem.contentLayer.on('pointermove', this.onPointerMove)
+        this.renderSystem.contentLayer.on('pointercancel', this.onPointerCancel)
+        this.renderSystem.contentLayer.on('wheel', this.onWheel)
+        this.renderSystem.app.canvas.onkeydown = this.onKeyDown
     }
 
     private onPointerDown(e: FederatedPointerEvent) {
+        console.log(e)
+    }
+
+    private onPointerMove(e: FederatedPointerEvent) {
+        console.log(e)
+    }
+
+    private onPointerUp(e: FederatedPointerEvent) {
+        console.log(e)
+    }
+
+    private onPointerCancel(e: FederatedPointerEvent) {
+        console.log(e)
+    }
+
+    private onWheel(e: WheelEvent) {
+        console.log(e)
+    }
+
+    private onKeyDown(e: KeyboardEvent) {
         console.log(e)
     }
 

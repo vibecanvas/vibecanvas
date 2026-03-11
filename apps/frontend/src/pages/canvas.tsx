@@ -5,6 +5,7 @@ import { findDocument } from "@/services/automerge";
 import { initBridge, type BridgeHandle } from "@/bridge/sync";
 import { showErrorToast } from "@/components/ui/Toast";
 import { Canvas } from "@vibecanvas/canvas";
+import { setStore, store } from "@/store";
 
 type CanvasPageProps = {
   canvas: TBackendCanvas;
@@ -45,7 +46,7 @@ const CanvasPage: Component<CanvasPageProps> = (props) => {
           </div>
         </Match>
         <Match when={docState() === "ready"}>
-          <Canvas />
+          <Canvas sidebarVisible={() => store.sidebarVisible} setSidebarVisible={b => setStore('sidebarVisible', b)} />
         </Match>
       </Switch>
     </div>
