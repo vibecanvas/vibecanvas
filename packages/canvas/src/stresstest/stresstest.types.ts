@@ -5,3 +5,8 @@ export type TStressSceneMetrics = {
   setupMs: number;
   renderMs: number;
 };
+
+export type TStressSceneHandle = {
+  metrics: TStressSceneMetrics;
+  destroy: () => void;
+};

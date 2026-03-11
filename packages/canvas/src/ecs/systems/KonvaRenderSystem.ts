@@ -1,11 +1,13 @@
 import { System } from "@lastolivegames/becsy";
 import Konva from "konva";
 import { setupKonvaStressScene } from "../../stresstest/setupKonvaStressScene";
+import type { TStressSceneHandle } from "../../stresstest/stresstest.types";
 
 export class KonvaRenderSystem extends System {
     private hostRef!: HTMLDivElement;
     private stage!: Konva.Stage;
     private resizeObserver?: ResizeObserver;
+    private sceneHandle?: TStressSceneHandle;
 
     initialize(): void {
         const { width, height } = this.getHostSize();
@@ -16,7 +18,8 @@ export class KonvaRenderSystem extends System {
             height,
         });
 
-        console.info("[canvas] konva stress metrics", setupKonvaStressScene(this.stage, { width, height }));
+        this.sceneHandle = setupKonvaStressScene(this.stage, { width, height });
+        console.info("[canvas] konva stress metrics", this.sceneHandle.metrics);
 
         this.resizeObserver = new ResizeObserver(() => {
             const nextSize = this.getHostSize();
@@ -27,7 +30,11 @@ export class KonvaRenderSystem extends System {
         this.resizeObserver.observe(this.hostRef);
     }
 
+    execute(): void {
+    }
+
     finalize(): void {
+        this.sceneHandle?.destroy();
         this.resizeObserver?.disconnect();
         this.stage?.destroy();
     }

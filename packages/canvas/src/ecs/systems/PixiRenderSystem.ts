@@ -1,30 +1,35 @@
 import { System } from "@lastolivegames/becsy";
 import { Application } from "pixi.js";
 import { setupPixiStressScene } from "../../stresstest/setupPixiStressScene";
+import type { TStressSceneHandle } from "../../stresstest/stresstest.types";
 
 export class PixiRenderSystem extends System {
     private hostRef!: HTMLDivElement;
     private app!: Application;
+    private sceneHandle?: TStressSceneHandle;
 
     async prepare(): Promise<void> {
         this.app = new Application();
 
         await this.app.init({
             resolution: window.devicePixelRatio,
-            preference: "webgl",
+            preference: "webgpu",
             autoStart: false,
             resizeTo: this.hostRef,
         });
 
         this.hostRef.replaceChildren(this.app.canvas);
 
-        console.info("[canvas] pixi stress metrics", setupPixiStressScene(this.app, this.getHostSize()));
-        this.app.render();
+        this.sceneHandle = setupPixiStressScene(this.app, this.getHostSize());
+        console.info("[canvas] pixi stress metrics", this.sceneHandle.metrics);
+        // this.app.render();
     }
 
-    initialize(): void {}
+    initialize(): void { }
+
 
     finalize(): void {
+        this.sceneHandle?.destroy();
         this.app?.destroy(true, true);
     }
 

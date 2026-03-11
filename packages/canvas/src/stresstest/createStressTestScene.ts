@@ -4,6 +4,7 @@ export type TStressSceneSize = {
 };
 
 export type TStressSceneTile = {
+  index: number;
   x: number;
   y: number;
   width: number;
@@ -12,6 +13,12 @@ export type TStressSceneTile = {
   accentHex: number;
   label: string;
   showLabel: boolean;
+  nodeBaseX: number;
+  nodeBaseY: number;
+  nodeRadius: number;
+  orbitAmplitude: number;
+  orbitSpeed: number;
+  orbitPhase: number;
 };
 
 export type TStressScene = {
@@ -29,13 +36,13 @@ const ACCENTS = [
 ];
 
 export function createStressTestScene(size: TStressSceneSize): TStressScene {
-  const tileWidth = 160;
-  const tileHeight = 96;
-  const gapX = 24;
-  const gapY = 24;
-  const padding = 48;
-  const columns = 12;
-  const rows = 12;
+  const tileWidth = 44;
+  const tileHeight = 28;
+  const gapX = 8;
+  const gapY = 8;
+  const padding = 12;
+  const columns = 100;
+  const rows = 100;
   const tiles: TStressSceneTile[] = [];
 
   for (let row = 0; row < rows; row += 1) {
@@ -44,6 +51,7 @@ export function createStressTestScene(size: TStressSceneSize): TStressScene {
       const accent = ACCENTS[index % ACCENTS.length];
 
       tiles.push({
+        index,
         x: padding + column * (tileWidth + gapX),
         y: padding + row * (tileHeight + gapY),
         width: tileWidth,
@@ -51,7 +59,13 @@ export function createStressTestScene(size: TStressSceneSize): TStressScene {
         accent: accent.css,
         accentHex: accent.hex,
         label: `node-${index}`,
-        showLabel: index % 3 === 0,
+        showLabel: index % 200 === 0,
+        nodeBaseX: padding + column * (tileWidth + gapX) + tileWidth - 12,
+        nodeBaseY: padding + row * (tileHeight + gapY) + tileHeight / 2,
+        nodeRadius: 4,
+        orbitAmplitude: 4 + (index % 4),
+        orbitSpeed: 0.8 + (index % 5) * 0.18,
+        orbitPhase: (index % 360) * (Math.PI / 180),
       });
     }
   }

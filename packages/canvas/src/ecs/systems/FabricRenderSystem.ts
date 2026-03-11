@@ -1,11 +1,13 @@
 import { System } from "@lastolivegames/becsy";
 import { Canvas } from "fabric";
 import { setupFabricStressScene } from "../../stresstest/setupFabricStressScene";
+import type { TStressSceneHandle } from "../../stresstest/stresstest.types";
 
 export class FabricRenderSystem extends System {
     private hostRef!: HTMLDivElement;
     private canvas!: Canvas;
     private resizeObserver?: ResizeObserver;
+    private sceneHandle?: TStressSceneHandle;
 
     initialize(): void {
         const canvasElement = document.createElement("canvas");
@@ -22,7 +24,8 @@ export class FabricRenderSystem extends System {
             selection: false,
         });
 
-        console.info("[canvas] fabric stress metrics", setupFabricStressScene(this.canvas, size));
+        this.sceneHandle = setupFabricStressScene(this.canvas, size);
+        console.info("[canvas] fabric stress metrics", this.sceneHandle.metrics);
 
         this.resizeObserver = new ResizeObserver(() => {
             const nextSize = this.getHostSize();
@@ -34,6 +37,7 @@ export class FabricRenderSystem extends System {
     }
 
     finalize(): void {
+        this.sceneHandle?.destroy();
         this.resizeObserver?.disconnect();
         this.canvas?.dispose();
     }
