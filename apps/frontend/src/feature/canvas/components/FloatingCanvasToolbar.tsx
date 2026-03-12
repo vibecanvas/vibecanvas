@@ -1,7 +1,7 @@
 /**
  * FloatingDrawingToolbar Component
  * Excalidraw-style floating toolbar at top center of canvas
- * Tool selection persisted in SolidJS store
+ * Presentational floating toolbar for a single canvas
  */
 
 import Hand from "lucide-solid/icons/hand";
@@ -24,7 +24,15 @@ import { For, Show, createMemo, createSignal } from "solid-js";
 import type { JSX } from "solid-js";
 import { ToolButton } from "./ToolButton";
 import { TOOLS, type TTool } from "./toolbar.types";
-import { store, setStore } from "@/store";
+
+interface IFloatingCanvasToolbarProps {
+  activeTool: () => TTool;
+  gridVisible: () => boolean;
+  sidebarVisible: () => boolean;
+  onToolSelect: (tool: TTool) => void;
+  onToggleGrid: () => void;
+  onToggleSidebar: () => void;
+}
 
 const TOOL_ICONS: Record<TTool, () => JSX.Element> = {
   hand: () => <Hand size={14} />,
@@ -45,36 +53,18 @@ const TOOL_ICONS: Record<TTool, () => JSX.Element> = {
 // Detect Mac for keyboard shortcut display
 const isMac = typeof navigator !== "undefined" && /Mac|iPod|iPhone|iPad/.test(navigator.platform);
 
-export function FloatingCanvasToolbar() {
-  // Store state - reactive access
-  const activeTool = createMemo(() => store.activeTool);
-  const isGridVisible = createMemo(() => store.gridVisible);
+export function FloatingCanvasToolbar(props: IFloatingCanvasToolbarProps) {
+  const activeTool = createMemo(() => props.activeTool());
+  const isGridVisible = createMemo(() => props.gridVisible());
+  const isSidebarVisible = createMemo(() => props.sidebarVisible());
   const [isCollapsed, setIsCollapsed] = createSignal(false);
 
   const toggleCollapsed = () => {
     setIsCollapsed((v) => !v);
   };
 
-  const setActiveTool = (tool: TTool) => {
-    if (tool === "image") {
-      const input = document.createElement("input");
-      input.type = "file";
-      input.accept = "image/*";
-      input.onchange = (e) => {
-        const file = (e.target as HTMLInputElement).files?.[0];
-        if (file) {
-          window.dispatchEvent(new CustomEvent("canvas:image-selected", { detail: { file } }));
-        }
-      };
-      input.click();
-      return;
-    }
-
-    setStore("activeTool", tool);
-  };
-
   return (
-    <div class="fixed top-3 right-3 pointer-events-none z-50 flex flex-row-reverse items-start gap-1.5">
+    <div class="absolute top-3 right-3 pointer-events-none z-50 flex flex-row-reverse items-start gap-1.5">
       {/* Main toolbar */}
       <div class="pointer-events-auto flex flex-col bg-card shadow-md border border-border overflow-hidden">
         {/* Terminal header - clickable toggle */}
@@ -104,7 +94,7 @@ export function FloatingCanvasToolbar() {
                   shortcut={shortcut}
                   letterShortcut={letterShortcut}
                   isActive={activeTool() === tool}
-                  onClick={() => setActiveTool(tool)}
+                  onClick={() => props.onToolSelect(tool)}
                 />
               )}
             </For>
@@ -112,7 +102,7 @@ export function FloatingCanvasToolbar() {
               icon={<Grid2x2 size={14} />}
               letterShortcut="g"
               isActive={isGridVisible()}
-              onClick={() => setStore("gridVisible", (visible) => !visible)}
+              onClick={props.onToggleGrid}
             />
           </div>
         </Show>
@@ -120,15 +110,13 @@ export function FloatingCanvasToolbar() {
         {/* Sidebar toggle - always visible */}
         <button
           type="button"
-          onClick={() => {
-            setStore("sidebarVisible", (v) => !v);
-          }}
+          onClick={props.onToggleSidebar}
           class="relative flex h-7 w-full items-center justify-center text-muted-foreground hover:bg-stone-200 dark:hover:bg-stone-800 transition-colors"
-          classList={{ "bg-amber-500/20 text-amber-700 dark:text-amber-400": !store.sidebarVisible }}
+          classList={{ "bg-amber-500/20 text-amber-700 dark:text-amber-400": !isSidebarVisible() }}
         >
           <PanelLeft size={14} />
           <span
-            class={`absolute bottom-0 left-px text-[7px] font-mono font-medium ${!store.sidebarVisible
+            class={`absolute bottom-0 left-px text-[7px] font-mono font-medium ${!isSidebarVisible()
               ? "text-amber-600 dark:text-amber-500"
               : "text-stone-400 dark:text-stone-500"
               }`}

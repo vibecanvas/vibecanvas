@@ -1,4 +1,5 @@
 import Konva from "konva";
+import { createSignal, type Accessor, type Setter } from "solid-js";
 import { CameraSystem } from "../managers/camera.manager";
 import { InputManager, type TInputSystem } from "../managers/input.manager";
 import { PanSystem } from "../systems/pan.system";
@@ -14,11 +15,8 @@ import type { TCanvasInputContext } from "../types/canvas-context.types";
 
 type TCanvasServiceArgs = {
   container: HTMLDivElement;
-  activeTool: TCanvasInputContext["getActiveTool"] extends () => infer T ? T : never;
-  gridVisible: boolean;
-  onActiveTool: TCanvasInputContext["setActiveTool"];
-  onToggleGrid: TCanvasInputContext["toggleGridVisible"];
-  onToggleSidebar: TCanvasInputContext["toggleSidebarVisible"];
+  getSidebarVisible: () => boolean;
+  onToggleSidebar: () => void;
 };
 
 /**
@@ -33,6 +31,8 @@ export class CanvasService {
   #camera: CameraSystem;
   #inputManager: InputManager<TCanvasInputContext>;
   #resizeObserver: ResizeObserver;
+  #stageRoot: HTMLDivElement;
+  #overlayRoot: HTMLDivElement;
   #gridLayer: Konva.Layer;
   #worldShapes: Konva.Group;
   #worldOverlay: Konva.Group;
@@ -44,22 +44,34 @@ export class CanvasService {
   #selectedIds = new Set<string>();
   #systems: AbstractCanvasSystem<TCanvasInputContext, unknown>[] = [];
   #context: TCanvasInputContext;
-  #activeTool: TCanvasServiceArgs["activeTool"];
-  #gridVisible: boolean;
+  #activeTool: Accessor<TCanvasInputContext["getActiveTool"] extends () => infer T ? T : never>;
+  #setActiveToolSignal: Setter<TCanvasInputContext["getActiveTool"] extends () => infer T ? T : never>;
+  #gridVisible: Accessor<boolean>;
+  #setGridVisibleSignal: Setter<boolean>;
 
   constructor(args: TCanvasServiceArgs) {
-    this.#activeTool = args.activeTool;
-    this.#gridVisible = args.gridVisible;
+    [this.#activeTool, this.#setActiveToolSignal] = createSignal("select");
+    [this.#gridVisible, this.#setGridVisibleSignal] = createSignal(true);
 
     logCanvasDebug("[canvas-service] mounted", {
-      activeTool: this.#activeTool,
-      gridVisible: this.#gridVisible,
+      activeTool: this.#activeTool(),
+      gridVisible: this.#gridVisible(),
     });
 
+    args.container.replaceChildren();
+
+    this.#stageRoot = document.createElement("div");
+    this.#stageRoot.className = "absolute inset-0";
+
+    this.#overlayRoot = document.createElement("div");
+    this.#overlayRoot.className = "absolute inset-0 pointer-events-none";
+
+    args.container.append(this.#stageRoot, this.#overlayRoot);
+
     this.#stage = new Konva.Stage({
-      container: args.container,
-      width: args.container.clientWidth || 1,
-      height: args.container.clientHeight || 1,
+      container: this.#stageRoot,
+      width: this.#stageRoot.clientWidth || args.container.clientWidth || 1,
+      height: this.#stageRoot.clientHeight || args.container.clientHeight || 1,
     });
 
     this.#gridLayer = new Konva.Layer();
@@ -87,7 +99,7 @@ export class CanvasService {
     this.#toolLabel = new Konva.Text({
       x: 16,
       y: 16,
-      text: `Tool: ${this.#activeTool}`,
+      text: `Tool: ${this.#activeTool()}`,
       fontSize: 14,
       fontFamily: "monospace",
       fill: "#475569",
@@ -110,10 +122,32 @@ export class CanvasService {
 
     this.#context = {
       camera: this.#camera,
-      getActiveTool: () => this.#activeTool,
-      setActiveTool: args.onActiveTool,
-      toggleGridVisible: args.onToggleGrid,
+      overlayRoot: this.#overlayRoot,
+      getActiveTool: this.#activeTool,
+      setActiveTool: (tool) => {
+        this.#setActiveToolSignal(tool);
+        this.#toolLabel.text(`Tool: ${tool}`);
+        this.#toolLabel.getLayer()?.batchDraw();
+      },
+      getGridVisible: this.#gridVisible,
+      toggleGridVisible: () => {
+        this.#setGridVisibleSignal((value) => !value);
+        this.#redrawSystems();
+      },
+      getSidebarVisible: args.getSidebarVisible,
       toggleSidebarVisible: args.onToggleSidebar,
+      openImagePicker: () => {
+        const input = document.createElement("input");
+        input.type = "file";
+        input.accept = "image/*";
+        input.onchange = (event) => {
+          const file = (event.target as HTMLInputElement).files?.[0];
+          if (file) {
+            window.dispatchEvent(new CustomEvent("canvas:image-selected", { detail: { file } }));
+          }
+        };
+        input.click();
+      },
       overlayLayer,
       selectionRect: this.#selectionRect,
       getSelectableNodes: () => this.#selectableNodes,
@@ -186,8 +220,8 @@ export class CanvasService {
 
     this.#resizeObserver = new ResizeObserver(() => {
       this.#stage.size({
-        width: args.container.clientWidth || 1,
-        height: args.container.clientHeight || 1,
+        width: this.#stageRoot.clientWidth || args.container.clientWidth || 1,
+        height: this.#stageRoot.clientHeight || args.container.clientHeight || 1,
       });
       this.#redrawSystems();
       this.#stage.batchDraw();
@@ -196,22 +230,6 @@ export class CanvasService {
     this.#resizeObserver.observe(args.container);
     this.#redrawSystems();
     this.#applySelectionStyles();
-  }
-
-  setActiveTool(activeTool: TCanvasServiceArgs["activeTool"]) {
-    this.#activeTool = activeTool;
-    this.#toolLabel.text(`Tool: ${activeTool}`);
-    this.#toolLabel.getLayer()?.batchDraw();
-    this.#inputManager.patchContext({
-      camera: this.#camera,
-      getActiveTool: () => this.#activeTool,
-    });
-    this.#redrawSystems();
-  }
-
-  setGridVisible(gridVisible: boolean) {
-    this.#gridVisible = gridVisible;
-    this.#redrawSystems();
   }
 
   destroy() {
@@ -231,7 +249,7 @@ export class CanvasService {
       width: this.#stage.width(),
       height: this.#stage.height(),
       camera: this.#camera,
-      visible: this.#gridVisible,
+      visible: this.#gridVisible(),
     });
   }
 

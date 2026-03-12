@@ -2,9 +2,8 @@ import { store, setStore } from "@/store";
 import type { TBackendCanvas } from "@/types/backend.types";
 import type { DocHandle } from "@automerge/automerge-repo";
 import type { TCanvasDoc } from "@vibecanvas/shell/automerge/index";
-import { createEffect, onCleanup, onMount } from "solid-js";
+import { onCleanup, onMount } from "solid-js";
 import { CanvasService } from "../service/canvas.service";
-import { FloatingCanvasToolbar } from "./FloatingCanvasToolbar";
 
 interface ICanvasProps {
   handle: DocHandle<TCanvasDoc>;
@@ -21,32 +20,14 @@ export function Canvas(props: ICanvasProps) {
 
     canvasService = new CanvasService({
       container,
-      activeTool: store.activeTool,
-      gridVisible: store.gridVisible,
-      onActiveTool: (tool) => setStore("activeTool", tool),
-      onToggleGrid: () => setStore("gridVisible", (v) => !v),
+      getSidebarVisible: () => store.sidebarVisible,
       onToggleSidebar: () => setStore("sidebarVisible", (v) => !v),
     });
-  });
-
-  createEffect(() => {
-    const activeTool = store.activeTool;
-    canvasService?.setActiveTool(activeTool);
-  });
-
-  createEffect(() => {
-    const gridVisible = store.gridVisible;
-    canvasService?.setGridVisible(gridVisible);
   });
 
   onCleanup(() => {
     canvasService?.destroy();
   });
 
-  return (
-    <>
-      <div ref={container} class="size-full" />
-      <FloatingCanvasToolbar />
-    </>
-  );
+  return <div ref={container} class="relative size-full" />;
 }

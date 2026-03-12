@@ -21,6 +21,7 @@ The current `apps/frontend` canvas is a Konva-based interaction sandbox with a s
 - `CanvasService` is the high-level entry point. It owns Konva lifecycle, shared context, managers, and systems.
 - managers are controllers for shared canvas runtime concerns such as camera and input routing.
 - systems are classes that handle a concrete canvas module: they react to input and/or manage drawing for that module.
+- systems may also own canvas-local HTML/JSX overlays rendered into a service-owned overlay root.
 - utils contain helper functions with little or no risky side effects.
 
 The important idea: the canvas is already split into runtime concerns, so new behaviors should be added as new input systems or services instead of putting more conditionals directly into `canvas.tsx`.
@@ -30,6 +31,7 @@ The important idea: the canvas is already split into runtime concerns, so new be
 Today the frontend canvas supports:
 
 - a Konva stage owned by `apps/frontend/src/feature/canvas/service/canvas.service.ts`
+- a canvas-local HTML overlay root owned by `apps/frontend/src/feature/canvas/service/canvas.service.ts`
 - world-space content rendered inside transformable world groups
 - a screen-space grid layer that redraws from camera state so panning/zooming still feels spatial
 - marquee selection with a dashed selection rectangle
@@ -37,7 +39,7 @@ Today the frontend canvas supports:
 - drag-to-pan using middle mouse, `Space`, or `hand` tool
 - touchpad/two-finger panning via wheel events
 - `ctrl+wheel` zoom around the pointer
-- active tool display from `store.activeTool`
+- a canvas-local toolbar rendered by `ToolSystem`
 
 Current limitations:
 
@@ -46,6 +48,7 @@ Current limitations:
 - there is no resize/rotate/draw-shape system yet
 - pen strokes are local runtime nodes only and are not persisted yet
 - zoom percent and camera state are not surfaced in UI beyond internal runtime state
+- only sidebar visibility remains global; tool and grid state are canvas-local
 
 ## Core Architecture
 
@@ -57,6 +60,7 @@ The current canvas is divided into 4 layers of responsibility.
 
 This service currently:
 
+- creates DOM roots for Konva and canvas-local overlays
 - creates the Konva `Stage`
 - creates four layers:
   - grid layer
@@ -69,6 +73,7 @@ This service currently:
 - registers those world groups with the camera
 - creates managers and registers systems
 - owns resize observation and canvas cleanup
+- owns canvas-local state such as active tool and grid visibility
 
 Screen-fixed UI like tool labels belongs in the HUD layer.
 World-space visuals like shapes and selection rect belong in world groups managed by the camera.
@@ -77,7 +82,7 @@ The grid is the special case: it stays on its own screen-space layer, but redraw
 `apps/frontend/src/feature/canvas/components/canvas.tsx` should stay thin and only:
 
 - mount `CanvasService`
-- push external store state into it (`activeTool`, `gridVisible`)
+- pass only truly global integrations into it (currently sidebar visibility)
 - destroy it on cleanup
 
 ### 2. Managers
@@ -143,6 +148,8 @@ A system is expected to have:
 - input hooks are adapted into `InputManager`
 - drawing hooks are called directly by `CanvasService` through `mount`, `redraw`, and `unmount`
 
+`ToolSystem` is the first system using this fully: it owns keyboard shortcuts and also renders the floating toolbar through Solid's `render()` into the canvas overlay root.
+
 ### 4. Utils
 
 Helpers live in `apps/frontend/src/feature/canvas/utils/`.
@@ -193,6 +200,7 @@ Current example:
 - `ZoomSystem` handles `ctrl+wheel`
 - `PanSystem` handles plain wheel/two-finger touchpad movement
 - `PenSystem` claims pointer gestures only when active tool is `pen`
+- `ToolSystem` owns keyboard shortcuts, local tool state, and toolbar overlay rendering
 
 ## Camera and Coordinate Spaces
 
@@ -311,6 +319,7 @@ Do not add large tool-specific conditionals directly into `InputManager`.
 Do not move Konva object ownership back into the Solid component.
 
 When a concern is shared orchestration rather than a canvas module, prefer a manager over a system.
+When a concern owns canvas-local HTML UI, render it from the owning system via the overlay root rather than from page-level Solid JSX.
 
 ### Add a New World Overlay
 
@@ -377,7 +386,7 @@ Avoid:
 - `apps/frontend/src/feature/canvas/systems/pen.system.ts`
 - `apps/frontend/src/feature/canvas/systems/pan.system.ts`
 - `apps/frontend/src/feature/canvas/systems/select-box.system.ts`
-- `apps/frontend/src/feature/canvas/systems/tool.system.ts`
+- `apps/frontend/src/feature/canvas/systems/tool.system.tsx`
 - `apps/frontend/src/feature/canvas/systems/zoom.system.ts`
 
 ### Utils
@@ -393,8 +402,8 @@ Avoid:
 ### Related State
 
 - `apps/frontend/src/store.ts`
-- `apps/frontend/src/feature/floating-canvas-toolbar/components/FloatingCanvasToolbar.tsx`
-- `apps/frontend/src/feature/floating-canvas-toolbar/types/toolbar.types.ts`
+- `apps/frontend/src/feature/canvas/components/FloatingCanvasToolbar.tsx`
+- `apps/frontend/src/feature/canvas/components/toolbar.types.ts`
 
 ## Data Flow
 
