@@ -38,6 +38,7 @@
         "konva": "^9.3.22",
         "lucide-solid": "^0.577.0",
         "partysocket": "^1.1.16",
+        "perfect-freehand": "^1.2.2",
         "solid-js": "^1.9.11",
         "zod": "catalog:",
       },

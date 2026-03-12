@@ -17,8 +17,8 @@
 
 The current `apps/frontend` canvas is a Konva-based interaction sandbox with a small but intentional architecture:
 
-- `Canvas.tsx` bootstraps the Konva stage and wires layers, demo shapes, camera, and input systems.
-- `Canvas.tsx` bootstraps the Konva stage and wires grid, world layers, camera, and input systems.
+- `Canvas.tsx` is only a thin Solid wrapper that mounts and destroys `CanvasService`.
+- `CanvasService` owns the Konva stage, layers, camera, input systems, resize handling, and local drawing runtime.
 - `InputManager` owns event routing and ensures only one pointer gesture system is active at a time.
 - `CameraSystem` owns world transform state (`x`, `y`, `scale`) and applies it to world groups.
 - Input systems like pan, select-box, and zoom are small modules that mutate camera state or transient overlay state.
@@ -29,10 +29,11 @@ The important idea: the canvas is already split into runtime concerns, so new be
 
 Today the frontend canvas supports:
 
-- a Konva stage mounted inside `apps/frontend/src/feature/canvas/components/canvas.tsx`
+- a Konva stage owned by `apps/frontend/src/feature/canvas/service/canvas.service.ts`
 - world-space demo shapes rendered inside a transformable world group
 - a screen-space grid layer that redraws from camera state so panning/zooming still feels spatial
 - marquee selection with a dashed selection rectangle
+- local-only freehand pen strokes rendered with `perfect-freehand`
 - drag-to-pan using middle mouse, `Space`, or `hand` tool
 - touchpad/two-finger panning via wheel events
 - `ctrl+wheel` zoom around the pointer
@@ -44,20 +45,20 @@ Current limitations:
 - the canvas currently has no persistent shapes rendered yet
 - there is no drag-selection/move system yet
 - there is no resize/rotate/draw-shape system yet
+- pen strokes are local runtime nodes only and are not persisted yet
 - zoom percent and camera state are not surfaced in UI beyond internal runtime state
 
 ## Core Architecture
 
 The current canvas is divided into 4 layers of responsibility.
 
-### 1. Stage Bootstrap
+### 1. Runtime Owner
 
-`apps/frontend/src/feature/canvas/components/canvas.tsx`
+`apps/frontend/src/feature/canvas/service/canvas.service.ts`
 
-This file currently:
+This service currently:
 
 - creates the Konva `Stage`
-- creates three layers:
 - creates four layers:
   - grid layer
   - shapes layer
@@ -68,10 +69,17 @@ This file currently:
   - `worldOverlay`
 - registers those world groups with the camera
 - creates and registers input systems
+- owns resize observation and canvas cleanup
 
 Screen-fixed UI like tool labels belongs in the HUD layer.
 World-space visuals like shapes and selection rect belong in world groups managed by the camera.
 The grid is the special case: it stays on its own screen-space layer, but redraws from camera state so it visually tracks camera movement.
+
+`apps/frontend/src/feature/canvas/components/canvas.tsx` should stay thin and only:
+
+- mount `CanvasService`
+- push external store state into it (`activeTool`, `gridVisible`)
+- destroy it on cleanup
 
 ### 2. Camera
 
@@ -112,6 +120,7 @@ Important behavior:
 Current input systems live in `apps/frontend/src/feature/canvas/service/`:
 
 - `pan-system.ts`
+- `pen-system.ts`
 - `select-box-system.ts`
 - `zoom-system.ts`
 - `grid-renderer.ts`
@@ -155,6 +164,7 @@ Current example:
 
 - `ZoomSystem` handles `ctrl+wheel`
 - `PanSystem` handles plain wheel/two-finger touchpad movement
+- `PenSystem` claims pointer gestures only when active tool is `pen`
 
 ## Camera and Coordinate Spaces
 
@@ -238,6 +248,24 @@ It:
 
 `zoomAtScreenPoint(...)` keeps the world point under the pointer stable while scale changes. That is the reason zoom feels anchored instead of jumping.
 
+## How Pen Works
+
+Pen is implemented by `apps/frontend/src/feature/canvas/service/pen-system.ts` and `apps/frontend/src/feature/canvas/service/stroke-renderer.ts`.
+
+Flow:
+
+1. Active tool is `pen`.
+2. Pointer positions are converted from screen space to world space through the camera.
+3. `PenSystem` collects raw world points locally during drag.
+4. `stroke-renderer.ts` passes those points into `perfect-freehand` and turns the outline into SVG path data.
+5. A transient preview `Konva.Path` is updated in `worldOverlay` while drawing.
+6. On pointer up, the preview is converted into a committed `Konva.Path` under `worldShapes` by `CanvasService`.
+
+Important rule:
+
+- local runtime stores raw points only during the gesture, then stores a rendered Konva path node after commit
+- if pen becomes persistent later, the right data model is raw points + style, not only the final SVG path
+
 ## How to Modify the Canvas Safely
 
 Use these rules when changing the canvas.
@@ -248,10 +276,11 @@ Preferred path:
 
 1. create a new input system in `apps/frontend/src/feature/canvas/service/`
 2. add any new shared runtime dependencies to `input-systems.types.ts`
-3. register the system in `canvas.tsx`
+3. register the system in `canvas.service.ts`
 4. choose a clear priority relative to existing systems
 
 Do not add large tool-specific conditionals directly into `InputManager`.
+Do not move Konva object ownership back into the Solid component.
 
 ### Add a New World Overlay
 
@@ -305,12 +334,15 @@ Avoid:
 
 ### Services
 
+- `apps/frontend/src/feature/canvas/service/canvas.service.ts`
 - `apps/frontend/src/feature/canvas/service/input-manager.ts`
 - `apps/frontend/src/feature/canvas/service/camera-system.ts`
 - `apps/frontend/src/feature/canvas/service/grid-renderer.ts`
 - `apps/frontend/src/feature/canvas/service/input-systems.types.ts`
+- `apps/frontend/src/feature/canvas/service/pen-system.ts`
 - `apps/frontend/src/feature/canvas/service/pan-system.ts`
 - `apps/frontend/src/feature/canvas/service/select-box-system.ts`
+- `apps/frontend/src/feature/canvas/service/stroke-renderer.ts`
 - `apps/frontend/src/feature/canvas/service/zoom-system.ts`
 
 ### Related State

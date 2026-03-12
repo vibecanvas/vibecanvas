@@ -1,4 +1,5 @@
 import Konva from "konva";
+import { logCanvasDebug } from "./canvas-debug";
 
 type TPointerEvent = Konva.KonvaEventObject<MouseEvent | TouchEvent | PointerEvent>;
 type TWheelEvent = Konva.KonvaEventObject<WheelEvent>;
@@ -45,6 +46,8 @@ type TInputManagerContext<TContext extends object> = {
  *
  * How the lifecycle works:
  * - `canStart()` decides whether this system should claim a pointer-down gesture.
+ * - systems without `canStart()` are ignored for pointer-start routing and can still
+ *   participate in wheel / keyboard handling.
  * - `onStart()` runs once when the system becomes active.
  * - `onMove()` receives pointer updates until the gesture ends.
  * - `onEnd()` commits final state and releases control.
@@ -109,6 +112,7 @@ type TInputManagerOptions<TContext extends object> = {
 };
 
 export type {
+  TInputHandlerResult,
   TInputManagerContext,
   TInputManagerEventMap,
   TInputSystem,
@@ -167,15 +171,28 @@ export class InputManager<TContext extends object> {
 
     const runtime = this.#runtimeContext();
 
+    logCanvasDebug("[input-manager] pointerdown", {
+      targetType: event.target?.getClassName?.(),
+      systems: this.#systems.map((system) => system.name),
+      activeSystemName: null,
+    });
+
     for (const system of this.#systems) {
       if (!this.#isSystemEnabled(system, runtime)) continue;
-      if (system.canStart && !system.canStart(runtime, event)) continue;
+      if (!system.canStart) continue;
+      if (!system.canStart(runtime, event)) continue;
+
+      logCanvasDebug("[input-manager] claimed pointerdown", {
+        system: system.name,
+      });
 
       this.#activeSystem = system;
       system.onStart?.(this.#runtimeContext(), event);
       this.#syncCursor();
       return;
     }
+
+    logCanvasDebug("[input-manager] pointerdown unclaimed");
   };
 
   readonly #handlePointerMove = (event: TPointerEvent) => {
