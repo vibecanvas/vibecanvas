@@ -1,3 +1,4 @@
+import { createComponent } from "solid-js";
 import { render } from "solid-js/web";
 import { FloatingCanvasToolbar } from "../components/FloatingCanvasToolbar";
 import { TOOL_SHORTCUTS, type TTool } from "../components/toolbar.types";
@@ -91,16 +92,18 @@ class ToolSystem extends AbstractCanvasSystem<TCanvasInputContext, TToolSystemSt
     mountElement.className = "absolute inset-0 pointer-events-none";
     context.data.overlayRoot.appendChild(mountElement);
 
-    const disposeRender = render(() => (
-      <FloatingCanvasToolbar
-        activeTool={context.data.getActiveTool}
-        gridVisible={context.data.getGridVisible}
-        sidebarVisible={context.data.getSidebarVisible}
-        onToolSelect={(tool) => this.selectToolFromRuntime(context, tool)}
-        onToggleGrid={context.data.toggleGridVisible}
-        onToggleSidebar={context.data.toggleSidebarVisible}
-      />
-    ), mountElement);
+    const disposeRender = render(
+      () =>
+        createComponent(FloatingCanvasToolbar, {
+          activeTool: context.data.getActiveTool,
+          gridVisible: context.data.getGridVisible,
+          sidebarVisible: context.data.getSidebarVisible,
+          onToolSelect: (tool) => this.selectToolFromRuntime(context, tool),
+          onToggleGrid: context.data.toggleGridVisible,
+          onToggleSidebar: context.data.toggleSidebarVisible,
+        }),
+      mountElement,
+    );
 
     this.state.mountElement = mountElement;
     this.state.disposeRender = disposeRender;

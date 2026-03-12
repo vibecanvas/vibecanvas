@@ -386,7 +386,7 @@ Avoid:
 - `apps/frontend/src/feature/canvas/systems/pen.system.ts`
 - `apps/frontend/src/feature/canvas/systems/pan.system.ts`
 - `apps/frontend/src/feature/canvas/systems/select-box.system.ts`
-- `apps/frontend/src/feature/canvas/systems/tool.system.tsx`
+- `apps/frontend/src/feature/canvas/systems/tool.system.ts`
 - `apps/frontend/src/feature/canvas/systems/zoom.system.ts`
 
 ### Utils

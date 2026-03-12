@@ -2,6 +2,7 @@ import Konva from "konva";
 import { createSignal, type Accessor, type Setter } from "solid-js";
 import { CameraSystem } from "../managers/camera.manager";
 import { InputManager, type TInputSystem } from "../managers/input.manager";
+import type { TTool } from "../components/toolbar.types";
 import { PanSystem } from "../systems/pan.system";
 import { PenSystem } from "../systems/pen.system";
 import { SelectBoxSystem } from "../systems/select-box.system";
@@ -36,7 +37,6 @@ export class CanvasService {
   #gridLayer: Konva.Layer;
   #worldShapes: Konva.Group;
   #worldOverlay: Konva.Group;
-  #toolLabel: Konva.Text;
   #selectionRect: Konva.Rect;
   #strokePreviewPath: Konva.Path;
   #cleanupCameraSubscription: (() => void) | null = null;
@@ -44,13 +44,13 @@ export class CanvasService {
   #selectedIds = new Set<string>();
   #systems: AbstractCanvasSystem<TCanvasInputContext, unknown>[] = [];
   #context: TCanvasInputContext;
-  #activeTool: Accessor<TCanvasInputContext["getActiveTool"] extends () => infer T ? T : never>;
-  #setActiveToolSignal: Setter<TCanvasInputContext["getActiveTool"] extends () => infer T ? T : never>;
+  #activeTool: Accessor<TTool>;
+  #setActiveToolSignal: Setter<TTool>;
   #gridVisible: Accessor<boolean>;
   #setGridVisibleSignal: Setter<boolean>;
 
   constructor(args: TCanvasServiceArgs) {
-    [this.#activeTool, this.#setActiveToolSignal] = createSignal("select");
+    [this.#activeTool, this.#setActiveToolSignal] = createSignal<TTool>("select");
     [this.#gridVisible, this.#setGridVisibleSignal] = createSignal(true);
 
     logCanvasDebug("[canvas-service] mounted", {
@@ -77,7 +77,6 @@ export class CanvasService {
     this.#gridLayer = new Konva.Layer();
     const shapesLayer = new Konva.Layer();
     const overlayLayer = new Konva.Layer();
-    const hudLayer = new Konva.Layer();
 
     this.#worldShapes = new Konva.Group();
     this.#worldOverlay = new Konva.Group();
@@ -96,22 +95,12 @@ export class CanvasService {
       dash: [6, 4],
       listening: false,
     });
-    this.#toolLabel = new Konva.Text({
-      x: 16,
-      y: 16,
-      text: `Tool: ${this.#activeTool()}`,
-      fontSize: 14,
-      fontFamily: "monospace",
-      fill: "#475569",
-      listening: false,
-    });
 
     this.#worldOverlay.add(this.#strokePreviewPath);
     this.#worldOverlay.add(this.#selectionRect);
     shapesLayer.add(this.#worldShapes);
     overlayLayer.add(this.#worldOverlay);
-    hudLayer.add(this.#toolLabel);
-    this.#stage.add(this.#gridLayer, shapesLayer, overlayLayer, hudLayer);
+    this.#stage.add(this.#gridLayer, shapesLayer, overlayLayer);
 
     this.#camera = new CameraSystem();
     this.#camera.registerTarget(this.#worldShapes);
@@ -126,8 +115,6 @@ export class CanvasService {
       getActiveTool: this.#activeTool,
       setActiveTool: (tool) => {
         this.#setActiveToolSignal(tool);
-        this.#toolLabel.text(`Tool: ${tool}`);
-        this.#toolLabel.getLayer()?.batchDraw();
       },
       getGridVisible: this.#gridVisible,
       toggleGridVisible: () => {
@@ -241,6 +228,8 @@ export class CanvasService {
     this.#resizeObserver.disconnect();
     this.#inputManager.destroy();
     this.#stage.destroy();
+    this.#overlayRoot.remove();
+    this.#stageRoot.remove();
   }
 
   #renderGrid() {
