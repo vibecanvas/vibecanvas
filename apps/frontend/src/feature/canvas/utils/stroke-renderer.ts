@@ -119,8 +119,20 @@ function getStrokePointsFromPenData(element: Pick<TElement, "x" | "y" | "data">)
   }));
 }
 
+function getLocalStrokePointsFromPenData(element: Pick<TElement, "data">): TStrokePoint[] {
+  if (element.data.type !== "pen") return [];
+
+  const penData = element.data;
+
+  return penData.points.map((point, index) => ({
+    x: point[0],
+    y: point[1],
+    pressure: penData.pressures[index] ?? 0.5,
+  }));
+}
+
 function getStrokePathFromPenData(element: Pick<TElement, "x" | "y" | "data">, options?: StrokeOptions) {
-  return getStrokePath(getStrokePointsFromPenData(element), {
+  return getStrokePath(getLocalStrokePointsFromPenData(element), {
     ...options,
     simulatePressure: element.data.type === "pen" ? element.data.simulatePressure : true,
   });
@@ -145,6 +157,7 @@ export {
   DEFAULT_STROKE_OPTIONS,
   createPenDataFromStrokePoints,
   getStrokePath,
+  getLocalStrokePointsFromPenData,
   getStrokePathFromPenData,
   getStrokePointsFromPenData,
   serializeStrokePoints,

@@ -127,6 +127,8 @@ export class CrdtManager {
     if (existingNode) {
       existingNode.setAttrs({
         id: element.id,
+        x: element.x,
+        y: element.y,
         data: pathData,
         fill,
         opacity,
@@ -139,6 +141,8 @@ export class CrdtManager {
 
     const node = new Konva.Path({
       id: element.id,
+      x: element.x,
+      y: element.y,
       data: pathData,
       fill,
       opacity,
