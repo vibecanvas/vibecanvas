@@ -1,16 +1,175 @@
 import type { TBackendCanvas } from "@/types/backend.types";
+import { store } from "@/store";
 import type { DocHandle } from "@automerge/automerge-repo";
 import type { TCanvasDoc } from "@vibecanvas/shell/automerge/index";
+import Konva from "konva";
+import { createEffect, onCleanup, onMount } from "solid-js";
+import { CameraSystem } from "../service/camera-system";
+import { InputManager } from "../service/input-manager";
+import { createPanSystem } from "../service/pan-system";
+import { createSelectBoxSystem } from "../service/select-box-system";
+import type { TCanvasInputContext } from "../service/input-systems.types";
 
 interface ICanvasProps {
-  handle: DocHandle<TCanvasDoc>
-  data: TBackendCanvas
+  handle: DocHandle<TCanvasDoc>;
+  data: TBackendCanvas;
 }
 
 export function Canvas(props: ICanvasProps) {
-  return (
-    <div>
-      <h1>Canvas {props.data.id}</h1>
-    </div>
-  );
+  let container!: HTMLDivElement;
+  let stage: Konva.Stage | null = null;
+  let inputManager: InputManager<TCanvasInputContext> | null = null;
+  let resizeObserver: ResizeObserver | null = null;
+  let toolLabel: Konva.Text | null = null;
+  let camera: CameraSystem | null = null;
+
+  const selectableNodes: Konva.Shape[] = [];
+  let selectedIds = new Set<string>();
+
+  const applySelectionStyles = () => {
+    for (const node of selectableNodes) {
+      const isSelected = selectedIds.has(node.id());
+
+      node.setAttrs({
+        stroke: isSelected ? "#f59e0b" : "#0369a1",
+        strokeWidth: isSelected ? 4 : 2,
+        shadowBlur: isSelected ? 12 : 0,
+        shadowColor: isSelected ? "#f59e0b" : undefined,
+      });
+    }
+
+    stage?.batchDraw();
+  };
+
+  onMount(() => {
+    props.handle;
+
+    stage = new Konva.Stage({
+      container,
+      width: container.clientWidth || 1,
+      height: container.clientHeight || 1,
+    });
+
+    const shapesLayer = new Konva.Layer();
+    const overlayLayer = new Konva.Layer();
+    const hudLayer = new Konva.Layer();
+    const worldShapes = new Konva.Group();
+    const worldOverlay = new Konva.Group();
+    const selectionRect = new Konva.Rect({
+      visible: false,
+      fill: "rgba(59, 130, 246, 0.12)",
+      stroke: "#3b82f6",
+      strokeWidth: 1,
+      dash: [6, 4],
+      listening: false,
+    });
+    toolLabel = new Konva.Text({
+      x: 16,
+      y: 16,
+      text: `Tool: ${store.activeTool}`,
+      fontSize: 14,
+      fontFamily: "monospace",
+      fill: "#475569",
+      listening: false,
+    });
+
+    const exampleShapes = [
+      new Konva.Rect({
+        id: "shape-rect-1",
+        x: 120,
+        y: 120,
+        width: 180,
+        height: 110,
+        fill: "#e0f2fe",
+        stroke: "#0369a1",
+        strokeWidth: 2,
+      }),
+      new Konva.Circle({
+        id: "shape-circle-1",
+        x: 420,
+        y: 210,
+        radius: 72,
+        fill: "#dcfce7",
+        stroke: "#166534",
+        strokeWidth: 2,
+      }),
+      new Konva.Rect({
+        id: "shape-rect-2",
+        x: 560,
+        y: 120,
+        width: 160,
+        height: 140,
+        fill: "#fae8ff",
+        stroke: "#9333ea",
+        strokeWidth: 2,
+      }),
+    ];
+
+    selectableNodes.push(...exampleShapes);
+    worldShapes.add(...exampleShapes);
+    worldOverlay.add(selectionRect);
+    shapesLayer.add(worldShapes);
+    overlayLayer.add(worldOverlay);
+    hudLayer.add(toolLabel);
+    stage.add(shapesLayer, overlayLayer, hudLayer);
+
+    camera = new CameraSystem();
+    camera.registerTarget(worldShapes);
+    camera.registerTarget(worldOverlay);
+
+    inputManager = new InputManager<TCanvasInputContext>({
+      stage,
+      context: {
+        camera,
+        getActiveTool: () => store.activeTool,
+        overlayLayer,
+        selectionRect,
+        getSelectableNodes: () => selectableNodes,
+        setSelectedIds: (ids) => {
+          selectedIds = new Set(ids);
+          applySelectionStyles();
+        },
+      },
+      defaultCursor: "default",
+    });
+
+    inputManager.registerSystem(createSelectBoxSystem());
+    inputManager.registerSystem(createPanSystem());
+
+    resizeObserver = new ResizeObserver(() => {
+      if (!stage) return;
+
+      stage.size({
+        width: container.clientWidth || 1,
+        height: container.clientHeight || 1,
+      });
+      stage.batchDraw();
+    });
+
+    resizeObserver.observe(container);
+    applySelectionStyles();
+  });
+
+  createEffect(() => {
+    if (!stage || !toolLabel) return;
+
+    const activeTool = store.activeTool;
+
+    toolLabel.text(`Tool: ${activeTool}`);
+    toolLabel.getLayer()?.batchDraw();
+
+    inputManager?.patchContext({
+      camera: camera!,
+      getActiveTool: () => activeTool,
+    });
+  });
+
+
+  onCleanup(() => {
+    resizeObserver?.disconnect();
+    inputManager?.destroy();
+    stage?.destroy();
+  });
+
+  return <div ref={container} class="size-full" />;
 }

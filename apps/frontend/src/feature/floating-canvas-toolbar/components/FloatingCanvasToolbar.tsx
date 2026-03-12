@@ -19,10 +19,10 @@ import FolderTree from "lucide-solid/icons/folder-tree";
 import SquareTerminal from "lucide-solid/icons/square-terminal";
 import PanelLeft from "lucide-solid/icons/panel-left";
 import { Tooltip } from "@kobalte/core/tooltip";
-import { For, Show, createMemo, createSignal } from "solid-js";
+import { For, Show, createMemo, createSignal, onCleanup, onMount } from "solid-js";
 import type { JSX } from "solid-js";
 import { ToolButton } from "./ToolButton";
-import type { TTool } from "../types/toolbar.types";
+import { TOOLS, TOOL_SHORTCUTS, type TTool } from "../types/toolbar.types";
 import { store, setStore } from "@/store";
 
 const TOOL_ICONS: Record<TTool, () => JSX.Element> = {
@@ -41,24 +41,19 @@ const TOOL_ICONS: Record<TTool, () => JSX.Element> = {
   terminal: () => <SquareTerminal size={14} />,
 };
 
-const TOOL_CONFIG: { tool: TTool; shortcut?: string; letterShortcut?: string }[] = [
-  { tool: "hand", letterShortcut: "h" },
-  { tool: "select", shortcut: "1", letterShortcut: "esc" },
-  { tool: "rectangle", shortcut: "2", letterShortcut: "r" },
-  { tool: "diamond", shortcut: "3", letterShortcut: "d" },
-  { tool: "ellipse", shortcut: "4", letterShortcut: "o" },
-  { tool: "arrow", shortcut: "5", letterShortcut: "a" },
-  { tool: "line", shortcut: "6", letterShortcut: "l" },
-  { tool: "pen", shortcut: "7", letterShortcut: "p" },
-  { tool: "text", shortcut: "8", letterShortcut: "t" },
-  { tool: "image", shortcut: "9" },
-  { tool: "chat", letterShortcut: "c" },
-  { tool: "filesystem", letterShortcut: "f" },
-  { tool: "terminal", letterShortcut: "j" },
-];
-
 // Detect Mac for keyboard shortcut display
 const isMac = typeof navigator !== "undefined" && /Mac|iPod|iPhone|iPad/.test(navigator.platform);
+
+function isEditableTarget(target: EventTarget | null) {
+  if (!(target instanceof HTMLElement)) return false;
+
+  return (
+    target.isContentEditable ||
+    target.tagName === "INPUT" ||
+    target.tagName === "TEXTAREA" ||
+    target.tagName === "SELECT"
+  );
+}
 
 export function FloatingCanvasToolbar() {
   // Store state - reactive access
@@ -69,25 +64,49 @@ export function FloatingCanvasToolbar() {
     setIsCollapsed((v) => !v);
   };
 
-  // Handle tool click - special handling for image tool
-  const handleToolClick = (tool: TTool) => {
+  const setActiveTool = (tool: TTool) => {
     if (tool === "image") {
-      // Open file picker for image
       const input = document.createElement("input");
       input.type = "file";
       input.accept = "image/*";
       input.onchange = (e) => {
         const file = (e.target as HTMLInputElement).files?.[0];
         if (file) {
-          // Dispatch custom event for canvas to handle
           window.dispatchEvent(new CustomEvent("canvas:image-selected", { detail: { file } }));
         }
       };
       input.click();
-    } else {
-      setStore("activeTool", tool);
+      return;
     }
+
+    setStore("activeTool", tool);
   };
+
+  onMount(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (isEditableTarget(event.target)) return;
+
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "b") {
+        event.preventDefault();
+        setStore("sidebarVisible", (visible) => !visible);
+        return;
+      }
+
+      if (event.metaKey || event.ctrlKey || event.altKey) return;
+
+      const tool = TOOL_SHORTCUTS[event.key] ?? TOOL_SHORTCUTS[event.key.toLowerCase()];
+      if (!tool) return;
+
+      event.preventDefault();
+      setActiveTool(tool);
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+
+    onCleanup(() => {
+      window.removeEventListener("keydown", handleKeyDown);
+    });
+  });
 
   return (
     <div class="fixed top-3 right-3 pointer-events-none z-50 flex flex-row-reverse items-start gap-1.5">
@@ -113,14 +132,14 @@ export function FloatingCanvasToolbar() {
         {/* Tool buttons - hidden when collapsed */}
         <Show when={!isCollapsed()}>
           <div class="flex flex-col">
-            <For each={TOOL_CONFIG}>
+            <For each={TOOLS}>
               {({ tool, shortcut, letterShortcut }) => (
                 <ToolButton
                   icon={TOOL_ICONS[tool]()}
                   shortcut={shortcut}
                   letterShortcut={letterShortcut}
                   isActive={activeTool() === tool}
-                  onClick={() => handleToolClick(tool)}
+                  onClick={() => setActiveTool(tool)}
                 />
               )}
             </For>

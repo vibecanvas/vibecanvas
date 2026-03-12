@@ -21,6 +21,7 @@ export type TTool =
 export interface IToolDefinition {
   tool: TTool;
   shortcut?: string;
+  letterShortcut?: string;
 }
 
 /** Maps keyboard shortcut keys to tools */
@@ -52,17 +53,17 @@ export const TOOL_SHORTCUTS: Record<string, TTool> = {
 
 /** Ordered list of tools with their shortcuts */
 export const TOOLS: IToolDefinition[] = [
-  { tool: "hand" },
-  { tool: "select", shortcut: "1" },
-  { tool: "rectangle", shortcut: "2" },
-  { tool: "diamond", shortcut: "3" },
-  { tool: "ellipse", shortcut: "4" },
-  { tool: "arrow", shortcut: "5" },
-  { tool: "line", shortcut: "6" },
-  { tool: "pen", shortcut: "7" },
-  { tool: "text", shortcut: "8" },
+  { tool: "hand", letterShortcut: "h" },
+  { tool: "select", shortcut: "1", letterShortcut: "esc" },
+  { tool: "rectangle", shortcut: "2", letterShortcut: "r" },
+  { tool: "diamond", shortcut: "3", letterShortcut: "d" },
+  { tool: "ellipse", shortcut: "4", letterShortcut: "o" },
+  { tool: "arrow", shortcut: "5", letterShortcut: "a" },
+  { tool: "line", shortcut: "6", letterShortcut: "l" },
+  { tool: "pen", shortcut: "7", letterShortcut: "p" },
+  { tool: "text", shortcut: "8", letterShortcut: "t" },
   { tool: "image", shortcut: "9" },
-  { tool: "chat" },
-  { tool: "filesystem" },
-  { tool: "terminal" },
+  { tool: "chat", letterShortcut: "c" },
+  { tool: "filesystem", letterShortcut: "f" },
+  { tool: "terminal", letterShortcut: "j" },
 ];
