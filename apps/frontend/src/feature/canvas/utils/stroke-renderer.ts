@@ -1,10 +1,18 @@
 import { getStroke, type StrokeOptions } from "perfect-freehand";
+import type { TElement, TPenData, TPoint2D } from "@vibecanvas/shell/automerge/index";
 import { logCanvasDebug } from "./canvas-debug";
 
 type TStrokePoint = {
   x: number;
   y: number;
   pressure: number;
+};
+
+type TSerializedPenStroke = {
+  x: number;
+  y: number;
+  points: TPoint2D[];
+  pressures: number[];
 };
 
 const DEFAULT_STROKE_OPTIONS: StrokeOptions = {
@@ -80,5 +88,64 @@ function getStrokePath(points: TStrokePoint[], options?: StrokeOptions) {
   return path;
 }
 
+function serializeStrokePoints(points: TStrokePoint[]): TSerializedPenStroke | null {
+  if (points.length < 2) return null;
+
+  let minX = Number.POSITIVE_INFINITY;
+  let minY = Number.POSITIVE_INFINITY;
+
+  for (const point of points) {
+    minX = Math.min(minX, point.x);
+    minY = Math.min(minY, point.y);
+  }
+
+  return {
+    x: minX,
+    y: minY,
+    points: points.map((point) => [point.x - minX, point.y - minY]),
+    pressures: points.map((point) => point.pressure),
+  };
+}
+
+function getStrokePointsFromPenData(element: Pick<TElement, "x" | "y" | "data">): TStrokePoint[] {
+  if (element.data.type !== "pen") return [];
+
+  const penData = element.data;
+
+  return penData.points.map((point, index) => ({
+    x: element.x + point[0],
+    y: element.y + point[1],
+    pressure: penData.pressures[index] ?? 0.5,
+  }));
+}
+
+function getStrokePathFromPenData(element: Pick<TElement, "x" | "y" | "data">, options?: StrokeOptions) {
+  return getStrokePath(getStrokePointsFromPenData(element), {
+    ...options,
+    simulatePressure: element.data.type === "pen" ? element.data.simulatePressure : true,
+  });
+}
+
+function createPenDataFromStrokePoints(points: TStrokePoint[]): (TPenData & { x: number; y: number }) | null {
+  const serialized = serializeStrokePoints(points);
+  if (!serialized) return null;
+
+  return {
+    type: "pen",
+    x: serialized.x,
+    y: serialized.y,
+    points: serialized.points,
+    pressures: serialized.pressures,
+    simulatePressure: true,
+  };
+}
+
 export type { TStrokePoint };
-export { DEFAULT_STROKE_OPTIONS, getStrokePath };
+export {
+  DEFAULT_STROKE_OPTIONS,
+  createPenDataFromStrokePoints,
+  getStrokePath,
+  getStrokePathFromPenData,
+  getStrokePointsFromPenData,
+  serializeStrokePoints,
+};

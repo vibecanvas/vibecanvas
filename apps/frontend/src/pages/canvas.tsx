@@ -42,7 +42,7 @@ const CanvasPage: Component<CanvasPageProps> = (props) => {
             <p class="text-xs text-destructive font-mono">Failed to load canvas document</p>
           </div>
         </Match>
-        <Match when={docState() === "ready"}>
+        <Match when={docState() === "ready" && docHandle()}>
           <Canvas data={props.canvas} handle={docHandle()!} />
         </Match>
       </Switch>

@@ -1,6 +1,9 @@
 import Konva from "konva";
+import type { DocHandle } from "@automerge/automerge-repo";
+import type { TCanvasDoc } from "@vibecanvas/shell/automerge/index";
 import { createSignal, type Accessor, type Setter } from "solid-js";
 import { CameraSystem } from "../managers/camera.manager";
+import { CrdtManager } from "../managers/crdt.manager";
 import { InputManager, type TInputSystem } from "../managers/input.manager";
 import type { TTool } from "../components/toolbar.types";
 import { PanSystem } from "../systems/pan.system";
@@ -16,6 +19,7 @@ import type { TCanvasInputContext } from "../types/canvas-context.types";
 
 type TCanvasServiceArgs = {
   container: HTMLDivElement;
+  handle: DocHandle<TCanvasDoc>;
   getSidebarVisible: () => boolean;
   onToggleSidebar: () => void;
 };
@@ -40,6 +44,7 @@ export class CanvasService {
   #selectionRect: Konva.Rect;
   #strokePreviewPath: Konva.Path;
   #cleanupCameraSubscription: (() => void) | null = null;
+  #crdtManager: CrdtManager;
   #selectableNodes: Konva.Shape[] = [];
   #selectedIds = new Set<string>();
   #systems: AbstractCanvasSystem<TCanvasInputContext, unknown>[] = [];
@@ -162,29 +167,11 @@ export class CanvasService {
         this.#strokePreviewPath.getLayer()?.batchDraw();
       },
       commitStroke: (points) => {
-        const data = getStrokePath(points);
         logCanvasDebug("[canvas-service] commitStroke", {
           pointsLength: points.length,
-          dataLength: data.length,
         });
-
-        if (!data) {
-          this.#clearStrokePreview();
-          return;
-        }
-
-        const strokeNode = new Konva.Path({
-          id: `stroke-${crypto.randomUUID()}`,
-          data,
-          fill: "#0f172a",
-          opacity: 0.92,
-        });
-
-        this.#worldShapes.add(strokeNode);
-        this.#selectableNodes.push(strokeNode);
+        this.#crdtManager.commitPenStroke(points);
         this.#clearStrokePreview();
-        this.#applySelectionStyles();
-        this.#worldShapes.getLayer()?.batchDraw();
         this.#worldOverlay.getLayer()?.batchDraw();
       },
       cancelStrokePreview: () => {
@@ -198,6 +185,22 @@ export class CanvasService {
       context: this.#context,
       defaultCursor: "default",
     });
+
+    this.#crdtManager = new CrdtManager({
+      handle: args.handle,
+      worldShapes: this.#worldShapes,
+      addSelectableNode: (node) => {
+        if (this.#selectableNodes.some((existingNode) => existingNode.id() === node.id())) return;
+        this.#selectableNodes.push(node);
+      },
+      removeSelectableNode: (nodeId) => {
+        this.#selectableNodes = this.#selectableNodes.filter((node) => node.id() !== nodeId);
+      },
+      syncSelectionStyles: () => {
+        this.#applySelectionStyles();
+      },
+    });
+    this.#crdtManager.mount();
 
     this.#systems = [
       new ZoomSystem(),
@@ -231,6 +234,7 @@ export class CanvasService {
     for (const system of [...this.#systems].reverse()) {
       system.drawing.unmount?.(runtimeContext);
     }
+    this.#crdtManager.destroy();
     this.#cleanupCameraSubscription?.();
     this.#resizeObserver.disconnect();
     this.#inputManager.destroy();

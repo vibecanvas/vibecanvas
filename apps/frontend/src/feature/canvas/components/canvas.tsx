@@ -15,11 +15,11 @@ export function Canvas(props: ICanvasProps) {
   let canvasService: CanvasService | null = null;
 
   onMount(() => {
-    void props.handle;
     void props.data;
 
     canvasService = new CanvasService({
       container,
+      handle: props.handle,
       getSidebarVisible: () => store.sidebarVisible,
       onToggleSidebar: () => setStore("sidebarVisible", (v) => !v),
     });
