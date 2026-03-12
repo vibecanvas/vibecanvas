@@ -44,7 +44,7 @@ type TCanvasSystemInputContext<TContext extends object> = TCanvasSystemRuntimeCo
  * Intent:
  * - `CanvasService` owns the full runtime and composes systems together.
  * - each system owns its own internal state and behavior boundaries.
- * - input handling and drawing lifecycle are defined in one place so future
+ * - input handling and runtime lifecycle are defined in one place so future
  *   systems follow the same shape.
  *
  * This class is intentionally descriptive first. It is meant to be reviewed
@@ -52,12 +52,12 @@ type TCanvasSystemInputContext<TContext extends object> = TCanvasSystemRuntimeCo
  *
  * Design notes:
  * - `input` contains gesture and event hooks.
- * - `drawing` contains visual lifecycle hooks.
+ * - `mount` / `update` / `unmount` contain visual/runtime lifecycle hooks.
  * - `state` is owned by the system implementation and can store transient or
  *   persistent runtime data needed by that module.
  * - hooks are optional because not every system needs every capability.
  *   For example, a zoom system may only care about wheel input, while a grid
- *   system may only care about drawing updates.
+ *   system may only care about runtime updates.
  */
 abstract class AbstractCanvasSystem<TContext extends object, TState> {
   /** Human-readable stable system id used by the canvas runtime. */
@@ -68,6 +68,15 @@ abstract class AbstractCanvasSystem<TContext extends object, TState> {
 
   /** Internal runtime state owned by this system. */
   protected state: TState;
+
+  /** Mount runtime-owned nodes or overlays. */
+  mount?(context: TCanvasSystemRuntimeContext<TContext>): void;
+
+  /** React to camera, resize, or other runtime updates. */
+  update?(context: TCanvasSystemRuntimeContext<TContext>): void;
+
+  /** Clean up runtime-owned nodes or overlays. */
+  unmount?(context: TCanvasSystemRuntimeContext<TContext>): void;
 
   /**
    * Input hooks for this system.
@@ -108,25 +117,6 @@ abstract class AbstractCanvasSystem<TContext extends object, TState> {
       event: TInputManagerEventMap["keyup"],
     ) => TInputHandlerResult;
     getCursor?: (context: TCanvasSystemInputContext<TContext>) => string | null | undefined;
-  };
-
-  /**
-   * Drawing hooks for this system.
-   *
-   * These are for visual ownership rather than input ownership. Examples:
-   * - create/remove Konva nodes
-   * - redraw overlays or guides
-   * - react to camera/store changes
-   * - batch drawing work on mount/update/unmount
-   *
-   * Drawing hooks intentionally use runtime context rather than input context.
-   * Rendering a canvas module should not need to know about input-manager-owned
-   * fields such as active gesture ownership or cursor controls.
-   */
-  abstract readonly drawing: {
-    mount?: (context: TCanvasSystemRuntimeContext<TContext>) => void;
-    redraw?: (context: TCanvasSystemRuntimeContext<TContext>) => void;
-    unmount?: (context: TCanvasSystemRuntimeContext<TContext>) => void;
   };
 
   protected constructor(args: {

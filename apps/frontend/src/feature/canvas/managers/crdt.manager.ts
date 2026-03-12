@@ -2,10 +2,12 @@ import type { DocHandle } from "@automerge/automerge-repo";
 import {
   getElementsSortedByZ,
   type TCanvasDoc,
+  type TElementData,
+  type TElementStyle,
   type TElement,
 } from "@vibecanvas/shell/automerge/types/canvas-doc";
 import Konva from "konva";
-import { getStrokePathFromPenData, type TStrokePoint, createPenDataFromStrokePoints } from "../utils/stroke-renderer";
+import { getStrokePathFromPenData } from "../utils/stroke-renderer";
 
 type TCrdtManagerArgs = {
   handle: DocHandle<TCanvasDoc>;
@@ -13,6 +15,17 @@ type TCrdtManagerArgs = {
   addSelectableNode: (node: Konva.Path) => void;
   removeSelectableNode: (nodeId: string) => void;
   syncSelectionStyles: () => void;
+};
+
+type TCrdtElementDraft = {
+  id?: string;
+  x: number;
+  y: number;
+  angle?: number;
+  parentGroupId?: string | null;
+  locked?: boolean;
+  data: TElementData;
+  style?: TElementStyle;
 };
 
 const DEFAULT_PEN_FILL = "#0f172a";
@@ -60,35 +73,30 @@ export class CrdtManager {
     this.#penNodes.clear();
   }
 
-  commitPenStroke(points: TStrokePoint[]) {
-    const penData = createPenDataFromStrokePoints(points);
-    if (!penData) return;
-
+  createElement(draft: TCrdtElementDraft) {
     const timestamp = Date.now();
-    const id = `pen-${crypto.randomUUID()}`;
+    const id = draft.id ?? `${draft.data.type}-${crypto.randomUUID()}`;
 
     this.#handle.change((doc) => {
       doc.elements[id] = {
         id,
-        x: penData.x,
-        y: penData.y,
-        angle: 0,
+        x: draft.x,
+        y: draft.y,
+        angle: draft.angle ?? 0,
         zIndex: `${timestamp}:${id}`,
-        parentGroupId: null,
+        parentGroupId: draft.parentGroupId ?? null,
         bindings: [],
-        locked: false,
+        locked: draft.locked ?? false,
         createdAt: timestamp,
         updatedAt: timestamp,
-        data: {
-          type: "pen",
-          points: penData.points,
-          pressures: penData.pressures,
-          simulatePressure: penData.simulatePressure,
-        },
-        style: {
-          backgroundColor: DEFAULT_PEN_FILL,
-          opacity: DEFAULT_PEN_OPACITY,
-        },
+        data: draft.data,
+        style: draft.data.type === "pen"
+          ? {
+              backgroundColor: DEFAULT_PEN_FILL,
+              opacity: DEFAULT_PEN_OPACITY,
+              ...draft.style,
+            }
+          : (draft.style ?? {}),
       };
     });
   }
@@ -157,4 +165,4 @@ export class CrdtManager {
   }
 }
 
-export type { TCrdtManagerArgs };
+export type { TCrdtElementDraft, TCrdtManagerArgs };

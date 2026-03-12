@@ -1,11 +1,14 @@
+import Konva from "konva";
+import type { TPenData } from "@vibecanvas/shell/automerge/index";
 import type { TCanvasInputContext } from "../types/canvas-context.types";
-import type { TStrokePoint } from "../utils/stroke-renderer";
+import { createPenDataFromStrokePoints, getStrokePath, type TStrokePoint } from "../utils/stroke-renderer";
 import { logCanvasDebug } from "../utils/canvas-debug";
 import { AbstractCanvasSystem } from "./system.abstract";
-import type { TCanvasSystemInputContext } from "./system.abstract";
+import type { TCanvasSystemInputContext, TCanvasSystemRuntimeContext } from "./system.abstract";
 
 type TPenState = {
   points: TStrokePoint[];
+  previewPath: Konva.Path | null;
 };
 
 /**
@@ -20,10 +23,8 @@ class PenSystem extends AbstractCanvasSystem<TCanvasInputContext, TPenState> {
 
   readonly input: AbstractCanvasSystem<TCanvasInputContext, TPenState>["input"];
 
-  readonly drawing: AbstractCanvasSystem<TCanvasInputContext, TPenState>["drawing"];
-
   constructor() {
-    super({ priority: 15, state: { points: [] } });
+    super({ priority: 15, state: { points: [], previewPath: null } });
 
     this.input = {
       canStart: this.canStart.bind(this),
@@ -33,8 +34,25 @@ class PenSystem extends AbstractCanvasSystem<TCanvasInputContext, TPenState> {
       onCancel: this.onCancel.bind(this),
       getCursor: this.getCursor.bind(this),
     };
+  }
 
-    this.drawing = {};
+  mount(context: TCanvasSystemRuntimeContext<TCanvasInputContext>) {
+    const previewPath = new Konva.Path({
+      data: "",
+      fill: "#0f172a",
+      opacity: 0.92,
+      visible: false,
+      listening: false,
+    });
+
+    this.state.previewPath = previewPath;
+    context.data.mountPreviewNode(this.name, previewPath);
+  }
+
+  unmount(context: TCanvasSystemRuntimeContext<TCanvasInputContext>) {
+    this.state.previewPath = null;
+    this.state.points = [];
+    context.data.unmountPreviewNode(this.name);
   }
 
   private getPressure(event: MouseEvent | TouchEvent | PointerEvent) {
@@ -64,13 +82,34 @@ class PenSystem extends AbstractCanvasSystem<TCanvasInputContext, TPenState> {
     return canStart;
   }
 
+  private syncPreview() {
+    if (!this.state.previewPath) return;
+
+    const data = getStrokePath(this.state.points);
+    this.state.previewPath.setAttrs({
+      data,
+      visible: Boolean(data),
+    });
+    this.state.previewPath.getLayer()?.batchDraw();
+  }
+
+  private clearPreview() {
+    if (!this.state.previewPath) return;
+    this.state.previewPath.hide();
+    this.state.previewPath.data("");
+    this.state.previewPath.getLayer()?.batchDraw();
+  }
+
+  private createPenElementData(): (TPenData & { x: number; y: number }) | null {
+    return createPenDataFromStrokePoints(this.state.points);
+  }
+
   private onStart(context: TCanvasSystemInputContext<TCanvasInputContext>, event: Parameters<NonNullable<PenSystem["input"]["onStart"]>>[1]) {
     const point = this.createPoint(context, event.evt);
     if (!point) return;
     this.state.points = [point, { ...point, x: point.x + 0.01, y: point.y + 0.01 }];
     logCanvasDebug("[pen-system] onStart", { point, pointsLength: this.state.points.length });
-    context.data.beginStrokePreview(point);
-    context.data.updateStrokePreview(this.state.points);
+    this.syncPreview();
   }
 
   private onMove(context: TCanvasSystemInputContext<TCanvasInputContext>, event: Parameters<NonNullable<PenSystem["input"]["onMove"]>>[1]) {
@@ -81,23 +120,40 @@ class PenSystem extends AbstractCanvasSystem<TCanvasInputContext, TPenState> {
     if (previousPoint && previousPoint.x === point.x && previousPoint.y === point.y) return;
     this.state.points = [...this.state.points, point];
     logCanvasDebug("[pen-system] onMove", { point, pointsLength: this.state.points.length });
-    context.data.updateStrokePreview(this.state.points);
+    this.syncPreview();
   }
 
   private onEnd(context: TCanvasSystemInputContext<TCanvasInputContext>) {
     logCanvasDebug("[pen-system] onEnd", { pointsLength: this.state.points.length });
     if (this.state.points.length >= 2) {
-      context.data.commitStroke(this.state.points);
+      const penData = this.createPenElementData();
+      if (penData) {
+        context.data.createElement({
+          x: penData.x,
+          y: penData.y,
+          data: {
+            type: "pen",
+            points: penData.points,
+            pressures: penData.pressures,
+            simulatePressure: penData.simulatePressure,
+          },
+          style: {
+            backgroundColor: "#0f172a",
+            opacity: 0.92,
+          },
+        });
+      }
     } else {
-      context.data.cancelStrokePreview();
+      this.clearPreview();
     }
+    this.clearPreview();
     this.state.points = [];
   }
 
-  private onCancel(context: TCanvasSystemInputContext<TCanvasInputContext>) {
+  private onCancel() {
     logCanvasDebug("[pen-system] onCancel", { pointsLength: this.state.points.length });
     this.state.points = [];
-    context.data.cancelStrokePreview();
+    this.clearPreview();
   }
 
   private getCursor(context: TCanvasSystemInputContext<TCanvasInputContext>) {

@@ -14,8 +14,7 @@ import { ToolSystem } from "../systems/tool.system";
 import { ZoomSystem } from "../systems/zoom.system";
 import { logCanvasDebug } from "../utils/canvas-debug";
 import { renderGrid } from "../utils/grid-renderer";
-import { getStrokePath, type TStrokePoint } from "../utils/stroke-renderer";
-import type { TCanvasInputContext } from "../types/canvas-context.types";
+import type { TCanvasElementDraft, TCanvasInputContext } from "../types/canvas-context.types";
 
 type TCanvasServiceArgs = {
   container: HTMLDivElement;
@@ -41,10 +40,9 @@ export class CanvasService {
   #gridLayer: Konva.Layer;
   #worldShapes: Konva.Group;
   #worldOverlay: Konva.Group;
-  #selectionRect: Konva.Rect;
-  #strokePreviewPath: Konva.Path;
   #cleanupCameraSubscription: (() => void) | null = null;
   #crdtManager: CrdtManager;
+  #previewNodes = new Map<string, Konva.Node>();
   #selectableNodes: Konva.Shape[] = [];
   #selectedIds = new Set<string>();
   #systems: AbstractCanvasSystem<TCanvasInputContext, unknown>[] = [];
@@ -88,24 +86,6 @@ export class CanvasService {
 
     this.#worldShapes = new Konva.Group();
     this.#worldOverlay = new Konva.Group();
-    this.#strokePreviewPath = new Konva.Path({
-      data: "",
-      fill: "#0f172a",
-      opacity: 0.92,
-      visible: false,
-      listening: false,
-    });
-    this.#selectionRect = new Konva.Rect({
-      visible: false,
-      fill: "rgba(59, 130, 246, 0.12)",
-      stroke: "#3b82f6",
-      strokeWidth: 1,
-      dash: [6, 4],
-      listening: false,
-    });
-
-    this.#worldOverlay.add(this.#strokePreviewPath);
-    this.#worldOverlay.add(this.#selectionRect);
     shapesLayer.add(this.#worldShapes);
     overlayLayer.add(this.#worldOverlay);
     this.#stage.add(this.#gridLayer, shapesLayer, overlayLayer);
@@ -147,36 +127,19 @@ export class CanvasService {
         };
         input.click();
       },
-      overlayLayer,
-      selectionRect: this.#selectionRect,
+      mountPreviewNode: (ownerId, node) => {
+        this.#mountPreviewNode(ownerId, node);
+      },
+      unmountPreviewNode: (ownerId) => {
+        this.#unmountPreviewNode(ownerId);
+      },
       getSelectableNodes: () => this.#selectableNodes,
       setSelectedIds: (ids) => {
         this.#selectedIds = new Set(ids);
         this.#applySelectionStyles();
       },
-      beginStrokePreview: (point) => {
-        logCanvasDebug("[canvas-service] beginStrokePreview", { point });
-        this.#syncStrokePath(this.#strokePreviewPath, [point, { ...point, x: point.x + 0.01, y: point.y + 0.01 }]);
-        this.#strokePreviewPath.getLayer()?.batchDraw();
-      },
-      updateStrokePreview: (points) => {
-        logCanvasDebug("[canvas-service] updateStrokePreview", {
-          pointsLength: points.length,
-        });
-        this.#syncStrokePath(this.#strokePreviewPath, points);
-        this.#strokePreviewPath.getLayer()?.batchDraw();
-      },
-      commitStroke: (points) => {
-        logCanvasDebug("[canvas-service] commitStroke", {
-          pointsLength: points.length,
-        });
-        this.#crdtManager.commitPenStroke(points);
-        this.#clearStrokePreview();
-        this.#worldOverlay.getLayer()?.batchDraw();
-      },
-      cancelStrokePreview: () => {
-        logCanvasDebug("[canvas-service] cancelStrokePreview");
-        this.#clearStrokePreview();
+      createElement: (draft) => {
+        this.#createElement(draft);
       },
     };
 
@@ -212,7 +175,7 @@ export class CanvasService {
 
     for (const system of this.#systems) {
       this.#inputManager.registerSystem(this.#toInputSystem(system));
-      system.drawing.mount?.(this.#runtimeContext());
+      system.mount?.(this.#runtimeContext());
     }
 
     this.#resizeObserver = new ResizeObserver(() => {
@@ -232,7 +195,10 @@ export class CanvasService {
   destroy() {
     const runtimeContext = this.#runtimeContext();
     for (const system of [...this.#systems].reverse()) {
-      system.drawing.unmount?.(runtimeContext);
+      system.unmount?.(runtimeContext);
+    }
+    for (const ownerId of this.#previewNodes.keys()) {
+      this.#unmountPreviewNode(ownerId);
     }
     this.#crdtManager.destroy();
     this.#cleanupCameraSubscription?.();
@@ -268,7 +234,7 @@ export class CanvasService {
     this.#renderGrid();
     const runtimeContext = this.#runtimeContext();
     for (const system of this.#systems) {
-      system.drawing.redraw?.(runtimeContext);
+      system.update?.(runtimeContext);
     }
   }
 
@@ -289,22 +255,37 @@ export class CanvasService {
     };
   }
 
-  #syncStrokePath(pathNode: Konva.Path, points: TStrokePoint[]) {
-    const data = getStrokePath(points);
+  #mountPreviewNode(ownerId: string, node: Konva.Node) {
+    const existingNode = this.#previewNodes.get(ownerId);
+    if (existingNode === node) return;
 
-    logCanvasDebug("[canvas-service] syncStrokePath", {
-      pointsLength: points.length,
-      dataLength: data.length,
-    });
+    if (existingNode) {
+      existingNode.remove();
+      existingNode.destroy();
+    }
 
-    pathNode.data(data);
-    pathNode.visible(Boolean(data));
+    this.#previewNodes.set(ownerId, node);
+    this.#worldOverlay.add(node);
+    node.moveToTop();
+    this.#worldOverlay.getLayer()?.batchDraw();
   }
 
-  #clearStrokePreview() {
-    this.#strokePreviewPath.hide();
-    this.#strokePreviewPath.data("");
-    this.#strokePreviewPath.getLayer()?.batchDraw();
+  #unmountPreviewNode(ownerId: string) {
+    const node = this.#previewNodes.get(ownerId);
+    if (!node) return;
+
+    this.#previewNodes.delete(ownerId);
+    node.destroy();
+    this.#worldOverlay.getLayer()?.batchDraw();
+  }
+
+  #createElement(draft: TCanvasElementDraft) {
+    logCanvasDebug("[canvas-service] createElement", {
+      type: draft.data.type,
+      x: draft.x,
+      y: draft.y,
+    });
+    this.#crdtManager.createElement(draft);
   }
 
   #applySelectionStyles() {

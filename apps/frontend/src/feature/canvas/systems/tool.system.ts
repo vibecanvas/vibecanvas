@@ -29,8 +29,6 @@ class ToolSystem extends AbstractCanvasSystem<TCanvasInputContext, TToolSystemSt
 
   readonly input: AbstractCanvasSystem<TCanvasInputContext, TToolSystemState>["input"];
 
-  readonly drawing: AbstractCanvasSystem<TCanvasInputContext, TToolSystemState>["drawing"];
-
   constructor() {
     super({
       priority: 0,
@@ -45,11 +43,6 @@ class ToolSystem extends AbstractCanvasSystem<TCanvasInputContext, TToolSystemSt
     this.input = {
       onKeyDown: this.onKeyDown.bind(this),
       onKeyUp: this.onKeyUp.bind(this),
-    };
-
-    this.drawing = {
-      mount: this.mount.bind(this),
-      unmount: this.unmount.bind(this),
     };
   }
 
@@ -125,7 +118,7 @@ class ToolSystem extends AbstractCanvasSystem<TCanvasInputContext, TToolSystemSt
     return true;
   }
 
-  private mount(context: TCanvasSystemRuntimeContext<TCanvasInputContext>) {
+  mount(context: TCanvasSystemRuntimeContext<TCanvasInputContext>) {
     const mountElement = document.createElement("div");
     mountElement.className = "absolute inset-0 pointer-events-none";
     context.data.overlayRoot.appendChild(mountElement);
@@ -147,7 +140,7 @@ class ToolSystem extends AbstractCanvasSystem<TCanvasInputContext, TToolSystemSt
     this.state.disposeRender = disposeRender;
   }
 
-  private unmount() {
+  unmount() {
     this.state.disposeRender?.();
     this.state.mountElement?.remove();
     this.state.disposeRender = null;

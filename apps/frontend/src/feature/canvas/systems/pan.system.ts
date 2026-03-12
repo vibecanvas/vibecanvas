@@ -23,8 +23,6 @@ class PanSystem extends AbstractCanvasSystem<TCanvasInputContext, TPanState> {
 
   readonly input: AbstractCanvasSystem<TCanvasInputContext, TPanState>["input"];
 
-  readonly drawing: AbstractCanvasSystem<TCanvasInputContext, TPanState>["drawing"];
-
   constructor() {
     super({
       priority: 10,
@@ -43,8 +41,6 @@ class PanSystem extends AbstractCanvasSystem<TCanvasInputContext, TPanState> {
       onWheel: this.onWheel.bind(this),
       getCursor: this.getCursor.bind(this),
     };
-
-    this.drawing = {};
   }
 
   private canStart(context: TCanvasSystemInputContext<TCanvasInputContext>, event: Parameters<NonNullable<PanSystem["input"]["canStart"]>>[1]) {

@@ -20,7 +20,7 @@ The current `apps/frontend` canvas is a Konva-based interaction sandbox with a s
 - `Canvas.tsx` is only a thin Solid wrapper that mounts and destroys `CanvasService`.
 - `CanvasService` is the high-level entry point. It owns Konva lifecycle, shared context, managers, and systems.
 - managers are controllers for shared canvas runtime concerns such as camera and input routing.
-- systems are classes that handle a concrete canvas module: they react to input and/or manage drawing for that module.
+- systems are classes that handle a concrete canvas module: they react to input and may also own runtime visuals for that module.
 - systems may also own canvas-local HTML/JSX overlays rendered into a service-owned overlay root.
 - utils contain helper functions with little or no risky side effects.
 
@@ -34,8 +34,8 @@ Today the frontend canvas supports:
 - a canvas-local HTML overlay root owned by `apps/frontend/src/feature/canvas/service/canvas.service.ts`
 - world-space content rendered inside transformable world groups
 - a screen-space grid layer that redraws from camera state so panning/zooming still feels spatial
-- marquee selection with a dashed selection rectangle
-- local-only freehand pen strokes rendered with `perfect-freehand`
+- marquee selection with a dashed selection rectangle owned by `SelectBoxSystem`
+- freehand pen strokes rendered with `perfect-freehand`, with local preview during drag and CRDT-backed persistence on commit
 - drag-to-pan using middle mouse, `Space`, or `hand` tool
 - touchpad/two-finger panning via wheel events
 - `ctrl+wheel` zoom around the pointer
@@ -43,10 +43,9 @@ Today the frontend canvas supports:
 
 Current limitations:
 
-- the canvas currently has no persistent shapes rendered yet
+- the canvas currently persists pen strokes only; other shape types are not rendered yet
 - there is no drag-selection/move system yet
 - there is no resize/rotate/draw-shape system yet
-- pen strokes are local runtime nodes only and are not persisted yet
 - zoom percent and camera state are not surfaced in UI beyond internal runtime state
 - only sidebar visibility remains global; tool and grid state are canvas-local
 
@@ -74,8 +73,11 @@ This service currently:
 - creates managers and registers systems
 - owns resize observation and canvas cleanup
 - owns canvas-local state such as active tool and grid visibility
+- exposes a runtime API to systems through context
+- mounts transient preview nodes into `worldOverlay`
+- delegates semantic element persistence into `CrdtManager`
 
-Screen-fixed UI like tool labels belongs in the HUD layer.
+Screen-fixed UI like toolbars belongs in the DOM overlay root.
 World-space visuals like shapes and selection rect belong in world groups managed by the camera.
 The grid is the special case: it stays on its own screen-space layer, but redraws from camera state so it visually tracks camera movement.
 
@@ -123,6 +125,20 @@ Important behavior:
 - `true` from `onWheel` / `onKeyDown` / `onKeyUp` means handled, stop routing
 - `false` or `undefined` means let lower-priority systems try
 
+#### CRDT Manager
+
+`apps/frontend/src/feature/canvas/managers/crdt.manager.ts`
+
+The CRDT manager owns document persistence and document-to-Konva reconciliation.
+
+It currently:
+
+- accepts semantic element drafts from `CanvasService`
+- writes those drafts into the local Automerge document
+- listens for document change events
+- reconciles persistent pen elements from document state into `worldShapes`
+- registers/removes selectable persistent nodes with `CanvasService`
+
 ### 3. Systems
 
 Current systems live in `apps/frontend/src/feature/canvas/systems/`:
@@ -138,7 +154,7 @@ Each system should own one module/part of the canvas.
 A system is expected to have:
 
 - input handling fields/hooks
-- drawing handling fields/hooks
+- optional root-level runtime lifecycle hooks: `mount()`, `update()`, `unmount()`
 - internal state if needed
 
 `system.abstract.ts` is the base shape for class-based systems.
@@ -146,9 +162,15 @@ A system is expected to have:
 `CanvasService` uses systems in two ways:
 
 - input hooks are adapted into `InputManager`
-- drawing hooks are called directly by `CanvasService` through `mount`, `redraw`, and `unmount`
+- lifecycle hooks are called directly by `CanvasService` through `mount`, `update`, and `unmount`
 
-`ToolSystem` is the first system using this fully: it owns keyboard shortcuts and also renders the floating toolbar through Solid's `render()` into the canvas overlay root.
+Systems should own transient module-local visuals themselves. For example:
+
+- `PenSystem` owns its preview `Konva.Path`
+- `SelectBoxSystem` owns its selection marquee `Konva.Rect`
+- `ToolSystem` owns the floating toolbar rendered through Solid's `render()` into the canvas overlay root
+
+Persistent document-backed visuals are still derived from CRDT state by `CrdtManager`, not passed around as raw `Konva.Node` source-of-truth objects.
 
 ### 4. Utils
 
@@ -236,9 +258,9 @@ Flow:
 
 1. System starts only when active tool is `select` and pointerdown hits empty stage.
 2. Start pointer is converted from screen space to world space with `camera.screenToWorld()`.
-3. The selection rectangle is drawn in world coordinates.
+3. `SelectBoxSystem` updates its own `Konva.Rect` preview node in world coordinates.
 4. On move, current pointer is also converted to world coordinates.
-5. The system updates `selectionRect` bounds and intersects it with selectable nodes.
+5. The system updates the marquee bounds and intersects it with selectable nodes.
 6. Selected ids are pushed back into `CanvasService`, which updates visual highlight styles.
 
 Important implication:
@@ -294,13 +316,17 @@ Flow:
 2. Pointer positions are converted from screen space to world space through the camera.
 3. `PenSystem` collects raw world points locally during drag.
 4. `utils/stroke-renderer.ts` passes those points into `perfect-freehand` and turns the outline into SVG path data.
-5. A transient preview `Konva.Path` is updated in `worldOverlay` while drawing.
-6. On pointer up, the preview is converted into a committed `Konva.Path` under `worldShapes` by `CanvasService`.
+5. `PenSystem` owns a transient preview `Konva.Path` mounted in `worldOverlay` while drawing.
+6. On pointer up, `PenSystem` serializes the stroke into semantic pen data and calls `CanvasService.createElement(...)`.
+7. `CanvasService` delegates that semantic draft to `CrdtManager.createElement(...)`.
+8. `CrdtManager` writes the new element into the local Automerge document.
+9. The local Automerge change event triggers reconcile, and `CrdtManager` creates or updates the persistent `Konva.Path` in `worldShapes`.
 
 Important rule:
 
-- local runtime stores raw points only during the gesture, then stores a rendered Konva path node after commit
-- if pen becomes persistent later, the right data model is raw points + style, not only the final SVG path
+- local runtime stores raw points only during the gesture
+- persistence should pass semantic document payloads through `CanvasService`, not raw `Konva.Node` instances
+- the right persisted model is raw points + style, not only the final SVG path
 
 ## How to Modify the Canvas Safely
 
@@ -320,6 +346,8 @@ Do not move Konva object ownership back into the Solid component.
 
 When a concern is shared orchestration rather than a canvas module, prefer a manager over a system.
 When a concern owns canvas-local HTML UI, render it from the owning system via the overlay root rather than from page-level Solid JSX.
+When a concern owns a transient world-space visual, let the system create its preview `Konva.Node` and mount it through `CanvasService`.
+When committing persistent state, pass semantic data into `CanvasService`, then let a manager like `CrdtManager` persist and reconcile it.
 
 ### Add a New World Overlay
 
@@ -345,7 +373,19 @@ If a shape should participate in selection:
 - add it to the selectable node list in `CanvasService`
 - ensure it has a stable `id()`
 
-Future direction is to replace demo shapes with document-backed nodes, but the selection contract remains the same.
+For transient drawing previews:
+
+- let the owning system create the preview node
+- mount it via `mountPreviewNode(...)`
+- clean it up in `unmount()` or gesture cancel/end
+
+For persistent shapes:
+
+- serialize the shape into semantic document data
+- call `createElement(...)` from the system
+- let `CrdtManager` turn the document element back into a persistent Konva node
+
+The selection contract remains the same: persistent Konva nodes need stable ids and must be registered as selectable.
 
 ### Add Keyboard or Wheel Shortcuts
 
@@ -379,6 +419,7 @@ Avoid:
 
 - `apps/frontend/src/feature/canvas/managers/input.manager.ts`
 - `apps/frontend/src/feature/canvas/managers/camera.manager.ts`
+- `apps/frontend/src/feature/canvas/managers/crdt.manager.ts`
 
 ### Systems
 
@@ -414,22 +455,31 @@ flowchart TD
 
   IM -->|pointer gesture ownership| P1[PanSystem]
   IM -->|pointer gesture ownership| SB1[SelectBoxSystem]
+  IM -->|pointer gesture ownership| PEN1[PenSystem]
   IM -->|wheel by priority| Z1[ZoomSystem]
 
   P1 --> C1[CameraManager.setPosition or panBy]
   Z1 --> C2[CameraManager.zoomAtScreenPoint]
   SB1 --> C3[CameraManager.screenToWorld]
+  PEN1 --> C4[CameraManager.screenToWorld]
 
   C1 --> WG1[worldShapes group]
   C1 --> WG2[worldOverlay group]
   C2 --> WG1
   C2 --> WG2
 
-  SB1 --> SR[selectionRect in worldOverlay]
+  SB1 --> SR[selectionRect preview in worldOverlay]
   SB1 --> SEL[selected ids]
   SEL --> CV[CanvasService applySelectionStyles]
 
-  HUD[HUD layer / tool label] -. fixed screen space .-> STAGE[Stage]
+  PEN1 --> PP[preview path in worldOverlay]
+  PEN1 --> CE[CanvasService createElement semantic draft]
+  CE --> CRDT[CrdtManager createElement]
+  CRDT --> DOC[Automerge local document]
+  DOC --> REC[reconcileFromDoc]
+  REC --> WG1
+
+  DOM[canvas overlay root / toolbar] -. fixed screen space .-> STAGE[Stage]
   WG1 --> STAGE
   WG2 --> STAGE
 ```

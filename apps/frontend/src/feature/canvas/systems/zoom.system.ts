@@ -23,16 +23,12 @@ class ZoomSystem extends AbstractCanvasSystem<TCanvasInputContext, TZoomState> {
 
   readonly input: AbstractCanvasSystem<TCanvasInputContext, TZoomState>["input"];
 
-  readonly drawing: AbstractCanvasSystem<TCanvasInputContext, TZoomState>["drawing"];
-
   constructor() {
     super({ priority: 30, state: {} });
 
     this.input = {
       onWheel: this.onWheel.bind(this),
     };
-
-    this.drawing = {};
   }
 
   private onWheel(context: TCanvasSystemInputContext<TCanvasInputContext>, event: Parameters<NonNullable<ZoomSystem["input"]["onWheel"]>>[1]) {
