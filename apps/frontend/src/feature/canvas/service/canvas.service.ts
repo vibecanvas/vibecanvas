@@ -44,13 +44,16 @@ export class CanvasService {
   #selectedIds = new Set<string>();
   #systems: AbstractCanvasSystem<TCanvasInputContext, unknown>[] = [];
   #context: TCanvasInputContext;
-  #activeTool: Accessor<TTool>;
-  #setActiveToolSignal: Setter<TTool>;
+  #selectedTool: Accessor<TTool>;
+  #setSelectedToolSignal: Setter<TTool>;
+  #temporaryTool: Accessor<TTool | null>;
+  #setTemporaryToolSignal: Setter<TTool | null>;
   #gridVisible: Accessor<boolean>;
   #setGridVisibleSignal: Setter<boolean>;
 
   constructor(args: TCanvasServiceArgs) {
-    [this.#activeTool, this.#setActiveToolSignal] = createSignal<TTool>("select");
+    [this.#selectedTool, this.#setSelectedToolSignal] = createSignal<TTool>("select");
+    [this.#temporaryTool, this.#setTemporaryToolSignal] = createSignal<TTool | null>(null);
     [this.#gridVisible, this.#setGridVisibleSignal] = createSignal(true);
 
     logCanvasDebug("[canvas-service] mounted", {
@@ -114,7 +117,11 @@ export class CanvasService {
       overlayRoot: this.#overlayRoot,
       getActiveTool: this.#activeTool,
       setActiveTool: (tool) => {
-        this.#setActiveToolSignal(tool);
+        this.#setSelectedToolSignal(tool);
+        this.#setTemporaryToolSignal(null);
+      },
+      setTemporaryTool: (tool) => {
+        this.#setTemporaryToolSignal(tool);
       },
       getGridVisible: this.#gridVisible,
       toggleGridVisible: () => {
@@ -232,6 +239,8 @@ export class CanvasService {
     this.#stageRoot.remove();
   }
 
+  #activeTool = () => this.#temporaryTool() ?? this.#selectedTool();
+
   #renderGrid() {
     renderGrid({
       layer: this.#gridLayer,
@@ -298,12 +307,21 @@ export class CanvasService {
     for (const node of this.#selectableNodes) {
       const isSelected = this.#selectedIds.has(node.id());
 
-      node.setAttrs({
-        stroke: isSelected ? "#f59e0b" : "#0369a1",
-        strokeWidth: isSelected ? 4 : 2,
-        shadowBlur: isSelected ? 12 : 0,
-        shadowColor: isSelected ? "#f59e0b" : undefined,
-      });
+      if (isSelected) {
+        node.setAttrs({
+          stroke: "#f59e0b",
+          strokeWidth: 4,
+          shadowBlur: 12,
+          shadowColor: "#f59e0b",
+        });
+      } else {
+        node.setAttrs({
+          stroke: null,
+          strokeWidth: 0,
+          shadowBlur: 0,
+          shadowColor: undefined,
+        });
+      }
     }
 
     this.#stage.batchDraw();

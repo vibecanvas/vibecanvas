@@ -13,6 +13,8 @@ import {
 type TToolSystemState = {
   disposeRender: (() => void) | null;
   mountElement: HTMLDivElement | null;
+  isSpaceHeld: boolean;
+  isTemporaryHandToolActive: boolean;
 };
 
 /**
@@ -32,14 +34,17 @@ class ToolSystem extends AbstractCanvasSystem<TCanvasInputContext, TToolSystemSt
   constructor() {
     super({
       priority: 0,
-      state: {
-        disposeRender: null,
-        mountElement: null,
-      },
-    });
+        state: {
+          disposeRender: null,
+          mountElement: null,
+          isSpaceHeld: false,
+          isTemporaryHandToolActive: false,
+        },
+      });
 
     this.input = {
       onKeyDown: this.onKeyDown.bind(this),
+      onKeyUp: this.onKeyUp.bind(this),
     };
 
     this.drawing = {
@@ -71,6 +76,23 @@ class ToolSystem extends AbstractCanvasSystem<TCanvasInputContext, TToolSystemSt
       return true;
     }
 
+    if (event.code === "Space") {
+      if (this.state.isSpaceHeld) {
+        event.preventDefault();
+        return true;
+      }
+
+      this.state.isSpaceHeld = true;
+      this.state.isTemporaryHandToolActive = context.data.getActiveTool() !== "hand";
+
+      if (this.state.isTemporaryHandToolActive) {
+        context.data.setTemporaryTool("hand");
+      }
+
+      event.preventDefault();
+      return true;
+    }
+
     if (event.metaKey || event.ctrlKey || event.altKey) return false;
 
     if (event.key.toLowerCase() === "g") {
@@ -84,6 +106,22 @@ class ToolSystem extends AbstractCanvasSystem<TCanvasInputContext, TToolSystemSt
 
     event.preventDefault();
     this.selectTool(context, tool);
+    return true;
+  }
+
+  private onKeyUp(
+    context: TCanvasSystemInputContext<TCanvasInputContext>,
+    event: TInputManagerEventMap["keyup"],
+  ) {
+    if (event.code !== "Space") return false;
+
+    if (this.state.isTemporaryHandToolActive) {
+      context.data.setTemporaryTool(null);
+    }
+
+    this.state.isSpaceHeld = false;
+    this.state.isTemporaryHandToolActive = false;
+    event.preventDefault();
     return true;
   }
 

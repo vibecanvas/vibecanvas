@@ -8,6 +8,7 @@ type TCanvasInputContext = {
   overlayRoot: HTMLDivElement;
   getActiveTool: () => TTool;
   setActiveTool: (tool: TTool) => void;
+  setTemporaryTool: (tool: TTool | null) => void;
   getGridVisible: () => boolean;
   toggleGridVisible: () => void;
   getSidebarVisible: () => boolean;

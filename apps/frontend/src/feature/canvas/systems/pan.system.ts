@@ -3,7 +3,6 @@ import { AbstractCanvasSystem } from "./system.abstract";
 import type { TCanvasSystemInputContext, TCanvasSystemRuntimeContext } from "./system.abstract";
 
 type TPanState = {
-  isSpacePressed: boolean;
   startPointer: { x: number; y: number } | null;
   startCameraPosition: { x: number; y: number } | null;
 };
@@ -30,7 +29,6 @@ class PanSystem extends AbstractCanvasSystem<TCanvasInputContext, TPanState> {
     super({
       priority: 10,
       state: {
-        isSpacePressed: false,
         startPointer: null,
         startCameraPosition: null,
       },
@@ -43,8 +41,6 @@ class PanSystem extends AbstractCanvasSystem<TCanvasInputContext, TPanState> {
       onEnd: this.onEnd.bind(this),
       onCancel: this.onCancel.bind(this),
       onWheel: this.onWheel.bind(this),
-      onKeyDown: this.onKeyDown.bind(this),
-      onKeyUp: this.onKeyUp.bind(this),
       getCursor: this.getCursor.bind(this),
     };
 
@@ -53,7 +49,7 @@ class PanSystem extends AbstractCanvasSystem<TCanvasInputContext, TPanState> {
 
   private canStart(context: TCanvasSystemInputContext<TCanvasInputContext>, event: Parameters<NonNullable<PanSystem["input"]["canStart"]>>[1]) {
     const isMiddleMouse = event.evt instanceof MouseEvent && event.evt.button === 1;
-    return isMiddleMouse || this.state.isSpacePressed || context.data.getActiveTool() === "hand";
+    return isMiddleMouse || context.data.getActiveTool() === "hand";
   }
 
   private onStart(context: TCanvasSystemInputContext<TCanvasInputContext>) {
@@ -95,27 +91,9 @@ class PanSystem extends AbstractCanvasSystem<TCanvasInputContext, TPanState> {
     this.state.startCameraPosition = null;
   }
 
-  private onKeyDown(_context: TCanvasSystemInputContext<TCanvasInputContext>, event: Parameters<NonNullable<PanSystem["input"]["onKeyDown"]>>[1]) {
-    if (event.code === "Space") {
-      this.state.isSpacePressed = true;
-      event.preventDefault();
-      return true;
-    }
-    return false;
-  }
-
-  private onKeyUp(_context: TCanvasSystemInputContext<TCanvasInputContext>, event: Parameters<NonNullable<PanSystem["input"]["onKeyUp"]>>[1]) {
-    if (event.code === "Space") {
-      this.state.isSpacePressed = false;
-      event.preventDefault();
-      return true;
-    }
-    return false;
-  }
-
   private getCursor(context: TCanvasSystemInputContext<TCanvasInputContext>) {
     if (context.activeSystemName === "pan") return "grabbing";
-    if (this.state.isSpacePressed || context.data.getActiveTool() === "hand") return "grab";
+    if (context.data.getActiveTool() === "hand") return "grab";
     return null;
   }
 }
