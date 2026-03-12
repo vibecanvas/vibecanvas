@@ -8,6 +8,7 @@ import { CameraSystem } from "../service/camera-system";
 import { InputManager } from "../service/input-manager";
 import { createPanSystem } from "../service/pan-system";
 import { createSelectBoxSystem } from "../service/select-box-system";
+import { createZoomSystem } from "../service/zoom-system";
 import type { TCanvasInputContext } from "../service/input-systems.types";
 
 interface ICanvasProps {
@@ -133,6 +134,7 @@ export function Canvas(props: ICanvasProps) {
       defaultCursor: "default",
     });
 
+    inputManager.registerSystem(createZoomSystem());
     inputManager.registerSystem(createSelectBoxSystem());
     inputManager.registerSystem(createPanSystem());
 

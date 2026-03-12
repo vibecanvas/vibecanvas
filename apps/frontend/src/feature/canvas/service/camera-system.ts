@@ -62,6 +62,16 @@ export class CameraSystem {
     this.#apply();
   }
 
+  zoomAtScreenPoint(args: { scale: number; screenPoint: Konva.Vector2d }) {
+    const worldPointBeforeZoom = this.screenToWorld(args.screenPoint);
+
+    this.#state.scale = args.scale;
+    this.#state.x = args.screenPoint.x - worldPointBeforeZoom.x * this.#state.scale;
+    this.#state.y = args.screenPoint.y - worldPointBeforeZoom.y * this.#state.scale;
+
+    this.#apply();
+  }
+
   screenToWorld(point: Konva.Vector2d): Konva.Vector2d {
     const target = this.#targets.values().next().value as Konva.Node | undefined;
 

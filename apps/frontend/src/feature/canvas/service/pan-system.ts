@@ -1,6 +1,17 @@
 import type { TInputSystem } from "./input-manager";
 import type { TCanvasInputContext } from "./input-systems.types";
 
+/**
+ * Handles viewport translation.
+ *
+ * This system supports two panning styles:
+ * - drag panning via middle mouse, `Space`, or the `hand` tool
+ * - touchpad/two-finger panning via wheel events without modifiers
+ *
+ * Wheel handling intentionally returns a boolean so the input manager can let the
+ * zoom system try first on `ctrl+wheel`, while normal wheel gestures fall through
+ * here and move the camera.
+ */
 function createPanSystem(): TInputSystem<TCanvasInputContext> {
   let isSpacePressed = false;
   let startPointer: { x: number; y: number } | null = null;
@@ -33,7 +44,7 @@ function createPanSystem(): TInputSystem<TCanvasInputContext> {
       context.stage.batchDraw();
     },
     onWheel: (context, event) => {
-      if (event.evt.ctrlKey) return;
+      if (event.evt.ctrlKey) return false;
 
       event.evt.preventDefault();
 
@@ -43,6 +54,7 @@ function createPanSystem(): TInputSystem<TCanvasInputContext> {
       });
 
       context.stage.batchDraw();
+      return true;
     },
     onEnd: () => {
       startPointer = null;
@@ -56,13 +68,19 @@ function createPanSystem(): TInputSystem<TCanvasInputContext> {
       if (event.code === "Space") {
         isSpacePressed = true;
         event.preventDefault();
+        return true;
       }
+
+      return false;
     },
     onKeyUp: (_context, event) => {
       if (event.code === "Space") {
         isSpacePressed = false;
         event.preventDefault();
+        return true;
       }
+
+      return false;
     },
     getCursor: (context) => {
       if (context.activeSystemName === "pan") return "grabbing";

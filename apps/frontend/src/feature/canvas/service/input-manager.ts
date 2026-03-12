@@ -3,6 +3,7 @@ import Konva from "konva";
 type TPointerEvent = Konva.KonvaEventObject<MouseEvent | TouchEvent | PointerEvent>;
 type TWheelEvent = Konva.KonvaEventObject<WheelEvent>;
 type TKeyboardEvent = KeyboardEvent;
+type TInputHandlerResult = boolean | void;
 
 /**
  * Normalized event names exposed by the input manager.
@@ -52,6 +53,11 @@ type TInputManagerContext<TContext extends object> = {
  * Priority is descending. Higher-priority systems get first chance to claim a
  * gesture, which makes it easy to let resize handles win over dragging, and
  * dragging win over marquee selection.
+ *
+ * Event fallthrough:
+ * - `onWheel()`, `onKeyDown()`, and `onKeyUp()` may return `true` to signal
+ *   that the event was handled and routing should stop.
+ * - Return `false` or `undefined` to allow lower-priority systems to try.
  */
 type TInputSystem<TContext extends object> = {
   name: string;
@@ -77,15 +83,15 @@ type TInputSystem<TContext extends object> = {
   onWheel?: (
     context: TInputManagerContext<TContext>,
     event: TInputManagerEventMap["wheel"],
-  ) => void;
+  ) => TInputHandlerResult;
   onKeyDown?: (
     context: TInputManagerContext<TContext>,
     event: TInputManagerEventMap["keydown"],
-  ) => void;
+  ) => TInputHandlerResult;
   onKeyUp?: (
     context: TInputManagerContext<TContext>,
     event: TInputManagerEventMap["keyup"],
-  ) => void;
+  ) => TInputHandlerResult;
   getCursor?: (context: TInputManagerContext<TContext>) => string | null | undefined;
 };
 
@@ -201,16 +207,16 @@ export class InputManager<TContext extends object> {
     const runtime = this.#runtimeContext();
 
     if (this.#activeSystem?.onWheel) {
-      this.#activeSystem.onWheel(runtime, event);
-      return;
+      const handled = this.#activeSystem.onWheel(runtime, event);
+      if (handled) return;
     }
 
     for (const system of this.#systems) {
       if (!this.#isSystemEnabled(system, runtime)) continue;
       if (!system.onWheel) continue;
 
-      system.onWheel(runtime, event);
-      return;
+      const handled = system.onWheel(runtime, event);
+      if (handled) return;
     }
   };
 
@@ -218,18 +224,18 @@ export class InputManager<TContext extends object> {
     const runtime = this.#runtimeContext();
 
     if (this.#activeSystem?.onKeyDown) {
-      this.#activeSystem.onKeyDown(runtime, event);
+      const handled = this.#activeSystem.onKeyDown(runtime, event);
       this.#syncCursor();
-      return;
+      if (handled) return;
     }
 
     for (const system of this.#systems) {
       if (!this.#isSystemEnabled(system, runtime)) continue;
       if (!system.onKeyDown) continue;
 
-      system.onKeyDown(runtime, event);
+      const handled = system.onKeyDown(runtime, event);
       this.#syncCursor();
-      return;
+      if (handled) return;
     }
   };
 
@@ -242,18 +248,18 @@ export class InputManager<TContext extends object> {
     const runtime = this.#runtimeContext();
 
     if (this.#activeSystem?.onKeyUp) {
-      this.#activeSystem.onKeyUp(runtime, event);
+      const handled = this.#activeSystem.onKeyUp(runtime, event);
       this.#syncCursor();
-      return;
+      if (handled) return;
     }
 
     for (const system of this.#systems) {
       if (!this.#isSystemEnabled(system, runtime)) continue;
       if (!system.onKeyUp) continue;
 
-      system.onKeyUp(runtime, event);
+      const handled = system.onKeyUp(runtime, event);
       this.#syncCursor();
-      return;
+      if (handled) return;
     }
   };
 
