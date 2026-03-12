@@ -1,5 +1,5 @@
-import type { TInputSystem } from "./input-manager";
-import type { TCanvasInputContext } from "./input-systems.types";
+import type { TInputSystem } from "../managers/input.manager";
+import type { TCanvasInputContext } from "../service/input-systems.types";
 
 const MIN_SCALE = 0.25;
 const MAX_SCALE = 4;

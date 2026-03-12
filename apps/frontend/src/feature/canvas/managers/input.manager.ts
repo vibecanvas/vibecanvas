@@ -1,5 +1,5 @@
 import Konva from "konva";
-import { logCanvasDebug } from "./canvas-debug";
+import { logCanvasDebug } from "../utils/canvas-debug";
 
 type TPointerEvent = Konva.KonvaEventObject<MouseEvent | TouchEvent | PointerEvent>;
 type TWheelEvent = Konva.KonvaEventObject<WheelEvent>;

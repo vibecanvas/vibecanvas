@@ -1,6 +1,6 @@
 import Konva from "konva";
-import type { TInputSystem } from "./input-manager";
-import type { TCanvasInputContext } from "./input-systems.types";
+import type { TInputSystem } from "../managers/input.manager";
+import type { TCanvasInputContext } from "../service/input-systems.types";
 
 function createSelectBoxSystem(): TInputSystem<TCanvasInputContext> {
   let origin: { x: number; y: number } | null = null;

@@ -1,5 +1,5 @@
-import type { TInputSystem } from "./input-manager";
-import type { TCanvasInputContext } from "./input-systems.types";
+import type { TInputSystem } from "../managers/input.manager";
+import type { TCanvasInputContext } from "../service/input-systems.types";
 
 /**
  * Handles viewport translation.

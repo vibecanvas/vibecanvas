@@ -1,14 +1,14 @@
 import Konva from "konva";
-import { CameraSystem } from "./camera-system";
-import { logCanvasDebug } from "./canvas-debug";
-import { renderGrid } from "./grid-renderer";
-import { InputManager } from "./input-manager";
+import { CameraSystem } from "../managers/camera.manager";
+import { InputManager } from "../managers/input.manager";
+import { logCanvasDebug } from "../utils/canvas-debug";
+import { renderGrid } from "../utils/grid-renderer";
+import { getStrokePath, type TStrokePoint } from "../utils/stroke-renderer";
+import { createPenSystem } from "../systems/pen.system";
+import { createPanSystem } from "../systems/pan.system";
+import { createSelectBoxSystem } from "../systems/select-box.system";
+import { createZoomSystem } from "../systems/zoom.system";
 import type { TCanvasInputContext } from "./input-systems.types";
-import { createPenSystem } from "./pen-system";
-import { createPanSystem } from "./pan-system";
-import { createSelectBoxSystem } from "./select-box-system";
-import { getStrokePath, type TStrokePoint } from "./stroke-renderer";
-import { createZoomSystem } from "./zoom-system";
 
 type TCanvasServiceArgs = {
   container: HTMLDivElement;

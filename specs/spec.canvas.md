@@ -18,10 +18,10 @@
 The current `apps/frontend` canvas is a Konva-based interaction sandbox with a small but intentional architecture:
 
 - `Canvas.tsx` is only a thin Solid wrapper that mounts and destroys `CanvasService`.
-- `CanvasService` owns the Konva stage, layers, camera, input systems, resize handling, and local drawing runtime.
-- `InputManager` owns event routing and ensures only one pointer gesture system is active at a time.
-- `CameraSystem` owns world transform state (`x`, `y`, `scale`) and applies it to world groups.
-- Input systems like pan, select-box, and zoom are small modules that mutate camera state or transient overlay state.
+- `CanvasService` is the high-level entry point. It owns Konva lifecycle, shared context, managers, and systems.
+- managers are controllers for shared canvas runtime concerns such as camera and input routing.
+- systems handle a concrete canvas module: they react to input and/or manage drawing for that module.
+- utils contain helper functions with little or no risky side effects.
 
 The important idea: the canvas is already split into runtime concerns, so new behaviors should be added as new input systems or services instead of putting more conditionals directly into `canvas.tsx`.
 
@@ -30,7 +30,7 @@ The important idea: the canvas is already split into runtime concerns, so new be
 Today the frontend canvas supports:
 
 - a Konva stage owned by `apps/frontend/src/feature/canvas/service/canvas.service.ts`
-- world-space demo shapes rendered inside a transformable world group
+- world-space content rendered inside transformable world groups
 - a screen-space grid layer that redraws from camera state so panning/zooming still feels spatial
 - marquee selection with a dashed selection rectangle
 - local-only freehand pen strokes rendered with `perfect-freehand`
@@ -41,7 +41,6 @@ Today the frontend canvas supports:
 
 Current limitations:
 
-- shapes are still demo nodes, not Automerge-backed canvas elements
 - the canvas currently has no persistent shapes rendered yet
 - there is no drag-selection/move system yet
 - there is no resize/rotate/draw-shape system yet
@@ -52,7 +51,7 @@ Current limitations:
 
 The current canvas is divided into 4 layers of responsibility.
 
-### 1. Runtime Owner
+### 1. Service
 
 `apps/frontend/src/feature/canvas/service/canvas.service.ts`
 
@@ -68,7 +67,7 @@ This service currently:
   - `worldShapes`
   - `worldOverlay`
 - registers those world groups with the camera
-- creates and registers input systems
+- creates managers and registers systems
 - owns resize observation and canvas cleanup
 
 Screen-fixed UI like tool labels belongs in the HUD layer.
@@ -81,9 +80,13 @@ The grid is the special case: it stays on its own screen-space layer, but redraw
 - push external store state into it (`activeTool`, `gridVisible`)
 - destroy it on cleanup
 
-### 2. Camera
+### 2. Managers
 
-`apps/frontend/src/feature/canvas/service/camera-system.ts`
+Current managers live in `apps/frontend/src/feature/canvas/managers/`.
+
+#### Camera Manager
+
+`apps/frontend/src/feature/canvas/managers/camera.manager.ts`
 
 The camera is the source of truth for viewport transform.
 
@@ -99,9 +102,9 @@ It does not listen to user input directly. It only:
 - applies transform updates to those nodes
 - converts coordinates between screen space and world space
 
-### 3. Input Router
+#### Input Manager
 
-`apps/frontend/src/feature/canvas/service/input-manager.ts`
+`apps/frontend/src/feature/canvas/managers/input.manager.ts`
 
 The input manager owns raw event routing.
 
@@ -115,17 +118,37 @@ Important behavior:
 - `true` from `onWheel` / `onKeyDown` / `onKeyUp` means handled, stop routing
 - `false` or `undefined` means let lower-priority systems try
 
-### 4. Input Systems
+### 3. Systems
 
-Current input systems live in `apps/frontend/src/feature/canvas/service/`:
+Current systems live in `apps/frontend/src/feature/canvas/systems/`:
 
-- `pan-system.ts`
-- `pen-system.ts`
-- `select-box-system.ts`
-- `zoom-system.ts`
+- `pan.system.ts`
+- `pen.system.ts`
+- `select-box.system.ts`
+- `zoom.system.ts`
+- `system.abstract.ts`
+
+Each system should own one module/part of the canvas.
+
+A system is expected to have:
+
+- input handling fields/hooks
+- drawing handling fields/hooks
+- internal state if needed
+
+`system.abstract.ts` is the base shape intended for future refactors.
+
+### 4. Utils
+
+Helpers live in `apps/frontend/src/feature/canvas/utils/`.
+
+Current examples:
+
+- `canvas-debug.ts`
 - `grid-renderer.ts`
+- `stroke-renderer.ts`
 
-Each one is small and focused. This is the main extension point for future canvas behavior.
+These should stay low-risk and focused on helper work rather than owning runtime lifecycle.
 
 ## Event and Input Model
 
@@ -194,7 +217,7 @@ The grid does not live in world space, but it still uses camera `x/y/scale` to c
 
 ## How Selection Works
 
-Selection is implemented by `apps/frontend/src/feature/canvas/service/select-box-system.ts`.
+Selection is implemented by `apps/frontend/src/feature/canvas/systems/select-box.system.ts`.
 
 Flow:
 
@@ -213,7 +236,7 @@ Important implication:
 
 ### Pan
 
-`apps/frontend/src/feature/canvas/service/pan-system.ts`
+`apps/frontend/src/feature/canvas/systems/pan.system.ts`
 
 Pan does not move the stage directly.
 It updates camera position.
@@ -236,7 +259,7 @@ For touchpad panning:
 
 ### Zoom
 
-`apps/frontend/src/feature/canvas/service/zoom-system.ts`
+`apps/frontend/src/feature/canvas/systems/zoom.system.ts`
 
 Zoom handles `ctrl+wheel`.
 
@@ -250,14 +273,14 @@ It:
 
 ## How Pen Works
 
-Pen is implemented by `apps/frontend/src/feature/canvas/service/pen-system.ts` and `apps/frontend/src/feature/canvas/service/stroke-renderer.ts`.
+Pen is implemented by `apps/frontend/src/feature/canvas/systems/pen.system.ts` and `apps/frontend/src/feature/canvas/utils/stroke-renderer.ts`.
 
 Flow:
 
 1. Active tool is `pen`.
 2. Pointer positions are converted from screen space to world space through the camera.
 3. `PenSystem` collects raw world points locally during drag.
-4. `stroke-renderer.ts` passes those points into `perfect-freehand` and turns the outline into SVG path data.
+4. `utils/stroke-renderer.ts` passes those points into `perfect-freehand` and turns the outline into SVG path data.
 5. A transient preview `Konva.Path` is updated in `worldOverlay` while drawing.
 6. On pointer up, the preview is converted into a committed `Konva.Path` under `worldShapes` by `CanvasService`.
 
@@ -274,13 +297,15 @@ Use these rules when changing the canvas.
 
 Preferred path:
 
-1. create a new input system in `apps/frontend/src/feature/canvas/service/`
-2. add any new shared runtime dependencies to `input-systems.types.ts`
-3. register the system in `canvas.service.ts`
+1. create a new system in `apps/frontend/src/feature/canvas/systems/`
+2. add any new shared runtime dependencies to `service/input-systems.types.ts`
+3. register the system in `service/canvas.service.ts`
 4. choose a clear priority relative to existing systems
 
 Do not add large tool-specific conditionals directly into `InputManager`.
 Do not move Konva object ownership back into the Solid component.
+
+When a concern is shared orchestration rather than a canvas module, prefer a manager over a system.
 
 ### Add a New World Overlay
 
@@ -319,7 +344,7 @@ Use the fallthrough rule:
 
 ### Change Pan/Zoom Behavior
 
-Do it in `CameraSystem`, `PanSystem`, or `ZoomSystem` first.
+Do it in the camera manager or the relevant pan/zoom system first.
 
 Avoid:
 
@@ -335,15 +360,26 @@ Avoid:
 ### Services
 
 - `apps/frontend/src/feature/canvas/service/canvas.service.ts`
-- `apps/frontend/src/feature/canvas/service/input-manager.ts`
-- `apps/frontend/src/feature/canvas/service/camera-system.ts`
-- `apps/frontend/src/feature/canvas/service/grid-renderer.ts`
 - `apps/frontend/src/feature/canvas/service/input-systems.types.ts`
-- `apps/frontend/src/feature/canvas/service/pen-system.ts`
-- `apps/frontend/src/feature/canvas/service/pan-system.ts`
-- `apps/frontend/src/feature/canvas/service/select-box-system.ts`
-- `apps/frontend/src/feature/canvas/service/stroke-renderer.ts`
-- `apps/frontend/src/feature/canvas/service/zoom-system.ts`
+
+### Managers
+
+- `apps/frontend/src/feature/canvas/managers/input.manager.ts`
+- `apps/frontend/src/feature/canvas/managers/camera.manager.ts`
+
+### Systems
+
+- `apps/frontend/src/feature/canvas/systems/system.abstract.ts`
+- `apps/frontend/src/feature/canvas/systems/pen.system.ts`
+- `apps/frontend/src/feature/canvas/systems/pan.system.ts`
+- `apps/frontend/src/feature/canvas/systems/select-box.system.ts`
+- `apps/frontend/src/feature/canvas/systems/zoom.system.ts`
+
+### Utils
+
+- `apps/frontend/src/feature/canvas/utils/canvas-debug.ts`
+- `apps/frontend/src/feature/canvas/utils/grid-renderer.ts`
+- `apps/frontend/src/feature/canvas/utils/stroke-renderer.ts`
 
 ### Related State
 
@@ -362,9 +398,9 @@ flowchart TD
   IM -->|pointer gesture ownership| SB1[SelectBoxSystem]
   IM -->|wheel by priority| Z1[ZoomSystem]
 
-  P1 --> C1[CameraSystem.setPosition or panBy]
-  Z1 --> C2[CameraSystem.zoomAtScreenPoint]
-  SB1 --> C3[CameraSystem.screenToWorld]
+  P1 --> C1[CameraManager.setPosition or panBy]
+  Z1 --> C2[CameraManager.zoomAtScreenPoint]
+  SB1 --> C3[CameraManager.screenToWorld]
 
   C1 --> WG1[worldShapes group]
   C1 --> WG2[worldOverlay group]

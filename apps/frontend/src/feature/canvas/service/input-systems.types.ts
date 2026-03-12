@@ -1,7 +1,7 @@
 import Konva from "konva";
 import type { TTool } from "@/feature/floating-canvas-toolbar";
-import type { CameraSystem } from "./camera-system";
-import type { TStrokePoint } from "./stroke-renderer";
+import type { CameraSystem } from "../managers/camera.manager";
+import type { TStrokePoint } from "../utils/stroke-renderer";
 
 type TCanvasInputContext = {
   camera: CameraSystem;

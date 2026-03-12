@@ -1,7 +1,7 @@
 import type {
   TInputHandlerResult,
   TInputManagerEventMap,
-} from "./input-manager";
+} from "../managers/input.manager";
 import type Konva from "konva";
 
 /**

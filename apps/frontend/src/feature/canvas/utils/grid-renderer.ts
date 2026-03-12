@@ -1,5 +1,5 @@
 import Konva from "konva";
-import type { CameraSystem } from "./camera-system";
+import type { CameraSystem } from "../managers/camera.manager";
 
 type TRenderGridArgs = {
   layer: Konva.Layer;

@@ -1,7 +1,7 @@
-import type { TInputSystem } from "./input-manager";
-import type { TCanvasInputContext } from "./input-systems.types";
-import type { TStrokePoint } from "./stroke-renderer";
-import { logCanvasDebug } from "./canvas-debug";
+import type { TInputSystem } from "../managers/input.manager";
+import type { TCanvasInputContext } from "../service/input-systems.types";
+import type { TStrokePoint } from "../utils/stroke-renderer";
+import { logCanvasDebug } from "../utils/canvas-debug";
 
 /**
  * Local-only freehand pen tool.
