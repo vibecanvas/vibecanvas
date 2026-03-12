@@ -7,6 +7,7 @@ import { TTool } from "@/feature/floating-canvas-toolbar"
 type TGlobalStore = {
   theme: "light" | "dark";
   sidebarVisible: boolean;
+  gridVisible: boolean;
   canvases: TBackendCanvas[];
   activeTool: TTool;
 };
@@ -14,6 +15,7 @@ type TGlobalStore = {
 const [store, setStore, init] = makePersisted(createStore<TGlobalStore>({
   theme: "light",
   sidebarVisible: true,
+  gridVisible: true,
   canvases: [],
   activeTool: "select",
 }), { name: "vibecanvas" });
@@ -26,4 +28,3 @@ orpcWebsocketService.safeClient.api.canvas.list()
   });
 
 export { init, setStore, store };
-

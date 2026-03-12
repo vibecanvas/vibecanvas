@@ -5,6 +5,7 @@ import type { TCanvasDoc } from "@vibecanvas/shell/automerge/index";
 import Konva from "konva";
 import { createEffect, onCleanup, onMount } from "solid-js";
 import { CameraSystem } from "../service/camera-system";
+import { renderGrid } from "../service/grid-renderer";
 import { InputManager } from "../service/input-manager";
 import { createPanSystem } from "../service/pan-system";
 import { createSelectBoxSystem } from "../service/select-box-system";
@@ -23,6 +24,8 @@ export function Canvas(props: ICanvasProps) {
   let resizeObserver: ResizeObserver | null = null;
   let toolLabel: Konva.Text | null = null;
   let camera: CameraSystem | null = null;
+  let gridLayer: Konva.Layer | null = null;
+  let cleanupCameraSubscription: (() => void) | null = null;
 
   const selectableNodes: Konva.Shape[] = [];
   let selectedIds = new Set<string>();
@@ -51,6 +54,7 @@ export function Canvas(props: ICanvasProps) {
       height: container.clientHeight || 1,
     });
 
+    gridLayer = new Konva.Layer();
     const shapesLayer = new Konva.Layer();
     const overlayLayer = new Konva.Layer();
     const hudLayer = new Konva.Layer();
@@ -74,49 +78,24 @@ export function Canvas(props: ICanvasProps) {
       listening: false,
     });
 
-    const exampleShapes = [
-      new Konva.Rect({
-        id: "shape-rect-1",
-        x: 120,
-        y: 120,
-        width: 180,
-        height: 110,
-        fill: "#e0f2fe",
-        stroke: "#0369a1",
-        strokeWidth: 2,
-      }),
-      new Konva.Circle({
-        id: "shape-circle-1",
-        x: 420,
-        y: 210,
-        radius: 72,
-        fill: "#dcfce7",
-        stroke: "#166534",
-        strokeWidth: 2,
-      }),
-      new Konva.Rect({
-        id: "shape-rect-2",
-        x: 560,
-        y: 120,
-        width: 160,
-        height: 140,
-        fill: "#fae8ff",
-        stroke: "#9333ea",
-        strokeWidth: 2,
-      }),
-    ];
-
-    selectableNodes.push(...exampleShapes);
-    worldShapes.add(...exampleShapes);
     worldOverlay.add(selectionRect);
     shapesLayer.add(worldShapes);
     overlayLayer.add(worldOverlay);
     hudLayer.add(toolLabel);
-    stage.add(shapesLayer, overlayLayer, hudLayer);
+    stage.add(gridLayer, shapesLayer, overlayLayer, hudLayer);
 
     camera = new CameraSystem();
     camera.registerTarget(worldShapes);
     camera.registerTarget(worldOverlay);
+    cleanupCameraSubscription = camera.onChange(() => {
+      renderGrid({
+        layer: gridLayer,
+        width: stage?.width() ?? 0,
+        height: stage?.height() ?? 0,
+        camera,
+        visible: store.gridVisible,
+      });
+    });
 
     inputManager = new InputManager<TCanvasInputContext>({
       stage,
@@ -145,15 +124,29 @@ export function Canvas(props: ICanvasProps) {
         width: container.clientWidth || 1,
         height: container.clientHeight || 1,
       });
+      renderGrid({
+        layer: gridLayer,
+        width: stage.width(),
+        height: stage.height(),
+        camera: camera!,
+        visible: store.gridVisible,
+      });
       stage.batchDraw();
     });
 
     resizeObserver.observe(container);
+    renderGrid({
+      layer: gridLayer,
+      width: stage.width(),
+      height: stage.height(),
+      camera,
+      visible: store.gridVisible,
+    });
     applySelectionStyles();
   });
 
   createEffect(() => {
-    if (!stage || !toolLabel) return;
+    if (!stage || !toolLabel || !camera) return;
 
     const activeTool = store.activeTool;
 
@@ -161,13 +154,26 @@ export function Canvas(props: ICanvasProps) {
     toolLabel.getLayer()?.batchDraw();
 
     inputManager?.patchContext({
-      camera: camera!,
+      camera,
       getActiveTool: () => activeTool,
+    });
+  });
+
+  createEffect(() => {
+    if (!stage || !camera) return;
+
+      renderGrid({
+        layer: gridLayer,
+        width: stage.width(),
+        height: stage.height(),
+        camera,
+      visible: store.gridVisible,
     });
   });
 
 
   onCleanup(() => {
+    cleanupCameraSubscription?.();
     resizeObserver?.disconnect();
     inputManager?.destroy();
     stage?.destroy();

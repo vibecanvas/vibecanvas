@@ -22,6 +22,7 @@ export class CameraSystem {
   };
 
   #targets = new Set<Konva.Node>();
+  #listeners = new Set<(state: TCameraState) => void>();
 
   constructor(initialState?: Partial<TCameraState>) {
     if (initialState) {
@@ -43,6 +44,15 @@ export class CameraSystem {
 
   unregisterTarget(node: Konva.Node) {
     this.#targets.delete(node);
+  }
+
+  onChange(listener: (state: TCameraState) => void) {
+    this.#listeners.add(listener);
+    listener(this.state);
+
+    return () => {
+      this.#listeners.delete(listener);
+    };
   }
 
   setPosition(position: Pick<TCameraState, "x" | "y">) {
@@ -93,6 +103,10 @@ export class CameraSystem {
   #apply() {
     for (const target of this.#targets) {
       this.#applyTo(target);
+    }
+
+    for (const listener of this.#listeners) {
+      listener(this.state);
     }
   }
 

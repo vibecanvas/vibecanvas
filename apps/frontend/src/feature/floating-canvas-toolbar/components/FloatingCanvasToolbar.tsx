@@ -17,6 +17,7 @@ import Image from "lucide-solid/icons/image";
 import MessageCircle from "lucide-solid/icons/message-circle";
 import FolderTree from "lucide-solid/icons/folder-tree";
 import SquareTerminal from "lucide-solid/icons/square-terminal";
+import Grid2x2 from "lucide-solid/icons/grid-2x2";
 import PanelLeft from "lucide-solid/icons/panel-left";
 import { Tooltip } from "@kobalte/core/tooltip";
 import { For, Show, createMemo, createSignal, onCleanup, onMount } from "solid-js";
@@ -58,6 +59,7 @@ function isEditableTarget(target: EventTarget | null) {
 export function FloatingCanvasToolbar() {
   // Store state - reactive access
   const activeTool = createMemo(() => store.activeTool);
+  const isGridVisible = createMemo(() => store.gridVisible);
   const [isCollapsed, setIsCollapsed] = createSignal(false);
 
   const toggleCollapsed = () => {
@@ -93,6 +95,12 @@ export function FloatingCanvasToolbar() {
       }
 
       if (event.metaKey || event.ctrlKey || event.altKey) return;
+
+      if (event.key.toLowerCase() === "g") {
+        event.preventDefault();
+        setStore("gridVisible", (visible) => !visible);
+        return;
+      }
 
       const tool = TOOL_SHORTCUTS[event.key] ?? TOOL_SHORTCUTS[event.key.toLowerCase()];
       if (!tool) return;
@@ -143,6 +151,12 @@ export function FloatingCanvasToolbar() {
                 />
               )}
             </For>
+            <ToolButton
+              icon={<Grid2x2 size={14} />}
+              letterShortcut="g"
+              isActive={isGridVisible()}
+              onClick={() => setStore("gridVisible", (visible) => !visible)}
+            />
           </div>
         </Show>
 
