@@ -1,11 +1,9 @@
-import { createSignal, Match, onCleanup, onMount, Show, Switch, type Component } from "solid-js";
+import { showErrorToast } from "@/components/ui/Toast";
+import { Canvas } from "@/feature/canvas/components/canvas";
+import { findDocument } from "@/services/automerge";
 import type { TBackendCanvas } from "@/types/backend.types";
 import type { AutomergeUrl } from "@automerge/automerge-repo";
-import { findDocument } from "@/services/automerge";
-import { initBridge, type BridgeHandle } from "@/bridge/sync";
-import { showErrorToast } from "@/components/ui/Toast";
-import { Canvas } from "@vibecanvas/canvas";
-import { setStore, store } from "@/store";
+import { createResource, createSignal, Match, onCleanup, Switch, type Component } from "solid-js";
 
 type CanvasPageProps = {
   canvas: TBackendCanvas;
@@ -13,23 +11,22 @@ type CanvasPageProps = {
 
 const CanvasPage: Component<CanvasPageProps> = (props) => {
   const [docState, setDocState] = createSignal<"loading" | "ready" | "error">("loading");
-  let bridgeHandle: BridgeHandle | null = null;
 
-  onMount(async () => {
+  const [docHandle] = createResource(() => props.canvas.automerge_url as AutomergeUrl, async (url) => {
     try {
-      const docHandle = await findDocument(props.canvas.automerge_url as AutomergeUrl);
-      bridgeHandle = initBridge(docHandle);
+      const docHandle = await findDocument(url);
       setDocState("ready");
+      return docHandle
     } catch (e) {
       console.error("[CanvasPage] Failed to load automerge doc:", e);
       showErrorToast("Failed to load automerge doc");
       setDocState("error");
+      throw e
     }
-  });
+  })
 
   onCleanup(() => {
-    bridgeHandle?.cleanup();
-    bridgeHandle = null;
+    docHandle()?.unload()
   });
 
   return (
@@ -46,7 +43,7 @@ const CanvasPage: Component<CanvasPageProps> = (props) => {
           </div>
         </Match>
         <Match when={docState() === "ready"}>
-          <Canvas sidebarVisible={() => store.sidebarVisible} setSidebarVisible={b => setStore('sidebarVisible', b)} />
+          <Canvas data={props.canvas} handle={docHandle()!} />
         </Match>
       </Switch>
     </div>

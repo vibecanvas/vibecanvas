@@ -19,13 +19,13 @@ import FolderTree from "lucide-solid/icons/folder-tree";
 import SquareTerminal from "lucide-solid/icons/square-terminal";
 import PanelLeft from "lucide-solid/icons/panel-left";
 import { Tooltip } from "@kobalte/core/tooltip";
-import { For, Show, onCleanup, onMount } from "solid-js";
+import { For, Show, createMemo, createSignal } from "solid-js";
 import type { JSX } from "solid-js";
 import { ToolButton } from "./ToolButton";
-import { TOOL_SHORTCUTS, type Tool } from "./toolbar.types";
-import { canvasStore, setCanvasStore } from "../../canvas.store";
+import type { TTool } from "../types/toolbar.types";
+import { store, setStore } from "@/store";
 
-const TOOL_ICONS: Record<Tool, () => JSX.Element> = {
+const TOOL_ICONS: Record<TTool, () => JSX.Element> = {
   hand: () => <Hand size={14} />,
   select: () => <MousePointer2 size={14} />,
   rectangle: () => <Square size={14} />,
@@ -41,7 +41,7 @@ const TOOL_ICONS: Record<Tool, () => JSX.Element> = {
   terminal: () => <SquareTerminal size={14} />,
 };
 
-const TOOL_CONFIG: { tool: Tool; shortcut?: string; letterShortcut?: string }[] = [
+const TOOL_CONFIG: { tool: TTool; shortcut?: string; letterShortcut?: string }[] = [
   { tool: "hand", letterShortcut: "h" },
   { tool: "select", shortcut: "1", letterShortcut: "esc" },
   { tool: "rectangle", shortcut: "2", letterShortcut: "r" },
@@ -60,21 +60,18 @@ const TOOL_CONFIG: { tool: Tool; shortcut?: string; letterShortcut?: string }[] 
 // Detect Mac for keyboard shortcut display
 const isMac = typeof navigator !== "undefined" && /Mac|iPod|iPhone|iPad/.test(navigator.platform);
 
-export interface IFloatingCanvasToolbarProps {
-  sidebarVisible: () => boolean,
-  setSidebarVisible: (b: boolean) => void
-}
+export function FloatingCanvasToolbar() {
+  // Store state - reactive access
+  const activeTool = createMemo(() => store.activeTool);
+  const [isCollapsed, setIsCollapsed] = createSignal(false);
 
-export function FloatingCanvasToolbar(props: IFloatingCanvasToolbarProps) {
-  const setActiveTool = (tool: Tool) => {
-    setCanvasStore("activeTool", tool);
+  const toggleCollapsed = () => {
+    setIsCollapsed((v) => !v);
   };
 
   // Handle tool click - special handling for image tool
-  const handleToolClick = (tool: Tool) => {
+  const handleToolClick = (tool: TTool) => {
     if (tool === "image") {
-      setActiveTool(tool);
-
       // Open file picker for image
       const input = document.createElement("input");
       input.type = "file";
@@ -88,39 +85,9 @@ export function FloatingCanvasToolbar(props: IFloatingCanvasToolbarProps) {
       };
       input.click();
     } else {
-      setActiveTool(tool);
+      setStore("activeTool", tool);
     }
   };
-
-  onMount(() => {
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.repeat || event.metaKey || event.ctrlKey || event.altKey) {
-        return;
-      }
-
-      const target = event.target;
-      if (target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement || target instanceof HTMLSelectElement) {
-        return;
-      }
-
-      if (target instanceof HTMLElement && target.isContentEditable) {
-        return;
-      }
-
-      const tool = TOOL_SHORTCUTS[event.key];
-      if (!tool) {
-        return;
-      }
-
-      event.preventDefault();
-      setActiveTool(tool);
-    };
-
-    // window.addEventListener("keydown", handleKeyDown);
-    // onCleanup(() => {
-    //   window.removeEventListener("keydown", handleKeyDown);
-    // });
-  });
 
   return (
     <div class="fixed top-3 right-3 pointer-events-none z-50 flex flex-row-reverse items-start gap-1.5">
@@ -131,20 +98,20 @@ export function FloatingCanvasToolbar(props: IFloatingCanvasToolbarProps) {
           <Tooltip.Trigger
             as="button"
             type="button"
-            onClick={() => setCanvasStore('isToolbarCollapsed', v => !v)}
+            onClick={toggleCollapsed}
             class="w-9 px-1 py-0.5 font-display text-[10px] text-muted-foreground tracking-wide text-center cursor-pointer hover:bg-stone-200 dark:hover:bg-stone-800 transition-colors"
           >
             TOOLS
           </Tooltip.Trigger>
           <Tooltip.Portal>
             <Tooltip.Content class="z-50 px-2 py-1 bg-stone-800 dark:bg-stone-200 text-stone-100 dark:text-stone-800 text-xs font-mono shadow-md">
-              {canvasStore.isToolbarCollapsed ? "Expand tools" : "Collapse tools"}
+              {isCollapsed() ? "Expand tools" : "Collapse tools"}
             </Tooltip.Content>
           </Tooltip.Portal>
         </Tooltip>
 
         {/* Tool buttons - hidden when collapsed */}
-        <Show when={!canvasStore.isToolbarCollapsed}>
+        <Show when={!isCollapsed()}>
           <div class="flex flex-col">
             <For each={TOOL_CONFIG}>
               {({ tool, shortcut, letterShortcut }) => (
@@ -152,7 +119,7 @@ export function FloatingCanvasToolbar(props: IFloatingCanvasToolbarProps) {
                   icon={TOOL_ICONS[tool]()}
                   shortcut={shortcut}
                   letterShortcut={letterShortcut}
-                  isActive={canvasStore.activeTool === tool}
+                  isActive={activeTool() === tool}
                   onClick={() => handleToolClick(tool)}
                 />
               )}
@@ -164,14 +131,14 @@ export function FloatingCanvasToolbar(props: IFloatingCanvasToolbarProps) {
         <button
           type="button"
           onClick={() => {
-            props.setSidebarVisible(!props.sidebarVisible())
+            setStore("sidebarVisible", (v) => !v);
           }}
           class="relative flex h-7 w-full items-center justify-center text-muted-foreground hover:bg-stone-200 dark:hover:bg-stone-800 transition-colors"
-          classList={{ "bg-amber-500/20 text-amber-700 dark:text-amber-400": !props.sidebarVisible() }}
+          classList={{ "bg-amber-500/20 text-amber-700 dark:text-amber-400": !store.sidebarVisible }}
         >
           <PanelLeft size={14} />
           <span
-            class={`absolute bottom-0 left-px text-[7px] font-mono font-medium ${!props.sidebarVisible()
+            class={`absolute bottom-0 left-px text-[7px] font-mono font-medium ${!store.sidebarVisible
               ? "text-amber-600 dark:text-amber-500"
               : "text-stone-400 dark:text-stone-500"
               }`}

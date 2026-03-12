@@ -3,7 +3,7 @@
  * Type definitions for the floating drawing toolbar
  */
 
-export type Tool =
+export type TTool =
   | "hand"
   | "select"
   | "rectangle"
@@ -18,13 +18,13 @@ export type Tool =
   | "filesystem"
   | "terminal";
 
-export interface ToolDefinition {
-  tool: Tool;
+export interface IToolDefinition {
+  tool: TTool;
   shortcut?: string;
 }
 
 /** Maps keyboard shortcut keys to tools */
-export const TOOL_SHORTCUTS: Record<string, Tool> = {
+export const TOOL_SHORTCUTS: Record<string, TTool> = {
   // Number shortcuts
   "1": "select",
   "2": "rectangle",
@@ -51,7 +51,7 @@ export const TOOL_SHORTCUTS: Record<string, Tool> = {
 } as const;
 
 /** Ordered list of tools with their shortcuts */
-export const TOOLS: ToolDefinition[] = [
+export const TOOLS: IToolDefinition[] = [
   { tool: "hand" },
   { tool: "select", shortcut: "1" },
   { tool: "rectangle", shortcut: "2" },
