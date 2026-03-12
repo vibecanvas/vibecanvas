@@ -35,6 +35,10 @@ Today the frontend canvas supports:
 - world-space content rendered inside transformable world groups
 - a screen-space grid layer that redraws from camera state so panning/zooming still feels spatial
 - marquee selection with a dashed selection rectangle owned by `SelectBoxSystem`
+- click/tap selection and empty-stage clear handled by `CanvasService`
+- shared selected-id state owned by `SelectionManager`
+- a shared blue `Konva.Transformer` owned by `TransformManager`
+- shift/cmd/ctrl click multi-select for selectable persistent nodes
 - freehand pen strokes rendered with `perfect-freehand`, with local preview during drag and CRDT-backed persistence on commit
 - drag-to-pan using middle mouse, `Space`, or `hand` tool
 - touchpad/two-finger panning via wheel events
@@ -44,8 +48,9 @@ Today the frontend canvas supports:
 Current limitations:
 
 - the canvas currently persists pen strokes only; other shape types are not rendered yet
-- there is no drag-selection/move system yet
-- there is no resize/rotate/draw-shape system yet
+- transform handles are visible for selected pen nodes, but transform changes are not persisted yet
+- there is no drag-selection/move persistence system yet
+- there is no resize/rotate persistence yet for document elements
 - zoom percent and camera state are not surfaced in UI beyond internal runtime state
 - only sidebar visibility remains global; tool and grid state are canvas-local
 
@@ -61,11 +66,10 @@ This service currently:
 
 - creates DOM roots for Konva and canvas-local overlays
 - creates the Konva `Stage`
-- creates four layers:
+- creates three layers:
   - grid layer
   - shapes layer
   - overlay layer
-  - HUD layer
 - creates two world groups:
   - `worldShapes`
   - `worldOverlay`
@@ -76,6 +80,8 @@ This service currently:
 - exposes a runtime API to systems through context
 - mounts transient preview nodes into `worldOverlay`
 - delegates semantic element persistence into `CrdtManager`
+- handles Konva click/tap selection routing
+- resolves selectable nodes from persistent scene nodes in `worldShapes`
 
 Screen-fixed UI like toolbars belongs in the DOM overlay root.
 World-space visuals like shapes and selection rect belong in world groups managed by the camera.
@@ -137,7 +143,35 @@ It currently:
 - writes those drafts into the local Automerge document
 - listens for document change events
 - reconciles persistent pen elements from document state into `worldShapes`
-- registers/removes selectable persistent nodes with `CanvasService`
+- marks persistent pen nodes with canvas runtime metadata such as selectable/transformable flags
+
+#### Selection Manager
+
+`apps/frontend/src/feature/canvas/managers/selection.manager.ts`
+
+The selection manager owns shared selection state only.
+
+It currently:
+
+- stores selected node ids
+- supports `clear()`, `selectOnly()`, `setSelectedIds()`, and `isSelected()`
+- supports pruning selected ids against the currently available scene nodes
+- notifies runtime subscribers when selection changes
+
+It does not own transformer UI or persistent node lifecycle.
+
+#### Transform Manager
+
+`apps/frontend/src/feature/canvas/managers/transform.manager.ts`
+
+The transform manager owns the shared `Konva.Transformer` visual.
+
+It currently:
+
+- creates and mounts one blue dashed `Konva.Transformer` into `worldOverlay`
+- attaches that transformer to the currently selected transformable nodes
+- exposes hooks for `transformstart`, `transform`, and `transformend`
+- keeps transform UI separate from selection state and CRDT persistence
 
 ### 3. Systems
 
@@ -252,20 +286,24 @@ The grid does not live in world space, but it still uses camera `x/y/scale` to c
 
 ## How Selection Works
 
-Selection is implemented by `apps/frontend/src/feature/canvas/systems/select-box.system.ts`.
+Selection is split between `CanvasService`, `SelectionManager`, `SelectBoxSystem`, and `TransformManager`.
 
 Flow:
 
-1. System starts only when active tool is `select` and pointerdown hits empty stage.
-2. Start pointer is converted from screen space to world space with `camera.screenToWorld()`.
-3. `SelectBoxSystem` updates its own `Konva.Rect` preview node in world coordinates.
-4. On move, current pointer is also converted to world coordinates.
-5. The system updates the marquee bounds and intersects it with selectable nodes.
-6. Selected ids are pushed back into `CanvasService`, which updates visual highlight styles.
+1. `CanvasService` handles Konva `click` / `tap` events for empty-stage clear and node click selection.
+2. `SelectionManager` is the shared source of truth for selected ids.
+3. `SelectBoxSystem` starts only when active tool is `select` and pointerdown hits empty stage.
+4. Start pointer is converted from screen space to world space with `camera.screenToWorld()`.
+5. `SelectBoxSystem` updates its own `Konva.Rect` preview node in world coordinates.
+6. On move, current pointer is also converted to world coordinates.
+7. The system updates the marquee bounds and intersects it with selectable nodes from `CanvasService`.
+8. `SelectionManager` updates selected ids.
+9. `TransformManager` reacts to selected ids and shows a shared blue transformer box for transformable nodes.
 
 Important implication:
 
 - any future drag/move/resize system should also operate in world space, not raw stage coordinates
+- selection state and transform visuals are separate concerns
 
 ## How Pan and Zoom Work
 
@@ -348,6 +386,7 @@ When a concern is shared orchestration rather than a canvas module, prefer a man
 When a concern owns canvas-local HTML UI, render it from the owning system via the overlay root rather than from page-level Solid JSX.
 When a concern owns a transient world-space visual, let the system create its preview `Konva.Node` and mount it through `CanvasService`.
 When committing persistent state, pass semantic data into `CanvasService`, then let a manager like `CrdtManager` persist and reconcile it.
+When a concern owns shared transform UI, prefer a dedicated manager like `TransformManager` instead of mixing that logic into selection state.
 
 ### Add a New World Overlay
 
@@ -370,8 +409,14 @@ If it should look world-aware but stay cheap to render:
 
 If a shape should participate in selection:
 
-- add it to the selectable node list in `CanvasService`
+- mark the persistent node as selectable when reconciling it into `worldShapes`
 - ensure it has a stable `id()`
+
+If a shape should show transform handles:
+
+- mark the node as transformable
+- let `TransformManager` attach the shared transformer when that node is selected
+- keep transformer UI separate from document persistence
 
 For transient drawing previews:
 
@@ -420,6 +465,8 @@ Avoid:
 - `apps/frontend/src/feature/canvas/managers/input.manager.ts`
 - `apps/frontend/src/feature/canvas/managers/camera.manager.ts`
 - `apps/frontend/src/feature/canvas/managers/crdt.manager.ts`
+- `apps/frontend/src/feature/canvas/managers/selection.manager.ts`
+- `apps/frontend/src/feature/canvas/managers/transform.manager.ts`
 
 ### Systems
 
@@ -452,6 +499,7 @@ Avoid:
 flowchart TD
   U1[User input] --> S1[Konva Stage events]
   S1 --> IM[InputManager]
+  S1 --> CS[CanvasService click/tap selection]
 
   IM -->|pointer gesture ownership| P1[PanSystem]
   IM -->|pointer gesture ownership| SB1[SelectBoxSystem]
@@ -469,8 +517,10 @@ flowchart TD
   C2 --> WG2
 
   SB1 --> SR[selectionRect preview in worldOverlay]
-  SB1 --> SEL[selected ids]
-  SEL --> CV[CanvasService applySelectionStyles]
+  SB1 --> SEL[SelectionManager selected ids]
+  CS --> SEL
+  SEL --> TR[TransformManager setNodes]
+  TR --> WG2
 
   PEN1 --> PP[preview path in worldOverlay]
   PEN1 --> CE[CanvasService createElement semantic draft]
