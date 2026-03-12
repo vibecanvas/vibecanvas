@@ -2,7 +2,7 @@ import { makePersisted } from "@solid-primitives/storage";
 import { createStore } from "solid-js/store";
 import type { TBackendCanvas } from "./types/backend.types";
 import { orpcWebsocketService } from "./services/orpc-websocket";
-import { TTool } from "@/feature/floating-canvas-toolbar"
+import type { TTool } from "@/feature/canvas/components/toolbar.types"
 
 type TGlobalStore = {
   theme: "light" | "dark";

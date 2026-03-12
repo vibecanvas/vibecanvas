@@ -1,5 +1,5 @@
 import Konva from "konva";
-import type { TTool } from "@/feature/floating-canvas-toolbar";
+import type { TTool } from "../components/toolbar.types";
 import type { CameraSystem } from "../managers/camera.manager";
 import type { TStrokePoint } from "../utils/stroke-renderer";
 

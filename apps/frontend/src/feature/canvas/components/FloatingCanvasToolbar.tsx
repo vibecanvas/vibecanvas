@@ -23,7 +23,7 @@ import { Tooltip } from "@kobalte/core/tooltip";
 import { For, Show, createMemo, createSignal, onCleanup, onMount } from "solid-js";
 import type { JSX } from "solid-js";
 import { ToolButton } from "./ToolButton";
-import { TOOLS, TOOL_SHORTCUTS, type TTool } from "../types/toolbar.types";
+import { TOOLS, TOOL_SHORTCUTS, type TTool } from "./toolbar.types";
 import { store, setStore } from "@/store";
 
 const TOOL_ICONS: Record<TTool, () => JSX.Element> = {

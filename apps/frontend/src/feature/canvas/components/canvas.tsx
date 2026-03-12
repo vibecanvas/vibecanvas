@@ -4,6 +4,7 @@ import type { DocHandle } from "@automerge/automerge-repo";
 import type { TCanvasDoc } from "@vibecanvas/shell/automerge/index";
 import { createEffect, onCleanup, onMount } from "solid-js";
 import { CanvasService } from "../service/canvas.service";
+import { FloatingCanvasToolbar } from "./FloatingCanvasToolbar";
 
 interface ICanvasProps {
   handle: DocHandle<TCanvasDoc>;
@@ -39,5 +40,10 @@ export function Canvas(props: ICanvasProps) {
     canvasService?.destroy();
   });
 
-  return <div ref={container} class="size-full" />;
+  return (
+    <>
+      <div ref={container} class="size-full" />
+      <FloatingCanvasToolbar />
+    </>
+  );
 }

@@ -1,6 +1,5 @@
 import { showErrorToast } from "@/components/ui/Toast";
 import { Canvas } from "@/feature/canvas/components/canvas";
-import { FloatingCanvasToolbar } from "@/feature/floating-canvas-toolbar";
 import { findDocument } from "@/services/automerge";
 import type { TBackendCanvas } from "@/types/backend.types";
 import type { AutomergeUrl } from "@automerge/automerge-repo";
@@ -45,7 +44,6 @@ const CanvasPage: Component<CanvasPageProps> = (props) => {
         </Match>
         <Match when={docState() === "ready"}>
           <Canvas data={props.canvas} handle={docHandle()!} />
-          <FloatingCanvasToolbar />
         </Match>
       </Switch>
     </div>
