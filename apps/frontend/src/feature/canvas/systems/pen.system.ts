@@ -1,7 +1,12 @@
-import type { TInputSystem } from "../managers/input.manager";
-import type { TCanvasInputContext } from "../service/input-systems.types";
+import type { TCanvasInputContext } from "../types/canvas-context.types";
 import type { TStrokePoint } from "../utils/stroke-renderer";
 import { logCanvasDebug } from "../utils/canvas-debug";
+import { AbstractCanvasSystem } from "./system.abstract";
+import type { TCanvasSystemInputContext } from "./system.abstract";
+
+type TPenState = {
+  points: TStrokePoint[];
+};
 
 /**
  * Local-only freehand pen tool.
@@ -10,18 +15,37 @@ import { logCanvasDebug } from "../utils/canvas-debug";
  * path while dragging, and commits the finished stroke back to the canvas runtime
  * on pointer end.
  */
-function createPenSystem(): TInputSystem<TCanvasInputContext> {
-  let points: TStrokePoint[] = [];
+class PenSystem extends AbstractCanvasSystem<TCanvasInputContext, TPenState> {
+  readonly name = "pen";
 
-  const getPressure = (event: MouseEvent | TouchEvent | PointerEvent) => {
+  readonly input: AbstractCanvasSystem<TCanvasInputContext, TPenState>["input"];
+
+  readonly drawing: AbstractCanvasSystem<TCanvasInputContext, TPenState>["drawing"];
+
+  constructor() {
+    super({ priority: 15, state: { points: [] } });
+
+    this.input = {
+      canStart: this.canStart.bind(this),
+      onStart: this.onStart.bind(this),
+      onMove: this.onMove.bind(this),
+      onEnd: this.onEnd.bind(this),
+      onCancel: this.onCancel.bind(this),
+      getCursor: this.getCursor.bind(this),
+    };
+
+    this.drawing = {};
+  }
+
+  private getPressure(event: MouseEvent | TouchEvent | PointerEvent) {
     if (event instanceof PointerEvent && Number.isFinite(event.pressure) && event.pressure > 0) {
       return event.pressure;
     }
 
     return 0.5;
-  };
+  }
 
-  const createPoint = (context: { getPointerPosition: () => { x: number; y: number } | null; data: TCanvasInputContext }, event?: MouseEvent | TouchEvent | PointerEvent) => {
+  private createPoint(context: TCanvasSystemInputContext<TCanvasInputContext>, event?: MouseEvent | TouchEvent | PointerEvent) {
     const pointer = context.getPointerPosition();
     if (!pointer) return null;
 
@@ -30,77 +54,56 @@ function createPenSystem(): TInputSystem<TCanvasInputContext> {
     return {
       x: worldPoint.x,
       y: worldPoint.y,
-      pressure: event ? getPressure(event) : 0.5,
+      pressure: event ? this.getPressure(event) : 0.5,
     } satisfies TStrokePoint;
-  };
+  }
 
-  return {
-    name: "pen",
-    priority: 15,
-    canStart: (context) => {
-      const canStart = context.data.getActiveTool() === "pen";
+  private canStart(context: TCanvasSystemInputContext<TCanvasInputContext>) {
+    const canStart = context.data.getActiveTool() === "pen";
+    if (canStart) logCanvasDebug("[pen-system] canStart matched for pen tool");
+    return canStart;
+  }
 
-      if (canStart) {
-        logCanvasDebug("[pen-system] canStart matched for pen tool");
-      }
+  private onStart(context: TCanvasSystemInputContext<TCanvasInputContext>, event: Parameters<NonNullable<PenSystem["input"]["onStart"]>>[1]) {
+    const point = this.createPoint(context, event.evt);
+    if (!point) return;
+    this.state.points = [point, { ...point, x: point.x + 0.01, y: point.y + 0.01 }];
+    logCanvasDebug("[pen-system] onStart", { point, pointsLength: this.state.points.length });
+    context.data.beginStrokePreview(point);
+    context.data.updateStrokePreview(this.state.points);
+  }
 
-      return canStart;
-    },
-    onStart: (context, event) => {
-      const point = createPoint(context, event.evt);
-      if (!point) return;
+  private onMove(context: TCanvasSystemInputContext<TCanvasInputContext>, event: Parameters<NonNullable<PenSystem["input"]["onMove"]>>[1]) {
+    if (this.state.points.length === 0) return;
+    const point = this.createPoint(context, event.evt);
+    if (!point) return;
+    const previousPoint = this.state.points[this.state.points.length - 1];
+    if (previousPoint && previousPoint.x === point.x && previousPoint.y === point.y) return;
+    this.state.points = [...this.state.points, point];
+    logCanvasDebug("[pen-system] onMove", { point, pointsLength: this.state.points.length });
+    context.data.updateStrokePreview(this.state.points);
+  }
 
-      points = [point, { ...point, x: point.x + 0.01, y: point.y + 0.01 }];
-      logCanvasDebug("[pen-system] onStart", {
-        point,
-        pointsLength: points.length,
-      });
-      context.data.beginStrokePreview(point);
-      context.data.updateStrokePreview(points);
-    },
-    onMove: (context, event) => {
-      if (points.length === 0) return;
-
-      const point = createPoint(context, event.evt);
-      if (!point) return;
-
-      const previousPoint = points[points.length - 1];
-      if (previousPoint && previousPoint.x === point.x && previousPoint.y === point.y) {
-        return;
-      }
-
-      points = [...points, point];
-      logCanvasDebug("[pen-system] onMove", {
-        point,
-        pointsLength: points.length,
-      });
-      context.data.updateStrokePreview(points);
-    },
-    onEnd: (context) => {
-      logCanvasDebug("[pen-system] onEnd", {
-        pointsLength: points.length,
-      });
-
-      if (points.length >= 2) {
-        context.data.commitStroke(points);
-      } else {
-        context.data.cancelStrokePreview();
-      }
-
-      points = [];
-    },
-    onCancel: (context) => {
-      logCanvasDebug("[pen-system] onCancel", {
-        pointsLength: points.length,
-      });
-      points = [];
+  private onEnd(context: TCanvasSystemInputContext<TCanvasInputContext>) {
+    logCanvasDebug("[pen-system] onEnd", { pointsLength: this.state.points.length });
+    if (this.state.points.length >= 2) {
+      context.data.commitStroke(this.state.points);
+    } else {
       context.data.cancelStrokePreview();
-    },
-    getCursor: (context) => {
-      if (context.data.getActiveTool() === "pen") return "crosshair";
-      return null;
-    },
-  };
+    }
+    this.state.points = [];
+  }
+
+  private onCancel(context: TCanvasSystemInputContext<TCanvasInputContext>) {
+    logCanvasDebug("[pen-system] onCancel", { pointsLength: this.state.points.length });
+    this.state.points = [];
+    context.data.cancelStrokePreview();
+  }
+
+  private getCursor(context: TCanvasSystemInputContext<TCanvasInputContext>) {
+    if (context.data.getActiveTool() === "pen") return "crosshair";
+    return null;
+  }
 }
 
-export { createPenSystem };
+export { PenSystem };

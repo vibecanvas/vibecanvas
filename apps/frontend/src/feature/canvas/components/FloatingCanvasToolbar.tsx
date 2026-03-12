@@ -20,10 +20,10 @@ import SquareTerminal from "lucide-solid/icons/square-terminal";
 import Grid2x2 from "lucide-solid/icons/grid-2x2";
 import PanelLeft from "lucide-solid/icons/panel-left";
 import { Tooltip } from "@kobalte/core/tooltip";
-import { For, Show, createMemo, createSignal, onCleanup, onMount } from "solid-js";
+import { For, Show, createMemo, createSignal } from "solid-js";
 import type { JSX } from "solid-js";
 import { ToolButton } from "./ToolButton";
-import { TOOLS, TOOL_SHORTCUTS, type TTool } from "./toolbar.types";
+import { TOOLS, type TTool } from "./toolbar.types";
 import { store, setStore } from "@/store";
 
 const TOOL_ICONS: Record<TTool, () => JSX.Element> = {
@@ -44,17 +44,6 @@ const TOOL_ICONS: Record<TTool, () => JSX.Element> = {
 
 // Detect Mac for keyboard shortcut display
 const isMac = typeof navigator !== "undefined" && /Mac|iPod|iPhone|iPad/.test(navigator.platform);
-
-function isEditableTarget(target: EventTarget | null) {
-  if (!(target instanceof HTMLElement)) return false;
-
-  return (
-    target.isContentEditable ||
-    target.tagName === "INPUT" ||
-    target.tagName === "TEXTAREA" ||
-    target.tagName === "SELECT"
-  );
-}
 
 export function FloatingCanvasToolbar() {
   // Store state - reactive access
@@ -83,38 +72,6 @@ export function FloatingCanvasToolbar() {
 
     setStore("activeTool", tool);
   };
-
-  onMount(() => {
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (isEditableTarget(event.target)) return;
-
-      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "b") {
-        event.preventDefault();
-        setStore("sidebarVisible", (visible) => !visible);
-        return;
-      }
-
-      if (event.metaKey || event.ctrlKey || event.altKey) return;
-
-      if (event.key.toLowerCase() === "g") {
-        event.preventDefault();
-        setStore("gridVisible", (visible) => !visible);
-        return;
-      }
-
-      const tool = TOOL_SHORTCUTS[event.key] ?? TOOL_SHORTCUTS[event.key.toLowerCase()];
-      if (!tool) return;
-
-      event.preventDefault();
-      setActiveTool(tool);
-    };
-
-    window.addEventListener("keydown", handleKeyDown);
-
-    onCleanup(() => {
-      window.removeEventListener("keydown", handleKeyDown);
-    });
-  });
 
   return (
     <div class="fixed top-3 right-3 pointer-events-none z-50 flex flex-row-reverse items-start gap-1.5">

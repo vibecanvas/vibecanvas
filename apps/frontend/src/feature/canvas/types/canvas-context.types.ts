@@ -6,6 +6,9 @@ import type { TStrokePoint } from "../utils/stroke-renderer";
 type TCanvasInputContext = {
   camera: CameraSystem;
   getActiveTool: () => TTool;
+  setActiveTool: (tool: TTool) => void;
+  toggleGridVisible: () => void;
+  toggleSidebarVisible: () => void;
   overlayLayer: Konva.Layer;
   selectionRect: Konva.Rect;
   getSelectableNodes: () => Konva.Node[];

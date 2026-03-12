@@ -34,6 +34,7 @@ type TInputManagerContext<TContext extends object> = {
   data: TContext;
   activeSystemName: string | null;
   getPointerPosition: () => Konva.Vector2d | null;
+  requestDraw: () => void;
   setCursor: (cursor: string) => void;
   resetCursor: () => void;
 };
@@ -300,6 +301,10 @@ export class InputManager<TContext extends object> {
     return this.#activeSystem?.name ?? null;
   }
 
+  get context() {
+    return this.#context;
+  }
+
   /**
    * Registers a new input system.
    *
@@ -399,6 +404,7 @@ export class InputManager<TContext extends object> {
       data: this.#context,
       activeSystemName: this.#activeSystem?.name ?? null,
       getPointerPosition: () => this.#stage.getPointerPosition(),
+      requestDraw: () => this.#stage.batchDraw(),
       setCursor: (cursor: string) => {
         this.#stage.container().style.cursor = cursor;
       },

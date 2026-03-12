@@ -76,7 +76,7 @@ abstract class AbstractCanvasSystem<TContext extends object, TState> {
    * can adapt these hooks into the manager without changing each concrete
    * system's public shape.
    */
-  readonly input: {
+  abstract readonly input: {
     isEnabled?: (context: TCanvasSystemInputContext<TContext>) => boolean;
     canStart?: (
       context: TCanvasSystemInputContext<TContext>,
@@ -123,7 +123,7 @@ abstract class AbstractCanvasSystem<TContext extends object, TState> {
    * Rendering a canvas module should not need to know about input-manager-owned
    * fields such as active gesture ownership or cursor controls.
    */
-  readonly drawing: {
+  abstract readonly drawing: {
     mount?: (context: TCanvasSystemRuntimeContext<TContext>) => void;
     redraw?: (context: TCanvasSystemRuntimeContext<TContext>) => void;
     unmount?: (context: TCanvasSystemRuntimeContext<TContext>) => void;
@@ -132,13 +132,9 @@ abstract class AbstractCanvasSystem<TContext extends object, TState> {
   protected constructor(args: {
     priority?: number;
     state: TState;
-    input?: AbstractCanvasSystem<TContext, TState>["input"];
-    drawing?: AbstractCanvasSystem<TContext, TState>["drawing"];
   }) {
     this.priority = args.priority ?? 0;
     this.state = args.state;
-    this.input = args.input ?? {};
-    this.drawing = args.drawing ?? {};
   }
 
 }

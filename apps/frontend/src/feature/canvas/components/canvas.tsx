@@ -1,4 +1,4 @@
-import { store } from "@/store";
+import { store, setStore } from "@/store";
 import type { TBackendCanvas } from "@/types/backend.types";
 import type { DocHandle } from "@automerge/automerge-repo";
 import type { TCanvasDoc } from "@vibecanvas/shell/automerge/index";
@@ -23,6 +23,9 @@ export function Canvas(props: ICanvasProps) {
       container,
       activeTool: store.activeTool,
       gridVisible: store.gridVisible,
+      onActiveTool: (tool) => setStore("activeTool", tool),
+      onToggleGrid: () => setStore("gridVisible", (v) => !v),
+      onToggleSidebar: () => setStore("sidebarVisible", (v) => !v),
     });
   });
 

@@ -20,7 +20,7 @@ The current `apps/frontend` canvas is a Konva-based interaction sandbox with a s
 - `Canvas.tsx` is only a thin Solid wrapper that mounts and destroys `CanvasService`.
 - `CanvasService` is the high-level entry point. It owns Konva lifecycle, shared context, managers, and systems.
 - managers are controllers for shared canvas runtime concerns such as camera and input routing.
-- systems handle a concrete canvas module: they react to input and/or manage drawing for that module.
+- systems are classes that handle a concrete canvas module: they react to input and/or manage drawing for that module.
 - utils contain helper functions with little or no risky side effects.
 
 The important idea: the canvas is already split into runtime concerns, so new behaviors should be added as new input systems or services instead of putting more conditionals directly into `canvas.tsx`.
@@ -136,7 +136,12 @@ A system is expected to have:
 - drawing handling fields/hooks
 - internal state if needed
 
-`system.abstract.ts` is the base shape intended for future refactors.
+`system.abstract.ts` is the base shape for class-based systems.
+
+`CanvasService` uses systems in two ways:
+
+- input hooks are adapted into `InputManager`
+- drawing hooks are called directly by `CanvasService` through `mount`, `redraw`, and `unmount`
 
 ### 4. Utils
 
@@ -226,7 +231,7 @@ Flow:
 3. The selection rectangle is drawn in world coordinates.
 4. On move, current pointer is also converted to world coordinates.
 5. The system updates `selectionRect` bounds and intersects it with selectable nodes.
-6. Selected ids are pushed back into `canvas.tsx`, which updates visual highlight styles.
+6. Selected ids are pushed back into `CanvasService`, which updates visual highlight styles.
 
 Important implication:
 
@@ -298,7 +303,7 @@ Use these rules when changing the canvas.
 Preferred path:
 
 1. create a new system in `apps/frontend/src/feature/canvas/systems/`
-2. add any new shared runtime dependencies to `service/input-systems.types.ts`
+2. add any new shared runtime dependencies to `types/canvas-context.types.ts`
 3. register the system in `service/canvas.service.ts`
 4. choose a clear priority relative to existing systems
 
@@ -328,7 +333,7 @@ If it should look world-aware but stay cheap to render:
 
 If a shape should participate in selection:
 
-- add it to the selectable node list in `canvas.tsx`
+- add it to the selectable node list in `CanvasService`
 - ensure it has a stable `id()`
 
 Future direction is to replace demo shapes with document-backed nodes, but the selection contract remains the same.
@@ -360,7 +365,6 @@ Avoid:
 ### Services
 
 - `apps/frontend/src/feature/canvas/service/canvas.service.ts`
-- `apps/frontend/src/feature/canvas/service/input-systems.types.ts`
 
 ### Managers
 
@@ -373,6 +377,7 @@ Avoid:
 - `apps/frontend/src/feature/canvas/systems/pen.system.ts`
 - `apps/frontend/src/feature/canvas/systems/pan.system.ts`
 - `apps/frontend/src/feature/canvas/systems/select-box.system.ts`
+- `apps/frontend/src/feature/canvas/systems/tool.system.ts`
 - `apps/frontend/src/feature/canvas/systems/zoom.system.ts`
 
 ### Utils
@@ -380,6 +385,10 @@ Avoid:
 - `apps/frontend/src/feature/canvas/utils/canvas-debug.ts`
 - `apps/frontend/src/feature/canvas/utils/grid-renderer.ts`
 - `apps/frontend/src/feature/canvas/utils/stroke-renderer.ts`
+
+### Types
+
+- `apps/frontend/src/feature/canvas/types/canvas-context.types.ts`
 
 ### Related State
 
@@ -409,7 +418,7 @@ flowchart TD
 
   SB1 --> SR[selectionRect in worldOverlay]
   SB1 --> SEL[selected ids]
-  SEL --> CV[canvas.tsx applySelectionStyles]
+  SEL --> CV[CanvasService applySelectionStyles]
 
   HUD[HUD layer / tool label] -. fixed screen space .-> STAGE[Stage]
   WG1 --> STAGE

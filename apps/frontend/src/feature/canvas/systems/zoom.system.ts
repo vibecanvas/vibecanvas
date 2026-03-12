@@ -1,5 +1,8 @@
-import type { TInputSystem } from "../managers/input.manager";
-import type { TCanvasInputContext } from "../service/input-systems.types";
+import type { TCanvasInputContext } from "../types/canvas-context.types";
+import { AbstractCanvasSystem } from "./system.abstract";
+import type { TCanvasSystemInputContext } from "./system.abstract";
+
+type TZoomState = Record<string, never>;
 
 const MIN_SCALE = 0.25;
 const MAX_SCALE = 4;
@@ -15,33 +18,36 @@ function clampScale(scale: number) {
   return Math.min(MAX_SCALE, Math.max(MIN_SCALE, scale));
 }
 
-function createZoomSystem(): TInputSystem<TCanvasInputContext> {
-  return {
-    name: "zoom",
-    priority: 30,
-    onWheel: (context, event) => {
-      if (!event.evt.ctrlKey) return false;
+class ZoomSystem extends AbstractCanvasSystem<TCanvasInputContext, TZoomState> {
+  readonly name = "zoom";
 
-      const pointer = context.getPointerPosition();
-      if (!pointer) return false;
+  readonly input: AbstractCanvasSystem<TCanvasInputContext, TZoomState>["input"];
 
-      event.evt.preventDefault();
+  readonly drawing: AbstractCanvasSystem<TCanvasInputContext, TZoomState>["drawing"];
 
-      const currentScale = context.data.camera.state.scale;
-      const direction = event.evt.deltaY > 0 ? 1 / ZOOM_STEP : ZOOM_STEP;
-      const nextScale = clampScale(currentScale * direction);
+  constructor() {
+    super({ priority: 30, state: {} });
 
-      if (nextScale === currentScale) return true;
+    this.input = {
+      onWheel: this.onWheel.bind(this),
+    };
 
-      context.data.camera.zoomAtScreenPoint({
-        scale: nextScale,
-        screenPoint: pointer,
-      });
+    this.drawing = {};
+  }
 
-      context.stage.batchDraw();
-      return true;
-    },
-  };
+  private onWheel(context: TCanvasSystemInputContext<TCanvasInputContext>, event: Parameters<NonNullable<ZoomSystem["input"]["onWheel"]>>[1]) {
+    if (!event.evt.ctrlKey) return false;
+    const pointer = context.getPointerPosition();
+    if (!pointer) return false;
+    event.evt.preventDefault();
+    const currentScale = context.data.camera.state.scale;
+    const direction = event.evt.deltaY > 0 ? 1 / ZOOM_STEP : ZOOM_STEP;
+    const nextScale = clampScale(currentScale * direction);
+    if (nextScale === currentScale) return true;
+    context.data.camera.zoomAtScreenPoint({ scale: nextScale, screenPoint: pointer });
+    context.requestDraw();
+    return true;
+  }
 }
 
-export { createZoomSystem };
+export { ZoomSystem };
