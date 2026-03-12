@@ -61,7 +61,7 @@ class SelectBoxSystem extends AbstractCanvasSystem<TCanvasInputContext, TSelectB
     if (!pointer || !this.state.selectionRect) return;
     this.state.origin = context.data.camera.screenToWorld(pointer);
     this.state.selectionRect.setAttrs({ x: this.state.origin.x, y: this.state.origin.y, width: 0, height: 0, visible: true });
-    context.data.setSelectedIds([]);
+    context.data.selection.clear();
     this.state.selectionRect.getLayer()?.batchDraw();
   }
 
@@ -82,11 +82,14 @@ class SelectBoxSystem extends AbstractCanvasSystem<TCanvasInputContext, TSelectB
       .filter((node) => node.id())
       .filter((node) => Konva.Util.haveIntersection(selectionBounds, node.getClientRect()))
       .map((node) => node.id());
-    context.data.setSelectedIds(selectedIds);
+    context.data.selection.setSelectedIds(selectedIds);
     this.state.selectionRect.getLayer()?.batchDraw();
   }
 
-  private onEnd() {
+  private onEnd(context: TCanvasSystemInputContext<TCanvasInputContext>) {
+    if (this.state.selectionRect && this.state.selectionRect.visible() && this.state.selectionRect.width() > 0 && this.state.selectionRect.height() > 0) {
+      context.data.suppressNextClickSelection();
+    }
     this.state.origin = null;
     this.hideSelectionRect();
   }

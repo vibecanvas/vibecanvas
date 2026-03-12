@@ -5,6 +5,8 @@ import { createSignal, type Accessor, type Setter } from "solid-js";
 import { CameraSystem } from "../managers/camera.manager";
 import { CrdtManager } from "../managers/crdt.manager";
 import { InputManager, type TInputSystem } from "../managers/input.manager";
+import { SelectionManager } from "../managers/selection.manager";
+import { TransformManager } from "../managers/transform.manager";
 import type { TTool } from "../components/toolbar.types";
 import { PanSystem } from "../systems/pan.system";
 import { PenSystem } from "../systems/pen.system";
@@ -15,6 +17,7 @@ import { ZoomSystem } from "../systems/zoom.system";
 import { logCanvasDebug } from "../utils/canvas-debug";
 import { renderGrid } from "../utils/grid-renderer";
 import type { TCanvasElementDraft, TCanvasInputContext } from "../types/canvas-context.types";
+import { Node } from "konva/lib/Node";
 
 type TCanvasServiceArgs = {
   container: HTMLDivElement;
@@ -40,11 +43,12 @@ export class CanvasService {
   #gridLayer: Konva.Layer;
   #worldShapes: Konva.Group;
   #worldOverlay: Konva.Group;
+  #transform: TransformManager;
   #cleanupCameraSubscription: (() => void) | null = null;
+  #cleanupSelectionSubscription: (() => void) | null = null;
   #crdtManager: CrdtManager;
-  #previewNodes = new Map<string, Konva.Node>();
-  #selectableNodes: Konva.Shape[] = [];
-  #selectedIds = new Set<string>();
+  #previewNodes = new Map<string, Konva.Shape | Konva.Group>();
+  #selection: SelectionManager;
   #systems: AbstractCanvasSystem<TCanvasInputContext, unknown>[] = [];
   #context: TCanvasInputContext;
   #selectedTool: Accessor<TTool>;
@@ -53,6 +57,7 @@ export class CanvasService {
   #setTemporaryToolSignal: Setter<TTool | null>;
   #gridVisible: Accessor<boolean>;
   #setGridVisibleSignal: Setter<boolean>;
+  #suppressNextClickSelection = false;
 
   constructor(args: TCanvasServiceArgs) {
     [this.#selectedTool, this.#setSelectedToolSignal] = createSignal<TTool>("select");
@@ -86,15 +91,32 @@ export class CanvasService {
 
     this.#worldShapes = new Konva.Group();
     this.#worldOverlay = new Konva.Group();
+    this.#transform = new TransformManager({
+      worldOverlay: this.#worldOverlay,
+      onTransformStart: () => {
+        logCanvasDebug("[transform-manager] transformstart");
+      },
+      onTransform: () => {
+        logCanvasDebug("[transform-manager] transform");
+      },
+      onTransformEnd: () => {
+        logCanvasDebug("[transform-manager] transformend");
+      },
+    });
     shapesLayer.add(this.#worldShapes);
     overlayLayer.add(this.#worldOverlay);
     this.#stage.add(this.#gridLayer, shapesLayer, overlayLayer);
 
     this.#camera = new CameraSystem();
+    this.#selection = new SelectionManager();
     this.#camera.registerTarget(this.#worldShapes);
     this.#camera.registerTarget(this.#worldOverlay);
     this.#cleanupCameraSubscription = this.#camera.onChange(() => {
       this.#redrawSystems();
+    });
+    this.#cleanupSelectionSubscription = this.#selection.onChange(() => {
+      this.#applySelectionStyles();
+      this.#syncTransformer();
     });
 
     this.#context = {
@@ -104,9 +126,11 @@ export class CanvasService {
       setActiveTool: (tool) => {
         this.#setSelectedToolSignal(tool);
         this.#setTemporaryToolSignal(null);
+        this.#syncTransformer();
       },
       setTemporaryTool: (tool) => {
         this.#setTemporaryToolSignal(tool);
+        this.#syncTransformer();
       },
       getGridVisible: this.#gridVisible,
       toggleGridVisible: () => {
@@ -127,16 +151,16 @@ export class CanvasService {
         };
         input.click();
       },
+      selection: this.#selection,
+      getSelectableNodes: () => this.#getSelectableNodes(),
       mountPreviewNode: (ownerId, node) => {
         this.#mountPreviewNode(ownerId, node);
       },
       unmountPreviewNode: (ownerId) => {
         this.#unmountPreviewNode(ownerId);
       },
-      getSelectableNodes: () => this.#selectableNodes,
-      setSelectedIds: (ids) => {
-        this.#selectedIds = new Set(ids);
-        this.#applySelectionStyles();
+      suppressNextClickSelection: () => {
+        this.#suppressNextClickSelection = true;
       },
       createElement: (draft) => {
         this.#createElement(draft);
@@ -152,18 +176,12 @@ export class CanvasService {
     this.#crdtManager = new CrdtManager({
       handle: args.handle,
       worldShapes: this.#worldShapes,
-      addSelectableNode: (node) => {
-        if (this.#selectableNodes.some((existingNode) => existingNode.id() === node.id())) return;
-        this.#selectableNodes.push(node);
-      },
-      removeSelectableNode: (nodeId) => {
-        this.#selectableNodes = this.#selectableNodes.filter((node) => node.id() !== nodeId);
-      },
-      syncSelectionStyles: () => {
-        this.#applySelectionStyles();
+      onReconcile: () => {
+        this.#syncSelectionToScene();
       },
     });
     this.#crdtManager.mount();
+    this.#registerStageSelectionEvents();
 
     this.#systems = [
       new ZoomSystem(),
@@ -189,7 +207,7 @@ export class CanvasService {
 
     this.#resizeObserver.observe(args.container);
     this.#redrawSystems();
-    this.#applySelectionStyles();
+    this.#syncSelectionToScene();
   }
 
   destroy() {
@@ -201,9 +219,11 @@ export class CanvasService {
       this.#unmountPreviewNode(ownerId);
     }
     this.#crdtManager.destroy();
+    this.#cleanupSelectionSubscription?.();
     this.#cleanupCameraSubscription?.();
     this.#resizeObserver.disconnect();
     this.#inputManager.destroy();
+    this.#transform.destroy();
     this.#stage.destroy();
     this.#overlayRoot.remove();
     this.#stageRoot.remove();
@@ -255,7 +275,7 @@ export class CanvasService {
     };
   }
 
-  #mountPreviewNode(ownerId: string, node: Konva.Node) {
+  #mountPreviewNode(ownerId: string, node: Konva.Shape | Konva.Group) {
     const existingNode = this.#previewNodes.get(ownerId);
     if (existingNode === node) return;
 
@@ -288,27 +308,101 @@ export class CanvasService {
     this.#crdtManager.createElement(draft);
   }
 
-  #applySelectionStyles() {
-    for (const node of this.#selectableNodes) {
-      const isSelected = this.#selectedIds.has(node.id());
-
-      if (isSelected) {
-        node.setAttrs({
-          stroke: "#f59e0b",
-          strokeWidth: 4,
-          shadowBlur: 12,
-          shadowColor: "#f59e0b",
-        });
-      } else {
-        node.setAttrs({
-          stroke: null,
-          strokeWidth: 0,
-          shadowBlur: 0,
-          shadowColor: undefined,
-        });
+  #registerStageSelectionEvents() {
+    this.#stage.on("click tap", (event) => {
+      if (this.#suppressNextClickSelection) {
+        this.#suppressNextClickSelection = false;
+        return;
       }
+
+      if (this.#activeTool() !== "select") {
+        return;
+      }
+
+      if (event.target === this.#stage) {
+        this.#selection.clear();
+        return;
+      }
+
+      if (this.#transform.isTransformerNode(event.target)) {
+        return;
+      }
+
+      const selectableNode = this.#resolveSelectableNode(event.target);
+      if (!selectableNode) {
+        return;
+      }
+
+      const metaPressed = event.evt.shiftKey || event.evt.ctrlKey || event.evt.metaKey;
+      const isSelected = this.#selection.isSelected(selectableNode.id());
+
+      if (!metaPressed && !isSelected) {
+        this.#selection.selectOnly(selectableNode.id());
+        return;
+      }
+
+      if (metaPressed && isSelected) {
+        this.#selection.setSelectedIds(this.#selection.getSelectedIds().filter((nodeId) => nodeId !== selectableNode.id()));
+        return;
+      }
+
+      if (metaPressed && !isSelected) {
+        this.#selection.setSelectedIds([...this.#selection.getSelectedIds(), selectableNode.id()]);
+        return;
+      }
+
+      this.#selection.selectOnly(selectableNode.id());
+    });
+  }
+
+  #getSelectableNodes() {
+    return this.#worldShapes.find((node: Node) => Boolean(node.getAttr("vcSelectable")));
+  }
+
+  #resolveSelectableNode(target: Konva.Node | null | undefined) {
+    let currentNode = target ?? null;
+
+    while (currentNode) {
+      if (currentNode === this.#stage) return null;
+
+      if (this.#transform.isTransformerNode(currentNode)) {
+        return null;
+      }
+
+      if (currentNode.id() && currentNode.getAttr("vcSelectable")) {
+        return currentNode;
+      }
+
+      currentNode = currentNode.getParent();
     }
 
+    return null;
+  }
+
+  #getTransformableNodes() {
+    return this.#selection
+      .getSelectedIds()
+      .map((nodeId) => this.#worldShapes.findOne(`#${nodeId}`))
+      .filter((node): node is Konva.Node => Boolean(node && node.getAttr("vcTransformable")));
+  }
+
+  #syncTransformer() {
+    if (this.#activeTool() !== "select") {
+      this.#transform.clear();
+      return;
+    }
+
+    this.#transform.setNodes(this.#getTransformableNodes());
+  }
+
+  #syncSelectionToScene() {
+    const selectableNodes = this.#getSelectableNodes();
+    this.#selection.pruneSelectedIds(selectableNodes.map((node) => node.id()));
+    this.#applySelectionStyles();
+    this.#syncTransformer();
+  }
+
+  #applySelectionStyles() {
     this.#stage.batchDraw();
   }
 }

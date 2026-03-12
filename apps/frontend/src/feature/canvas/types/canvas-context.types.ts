@@ -2,6 +2,7 @@ import Konva from "konva";
 import type { TElementData, TElementStyle } from "@vibecanvas/shell/automerge/index";
 import type { TTool } from "../components/toolbar.types";
 import type { CameraSystem } from "../managers/camera.manager";
+import type { SelectionManager } from "../managers/selection.manager";
 
 type TCanvasElementDraft = {
   id?: string;
@@ -25,10 +26,11 @@ type TCanvasInputContext = {
   getSidebarVisible: () => boolean;
   toggleSidebarVisible: () => void;
   openImagePicker: () => void;
-  mountPreviewNode: (ownerId: string, node: Konva.Node) => void;
-  unmountPreviewNode: (ownerId: string) => void;
+  selection: SelectionManager;
   getSelectableNodes: () => Konva.Node[];
-  setSelectedIds: (ids: string[]) => void;
+  mountPreviewNode: (ownerId: string, node: Konva.Shape | Konva.Group) => void;
+  unmountPreviewNode: (ownerId: string) => void;
+  suppressNextClickSelection: () => void;
   createElement: (draft: TCanvasElementDraft) => void;
 };
 

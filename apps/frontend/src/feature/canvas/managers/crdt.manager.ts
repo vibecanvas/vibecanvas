@@ -12,9 +12,7 @@ import { getStrokePathFromPenData } from "../utils/stroke-renderer";
 type TCrdtManagerArgs = {
   handle: DocHandle<TCanvasDoc>;
   worldShapes: Konva.Group;
-  addSelectableNode: (node: Konva.Path) => void;
-  removeSelectableNode: (nodeId: string) => void;
-  syncSelectionStyles: () => void;
+  onReconcile?: () => void;
 };
 
 type TCrdtElementDraft = {
@@ -34,9 +32,7 @@ const DEFAULT_PEN_OPACITY = 0.92;
 export class CrdtManager {
   #handle: DocHandle<TCanvasDoc>;
   #worldShapes: Konva.Group;
-  #addSelectableNode: (node: Konva.Path) => void;
-  #removeSelectableNode: (nodeId: string) => void;
-  #syncSelectionStyles: () => void;
+  #onReconcile: (() => void) | null;
   #penNodes = new Map<string, Konva.Path>();
 
   readonly #onChange = () => {
@@ -46,9 +42,7 @@ export class CrdtManager {
   constructor(args: TCrdtManagerArgs) {
     this.#handle = args.handle;
     this.#worldShapes = args.worldShapes;
-    this.#addSelectableNode = args.addSelectableNode;
-    this.#removeSelectableNode = args.removeSelectableNode;
-    this.#syncSelectionStyles = args.syncSelectionStyles;
+    this.#onReconcile = args.onReconcile ?? null;
   }
 
   mount() {
@@ -60,10 +54,6 @@ export class CrdtManager {
   destroy() {
     if (this.#handle) {
       this.#handle.off("change", this.#onChange);
-    }
-
-    for (const nodeId of this.#penNodes.keys()) {
-      this.#removeSelectableNode(nodeId);
     }
 
     for (const node of this.#penNodes.values()) {
@@ -111,7 +101,6 @@ export class CrdtManager {
 
     for (const [nodeId, node] of this.#penNodes) {
       if (nextIds.has(nodeId)) continue;
-      this.#removeSelectableNode(nodeId);
       node.destroy();
       this.#penNodes.delete(nodeId);
     }
@@ -120,7 +109,7 @@ export class CrdtManager {
       this.#upsertPenNode(element);
     }
 
-    this.#syncSelectionStyles();
+    this.#onReconcile?.();
     this.#worldShapes.getLayer()?.batchDraw();
   }
 
@@ -142,6 +131,8 @@ export class CrdtManager {
         opacity,
         rotation: element.angle,
         visible: Boolean(pathData),
+        vcSelectable: true,
+        vcTransformable: true,
       });
       existingNode.moveToTop();
       return;
@@ -161,7 +152,10 @@ export class CrdtManager {
     this.#worldShapes.add(node);
     node.moveToTop();
     this.#penNodes.set(element.id, node);
-    this.#addSelectableNode(node);
+    node.setAttrs({
+      vcSelectable: true,
+      vcTransformable: true,
+    });
   }
 }
 
