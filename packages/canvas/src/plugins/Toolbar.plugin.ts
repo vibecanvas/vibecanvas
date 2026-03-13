@@ -1,9 +1,20 @@
 import { render } from "solid-js/web";
 import type { IPlugin, IPluginContext } from "./interface";
-import { Accessor, createComponent, createEffect, createReaction, createSignal, Setter } from "solid-js";
+import { Accessor, createComponent, createEffect, createSignal, Setter } from "solid-js";
 import { FloatingCanvasToolbar } from "../components/FloatingCanvasToolbar";
-import { TTool } from "../components/FloatingCanvasToolbar/toolbar.types";
+import { TOOL_SHORTCUTS, TTool } from "../components/FloatingCanvasToolbar/toolbar.types";
 import { CustomEvents } from "../custom-events";
+
+function getShortcutTool(event: KeyboardEvent): TTool | null {
+  if (event.metaKey || event.ctrlKey || event.altKey) return null;
+
+  if (event.key === "Escape") {
+    return TOOL_SHORTCUTS.Escape;
+  }
+
+  const normalizedKey = event.key.toLowerCase();
+  return TOOL_SHORTCUTS[normalizedKey] ?? null;
+}
 
 function mountSolidComponent(context: IPluginContext, activeTool: Accessor<TTool>, setActiveTool: Setter<TTool>, gridVisible: Accessor<boolean>, setGridVisible: Setter<boolean>, onToggleSidebar: () => void) {
   const mountElement = document.createElement("div");
@@ -31,6 +42,7 @@ export class ToolbarPlugin implements IPlugin {
   #setActiveTool: Setter<TTool>
   #gridVisible: Accessor<boolean>
   #setGridVisible: Setter<boolean>
+  #toolBeforeSpaceHold: TTool | null = null;
   #mountElement: HTMLDivElement | null = null;
   #disposeRender: (() => void) | null = null;
 
@@ -62,6 +74,57 @@ export class ToolbarPlugin implements IPlugin {
       const value = this.#gridVisible();
       context.hooks.customEvent.call(CustomEvents.GRID_VISIBLE, value);
     });
+
+    context.hooks.keydown.tap(event => {
+      if (event.key === " ") {
+        event.preventDefault();
+
+        if (this.#toolBeforeSpaceHold === null) {
+          const currentTool = this.#activeTool();
+          this.#toolBeforeSpaceHold = currentTool;
+
+          if (currentTool !== "hand") {
+            this.#setActiveTool("hand");
+          }
+        }
+
+        return true;
+      }
+
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "b") {
+        event.preventDefault();
+        this.onToggleSidebar();
+        return true;
+      }
+
+      const tool = getShortcutTool(event);
+      if (tool) {
+        this.#setActiveTool(tool);
+        return true;
+      }
+
+      if (event.key.toLowerCase() === "g") {
+        this.#setGridVisible((value) => !value);
+        return true;
+      }
+
+      return false;
+    })
+
+    context.hooks.keyup.tap(event => {
+      if (event.key !== " ") {
+        return false;
+      }
+
+      event.preventDefault();
+
+      if (this.#toolBeforeSpaceHold !== null) {
+        this.#setActiveTool(this.#toolBeforeSpaceHold);
+        this.#toolBeforeSpaceHold = null;
+      }
+
+      return true;
+    })
 
   }
 }

@@ -1,7 +1,7 @@
 import Konva from "konva";
 import { ICanvasConfig } from "./interface";
 import { Camera } from "./Camera";
-import { IPluginContext, TKeyboardEvent, TMouseEvent, TPointerEvent, TWheelEvent } from "../../plugins/interface";
+import { IPluginContext, TMouseEvent, TPointerEvent, TWheelEvent } from "../../plugins/interface";
 import { CanvasMode, Theme } from "./enum";
 import { AsyncParallelHook, SyncExitHook, SyncHook } from "../../tapable";
 import { GridPlugin } from "../../plugins/Grid.plugin";
@@ -74,8 +74,8 @@ export class CanvasService {
         pointerOver: new SyncHook<TPointerEvent>(),
         pointerCancel: new SyncHook<TPointerEvent>(),
         pointerWheel: new SyncHook<TWheelEvent>(),
-        keydown: new SyncHook<TKeyboardEvent>(),
-        keyup: new SyncHook<TKeyboardEvent>(),
+        keydown: new SyncHook<KeyboardEvent>(),
+        keyup: new SyncHook<KeyboardEvent>(),
         modeChange: new SyncHook<[CanvasMode, CanvasMode]>(),
         customEvent: new SyncExitHook<TCustomEvent>()
       },

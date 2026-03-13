@@ -1,4 +1,4 @@
-import type { IPlugin, IPluginContext, TKeyboardEvent, TMouseEvent, TPointerEvent, TWheelEvent } from "./interface";
+import type { IPlugin, IPluginContext, TMouseEvent, TPointerEvent, TWheelEvent } from "./interface";
 
 export class EventListenerPlugin implements IPlugin {
   apply(context: IPluginContext): void {
@@ -32,11 +32,11 @@ export class EventListenerPlugin implements IPlugin {
       hooks.pointerWheel.call(event);
     };
 
-    const onkeydown = (event: TKeyboardEvent) => {
+    const onkeydown = (event: KeyboardEvent) => {
       hooks.keydown.call(event);
     };
 
-    const onkeyup = (event: TKeyboardEvent) => {
+    const onkeyup = (event: KeyboardEvent) => {
       hooks.keyup.call(event);
     };
 
@@ -63,9 +63,14 @@ export class EventListenerPlugin implements IPlugin {
 
     stage.on(`wheel`, onpointerwheel);
 
-    stage.on(`keydown`, onkeydown);
+    stage.container().addEventListener(`keydown`, onkeydown);
 
-    stage.on(`keyup`, onkeyup);
+    stage.container().addEventListener(`keyup`, onkeyup);
+
+    stage.container().tabIndex = 1;
+    stage.container().focus();
+    stage.container().style.outline = 'none';
+
 
     hooks.destroy.tap(() => {
       stage.off(`pointerdown`, onpointerdown);
@@ -75,8 +80,9 @@ export class EventListenerPlugin implements IPlugin {
       stage.off(`pointerover`, onpointerover);
       stage.off(`pointercancel`, onpointercancel);
       stage.off(`wheel`, onpointerwheel);
-      stage.off(`keydown`, onkeydown);
-      stage.off(`keyup`, onkeyup);
+      stage.container().removeEventListener(`keydown`, onkeydown);
+      stage.container().removeEventListener(`keyup`, onkeyup);
+
     });
   }
 }

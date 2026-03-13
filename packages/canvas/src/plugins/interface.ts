@@ -8,7 +8,6 @@ import type { TCustomEvent } from '../custom-events';
 export type TPointerEvent = Konva.KonvaEventObject<PointerEvent>;
 export type TMouseEvent = Konva.KonvaEventObject<MouseEvent>;
 export type TWheelEvent = Konva.KonvaEventObject<WheelEvent>;
-export type TKeyboardEvent = Konva.KonvaEventObject<KeyboardEvent>;
 
 export interface IHooks {
   /**
@@ -34,8 +33,8 @@ export interface IHooks {
   pointerMove: SyncHook<[TMouseEvent]>;
   pointerWheel: SyncHook<[TWheelEvent]>;
   pointerCancel: SyncHook<[TPointerEvent]>;
-  keydown: SyncHook<[TKeyboardEvent]>;
-  keyup: SyncHook<[TKeyboardEvent]>;
+  keydown: SyncHook<[KeyboardEvent]>;
+  keyup: SyncHook<[KeyboardEvent]>;
   cameraChange: SyncHook<[]>;
   modeChange: SyncHook<[CanvasMode, CanvasMode]>;
   customEvent: SyncExitHook<TCustomEvent>;
