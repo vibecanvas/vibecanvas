@@ -4,10 +4,10 @@ import type Konva from "konva";
 import { ICanvasConfig } from 'src/services/canvas/interface';
 import { Camera } from 'src/services/canvas/Camera';
 
-export type TPointerEvent = Konva.KonvaEventObject<MouseEvent | TouchEvent | PointerEvent>;
+export type TPointerEvent = Konva.KonvaEventObject<PointerEvent>;
+export type TMouseEvent = Konva.KonvaEventObject<MouseEvent>;
 export type TWheelEvent = Konva.KonvaEventObject<WheelEvent>;
-export type TKeyboardEvent = KeyboardEvent;
-export type TInputHandlerResult = boolean | void;
+export type TKeyboardEvent = Konva.KonvaEventObject<KeyboardEvent>;
 
 export interface IHooks {
   /**
@@ -28,11 +28,13 @@ export interface IHooks {
   resize: SyncHook<[number, number]>;
   pointerDown: SyncHook<[TPointerEvent]>;
   pointerUp: SyncHook<[TPointerEvent]>;
-  pointerMove: SyncHook<[TPointerEvent]>;
   pointerOut: SyncHook<[TPointerEvent]>;
   pointerOver: SyncHook<[TPointerEvent]>;
+  pointerMove: SyncHook<[TMouseEvent]>;
   pointerWheel: SyncHook<[TWheelEvent]>;
   pointerCancel: SyncHook<[TPointerEvent]>;
+  keydown: SyncHook<[TKeyboardEvent]>;
+  keyup: SyncHook<[TKeyboardEvent]>;
   cameraChange: SyncHook<[]>;
   modeChange: SyncHook<[CanvasMode, CanvasMode]>;
 }
@@ -42,6 +44,7 @@ export interface IPluginContext extends ICanvasConfig {
   hooks: IHooks;
   staticLayer: Konva.Layer;
   dynamicLayer: Konva.Layer;
+  stage: Konva.Stage;
   camera: Camera;
   api: {
     getCanvasMode(): CanvasMode;

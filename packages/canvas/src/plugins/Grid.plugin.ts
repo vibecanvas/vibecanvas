@@ -105,13 +105,15 @@ export class GridPlugin implements IPlugin {
   }
 
   apply(context: IPluginContext): void {
-    renderGrid({
+    const rerenderGrid = () => renderGrid({
       camera: context.camera,
-      height: context.staticLayer.height(),
-      width: context.staticLayer.width(),
+      height: context.stage.height(),
+      width: context.stage.width(),
       layer: context.staticLayer,
       visible: true
-    })
+    });
 
+    rerenderGrid();
+    context.hooks.cameraChange.tap(rerenderGrid);
   }
 }

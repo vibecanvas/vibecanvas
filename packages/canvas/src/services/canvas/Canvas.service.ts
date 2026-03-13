@@ -1,10 +1,12 @@
 import Konva from "konva";
 import { ICanvasConfig } from "./interface";
 import { Camera } from "./Camera";
-import { IPluginContext, TPointerEvent, TWheelEvent } from "../../plugins/interface";
+import { IPluginContext, TKeyboardEvent, TMouseEvent, TPointerEvent, TWheelEvent } from "../../plugins/interface";
 import { CanvasMode, Theme } from "./enum";
 import { AsyncParallelHook, SyncHook } from "../../tapable";
 import { GridPlugin } from "../../plugins/Grid.plugin";
+import { EventListenerPlugin } from "../../plugins/EventListener.plugin";
+import { CameraControlPlugin } from "../../plugins/CameraControl.plugin";
 
 
 export class CanvasService {
@@ -12,7 +14,7 @@ export class CanvasService {
   #stage: Konva.Stage;
   #staticLayer: Konva.Layer;
   #dynamicLayer: Konva.Layer;
-  #camera = new Camera()
+  #camera: Camera;
   #instancePromise: Promise<this>;
   #pluginContext: IPluginContext;
   #mode: CanvasMode = CanvasMode.SELECT;
@@ -28,10 +30,9 @@ export class CanvasService {
 
     this.#staticLayer = new Konva.Layer({ draggable: false });
     this.#dynamicLayer = new Konva.Layer();
+    this.#camera = new Camera(this.#dynamicLayer);
     this.#stage.add(this.#staticLayer);
     this.#stage.add(this.#dynamicLayer);
-
-    this.#stage.position
 
     const rect1 = new Konva.Rect({
       x: 60,
@@ -43,7 +44,18 @@ export class CanvasService {
       draggable: true,
     });
 
+    const rect2 = new Konva.Rect({
+      x: 220,
+      y: 140,
+      width: 100,
+      height: 90,
+      fill: "blue",
+      name: "rect",
+      draggable: true,
+    });
+
     this.#dynamicLayer.add(rect1);
+    this.#dynamicLayer.add(rect2);
 
     this.#pluginContext = {
       hooks: {
@@ -54,15 +66,18 @@ export class CanvasService {
         resize: new SyncHook(),
         pointerDown: new SyncHook<TPointerEvent>(),
         pointerUp: new SyncHook<TPointerEvent>(),
-        pointerMove: new SyncHook<TPointerEvent>(),
+        pointerMove: new SyncHook<TMouseEvent>(),
         pointerOut: new SyncHook<TPointerEvent>(),
         pointerOver: new SyncHook<TPointerEvent>(),
         pointerCancel: new SyncHook<TPointerEvent>(),
         pointerWheel: new SyncHook<TWheelEvent>(),
+        keydown: new SyncHook<TKeyboardEvent>(),
+        keyup: new SyncHook<TKeyboardEvent>(),
         modeChange: new SyncHook<[CanvasMode, CanvasMode]>(),
       },
       staticLayer: this.#staticLayer,
       dynamicLayer: this.#dynamicLayer,
+      stage: this.#stage,
       camera: this.#camera,
       api: {
         getCanvasMode: () => this.#mode,
@@ -71,7 +86,9 @@ export class CanvasService {
     }
 
     const plugins = [
-      new GridPlugin()
+      new EventListenerPlugin(),
+      new GridPlugin(),
+      new CameraControlPlugin(),
     ];
 
     this.#instancePromise = (async () => {
