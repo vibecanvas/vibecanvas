@@ -8,6 +8,7 @@ import { GridPlugin } from "../../plugins/Grid.plugin";
 import { EventListenerPlugin } from "../../plugins/EventListener.plugin";
 import { CameraControlPlugin } from "../../plugins/CameraControl.plugin";
 import { ToolbarPlugin } from "../../plugins/Toolbar.plugin";
+import type { TCustomEvent } from "../../custom-events";
 
 
 export class CanvasService {
@@ -76,7 +77,7 @@ export class CanvasService {
         keydown: new SyncHook<TKeyboardEvent>(),
         keyup: new SyncHook<TKeyboardEvent>(),
         modeChange: new SyncHook<[CanvasMode, CanvasMode]>(),
-        customEvent: new SyncExitHook<[string, any]>()
+        customEvent: new SyncExitHook<TCustomEvent>()
       },
       staticLayer: this.#staticLayer,
       dynamicLayer: this.#dynamicLayer,

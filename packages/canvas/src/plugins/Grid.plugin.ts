@@ -1,5 +1,6 @@
 import { Camera } from "src/services/canvas/Camera";
 import type { IPlugin, IPluginContext } from "./interface";
+import { CustomEvents } from "../custom-events";
 
 import Konva from "konva";
 
@@ -116,10 +117,10 @@ export class GridPlugin implements IPlugin {
     rerenderGrid();
     context.hooks.cameraChange.tap(rerenderGrid);
     context.hooks.customEvent.tap((event, value) => {
-      if (event !== 'grid-visible') return false
-      rerenderGrid(value)
+      if (event !== CustomEvents.GRID_VISIBLE) return false;
+      rerenderGrid(value);
 
-      return false // allow other plugins to handle the event
-    })
+      return false;
+    });
   }
 }

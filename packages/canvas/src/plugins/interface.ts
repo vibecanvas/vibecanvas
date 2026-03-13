@@ -1,8 +1,9 @@
 import { CanvasMode, Theme } from 'src/services/canvas/enum';
-import { AsyncParallelHook, SyncHook, SyncWaterfallHook } from '../tapable';
+import { AsyncParallelHook, SyncExitHook, SyncHook } from '../tapable';
 import type Konva from "konva";
 import { ICanvasConfig } from 'src/services/canvas/interface';
 import { Camera } from 'src/services/canvas/Camera';
+import type { TCustomEvent } from '../custom-events';
 
 export type TPointerEvent = Konva.KonvaEventObject<PointerEvent>;
 export type TMouseEvent = Konva.KonvaEventObject<MouseEvent>;
@@ -37,6 +38,7 @@ export interface IHooks {
   keyup: SyncHook<[TKeyboardEvent]>;
   cameraChange: SyncHook<[]>;
   modeChange: SyncHook<[CanvasMode, CanvasMode]>;
+  customEvent: SyncExitHook<TCustomEvent>;
 }
 
 

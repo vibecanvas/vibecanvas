@@ -3,6 +3,7 @@ import type { IPlugin, IPluginContext } from "./interface";
 import { Accessor, createComponent, createEffect, createReaction, createSignal, Setter } from "solid-js";
 import { FloatingCanvasToolbar } from "../components/FloatingCanvasToolbar";
 import { TTool } from "../components/FloatingCanvasToolbar/toolbar.types";
+import { CustomEvents } from "../custom-events";
 
 function mountSolidComponent(context: IPluginContext, activeTool: Accessor<TTool>, setActiveTool: Setter<TTool>, gridVisible: Accessor<boolean>, setGridVisible: Setter<boolean>, onToggleSidebar: () => void) {
   const mountElement = document.createElement("div");
@@ -59,9 +60,8 @@ export class ToolbarPlugin implements IPlugin {
 
     createEffect(() => {
       const value = this.#gridVisible();
-      console.log(value)
-      context.hooks.customEvent.call('grid-visible', value);
-    })
+      context.hooks.customEvent.call(CustomEvents.GRID_VISIBLE, value);
+    });
 
   }
 }
