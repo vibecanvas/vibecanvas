@@ -43,10 +43,10 @@ export class CanvasService {
     this.#staticBackgroundLayer = new Konva.Layer();
     this.#staticForegroundLayer = new Konva.Layer();
     this.#dynamicLayer = new Konva.Layer();
-    this.#camera = new Camera(this.#dynamicLayer);
+    this.#camera = new Camera({ dynamicLayer: this.#dynamicLayer, staticForegroundLayer: this.#staticForegroundLayer });
     this.#stage.add(this.#staticBackgroundLayer);
-    this.#stage.add(this.#dynamicLayer);
     this.#stage.add(this.#staticForegroundLayer);
+    this.#stage.add(this.#dynamicLayer);
 
     const rect1 = new Konva.Rect({
       x: 60,
@@ -68,8 +68,8 @@ export class CanvasService {
       draggable: true,
     });
 
-    this.#dynamicLayer.add(rect1);
-    this.#dynamicLayer.add(rect2);
+    this.#staticForegroundLayer.add(rect1);
+    this.#staticForegroundLayer.add(rect2);
 
     this.#pluginContext = {
       hooks: {

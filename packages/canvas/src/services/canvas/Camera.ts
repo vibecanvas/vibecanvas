@@ -1,4 +1,5 @@
 import type Konva from "konva";
+import { IPluginContext } from "src/plugins/interface";
 
 const MIN_ZOOM = 0.25;
 const MAX_ZOOM = 4;
@@ -9,12 +10,14 @@ function clampZoom(zoom: number) {
 
 export class Camera {
   #dynamicLayer: Konva.Layer;
+  #staticForgroundLayer: Konva.Layer
   #x: number = 0;
   #y: number = 0;
   #zoom: number = 1;
 
-  constructor(dynamicLayer: Konva.Layer) {
-    this.#dynamicLayer = dynamicLayer;
+  constructor(ctx: { dynamicLayer: Konva.Layer, staticForegroundLayer: Konva.Layer }) {
+    this.#dynamicLayer = ctx.dynamicLayer;
+    this.#staticForgroundLayer = ctx.staticForegroundLayer;
   }
 
   get x() {
@@ -47,8 +50,7 @@ export class Camera {
 
     this.#x = nextX;
     this.#y = nextY;
-    this.#dynamicLayer.position({ x: nextX, y: nextY });
-    this.#dynamicLayer.batchDraw();
+    this.apply({ pos: { x: nextX, y: nextY } });
   }
 
   zoomAtScreenPoint(scale: number, screenPoint: { x: number; y: number }) {
@@ -63,8 +65,19 @@ export class Camera {
     this.#zoom = nextZoom;
     this.#x = nextX;
     this.#y = nextY;
-    this.#dynamicLayer.scale({ x: nextZoom, y: nextZoom });
-    this.#dynamicLayer.position({ x: nextX, y: nextY });
+    this.apply({ pos: { x: nextX, y: nextY }, zoom: nextZoom });
+  }
+
+  private apply(args: { pos?: { x: number, y: number }, zoom?: number }) {
+    if (args.pos) {
+      this.#dynamicLayer.position(args.pos);
+      this.#staticForgroundLayer.position(args.pos);
+    }
+    if (args.zoom) {
+      this.#dynamicLayer.scale({ x: args.zoom, y: args.zoom });
+      this.#staticForgroundLayer.scale({ x: args.zoom, y: args.zoom });
+    }
     this.#dynamicLayer.batchDraw();
+    this.#staticForgroundLayer.batchDraw();
   }
 }

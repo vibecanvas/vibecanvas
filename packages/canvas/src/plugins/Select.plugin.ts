@@ -20,7 +20,7 @@ export class SelectPlugin implements IPlugin {
   }
 
   apply(context: IPluginContext): void {
-    context.staticForegroundLayer.add(this.#selectionRectangle);
+    context.dynamicLayer.add(this.#selectionRectangle);
 
     context.hooks.customEvent.tap(() => {
       if (context.state.mode === CanvasMode.SELECT) return false;
