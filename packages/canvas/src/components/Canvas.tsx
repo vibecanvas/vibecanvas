@@ -10,6 +10,10 @@ export type TBackendCanvas = typeof schema.canvas.$inferSelect;
 
 type CanvasPageProps = {
   canvas: TBackendCanvas;
+  store: {
+    sidebarVisible: () => boolean;
+    onToggleSidebar: () => void;
+  },
   notification: {
     showSuccess(title: string, description?: string): void
     showError(title: string, description?: string): void
