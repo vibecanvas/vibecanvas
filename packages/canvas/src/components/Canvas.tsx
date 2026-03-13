@@ -1,8 +1,10 @@
-import { findDocument } from "../service/automerge";
 import { AutomergeUrl, DocHandle } from "@automerge/automerge-repo";
 import { TCanvasDoc } from "@vibecanvas/shell/automerge/index";
 import type * as schema from "@vibecanvas/shell/database/schema";
-import { createEffect, createResource, createSignal, Match, Switch } from "solid-js";
+import { createEffect, createResource, Match, Switch } from "solid-js";
+import { findDocument } from "../services/automerge";
+import { CanvasService } from "../services/canvas/Canvas.service";
+import { CanvasMode, Theme } from "../services/canvas/enum";
 
 export type TBackendCanvas = typeof schema.canvas.$inferSelect;
 
@@ -15,12 +17,10 @@ type CanvasPageProps = {
   }
 };
 
-type TState = 'loading' | 'error' | 'ready';
-
 export function Canvas(props: CanvasPageProps) {
   let containerRef!: HTMLDivElement;
   let activeHandle: DocHandle<TCanvasDoc> | null = null;
-
+  let canvasService: CanvasService | null = null;
   const [docHandle] = createResource(() => props.canvas.automerge_url as AutomergeUrl, async (url) => {
     try {
       return await findDocument(url);
@@ -36,6 +36,16 @@ export function Canvas(props: CanvasPageProps) {
     if (!nextHandle || nextHandle === activeHandle) return;
 
     activeHandle = nextHandle;
+    if (canvasService) {
+      canvasService.destroy();
+      canvasService = null;
+    }
+
+    canvasService = new CanvasService({
+      mode: CanvasMode.SELECT,
+      theme: Theme.DARK,
+
+    }, containerRef);
   });
 
   return <div ref={containerRef} class="relative w-full h-full bg-gray-400/10">
@@ -45,9 +55,6 @@ export function Canvas(props: CanvasPageProps) {
       </Match>
       <Match when={docHandle.error}>
         <div>Error</div>
-      </Match>
-      <Match when={docHandle()}>
-        <div>Ready</div>
       </Match>
     </Switch>
   </div>;
