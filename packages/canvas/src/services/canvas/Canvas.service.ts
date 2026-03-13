@@ -3,7 +3,7 @@ import { ICanvasConfig } from "./interface";
 import { Camera } from "./Camera";
 import { IPluginContext, TKeyboardEvent, TMouseEvent, TPointerEvent, TWheelEvent } from "../../plugins/interface";
 import { CanvasMode, Theme } from "./enum";
-import { AsyncParallelHook, SyncHook } from "../../tapable";
+import { AsyncParallelHook, SyncExitHook, SyncHook } from "../../tapable";
 import { GridPlugin } from "../../plugins/Grid.plugin";
 import { EventListenerPlugin } from "../../plugins/EventListener.plugin";
 import { CameraControlPlugin } from "../../plugins/CameraControl.plugin";
@@ -76,6 +76,7 @@ export class CanvasService {
         keydown: new SyncHook<TKeyboardEvent>(),
         keyup: new SyncHook<TKeyboardEvent>(),
         modeChange: new SyncHook<[CanvasMode, CanvasMode]>(),
+        customEvent: new SyncExitHook<[string, any]>()
       },
       staticLayer: this.#staticLayer,
       dynamicLayer: this.#dynamicLayer,

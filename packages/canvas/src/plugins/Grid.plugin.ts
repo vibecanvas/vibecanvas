@@ -105,15 +105,21 @@ export class GridPlugin implements IPlugin {
   }
 
   apply(context: IPluginContext): void {
-    const rerenderGrid = () => renderGrid({
+    const rerenderGrid = (visible = true) => renderGrid({
       camera: context.camera,
       height: context.stage.height(),
       width: context.stage.width(),
       layer: context.staticLayer,
-      visible: true
+      visible
     });
 
     rerenderGrid();
     context.hooks.cameraChange.tap(rerenderGrid);
+    context.hooks.customEvent.tap((event, value) => {
+      if (event !== 'grid-visible') return false
+      rerenderGrid(value)
+
+      return false // allow other plugins to handle the event
+    })
   }
 }
