@@ -1,41 +1,52 @@
 import Konva from "konva";
-import { ICanvasConfig } from "./interface";
-import { Camera } from "./Camera";
-import { IPluginContext, TMouseEvent, TPointerEvent, TWheelEvent } from "../../plugins/interface";
-import { CanvasMode, Theme } from "./enum";
-import { AsyncParallelHook, SyncExitHook, SyncHook } from "../../tapable";
-import { GridPlugin } from "../../plugins/Grid.plugin";
-import { EventListenerPlugin } from "../../plugins/EventListener.plugin";
-import { CameraControlPlugin } from "../../plugins/CameraControl.plugin";
-import { ToolbarPlugin } from "../../plugins/Toolbar.plugin";
 import type { TCustomEvent } from "../../custom-events";
+import { CameraControlPlugin } from "../../plugins/CameraControl.plugin";
+import { EventListenerPlugin } from "../../plugins/EventListener.plugin";
+import { GridPlugin } from "../../plugins/Grid.plugin";
+import { IPluginContext, TMouseEvent, TPointerEvent, TWheelEvent } from "../../plugins/interface";
+import { SelectPlugin } from "../../plugins/Select.plugin";
+import { ToolbarPlugin } from "../../plugins/Toolbar.plugin";
+import { AsyncParallelHook, SyncExitHook, SyncHook } from "../../tapable";
+import { Camera } from "./Camera";
+import { CanvasMode, Theme } from "./enum";
+import { createStore, SetStoreFunction } from 'solid-js/store';
+import { IState } from "./interface";
 
 
 export class CanvasService {
-  #config: ICanvasConfig;
   #stage: Konva.Stage;
-  #staticLayer: Konva.Layer;
+  #staticBackgroundLayer: Konva.Layer;
+  #staticForegroundLayer: Konva.Layer;
   #dynamicLayer: Konva.Layer;
   #camera: Camera;
   #instancePromise: Promise<this>;
   #pluginContext: IPluginContext;
-  #mode: CanvasMode = CanvasMode.SELECT;
   #resizeObserver: ResizeObserver;
-  #theme: Theme = Theme.LIGHT;
+  #state: IState;
+  #setState: SetStoreFunction<IState>;
 
-  constructor(config: ICanvasConfig, container: HTMLDivElement, onToggleSidebar: () => void) {
-    this.#config = config;
+  constructor(container: HTMLDivElement, onToggleSidebar: () => void) {
     this.#stage = new Konva.Stage({
       container,
       width: container.clientWidth,
       height: container.clientHeight,
     });
 
-    this.#staticLayer = new Konva.Layer({ draggable: false });
+    const [state, setState] = createStore({
+      mode: CanvasMode.SELECT,
+      theme: Theme.LIGHT,
+    });
+    this.#state = state;
+    this.#setState = setState;
+
+
+    this.#staticBackgroundLayer = new Konva.Layer();
+    this.#staticForegroundLayer = new Konva.Layer();
     this.#dynamicLayer = new Konva.Layer();
     this.#camera = new Camera(this.#dynamicLayer);
-    this.#stage.add(this.#staticLayer);
+    this.#stage.add(this.#staticBackgroundLayer);
     this.#stage.add(this.#dynamicLayer);
+    this.#stage.add(this.#staticForegroundLayer);
 
     const rect1 = new Konva.Rect({
       x: 60,
@@ -79,14 +90,13 @@ export class CanvasService {
         modeChange: new SyncHook<[CanvasMode, CanvasMode]>(),
         customEvent: new SyncExitHook<TCustomEvent>()
       },
-      staticLayer: this.#staticLayer,
+      staticBackgroundLayer: this.#staticBackgroundLayer,
+      staticForegroundLayer: this.#staticForegroundLayer,
       dynamicLayer: this.#dynamicLayer,
       stage: this.#stage,
       camera: this.#camera,
-      api: {
-        getCanvasMode: () => this.#mode,
-        getTheme: () => this.#theme,
-      }
+      state: this.#state,
+      setState: this.#setState,
     }
 
     const plugins = [
@@ -94,6 +104,7 @@ export class CanvasService {
       new GridPlugin(),
       new CameraControlPlugin(),
       new ToolbarPlugin(onToggleSidebar),
+      new SelectPlugin(),
     ];
 
     this.#instancePromise = (async () => {

@@ -111,7 +111,7 @@ export class GridPlugin implements IPlugin {
       camera: context.camera,
       height: context.stage.height(),
       width: context.stage.width(),
-      layer: context.staticLayer,
+      layer: context.staticBackgroundLayer,
       visible: this.#visible,
     });
 

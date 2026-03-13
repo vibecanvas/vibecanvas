@@ -4,6 +4,7 @@ import { Accessor, createComponent, createEffect, createSignal, Setter } from "s
 import { FloatingCanvasToolbar } from "../components/FloatingCanvasToolbar";
 import { TOOL_SHORTCUTS, TTool } from "../components/FloatingCanvasToolbar/toolbar.types";
 import { CustomEvents } from "../custom-events";
+import { CanvasMode } from "../services/canvas/enum";
 
 function getShortcutTool(event: KeyboardEvent): TTool | null {
   if (event.metaKey || event.ctrlKey || event.altKey) return null;
@@ -47,7 +48,7 @@ export class ToolbarPlugin implements IPlugin {
   #disposeRender: (() => void) | null = null;
 
   constructor(private onToggleSidebar: () => void) {
-    const [activeTool, setActiveTool] = createSignal<TTool>('hand');
+    const [activeTool, setActiveTool] = createSignal<TTool>('select');
     this.#activeTool = activeTool;
     this.#setActiveTool = setActiveTool;
     const [gridVisible, setGridVisible] = createSignal(true);
@@ -68,6 +69,20 @@ export class ToolbarPlugin implements IPlugin {
       this.#mountElement?.remove();
       this.#disposeRender = null;
       this.#mountElement = null;
+    })
+
+    createEffect(() => {
+      const value = this.#activeTool()
+      if (value === 'select') {
+        context.setState('mode', CanvasMode.SELECT)
+      } else if (value === 'hand') {
+        context.setState('mode', CanvasMode.HAND)
+      } else if (["rectangle", "diamond", "ellipse"].includes(value)) {
+        context.setState('mode', CanvasMode.DRAW_CREATE)
+      } else {
+        context.setState('mode', CanvasMode.CLICK_CREATE)
+      }
+      context.hooks.customEvent.call(CustomEvents.TOOL_SELECT, value);
     })
 
     createEffect(() => {

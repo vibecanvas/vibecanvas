@@ -1,9 +1,10 @@
-import { CanvasMode, Theme } from 'src/services/canvas/enum';
-import { AsyncParallelHook, SyncExitHook, SyncHook } from '../tapable';
 import type Konva from "konva";
-import { ICanvasConfig } from 'src/services/canvas/interface';
-import { Camera } from 'src/services/canvas/Camera';
+import type { SetStoreFunction } from 'solid-js/store';
+import type { Camera } from 'src/services/canvas/Camera';
+import type { CanvasMode } from 'src/services/canvas/enum';
+import type { IState } from 'src/services/canvas/interface';
 import type { TCustomEvent } from '../custom-events';
+import { AsyncParallelHook, SyncExitHook, SyncHook } from '../tapable';
 
 export type TPointerEvent = Konva.KonvaEventObject<PointerEvent>;
 export type TMouseEvent = Konva.KonvaEventObject<MouseEvent>;
@@ -40,17 +41,16 @@ export interface IHooks {
   customEvent: SyncExitHook<TCustomEvent>;
 }
 
-
-export interface IPluginContext extends ICanvasConfig {
+export interface IPluginContext {
   hooks: IHooks;
-  staticLayer: Konva.Layer;
+  staticBackgroundLayer: Konva.Layer;
+  staticForegroundLayer: Konva.Layer;
   dynamicLayer: Konva.Layer;
   stage: Konva.Stage;
   camera: Camera;
-  api: {
-    getCanvasMode(): CanvasMode;
-    getTheme(): Theme;
-  };
+  state: IState;
+  setState: SetStoreFunction<IState>;
+
 }
 
 /**
