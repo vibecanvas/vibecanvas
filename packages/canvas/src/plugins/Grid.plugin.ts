@@ -101,24 +101,26 @@ function renderGrid(args: TRenderGridArgs) {
 }
 
 export class GridPlugin implements IPlugin {
+  #visible: boolean = true;
   constructor() {
 
   }
 
   apply(context: IPluginContext): void {
-    const rerenderGrid = (visible = true) => renderGrid({
+    const rerenderGrid = () => renderGrid({
       camera: context.camera,
       height: context.stage.height(),
       width: context.stage.width(),
       layer: context.staticLayer,
-      visible
+      visible: this.#visible,
     });
 
     rerenderGrid();
-    context.hooks.cameraChange.tap(rerenderGrid);
+    context.hooks.cameraChange.tap(() => { if (this.#visible) rerenderGrid() });
     context.hooks.customEvent.tap((event, value) => {
       if (event !== CustomEvents.GRID_VISIBLE) return false;
-      rerenderGrid(value);
+      this.#visible = value;
+      rerenderGrid();
 
       return false;
     });
