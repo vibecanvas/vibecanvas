@@ -7,6 +7,7 @@ import { AsyncParallelHook, SyncHook } from "../../tapable";
 import { GridPlugin } from "../../plugins/Grid.plugin";
 import { EventListenerPlugin } from "../../plugins/EventListener.plugin";
 import { CameraControlPlugin } from "../../plugins/CameraControl.plugin";
+import { ToolbarPlugin } from "../../plugins/Toolbar.plugin";
 
 
 export class CanvasService {
@@ -18,9 +19,10 @@ export class CanvasService {
   #instancePromise: Promise<this>;
   #pluginContext: IPluginContext;
   #mode: CanvasMode = CanvasMode.SELECT;
+  #resizeObserver: ResizeObserver;
   #theme: Theme = Theme.LIGHT;
 
-  constructor(config: ICanvasConfig, container: HTMLDivElement) {
+  constructor(config: ICanvasConfig, container: HTMLDivElement, onToggleSidebar: () => void) {
     this.#config = config;
     this.#stage = new Konva.Stage({
       container,
@@ -89,6 +91,7 @@ export class CanvasService {
       new EventListenerPlugin(),
       new GridPlugin(),
       new CameraControlPlugin(),
+      new ToolbarPlugin(onToggleSidebar),
     ];
 
     this.#instancePromise = (async () => {
@@ -102,6 +105,18 @@ export class CanvasService {
       return this;
     })();
 
+    this.#resizeObserver = new ResizeObserver(() => {
+      this.#stage.size({
+        width: this.#stage.container().clientWidth,
+        height: this.#stage.container().clientHeight,
+      });
+      this.#stage.batchDraw();
+      this.#pluginContext.hooks.cameraChange.call();
+    });
+
+    this.#resizeObserver.observe(container);
+
+
   }
 
   get initialized() {
@@ -110,6 +125,8 @@ export class CanvasService {
 
   destroy() {
     this.#stage.destroy();
+    this.#resizeObserver.disconnect();
+    this.#pluginContext.hooks.destroy.call();
   }
 
 } 

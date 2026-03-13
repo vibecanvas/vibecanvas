@@ -49,7 +49,10 @@ export function Canvas(props: CanvasPageProps) {
       mode: CanvasMode.SELECT,
       theme: Theme.DARK,
 
-    }, containerRef);
+    }, containerRef, props.store.onToggleSidebar);
+    canvasService.initialized.then(() => {
+      console.log("[CanvasPage] CanvasService initialized");
+    });
   });
 
   return <div ref={containerRef} class="relative w-full h-full bg-gray-400/10">
