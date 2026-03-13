@@ -1,16 +1,20 @@
 import Konva from "konva";
+import { Group } from "konva/lib/Group";
+import { Shape, ShapeConfig } from "konva/lib/Shape";
+import { createStore, SetStoreFunction } from 'solid-js/store';
 import type { TCustomEvent } from "../../custom-events";
 import { CameraControlPlugin } from "../../plugins/CameraControl.plugin";
 import { EventListenerPlugin } from "../../plugins/EventListener.plugin";
+import { ExampleScenePlugin } from "../../plugins/ExampleScene.plugin";
 import { GridPlugin } from "../../plugins/Grid.plugin";
-import { IPluginContext, TMouseEvent, TPointerEvent, TWheelEvent } from "../../plugins/interface";
+import type { IPluginContext, TMouseEvent, TPointerEvent, TWheelEvent } from "../../plugins/interface";
 import { SelectPlugin } from "../../plugins/Select.plugin";
 import { ToolbarPlugin } from "../../plugins/Toolbar.plugin";
+import { TransformPlugin } from "../../plugins/Transform.plugin";
 import { AsyncParallelHook, SyncExitHook, SyncHook } from "../../tapable";
 import { Camera } from "./Camera";
 import { CanvasMode, Theme } from "./enum";
-import { createStore, SetStoreFunction } from 'solid-js/store';
-import { IState } from "./interface";
+import type { IState } from "./interface";
 
 
 export class CanvasService {
@@ -35,6 +39,7 @@ export class CanvasService {
     const [state, setState] = createStore({
       mode: CanvasMode.SELECT,
       theme: Theme.LIGHT,
+      selection: [] as (Group | Shape<ShapeConfig>)[],
     });
     this.#state = state;
     this.#setState = setState;
@@ -47,29 +52,6 @@ export class CanvasService {
     this.#stage.add(this.#staticBackgroundLayer);
     this.#stage.add(this.#staticForegroundLayer);
     this.#stage.add(this.#dynamicLayer);
-
-    const rect1 = new Konva.Rect({
-      x: 60,
-      y: 60,
-      width: 100,
-      height: 90,
-      fill: 'red',
-      name: 'rect',
-      draggable: true,
-    });
-
-    const rect2 = new Konva.Rect({
-      x: 220,
-      y: 140,
-      width: 100,
-      height: 90,
-      fill: "blue",
-      name: "rect",
-      draggable: true,
-    });
-
-    this.#staticForegroundLayer.add(rect1);
-    this.#staticForegroundLayer.add(rect2);
 
     this.#pluginContext = {
       hooks: {
@@ -105,6 +87,8 @@ export class CanvasService {
       new CameraControlPlugin(),
       new ToolbarPlugin(onToggleSidebar),
       new SelectPlugin(),
+      new TransformPlugin(),
+      new ExampleScenePlugin()
     ];
 
     this.#instancePromise = (async () => {

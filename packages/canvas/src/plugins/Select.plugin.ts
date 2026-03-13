@@ -9,6 +9,15 @@ function getSelectionLayerPointerPosition(context: IPluginContext) {
   return pointer;
 }
 
+function hasSameSelectionOrder(
+  currentSelection: Array<{ id(): string }>,
+  nextSelection: Array<{ id(): string }>,
+) {
+  if (currentSelection.length != nextSelection.length) return false;
+
+  return currentSelection.every((node, index) => node.id() === nextSelection[index]?.id());
+}
+
 export class SelectPlugin implements IPlugin {
   #selectionRectangle: Konva.Rect;
 
@@ -43,6 +52,11 @@ export class SelectPlugin implements IPlugin {
       this.#selectionRectangle.position(pointer);
       this.#selectionRectangle.size({ width: 0, height: 0 });
       this.#selectionRectangle.moveToTop();
+
+
+      context.setState('selection', []);
+
+
       context.dynamicLayer.batchDraw();
     });
 
@@ -55,6 +69,16 @@ export class SelectPlugin implements IPlugin {
         width: pointer.x - this.#selectionRectangle.x(),
         height: pointer.y - this.#selectionRectangle.y(),
       });
+
+      const topNodes = context.staticForegroundLayer.getChildren(item => item.parent?.id === context.staticForegroundLayer.id)
+      const inSelection = topNodes.filter(node => {
+        return Konva.Util.haveIntersection(node.getClientRect(), this.#selectionRectangle.getClientRect());
+      }).sort((a, b) => a.id().localeCompare(b.id()))
+
+      if (!hasSameSelectionOrder(context.state.selection, inSelection)) {
+        context.setState('selection', inSelection);
+      }
+
       context.dynamicLayer.batchDraw();
     });
 
