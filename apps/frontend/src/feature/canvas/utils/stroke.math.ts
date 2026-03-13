@@ -152,6 +152,10 @@ function createPenDataFromStrokePoints(points: TStrokePoint[]): (TPenData & { x:
   };
 }
 
+function scalePenDataPoints(points: TPoint2D[], scaleX: number, scaleY: number): TPoint2D[] {
+  return points.map((point) => [point[0] * scaleX, point[1] * scaleY]);
+}
+
 export type { TStrokePoint };
 export {
   DEFAULT_STROKE_OPTIONS,
@@ -160,5 +164,6 @@ export {
   getLocalStrokePointsFromPenData,
   getStrokePathFromPenData,
   getStrokePointsFromPenData,
+  scalePenDataPoints,
   serializeStrokePoints,
 };

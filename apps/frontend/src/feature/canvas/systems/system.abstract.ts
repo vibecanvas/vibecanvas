@@ -34,7 +34,6 @@ type TCanvasSystemInputContext<TContext extends object> = TCanvasSystemRuntimeCo
  * Base class for a canvas system.
  *
  * A system owns one coherent part of canvas behavior. Examples:
- * - camera / viewport state
  * - pen drawing
  * - marquee selection
  * - drag and drop

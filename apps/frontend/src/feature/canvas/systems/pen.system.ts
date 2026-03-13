@@ -1,7 +1,8 @@
 import Konva from "konva";
 import type { TPenData } from "@vibecanvas/shell/automerge/index";
+import type { TCanvasElementDraft } from "../types/canvas-context.types";
 import type { TCanvasInputContext } from "../types/canvas-context.types";
-import { createPenDataFromStrokePoints, getStrokePath, type TStrokePoint } from "../utils/stroke-renderer";
+import { createPenDataFromStrokePoints, getStrokePath, scalePenDataPoints, type TStrokePoint } from "../utils/stroke.math";
 import { logCanvasDebug } from "../utils/canvas-debug";
 import { AbstractCanvasSystem } from "./system.abstract";
 import type { TCanvasSystemInputContext, TCanvasSystemRuntimeContext } from "./system.abstract";
@@ -32,7 +33,29 @@ class PenSystem extends AbstractCanvasSystem<TCanvasInputContext, TPenState> {
       onMove: this.onMove.bind(this),
       onEnd: this.onEnd.bind(this),
       onCancel: this.onCancel.bind(this),
-      getCursor: this.getCursor.bind(this),
+      getCursor: PenSystem.getCursor,
+    };
+  }
+
+  static createTransformUpdate(node: Konva.Node): { id: string; update: Partial<Omit<TCanvasElementDraft, "id">> } | null {
+    const elementId = node.getAttr("vcElementId");
+    const elementData = node.getAttr("vcElementData") as TPenData | undefined;
+    if (typeof elementId !== "string" || !elementData || elementData.type !== "pen") return null;
+
+    const scaleX = node.scaleX();
+    const scaleY = node.scaleY();
+
+    return {
+      id: elementId,
+      update: {
+        x: node.x(),
+        y: node.y(),
+        angle: node.rotation(),
+        data: {
+          ...elementData,
+          points: scalePenDataPoints(elementData.points, scaleX, scaleY),
+        },
+      },
     };
   }
 
@@ -156,7 +179,7 @@ class PenSystem extends AbstractCanvasSystem<TCanvasInputContext, TPenState> {
     this.clearPreview();
   }
 
-  private getCursor(context: TCanvasSystemInputContext<TCanvasInputContext>) {
+  private static getCursor(context: TCanvasSystemInputContext<TCanvasInputContext>) {
     if (context.data.getActiveTool() === "pen") return "crosshair";
     return null;
   }

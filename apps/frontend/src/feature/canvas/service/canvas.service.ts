@@ -15,7 +15,7 @@ import { AbstractCanvasSystem, type TCanvasSystemRuntimeContext } from "../syste
 import { ToolSystem } from "../systems/tool.system";
 import { ZoomSystem } from "../systems/zoom.system";
 import { logCanvasDebug } from "../utils/canvas-debug";
-import { renderGrid } from "../utils/grid-renderer";
+import { renderGrid } from "../utils/grid.math";
 import type { TCanvasElementDraft, TCanvasInputContext } from "../types/canvas-context.types";
 import { Node } from "konva/lib/Node";
 
@@ -102,6 +102,14 @@ export class CanvasService {
       onTransformEnd: () => {
         logCanvasDebug("[transform-manager] transformend");
       },
+    });
+    this.#transform.registerHandler("pen", (node) => {
+      const nextTransform = PenSystem.createTransformUpdate(node);
+      if (!nextTransform) return;
+
+      this.#updateElement(nextTransform.id, nextTransform.update);
+      node.scaleX(1);
+      node.scaleY(1);
     });
     shapesLayer.add(this.#worldShapes);
     overlayLayer.add(this.#worldOverlay);
@@ -306,6 +314,17 @@ export class CanvasService {
       y: draft.y,
     });
     this.#crdtManager.createElement(draft);
+  }
+
+  #updateElement(id: string, update: Partial<Omit<TCanvasElementDraft, "id">>) {
+    this.#crdtManager.updateElement({
+      id,
+      x: update.x,
+      y: update.y,
+      angle: update.angle,
+      data: update.data,
+      style: update.style,
+    });
   }
 
   #registerStageSelectionEvents() {

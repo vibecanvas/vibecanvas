@@ -7,7 +7,7 @@ import {
   type TElement,
 } from "@vibecanvas/shell/automerge/types/canvas-doc";
 import Konva from "konva";
-import { getStrokePathFromPenData } from "../utils/stroke-renderer";
+import { getStrokePathFromPenData } from "../utils/stroke.math";
 
 type TCrdtManagerArgs = {
   handle: DocHandle<TCanvasDoc>;
@@ -23,6 +23,15 @@ type TCrdtElementDraft = {
   parentGroupId?: string | null;
   locked?: boolean;
   data: TElementData;
+  style?: TElementStyle;
+};
+
+type TCrdtElementUpdate = {
+  id: string;
+  x?: number;
+  y?: number;
+  angle?: number;
+  data?: TElementData;
   style?: TElementStyle;
 };
 
@@ -91,6 +100,25 @@ export class CrdtManager {
     });
   }
 
+  updateElement(update: TCrdtElementUpdate) {
+    const timestamp = Date.now();
+
+    this.#handle.change((doc) => {
+      const existingElement = doc.elements[update.id];
+      if (!existingElement) return;
+
+      doc.elements[update.id] = {
+        ...existingElement,
+        x: update.x ?? existingElement.x,
+        y: update.y ?? existingElement.y,
+        angle: update.angle ?? existingElement.angle,
+        data: update.data ?? existingElement.data,
+        style: update.style ? { ...existingElement.style, ...update.style } : existingElement.style,
+        updatedAt: timestamp,
+      };
+    });
+  }
+
   reconcileFromDoc() {
     if (!this.#handle) return;
     const doc = this.#handle.docSync();
@@ -133,6 +161,9 @@ export class CrdtManager {
         visible: Boolean(pathData),
         vcSelectable: true,
         vcTransformable: true,
+        vcElementId: element.id,
+        vcElementType: element.data.type,
+        vcElementData: element.data,
       });
       existingNode.moveToTop();
       return;
@@ -147,16 +178,17 @@ export class CrdtManager {
       opacity,
       rotation: element.angle,
       visible: Boolean(pathData),
+      vcElementId: element.id,
+      vcElementType: element.data.type,
+      vcElementData: element.data,
+      vcSelectable: true,
+      vcTransformable: true,
     });
 
     this.#worldShapes.add(node);
     node.moveToTop();
     this.#penNodes.set(element.id, node);
-    node.setAttrs({
-      vcSelectable: true,
-      vcTransformable: true,
-    });
   }
 }
 
-export type { TCrdtElementDraft, TCrdtManagerArgs };
+export type { TCrdtElementDraft, TCrdtElementUpdate, TCrdtManagerArgs };
