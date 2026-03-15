@@ -5,8 +5,9 @@ import { GroupPlugin } from "./Group.plugin";
 
 
 export class ExampleScenePlugin implements IPlugin {
-
-  constructor() {
+  #groupPlugin: GroupPlugin;
+  constructor(groupPlugin: GroupPlugin) {
+    this.#groupPlugin = groupPlugin;
   }
 
   apply(context: IPluginContext): void {
@@ -22,8 +23,8 @@ export class ExampleScenePlugin implements IPlugin {
     s2.setDraggable(true)
     s3.setDraggable(true)
 
-    GroupPlugin.group(context, [s1, s2])
-
+    const g1 = GroupPlugin.group(context, [s1, s2])
+    this.#groupPlugin.setupGroupListeners(context, g1)
     context.staticForegroundLayer.add(s3)
 
 

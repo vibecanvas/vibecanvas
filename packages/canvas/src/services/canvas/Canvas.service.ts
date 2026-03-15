@@ -92,6 +92,8 @@ export class CanvasService {
       setState: this.#setState,
     }
 
+    // needs instance beforehand
+    const groupPlugin = new GroupPlugin();
     const plugins = [
       new EventListenerPlugin(),
       new GridPlugin(),
@@ -100,8 +102,8 @@ export class CanvasService {
       new SelectPlugin(),
       new TransformPlugin(),
       new Shape2dPlugin(),
-      new GroupPlugin(),
-      new ExampleScenePlugin()
+      groupPlugin,
+      new ExampleScenePlugin(groupPlugin)
     ];
 
     this.#instancePromise = (async () => {
