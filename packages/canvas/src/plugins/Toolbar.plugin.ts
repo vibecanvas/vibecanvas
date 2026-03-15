@@ -71,6 +71,18 @@ export class ToolbarPlugin implements IPlugin {
       this.#mountElement = null;
     })
 
+
+    this.setupKeyShortcuts(context)
+    this.setupEffects(context)
+    this.setupDrawElement(context)
+
+
+
+  }
+
+  private setupDrawElement(context: IPluginContext) { }
+
+  private setupEffects(context: IPluginContext) {
     createEffect(() => {
       const value = this.#activeTool()
       if (value === 'select') {
@@ -90,6 +102,30 @@ export class ToolbarPlugin implements IPlugin {
       context.hooks.customEvent.call(CustomEvents.GRID_VISIBLE, value);
     });
 
+    createEffect(() => {
+      const value = context.state.mode
+      switch (value) {
+        case CanvasMode.SELECT:
+          context.stage.container().style.cursor = 'default'
+          break;
+        case CanvasMode.HAND:
+          context.stage.container().style.cursor = 'grab'
+          break;
+        case CanvasMode.DRAW_CREATE:
+          context.stage.container().style.cursor = 'crosshair'
+          break;
+        case CanvasMode.CLICK_CREATE:
+          context.stage.container().style.cursor = 'pointer'
+          break;
+        default:
+          context.stage.container().style.cursor = 'default'
+          break;
+      }
+    })
+
+  }
+
+  private setupKeyShortcuts(context: IPluginContext) {
     context.hooks.keydown.tap(event => {
       if (event.key === " ") {
         event.preventDefault();
@@ -140,6 +176,5 @@ export class ToolbarPlugin implements IPlugin {
 
       return true;
     })
-
   }
 }

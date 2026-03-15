@@ -15,6 +15,7 @@ import { AsyncParallelHook, SyncExitHook, SyncHook } from "../../tapable";
 import { Camera } from "./Camera";
 import { CanvasMode, Theme } from "./enum";
 import type { IState } from "./interface";
+import { createEffect } from "solid-js";
 
 
 export class CanvasService {
