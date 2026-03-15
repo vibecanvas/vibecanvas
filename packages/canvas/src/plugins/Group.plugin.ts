@@ -10,6 +10,7 @@ import { Shape2dPlugin } from "./Shape2d.plugin";
 
 
 export class GroupPlugin implements IPlugin {
+  #boundaries: Konva.Rect[] = [];
 
   constructor() {
 
@@ -24,7 +25,7 @@ export class GroupPlugin implements IPlugin {
         event.stopPropagation()
         if (context.state.mode === CanvasMode.SELECT && context.state.selection.length > 1) {
           console.log('group')
-          this.group(context)
+          GroupPlugin.group(context, context.state.selection)
 
         }
 
@@ -40,25 +41,47 @@ export class GroupPlugin implements IPlugin {
     })
   }
 
-  private group(context: IPluginContext) {
+  static group(context: IPluginContext, selections: (Konva.Group | Konva.Shape)[]) {
 
     const newGroup = new Konva.Group({
       draggable: true
     })
-    context.state.selection.forEach(node => {
+    selections.forEach(node => {
       newGroup.add(node)
       node.setDraggable(false)
       if (node instanceof Konva.Shape && Shape2dPlugin.supportedTypes.has(node.getAttr('backendData').data.type)) {
         Shape2dPlugin.removeShapeListeners(node)
+      } else if (node instanceof Konva.Group) {
+        GroupPlugin.removeGroupListeners(context, node)
       }
     })
 
+    GroupPlugin.setupGroupListeners(context, newGroup)
     context.staticForegroundLayer.add(newGroup)
   }
 
-  static setupGroupListeners(group: Konva.Group, context: IPluginContext) {
+
+  private static removeGroupListeners(context: IPluginContext, group: Konva.Group) {
+    group
+      .off('pointerclick')
+      .off('pointerdblclick')
+      .off('dragstart')
+      .off('dragmove')
+      .off('dragend')
+      .off('transformstart')
+      .off('transformmove')
+      .off('transformend')
+  }
+
+  private static setupGroupListeners(context: IPluginContext, group: Konva.Group) {
+    // group.children.forEach(node => {
+    //   node.on('pointerclick', e => {
+    //     console.log('child', e)
+    //   })
+    // })
     group.on('pointerclick', e => {
       console.log(e)
+      context.setState('selection', [group])
     })
   }
 

@@ -20,6 +20,15 @@ export class TransformPlugin implements IPlugin {
   apply(context: IPluginContext): void {
     context.dynamicLayer.add(this.#transformer);
     createEffect(() => {
+      if (context.state.selection.length === 1 && context.state.selection[0] instanceof Konva.Group) {
+        this.#transformer.borderEnabled(false)
+      } else if (context.state.selection.length > 1) {
+        this.#transformer.borderEnabled(true)
+        this.#transformer.borderDash([2, 2])
+      } else if (context.state.selection.length === 1) {
+        this.#transformer.borderEnabled(true)
+        this.#transformer.borderDash([0, 0])
+      }
       this.#transformer.setNodes(context.state.selection)
       this.#transformer.update()
     })
