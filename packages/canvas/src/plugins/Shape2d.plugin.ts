@@ -5,6 +5,7 @@ import { createEffect } from "solid-js";
 import { produce } from "solid-js/store";
 import type { TTool } from "../components/FloatingCanvasToolbar/toolbar.types";
 import { CustomEvents } from "../custom-events";
+import { TCanvasDoc, TElement, TElementData, TElementStyle, TRectData } from "@vibecanvas/shell/automerge/index";
 
 
 export class Shape2dPlugin implements IPlugin {
@@ -33,14 +34,29 @@ export class Shape2dPlugin implements IPlugin {
       const pointer = context.dynamicLayer.getRelativePointerPosition();
       if (!pointer) return;
 
-      this.#previewDrawing = Shape2dPlugin.createPreviewRect({
-        x: pointer.x,
-        y: pointer.y,
-        w: 0,
-        h: 0,
-        fill: 'red',
-      });
-      context.dynamicLayer.add(this.#previewDrawing);
+      if (this.#activeTool === 'rectangle') {
+        this.#previewDrawing = Shape2dPlugin.createPreviewRect({
+          id: crypto.randomUUID(),
+          angle: 0,
+          x: pointer.x,
+          y: pointer.y,
+          bindings: [],
+          createdAt: Date.now(),
+          locked: false,
+          parentGroupId: null,
+          updatedAt: Date.now(),
+          zIndex: '',
+          data: {
+            type: 'rect',
+            w: 0,
+            h: 0,
+          },
+          style: {
+            backgroundColor: 'red'
+          }
+        });
+      }
+      if (this.#previewDrawing) context.dynamicLayer.add(this.#previewDrawing);
     })
 
     context.hooks.pointerMove.tap((e) => {
@@ -74,7 +90,6 @@ export class Shape2dPlugin implements IPlugin {
         return
       }
 
-      console.log(e)
       if (e.type === 'click')
         context.setState('selection', produce(selection => {
           if (!e.evt.shiftKey) selection.length = 0
@@ -82,28 +97,80 @@ export class Shape2dPlugin implements IPlugin {
             selection.push(shape)
           }
         }))
+
+      if (e.type === 'dragstart' && e.evt.altKey) {
+        shape.stopDrag()
+        console.log('drag clone')
+        Shape2dPlugin.createCloneDrag(shape, context)
+      }
     })
 
     shape.on('dragmove', e => {
-      console.log('dragmove', e.type)
+      const backendData: TElement = shape.getAttr('backendData');
+      const { x, y } = shape.position();
+      backendData.x = x
+      backendData.y = y
+      shape.setAttr('backendData', backendData)
     })
 
     shape.on('transform', e => {
-      console.log('transform', e.type)
+      const backendData: TElement = shape.getAttr('backendData');
+      const rotation = shape.rotation()
+      const { x, y } = shape.position();
+      const { height, width } = shape.size()
+      backendData.angle = rotation
+      backendData.x = x
+      backendData.y = y
+      if (backendData.data.type === 'rect' || backendData.data.type === 'diamond') {
+        backendData.data.h = height
+        backendData.data.w = width
+      }
+      shape.setAttr('backendData', backendData)
     })
 
     context.staticForegroundLayer.add(shape);
   }
 
-  static createPreviewRect(args: { x: number, y: number, w: number, h: number, fill: string }) {
+  static createCloneDrag(shape: Konva.Shape, context: IPluginContext) {
+    const backendData = shape.getAttr('backendData') as TElement
+    let newShape: Konva.Shape | null = null;
+    if (backendData.data.type === 'rect') {
+      const newBackendData = structuredClone(backendData)
+      newBackendData.id = crypto.randomUUID()
+      newShape = Shape2dPlugin.createPreviewRect(newBackendData)
+    }
+
+    if (newShape) {
+      context.dynamicLayer.add(newShape)
+      newShape.startDrag()
+      newShape.on('dragmove', e => {
+        const { x, y } = newShape.getPosition()
+        // NOTE: better to selectivly set data, idk how
+        newShape.setAttr('backendData', { ...newShape.getAttr('backendData'), x, y })
+      })
+      newShape.on('dragend', () => {
+        newShape.off('dragend')
+        newShape.off('dragmove')
+        Shape2dPlugin.syncShape(newShape, context)
+      })
+      newShape.moveToTop()
+    }
+    return newShape;
+
+  }
+
+  static createPreviewRect(backendData: TElement) {
+    const data = backendData.data as TRectData
     const shape = new Konva.Rect({
-      x: args.x,
-      y: args.y,
-      width: args.w,
-      height: args.h,
-      fill: args.fill,
-      name: 'rect',
+      id: backendData.id,
+      rotationDeg: backendData.angle,
+      x: backendData.x,
+      y: backendData.y,
+      width: data.w,
+      height: data.h,
+      fill: backendData.style.backgroundColor,
       draggable: false,
+      backendData: backendData
     });
 
     return shape
