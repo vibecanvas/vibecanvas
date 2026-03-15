@@ -20,7 +20,6 @@ export class TransformPlugin implements IPlugin {
   apply(context: IPluginContext): void {
     context.dynamicLayer.add(this.#transformer);
     createEffect(() => {
-      console.log(context.state.selection)
       this.#transformer.setNodes(context.state.selection)
       this.#transformer.update()
     })

@@ -43,19 +43,18 @@ export class SelectPlugin implements IPlugin {
       return false;
     });
 
-    context.hooks.pointerDown.tap(() => {
+    context.hooks.pointerDown.tap((e) => {
       if (context.state.mode !== CanvasMode.SELECT) return;
       const pointer = getSelectionLayerPointerPosition(context);
       if (!pointer) return;
+      if (e.target !== context.stage) return;
 
       this.#selectionRectangle.visible(true);
       this.#selectionRectangle.position(pointer);
       this.#selectionRectangle.size({ width: 0, height: 0 });
       this.#selectionRectangle.moveToTop();
 
-
       context.setState('selection', []);
-
 
       context.dynamicLayer.batchDraw();
     });
