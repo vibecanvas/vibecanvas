@@ -44,7 +44,7 @@ export function Canvas(props: CanvasPageProps) {
       canvasService = null;
     }
 
-    canvasService = new CanvasService(containerRef, props.store.onToggleSidebar);
+    canvasService = new CanvasService(containerRef, props.store.onToggleSidebar, activeHandle);
     canvasService.initialized.then(() => {
       console.log("[CanvasPage] CanvasService initialized");
     });

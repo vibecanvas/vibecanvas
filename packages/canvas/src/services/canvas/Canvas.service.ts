@@ -1,6 +1,6 @@
 import Konva from "konva";
-import { Group } from "konva/lib/Group";
-import { Shape, ShapeConfig } from "konva/lib/Shape";
+import type { Group } from "konva/lib/Group";
+import type { Shape, ShapeConfig } from "konva/lib/Shape";
 import { createStore, SetStoreFunction } from 'solid-js/store';
 import type { TCustomEvent } from "../../custom-events";
 import { CameraControlPlugin } from "../../plugins/CameraControl.plugin";
@@ -16,6 +16,10 @@ import { AsyncParallelHook, SyncExitHook, SyncHook } from "../../tapable";
 import { Camera } from "./Camera";
 import { CanvasMode, Theme } from "./enum";
 import type { IState } from "./interface";
+import type { DocHandle } from "@automerge/automerge-repo";
+import type { TCanvasDoc } from "@vibecanvas/shell/automerge/index";
+import { Crdt } from "./crdt";
+import { TBackendCanvas } from "src/components/Canvas";
 
 
 export class CanvasService {
@@ -29,8 +33,12 @@ export class CanvasService {
   #resizeObserver: ResizeObserver;
   #state: IState;
   #setState: SetStoreFunction<IState>;
+  #docHandle: DocHandle<TCanvasDoc>;
+  #crdt: Crdt;
 
-  constructor(container: HTMLDivElement, onToggleSidebar: () => void) {
+  constructor(container: HTMLDivElement, onToggleSidebar: () => void, docHandle: DocHandle<TCanvasDoc>) {
+    this.#docHandle = docHandle;
+    this.#crdt = new Crdt(docHandle);
     this.#stage = new Konva.Stage({
       container,
       width: container.clientWidth,
@@ -90,7 +98,7 @@ export class CanvasService {
       new SelectPlugin(),
       new TransformPlugin(),
       new Shape2dPlugin(),
-      new ExampleScenePlugin()
+      // new ExampleScenePlugin()
     ];
 
     this.#instancePromise = (async () => {
@@ -126,6 +134,24 @@ export class CanvasService {
     this.#stage.destroy();
     this.#resizeObserver.disconnect();
     this.#pluginContext.hooks.destroy.call();
+  }
+
+  private loadCanvas() {
+    const doc = this.#docHandle.doc()
+    const supportedTypes: TCanvasDoc['elements'][number]['data']['type'][] = ['rect']
+
+    // build all groups first
+
+    // add all elements to their groups or stage
+    Object.values(doc.elements).forEach((element) => {
+      const parent = this.#staticForegroundLayer; // no groups yet
+
+      if (supportedTypes.includes(element.data.type)) {
+
+      }
+
+
+    })
   }
 
 } 
