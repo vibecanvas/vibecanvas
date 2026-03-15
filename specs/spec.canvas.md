@@ -1,535 +1,763 @@
-# Canvas Feature Spec (Frontend / Konva)
+# Canvas Package Spec (`@vibecanvas/canvas`)
 
 ## Table of Contents
 
 1. [Overview](#overview)
-2. [Current Scope](#current-scope)
-3. [Core Architecture](#core-architecture)
-4. [Event and Input Model](#event-and-input-model)
-5. [Camera and Coordinate Spaces](#camera-and-coordinate-spaces)
-6. [How Selection Works](#how-selection-works)
-7. [How Pan and Zoom Work](#how-pan-and-zoom-work)
-8. [How to Modify the Canvas Safely](#how-to-modify-the-canvas-safely)
-9. [File Index](#file-index)
-10. [Data Flow](#data-flow)
+2. [What the Package Is Today](#what-the-package-is-today)
+3. [Design Principles](#design-principles)
+4. [Architecture](#architecture)
+5. [Runtime Layers](#runtime-layers)
+6. [Plugin System](#plugin-system)
+7. [Input and Event Flow](#input-and-event-flow)
+8. [Camera and Coordinate Spaces](#camera-and-coordinate-spaces)
+9. [Selection and Transform Behavior](#selection-and-transform-behavior)
+10. [Shape Creation and Scene Behavior](#shape-creation-and-scene-behavior)
+11. [Automerge and CRDT Role](#automerge-and-crdt-role)
+12. [How to Extend the Package](#how-to-extend-the-package)
+13. [Current Gaps and WIP Areas](#current-gaps-and-wip-areas)
+14. [File Index](#file-index)
+15. [Data Flow](#data-flow)
 
 ## Overview
 
-The current `apps/frontend` canvas is a Konva-based interaction sandbox with a small but intentional architecture:
+`@vibecanvas/canvas` is a reusable canvas runtime package built around:
 
-- `Canvas.tsx` is only a thin Solid wrapper that mounts and destroys `CanvasService`.
-- `CanvasService` is the high-level entry point. It owns Konva lifecycle, shared context, managers, and systems.
-- managers are controllers for shared canvas runtime concerns such as camera and input routing.
-- systems are classes that handle a concrete canvas module: they react to input and may also own runtime visuals for that module.
-- systems may also own canvas-local HTML/JSX overlays rendered into a service-owned overlay root.
-- utils contain helper functions with little or no risky side effects.
+- Konva for canvas rendering
+- SolidJS for DOM overlays
+- a small hook-based plugin system for behavior composition
+- Automerge document lookup as the startup source for a canvas session
 
-The important idea: the canvas is already split into runtime concerns, so new behaviors should be added as new input systems or services instead of putting more conditionals directly into `canvas.tsx`.
+The package should be understood as a plugin-driven canvas shell, not yet a full document-driven editor.
 
-## Current Scope
+The most important idea is separation of responsibilities:
 
-Today the frontend canvas supports:
+- `Canvas.tsx` handles app-facing lifecycle and async document loading.
+- `CanvasService` owns the Konva runtime, shared state, layers, and plugin context.
+- plugins own features such as event wiring, grid rendering, camera control, toolbar UI, selection, transforms, and shape behaviors.
+- `Camera` owns viewport math and applies transforms, but does not decide input policy.
+- Automerge currently boots the session and exposes the document handle, but is not yet the live rendering source of truth.
 
-- a Konva stage owned by `apps/frontend/src/feature/canvas/service/canvas.service.ts`
-- a canvas-local HTML overlay root owned by `apps/frontend/src/feature/canvas/service/canvas.service.ts`
-- world-space content rendered inside transformable world groups
-- a screen-space grid layer that redraws from camera state so panning/zooming still feels spatial
-- marquee selection with a dashed selection rectangle owned by `SelectBoxSystem`
-- click/tap selection and empty-stage clear handled by `CanvasService`
-- shared selected-id state owned by `SelectionManager`
-- a shared blue `Konva.Transformer` owned by `TransformManager`
-- shift/cmd/ctrl click multi-select for selectable persistent nodes
-- freehand pen strokes rendered with `perfect-freehand`, with local preview during drag and CRDT-backed persistence on commit
-- drag-to-pan using middle mouse, `Space`, or `hand` tool
-- touchpad/two-finger panning via wheel events
-- `ctrl+wheel` zoom around the pointer
-- a canvas-local toolbar rendered by `ToolSystem`
+## What the Package Is Today
 
-Current limitations:
+Today this package already provides:
 
-- the canvas currently persists pen strokes only; other shape types are not rendered yet
-- transform handles are visible for selected pen nodes, but transform changes are not persisted yet
-- there is no drag-selection/move persistence system yet
-- there is no resize/rotate persistence yet for document elements
-- zoom percent and camera state are not surfaced in UI beyond internal runtime state
-- only sidebar visibility remains global; tool and grid state are canvas-local
+- a public `Canvas` component exported from `packages/canvas/src/index.ts`
+- async Automerge document discovery from a backend canvas row
+- a Konva stage with three layers
+- a split between screen-space layers and world-space layers
+- plugin-owned behavior via shared hooks
+- wheel pan and pointer-anchored zoom
+- a viewport-aware grid that redraws from camera state
+- a plugin-owned Solid toolbar overlay
+- selection rectangle and shared transform handles
+- rectangle preview creation and basic drag/transform behavior for synced shapes
+- a demo scene plugin that mounts example rectangles
 
-## Core Architecture
+Important constraint:
 
-The current canvas is divided into 4 layers of responsibility.
+- the runtime is only partially connected to the CRDT document; most visible scene behavior is still local/demo behavior rather than fully loaded from `TCanvasDoc`
 
-### 1. Service
+## Design Principles
 
-`apps/frontend/src/feature/canvas/service/canvas.service.ts`
+### 1. Keep the host component thin
 
-This service currently:
+`packages/canvas/src/components/Canvas.tsx` should stay focused on:
 
-- creates DOM roots for Konva and canvas-local overlays
-- creates the Konva `Stage`
-- creates three layers:
-  - grid layer
-  - shapes layer
-  - overlay layer
-- creates two world groups:
-  - `worldShapes`
-  - `worldOverlay`
-- registers those world groups with the camera
-- creates managers and registers systems
-- owns resize observation and canvas cleanup
-- owns canvas-local state such as active tool and grid visibility
-- exposes a runtime API to systems through context
-- mounts transient preview nodes into `worldOverlay`
-- delegates semantic element persistence into `CrdtManager`
-- handles Konva click/tap selection routing
-- resolves selectable nodes from persistent scene nodes in `worldShapes`
+- reading `canvas.automerge_url`
+- resolving the `DocHandle`
+- creating and destroying `CanvasService`
+- surfacing loading/error UI to the caller
 
-Screen-fixed UI like toolbars belongs in the DOM overlay root.
-World-space visuals like shapes and selection rect belong in world groups managed by the camera.
-The grid is the special case: it stays on its own screen-space layer, but redraws from camera state so it visually tracks camera movement.
+It should not accumulate feature logic.
 
-`apps/frontend/src/feature/canvas/components/canvas.tsx` should stay thin and only:
+### 2. Put shared runtime concerns in `CanvasService`
 
-- mount `CanvasService`
-- pass only truly global integrations into it (currently sidebar visibility)
-- destroy it on cleanup
+`CanvasService` is the runtime kernel. If something is shared across multiple features, it belongs here or in the plugin context, not inside one feature plugin.
 
-### 2. Managers
+Examples:
 
-Current managers live in `apps/frontend/src/feature/canvas/managers/`.
+- stage creation
+- layer creation
+- camera construction
+- runtime store
+- hook channels
+- resize observation
+- plugin installation order
 
-#### Camera Manager
+### 3. Put feature behavior in plugins
 
-`apps/frontend/src/feature/canvas/managers/camera.manager.ts`
+Feature logic should be composed by plugins instead of hardcoded into `CanvasService`.
 
-The camera is the source of truth for viewport transform.
+Examples:
 
-It stores:
+- event bridging
+- camera interaction
+- grid rendering
+- toolbar overlay
+- selection logic
+- transform visuals
+- shape-specific creation behavior
 
-- `x`
-- `y`
-- `scale`
+### 4. Treat viewport math as a first-class concern
 
-It does not listen to user input directly. It only:
+The camera is the source of truth for pan and zoom state.
 
-- registers world nodes that should move/scale together
-- applies transform updates to those nodes
-- converts coordinates between screen space and world space
+- input plugins decide when to pan/zoom
+- `Camera` decides how transforms are applied
+- screen-space and world-space visuals should not be mixed casually
 
-#### Input Manager
+### 5. Prefer hooks and custom events over direct cross-plugin coupling
 
-`apps/frontend/src/feature/canvas/managers/input.manager.ts`
-
-The input manager owns raw event routing.
-
-It listens to Konva stage events and keyboard events once, then forwards them to input systems.
-
-Important behavior:
-
-- pointer gestures are exclusive: one system owns a drag at a time
-- wheel and keyboard events can fall through by priority
-- higher-priority systems get first chance to handle events
-- `true` from `onWheel` / `onKeyDown` / `onKeyUp` means handled, stop routing
-- `false` or `undefined` means let lower-priority systems try
-
-#### CRDT Manager
-
-`apps/frontend/src/feature/canvas/managers/crdt.manager.ts`
-
-The CRDT manager owns document persistence and document-to-Konva reconciliation.
-
-It currently:
-
-- accepts semantic element drafts from `CanvasService`
-- writes those drafts into the local Automerge document
-- listens for document change events
-- reconciles persistent pen elements from document state into `worldShapes`
-- marks persistent pen nodes with canvas runtime metadata such as selectable/transformable flags
-
-#### Selection Manager
-
-`apps/frontend/src/feature/canvas/managers/selection.manager.ts`
-
-The selection manager owns shared selection state only.
-
-It currently:
-
-- stores selected node ids
-- supports `clear()`, `selectOnly()`, `setSelectedIds()`, and `isSelected()`
-- supports pruning selected ids against the currently available scene nodes
-- notifies runtime subscribers when selection changes
-
-It does not own transformer UI or persistent node lifecycle.
-
-#### Transform Manager
-
-`apps/frontend/src/feature/canvas/managers/transform.manager.ts`
-
-The transform manager owns the shared `Konva.Transformer` visual.
-
-It currently:
-
-- creates and mounts one blue dashed `Konva.Transformer` into `worldOverlay`
-- attaches that transformer to the currently selected transformable nodes
-- exposes hooks for `transformstart`, `transform`, and `transformend`
-- keeps transform UI separate from selection state and CRDT persistence
-
-### 3. Systems
-
-Current systems live in `apps/frontend/src/feature/canvas/systems/`:
-
-- `pan.system.ts`
-- `pen.system.ts`
-- `select-box.system.ts`
-- `zoom.system.ts`
-- `system.abstract.ts`
-
-Each system should own one module/part of the canvas.
-
-A system is expected to have:
-
-- input handling fields/hooks
-- optional root-level runtime lifecycle hooks: `mount()`, `update()`, `unmount()`
-- internal state if needed
-
-`system.abstract.ts` is the base shape for class-based systems.
-
-`CanvasService` uses systems in two ways:
-
-- input hooks are adapted into `InputManager`
-- lifecycle hooks are called directly by `CanvasService` through `mount`, `update`, and `unmount`
-
-Systems should own transient module-local visuals themselves. For example:
-
-- `PenSystem` owns its preview `Konva.Path`
-- `SelectBoxSystem` owns its selection marquee `Konva.Rect`
-- `ToolSystem` owns the floating toolbar rendered through Solid's `render()` into the canvas overlay root
-
-Persistent document-backed visuals are still derived from CRDT state by `CrdtManager`, not passed around as raw `Konva.Node` source-of-truth objects.
-
-### 4. Utils
-
-Helpers live in `apps/frontend/src/feature/canvas/utils/`.
+Plugins communicate through shared hook channels and `customEvent` messages.
 
 Current examples:
 
-- `canvas-debug.ts`
-- `grid-renderer.ts`
-- `stroke-renderer.ts`
+- toolbar emits `CustomEvents.TOOL_SELECT`
+- toolbar emits `CustomEvents.GRID_VISIBLE`
+- grid listens for grid visibility changes
+- shape plugin listens for tool selection changes
 
-These should stay low-risk and focused on helper work rather than owning runtime lifecycle.
+### 6. Keep Automerge integration behind an explicit boundary
 
-## Event and Input Model
+Automerge is already present, but document-driven rendering is incomplete.
 
-The event model is intentionally split by gesture type.
+That means new work should respect the current direction:
 
-### Pointer Gestures
+- do not bypass the document model with ad-hoc global state
+- do not treat the demo scene as the final architecture
+- connect future scene loading/saving through `DocHandle`, `Crdt`, and `TCanvasDoc`
 
-Handled through:
+## Architecture
 
-- `canStart()`
-- `onStart()`
-- `onMove()`
-- `onEnd()`
-- `onCancel()`
+The current architecture is best described in four layers:
 
-Flow:
+1. `Canvas.tsx` - app-facing host and lifecycle bridge
+2. `CanvasService` - runtime kernel
+3. plugins - modular behavior units
+4. Automerge services - document bootstrap and persistence plumbing
 
-1. `InputManager` receives pointer down from Konva.
-2. Systems are checked in priority order.
-3. First system whose `canStart()` matches becomes the active system.
-4. Only that system receives move/end/cancel events until gesture finishes.
+High-level flow:
 
-This is what prevents select-box and pan from both trying to own the same drag.
+```text
+Consumer renders <Canvas />
+  -> Canvas resolves Automerge DocHandle from canvas.automerge_url
+  -> Canvas constructs CanvasService(container, onToggleSidebar, docHandle)
+  -> CanvasService creates stage, layers, camera, state, hooks, CRDT helper
+  -> CanvasService installs plugins
+  -> EventListenerPlugin republishes raw events into hook channels
+  -> feature plugins react and update Konva/DOM runtime state
+```
 
-### Wheel and Keyboard
+## Runtime Layers
 
-These are not exclusive in the same way.
+`packages/canvas/src/services/canvas/Canvas.service.ts` creates three Konva layers:
 
-Flow:
+- `staticBackgroundLayer`
+- `staticForegroundLayer`
+- `dynamicLayer`
 
-1. Manager tries active system first.
-2. If not handled, manager tries registered systems by priority.
-3. First system returning `true` claims the event.
+These layers are intentional and form the rendering contract.
 
-Current example:
+### `staticBackgroundLayer`
 
-- `ZoomSystem` handles `ctrl+wheel`
-- `PanSystem` handles plain wheel/two-finger touchpad movement
-- `PenSystem` claims pointer gestures only when active tool is `pen`
-- `ToolSystem` owns keyboard shortcuts, local tool state, and toolbar overlay rendering
+Use this for screen-space background visuals that should not be moved by the camera transform.
+
+Current usage:
+
+- grid rendering
+
+The grid still reacts to camera state, but it is recomputed rather than moved as world geometry.
+
+### `staticForegroundLayer`
+
+Use this for foreground content that should visually follow camera transforms but stay logically separate from the main world layer.
+
+Current usage:
+
+- synced/selectable shapes added by `Shape2dPlugin.syncShape()`
+
+Important detail: `Camera` applies position and scale to both `dynamicLayer` and `staticForegroundLayer`.
+
+### `dynamicLayer`
+
+Use this for world-space runtime visuals and interaction helpers.
+
+Current usage:
+
+- selection rectangle
+- transformer
+- shape preview while drawing
+- clone-drag temporary shapes
+
+### Why the split matters
+
+The key mental model is:
+
+- some visuals are derived from the viewport and should be redrawn in screen space
+- some visuals are part of the interactive world and should move with pan/zoom
+- some transient interaction helpers belong in the same transformed space as content
+
+If you blur those roles, pan/zoom, selection, and future CRDT reconciliation become much harder to reason about.
+
+## Plugin System
+
+Plugins are defined by `packages/canvas/src/plugins/interface.ts`.
+
+Each plugin receives an `IPluginContext` containing:
+
+- `stage`
+- `staticBackgroundLayer`
+- `staticForegroundLayer`
+- `dynamicLayer`
+- `camera`
+- `state`
+- `setState`
+- `hooks`
+
+### Installed plugins
+
+`CanvasService` currently installs plugins in this order:
+
+1. `EventListenerPlugin`
+2. `GridPlugin`
+3. `CameraControlPlugin`
+4. `ToolbarPlugin`
+5. `SelectPlugin`
+6. `TransformPlugin`
+7. `Shape2dPlugin`
+8. `ExampleScenePlugin`
+
+That order matters because earlier plugins often establish infrastructure that later plugins depend on.
+
+### Hook types
+
+The plugin runtime uses lightweight tapable-style hooks from `packages/canvas/src/tapable/`.
+
+Current hook families include:
+
+- lifecycle: `init`, `initAsync`, `destroy`, `resize`
+- pointer: `pointerDown`, `pointerMove`, `pointerUp`, `pointerOut`, `pointerOver`, `pointerCancel`, `pointerWheel`
+- keyboard: `keydown`, `keyup`
+- runtime: `cameraChange`, `modeChange`, `customEvent`
+
+Hook behavior is simple:
+
+- `SyncHook` broadcasts to all listeners
+- `AsyncParallelHook` waits for async plugin work during startup
+- `SyncExitHook` supports early exits / return-aware event handling for custom events
+
+### Plugin inventory
+
+#### `EventListenerPlugin`
+
+Bridges raw Konva stage and DOM keyboard events into hook calls.
+
+- listens to stage pointer and wheel events
+- listens to keyboard events on the stage container
+- makes the stage container focusable
+- cleans up listeners on destroy
+
+This is the single raw event bridge. Other plugins should usually consume hooks, not register duplicate root listeners.
+
+#### `CameraControlPlugin`
+
+Owns wheel-based viewport control.
+
+- `ctrl+wheel` zooms around the pointer
+- plain wheel pans by delta
+- emits `cameraChange` after camera updates
+
+#### `GridPlugin`
+
+Owns the background grid.
+
+- renders into `staticBackgroundLayer`
+- computes spacing from camera zoom
+- computes offsets from camera position
+- rerenders on `cameraChange`
+- toggles visibility from `CustomEvents.GRID_VISIBLE`
+
+#### `ToolbarPlugin`
+
+Owns the floating DOM toolbar.
+
+- mounts a Solid component into an absolutely positioned DOM node attached to the stage container
+- tracks active tool locally
+- tracks grid visibility locally
+- maps tool selection into runtime `CanvasMode`
+- updates cursor style from runtime mode
+- supports keyboard shortcuts and temporary `Space` hand mode
+- emits custom events to inform other plugins
+
+This is the main example of plugin-owned DOM overlay UI.
+
+#### `SelectPlugin`
+
+Owns marquee selection.
+
+- creates a dashed translucent `Konva.Rect`
+- only operates while canvas mode is `SELECT`
+- starts marquee only when pointerdown hits the stage itself
+- uses `dynamicLayer.getRelativePointerPosition()` for world-relative coordinates
+- collects intersecting top-level nodes from `staticForegroundLayer`
+- writes selected nodes into shared runtime state
+
+#### `TransformPlugin`
+
+Owns the shared `Konva.Transformer`.
+
+- mounts one transformer into `dynamicLayer`
+- reacts to shared `state.selection`
+- blocks bubbling from transformer click/pointerdown
+
+This keeps transform UI separate from selection logic.
+
+#### `Shape2dPlugin`
+
+Owns 2D shape preview and interaction glue.
+
+Currently it:
+
+- listens for active tool changes through `CustomEvents.TOOL_SELECT`
+- starts rectangle preview creation while mode is `DRAW_CREATE`
+- updates preview size on pointer move
+- commits by converting back to `select` mode and syncing the created shape into the scene
+- supports click selection on shapes
+- supports shift-multiselect behavior through selection array updates
+- supports `alt+drag` clone-drag for synced shapes
+- mirrors drag and transform updates into a shape's `backendData` attribute
+
+Important limitation:
+
+- it updates local `backendData`, but does not yet persist those edits back into the Automerge document
+
+#### `ExampleScenePlugin`
+
+Creates demo rectangles and syncs them into the scene at startup.
+
+This is scaffolding, not the intended long-term source of truth.
+
+#### `GroupPlugin`
+
+Exists as a stub but is not currently installed.
+
+This signals the intended direction for first-class group behavior, matching the `groups` collection already present in `TCanvasDoc`.
+
+## Input and Event Flow
+
+Input flow is intentionally centralized.
+
+### Raw event path
+
+```text
+Konva stage / stage container
+  -> EventListenerPlugin
+  -> plugin hooks
+  -> feature plugins react
+```
+
+### Pointer flow
+
+Current pointer interactions are cooperative rather than managed by a strict exclusive input command system.
+
+Today:
+
+- plugins independently tap pointer hooks
+- plugins self-check runtime mode and event target before acting
+- `Canvas.input.ts` exists but is empty, so there is no centralized gesture ownership system yet
+
+This is an important WIP area. When interactions become more complex, a more explicit ownership/routing model will likely be needed.
+
+### Keyboard flow
+
+Keyboard events are currently handled mainly by `ToolbarPlugin`.
+
+Supported behaviors include:
+
+- `Space` hold for temporary hand mode
+- `Cmd/Ctrl+B` sidebar toggle
+- tool shortcuts from `toolbar.types.ts`
+- `g` to toggle grid
+- `Escape` to switch back to `select`
+
+### Custom event flow
+
+Plugins also communicate through typed custom events:
+
+- `GRID_VISIBLE`
+- `TOOL_SELECT`
+
+This is the package's current cross-plugin coordination pattern.
 
 ## Camera and Coordinate Spaces
 
-There are two coordinate spaces in the current canvas.
+`packages/canvas/src/services/canvas/Camera.ts` owns:
 
-### Screen Space
+- `x`
+- `y`
+- `zoom`
 
-- raw pointer positions from Konva stage
-- HUD text / fixed overlays
-- wheel anchor position for zoom input
+And exposes:
 
-### World Space
+- `pan(deltaX, deltaY)`
+- `zoomAtScreenPoint(scale, screenPoint)`
 
-- actual shapes
-- selection marquee rectangle
-- future drag/move/resize geometry
+### What the camera controls
 
-The camera translates between them.
+The camera applies transforms to:
 
-Important rule:
+- `dynamicLayer`
+- `staticForegroundLayer`
 
-- if a visual element moves with the canvas, treat it as world space
-- if a visual element stays pinned to the viewport, treat it as screen space
+It does not transform `staticBackgroundLayer`.
 
-This is why the selection rectangle is inside `worldOverlay`, not the HUD layer.
-The grid does not live in world space, but it still uses camera `x/y/scale` to compute line offsets and spacing.
+### Coordinate model
 
-## How Selection Works
+There are effectively two spaces in the runtime.
 
-Selection is split between `CanvasService`, `SelectionManager`, `SelectBoxSystem`, and `TransformManager`.
+#### Screen space
 
-Flow:
+- stage size
+- pointer position from `stage.getPointerPosition()`
+- DOM toolbar placement
+- grid line placement after viewport derivation
 
-1. `CanvasService` handles Konva `click` / `tap` events for empty-stage clear and node click selection.
-2. `SelectionManager` is the shared source of truth for selected ids.
-3. `SelectBoxSystem` starts only when active tool is `select` and pointerdown hits empty stage.
-4. Start pointer is converted from screen space to world space with `camera.screenToWorld()`.
-5. `SelectBoxSystem` updates its own `Konva.Rect` preview node in world coordinates.
-6. On move, current pointer is also converted to world coordinates.
-7. The system updates the marquee bounds and intersects it with selectable nodes from `CanvasService`.
-8. `SelectionManager` updates selected ids.
-9. `TransformManager` reacts to selected ids and shows a shared blue transformer box for transformable nodes.
+#### World-relative space
 
-Important implication:
+- shapes and preview shapes
+- selection rectangle
+- transformer-attached nodes
+- pointer positions obtained from `dynamicLayer.getRelativePointerPosition()`
 
-- any future drag/move/resize system should also operate in world space, not raw stage coordinates
-- selection state and transform visuals are separate concerns
+### Why zoom feels anchored
 
-## How Pan and Zoom Work
+`zoomAtScreenPoint()` computes the world point under the pointer before changing scale, then adjusts camera position so that same world point stays under the pointer after zoom.
 
-### Pan
+That is the correct pattern for pointer-anchored zoom and should be preserved.
 
-`apps/frontend/src/feature/canvas/systems/pan.system.ts`
+## Selection and Transform Behavior
 
-Pan does not move the stage directly.
-It updates camera position.
+Selection is shared state, while transform UI is a separate visual concern.
 
-Supported pan inputs:
+### Selection state
 
-- middle mouse drag
-- `Space` + drag
-- `hand` tool + drag
-- two-finger touchpad wheel scroll
+`CanvasService` owns a small Solid store with:
 
-For drag panning:
+- `mode`
+- `theme`
+- `selection`
 
-- system stores start pointer and start camera position
-- move delta is added to camera position
+`selection` currently stores actual Konva nodes, not ids.
 
-For touchpad panning:
+That makes the current runtime simple, but it also means selection is still local runtime state rather than durable document state.
 
-- wheel delta is converted into `camera.panBy(...)`
+### Marquee selection flow
 
-### Zoom
+1. Canvas mode must be `SELECT`.
+2. Pointer down must hit the stage background.
+3. `SelectPlugin` shows its selection rectangle in `dynamicLayer`.
+4. Pointer movement updates the marquee size in world-relative coordinates.
+5. `SelectPlugin` intersects the marquee against top-level nodes in `staticForegroundLayer`.
+6. Matching nodes are written into `state.selection`.
+7. `TransformPlugin` updates the shared transformer nodes.
 
-`apps/frontend/src/feature/canvas/systems/zoom.system.ts`
+### Transform behavior
 
-Zoom handles `ctrl+wheel`.
+The transformer is purely runtime UI right now.
 
-It:
+- it follows current selection
+- it does not own persistence
+- shape transform handlers update local `backendData` on the node itself
 
-- reads current pointer position in screen space
-- computes next clamped scale
-- calls `camera.zoomAtScreenPoint(...)`
+This means transform visuals work, but persistent document updates are still incomplete.
 
-`zoomAtScreenPoint(...)` keeps the world point under the pointer stable while scale changes. That is the reason zoom feels anchored instead of jumping.
+## Shape Creation and Scene Behavior
 
-## How Pen Works
+The current scene pipeline is partly real and partly scaffolding.
 
-Pen is implemented by `apps/frontend/src/feature/canvas/systems/pen.system.ts` and `apps/frontend/src/feature/canvas/utils/stroke-renderer.ts`.
+### Rectangle creation flow today
 
-Flow:
+1. Toolbar selects a shape tool such as `rectangle`.
+2. `ToolbarPlugin` maps that tool to `CanvasMode.DRAW_CREATE`.
+3. `Shape2dPlugin` listens to `pointerDown` and creates a preview rect.
+4. `pointerMove` resizes the preview.
+5. `pointerUp` clones the preview, destroys the temporary node, and resets the tool back to `select`.
+6. `Shape2dPlugin.syncShape()` wires the resulting Konva shape into selection, drag, clone-drag, and transform behavior.
+7. The synced shape is added to `staticForegroundLayer`.
 
-1. Active tool is `pen`.
-2. Pointer positions are converted from screen space to world space through the camera.
-3. `PenSystem` collects raw world points locally during drag.
-4. `utils/stroke-renderer.ts` passes those points into `perfect-freehand` and turns the outline into SVG path data.
-5. `PenSystem` owns a transient preview `Konva.Path` mounted in `worldOverlay` while drawing.
-6. On pointer up, `PenSystem` serializes the stroke into semantic pen data and calls `CanvasService.createElement(...)`.
-7. `CanvasService` delegates that semantic draft to `CrdtManager.createElement(...)`.
-8. `CrdtManager` writes the new element into the local Automerge document.
-9. The local Automerge change event triggers reconcile, and `CrdtManager` creates or updates the persistent `Konva.Path` in `worldShapes`.
+### Shape data model
 
-Important rule:
+Shapes carry a `backendData` attribute containing a `TElement` from `@vibecanvas/shell/automerge`.
 
-- local runtime stores raw points only during the gesture
-- persistence should pass semantic document payloads through `CanvasService`, not raw `Konva.Node` instances
-- the right persisted model is raw points + style, not only the final SVG path
+That means the runtime is already aligned with the shared canvas document model, including fields like:
 
-## How to Modify the Canvas Safely
+- `id`
+- `x`
+- `y`
+- `angle`
+- `zIndex`
+- `parentGroupId`
+- `data`
+- `style`
 
-Use these rules when changing the canvas.
+### Scene loading status
 
-### Add a New Interaction
+`CanvasService` already has a private `loadCanvas()` method outline and a `Crdt` instance, but they are not yet the main scene pipeline.
+
+So the current visible world is mostly:
+
+- demo scene rectangles from `ExampleScenePlugin`
+- locally created rectangles from `Shape2dPlugin`
+
+not a full reconcile of `doc.elements`.
+
+## Automerge and CRDT Role
+
+Automerge bootstrap lives in `packages/canvas/src/services/automerge.ts`.
+
+That service currently handles:
+
+- singleton repo creation
+- IndexedDB persistence
+- WebSocket sync to `/automerge`
+- cached document handles
+- loading persisted documents from `localStorage`
+- document lookup by `AutomergeUrl`
+
+### Startup flow
+
+`Canvas.tsx` uses `findDocument(url)` to wait for the document handle before constructing the canvas runtime.
+
+### Document shape
+
+The underlying shared document type is `TCanvasDoc` from `packages/imperative-shell/src/automerge/types/canvas-doc.ts`.
+
+Important design choices already present there:
+
+- unified `elements` map for all drawings and widgets
+- first-class `groups`
+- fractional `zIndex`
+- `parentGroupId` for nesting
+- a single `TElement` union covering rect, ellipse, diamond, arrow, line, pen, text, image, chat, filetree, terminal, and file
+
+### Current CRDT limitation
+
+`packages/canvas/src/services/canvas/Crdt.ts` is only a stub, and `CanvasService.loadCanvas()` is not yet implemented.
+
+So today:
+
+- the document is loaded
+- the runtime can inspect the document
+- but the package is not yet reconciling the full scene from `doc.elements`
+- drag/transform edits are not yet committed back through CRDT helpers
+
+## How to Extend the Package
+
+Use these rules to keep new work aligned with the current architecture.
+
+### Add a new feature behavior
 
 Preferred path:
 
-1. create a new system in `apps/frontend/src/feature/canvas/systems/`
-2. add any new shared runtime dependencies to `types/canvas-context.types.ts`
-3. register the system in `service/canvas.service.ts`
-4. choose a clear priority relative to existing systems
+1. create a new plugin in `packages/canvas/src/plugins/`
+2. use `IPluginContext` instead of reaching into `CanvasService` internals
+3. register the plugin in `CanvasService`
+4. use hooks and custom events for coordination
 
-Do not add large tool-specific conditionals directly into `InputManager`.
-Do not move Konva object ownership back into the Solid component.
+Prefer this for:
 
-When a concern is shared orchestration rather than a canvas module, prefer a manager over a system.
-When a concern owns canvas-local HTML UI, render it from the owning system via the overlay root rather than from page-level Solid JSX.
-When a concern owns a transient world-space visual, let the system create its preview `Konva.Node` and mount it through `CanvasService`.
-When committing persistent state, pass semantic data into `CanvasService`, then let a manager like `CrdtManager` persist and reconcile it.
-When a concern owns shared transform UI, prefer a dedicated manager like `TransformManager` instead of mixing that logic into selection state.
+- new tools
+- new canvas interaction behavior
+- new overlay UI
+- new scene decoration
+- new viewport-derived visuals
 
-### Add a New World Overlay
+### Add a new shared runtime capability
 
-If the overlay should move with panning/zooming:
+If multiple plugins need it, add it to `CanvasService` and the plugin context.
 
-- add it under `worldOverlay`
-- use world coordinates
-- convert pointer positions with camera helpers when needed
+Examples:
 
-If it should stay pinned to viewport:
+- a scene registry
+- document mutation helpers
+- selection helpers beyond raw node arrays
+- a proper input ownership manager
 
-- add it to HUD layer or DOM outside Konva world groups
+### Add new viewport math
 
-If it should look world-aware but stay cheap to render:
+Put math and transform application in `Camera`, not in feature plugins.
 
-- keep it on a screen-space layer
-- redraw it from camera state like the current grid
+Examples:
 
-### Add New Shapes
+- zoom limits
+- coordinate conversion helpers
+- fit-to-bounds helpers
+- centering or framing APIs
 
-If a shape should participate in selection:
+### Add a new DOM overlay
 
-- mark the persistent node as selectable when reconciling it into `worldShapes`
-- ensure it has a stable `id()`
+Mount it from a plugin, following the toolbar pattern.
 
-If a shape should show transform handles:
+- create an absolutely positioned DOM mount element
+- append it to `stage.container()`
+- render Solid into that node
+- clean it up on `destroy`
 
-- mark the node as transformable
-- let `TransformManager` attach the shared transformer when that node is selected
-- keep transformer UI separate from document persistence
+Do not move overlay UI back into `Canvas.tsx` unless it is truly outside canvas runtime ownership.
 
-For transient drawing previews:
+### Add a new shape type
 
-- let the owning system create the preview node
-- mount it via `mountPreviewNode(...)`
-- clean it up in `unmount()` or gesture cancel/end
+The intended path is:
 
-For persistent shapes:
+1. add or reuse the relevant `TElement.data.type` in the shared canvas document model
+2. add shape creation and preview logic in a plugin such as `Shape2dPlugin` or a more specialized plugin
+3. make sure the created Konva node carries `backendData`
+4. wire selection/drag/transform behavior through the shared runtime pattern
+5. eventually connect creation and edits to CRDT persistence instead of leaving them local-only
 
-- serialize the shape into semantic document data
-- call `createElement(...)` from the system
-- let `CrdtManager` turn the document element back into a persistent Konva node
+For geometric shapes, keep a strong separation between:
 
-The selection contract remains the same: persistent Konva nodes need stable ids and must be registered as selectable.
+- preview node creation
+- synced runtime node behavior
+- CRDT/document persistence
 
-### Add Keyboard or Wheel Shortcuts
+### Add scene loading from the document
 
-Implement them inside an input system.
+Do not continue expanding `ExampleScenePlugin`.
 
-Use the fallthrough rule:
+Instead:
 
-- return `true` if the system handled the event
-- return `false` if another lower-priority system should still get a chance
+- implement `Crdt` as the document read/write boundary
+- implement `CanvasService.loadCanvas()` or an equivalent reconcile pipeline
+- read `doc.elements` and `doc.groups`
+- instantiate plugins/renderers from semantic element data
+- keep `TCanvasDoc` as the source of truth
 
-### Change Pan/Zoom Behavior
+### Add new plugin-to-plugin coordination
 
-Do it in the camera manager or the relevant pan/zoom system first.
+Prefer one of these:
 
-Avoid:
+- new hook channel if the event is runtime-wide
+- new typed `CustomEvents` entry if the event is feature-level and discrete
 
-- directly mutating stage transform for world movement
-- mixing screen-space and world-space math in `canvas.tsx`
+Avoid tight direct imports between feature plugins when a runtime message is enough.
+
+## Current Gaps and WIP Areas
+
+This package is clearly mid-transition. The spec should reflect that honestly.
+
+Current incomplete areas:
+
+- `Canvas.input.ts` is empty; no formal input-command or gesture-ownership system exists yet
+- `Crdt.ts` is only a stub
+- `CanvasService.loadCanvas()` is outlined but unused
+- `ExampleScenePlugin` still supplies demo content
+- shape edits update local node `backendData`, but not the Automerge document
+- only rectangle creation is meaningfully scaffolded in `Shape2dPlugin`
+- `GroupPlugin` exists but is not implemented or installed
+- `selection` stores live Konva nodes rather than document ids
+- toolbar/store integration is still package-local and partly stubbed, such as `sidebarVisible: () => true`
+
+These are not accidental rough edges. They show the package is evolving from a canvas runtime shell into a real document-backed editor.
 
 ## File Index
 
-### Main Entry
+### Public entry
 
-- `apps/frontend/src/feature/canvas/components/canvas.tsx`
+- `packages/canvas/src/index.ts`
+- `packages/canvas/src/components/Canvas.tsx`
 
-### Services
+### Runtime kernel
 
-- `apps/frontend/src/feature/canvas/service/canvas.service.ts`
+- `packages/canvas/src/services/canvas/Canvas.service.ts`
+- `packages/canvas/src/services/canvas/Camera.ts`
+- `packages/canvas/src/services/canvas/Crdt.ts`
+- `packages/canvas/src/services/canvas/interface.ts`
+- `packages/canvas/src/services/canvas/enum.ts`
+- `packages/canvas/src/services/canvas/Canvas.input.ts`
 
-### Managers
+### Automerge bootstrap
 
-- `apps/frontend/src/feature/canvas/managers/input.manager.ts`
-- `apps/frontend/src/feature/canvas/managers/camera.manager.ts`
-- `apps/frontend/src/feature/canvas/managers/crdt.manager.ts`
-- `apps/frontend/src/feature/canvas/managers/selection.manager.ts`
-- `apps/frontend/src/feature/canvas/managers/transform.manager.ts`
+- `packages/canvas/src/services/automerge.ts`
 
-### Systems
+### Plugin contracts
 
-- `apps/frontend/src/feature/canvas/systems/system.abstract.ts`
-- `apps/frontend/src/feature/canvas/systems/pen.system.ts`
-- `apps/frontend/src/feature/canvas/systems/pan.system.ts`
-- `apps/frontend/src/feature/canvas/systems/select-box.system.ts`
-- `apps/frontend/src/feature/canvas/systems/tool.system.ts`
-- `apps/frontend/src/feature/canvas/systems/zoom.system.ts`
+- `packages/canvas/src/plugins/interface.ts`
+- `packages/canvas/src/custom-events.ts`
 
-### Utils
+### Installed plugins
 
-- `apps/frontend/src/feature/canvas/utils/canvas-debug.ts`
-- `apps/frontend/src/feature/canvas/utils/grid-renderer.ts`
-- `apps/frontend/src/feature/canvas/utils/stroke-renderer.ts`
+- `packages/canvas/src/plugins/EventListener.plugin.ts`
+- `packages/canvas/src/plugins/Grid.plugin.ts`
+- `packages/canvas/src/plugins/CameraControl.plugin.ts`
+- `packages/canvas/src/plugins/Toolbar.plugin.ts`
+- `packages/canvas/src/plugins/Select.plugin.ts`
+- `packages/canvas/src/plugins/Transform.plugin.ts`
+- `packages/canvas/src/plugins/Shape2d.plugin.ts`
+- `packages/canvas/src/plugins/ExampleScene.plugin.ts`
 
-### Types
+### Future / partial plugins
 
-- `apps/frontend/src/feature/canvas/types/canvas-context.types.ts`
+- `packages/canvas/src/plugins/Group.plugin.ts`
 
-### Related State
+### Toolbar UI
 
-- `apps/frontend/src/store.ts`
-- `apps/frontend/src/feature/canvas/components/FloatingCanvasToolbar.tsx`
-- `apps/frontend/src/feature/canvas/components/toolbar.types.ts`
+- `packages/canvas/src/components/FloatingCanvasToolbar/index.tsx`
+- `packages/canvas/src/components/FloatingCanvasToolbar/ToolButton.tsx`
+- `packages/canvas/src/components/FloatingCanvasToolbar/toolbar.types.ts`
+
+### Hook implementation
+
+- `packages/canvas/src/tapable/AsyncParallelHook.ts`
+- `packages/canvas/src/tapable/SyncHook.ts`
+- `packages/canvas/src/tapable/SyncExitHook.ts`
+- `packages/canvas/src/tapable/SyncWaterfallHook.ts`
+
+### Shared document model reference
+
+- `packages/imperative-shell/src/automerge/types/canvas-doc.ts`
 
 ## Data Flow
 
 ```mermaid
 flowchart TD
-  U1[User input] --> S1[Konva Stage events]
-  S1 --> IM[InputManager]
-  S1 --> CS[CanvasService click/tap selection]
+  A[Consumer renders Canvas component] --> B[Canvas.tsx reads automerge_url]
+  B --> C[findDocument url]
+  C --> D[DocHandle ready]
+  D --> E[CanvasService created]
 
-  IM -->|pointer gesture ownership| P1[PanSystem]
-  IM -->|pointer gesture ownership| SB1[SelectBoxSystem]
-  IM -->|pointer gesture ownership| PEN1[PenSystem]
-  IM -->|wheel by priority| Z1[ZoomSystem]
+  E --> F[Create stage and layers]
+  E --> G[Create camera]
+  E --> H[Create shared state and hooks]
+  E --> I[Create CRDT helper]
+  E --> J[Install plugins]
 
-  P1 --> C1[CameraManager.setPosition or panBy]
-  Z1 --> C2[CameraManager.zoomAtScreenPoint]
-  SB1 --> C3[CameraManager.screenToWorld]
-  PEN1 --> C4[CameraManager.screenToWorld]
+  J --> K[EventListenerPlugin]
+  K --> L[pointer and keyboard hooks]
 
-  C1 --> WG1[worldShapes group]
-  C1 --> WG2[worldOverlay group]
-  C2 --> WG1
-  C2 --> WG2
+  L --> M[CameraControlPlugin]
+  L --> N[ToolbarPlugin]
+  L --> O[SelectPlugin]
+  L --> P[Shape2dPlugin]
 
-  SB1 --> SR[selectionRect preview in worldOverlay]
-  SB1 --> SEL[SelectionManager selected ids]
-  CS --> SEL
-  SEL --> TR[TransformManager setNodes]
-  TR --> WG2
+  M --> Q[Camera pan and zoom]
+  Q --> R[dynamicLayer transform]
+  Q --> S[staticForegroundLayer transform]
+  Q --> T[cameraChange hook]
+  T --> U[GridPlugin rerender]
 
-  PEN1 --> PP[preview path in worldOverlay]
-  PEN1 --> CE[CanvasService createElement semantic draft]
-  CE --> CRDT[CrdtManager createElement]
-  CRDT --> DOC[Automerge local document]
-  DOC --> REC[reconcileFromDoc]
-  REC --> WG1
+  N --> V[customEvent TOOL_SELECT]
+  N --> W[customEvent GRID_VISIBLE]
+  V --> P
+  W --> U
 
-  DOM[canvas overlay root / toolbar] -. fixed screen space .-> STAGE[Stage]
-  WG1 --> STAGE
-  WG2 --> STAGE
+  O --> X[state.selection]
+  X --> Y[TransformPlugin transformer nodes]
+
+  P --> Z[preview shape in dynamicLayer]
+  P --> AA[synced shape in staticForegroundLayer]
+  AA --> X
+
+  D -. current partial integration .-> AB[Crdt stub]
+  AB -. intended future path .-> AC[load from doc.elements and write edits back]
 ```

@@ -9,8 +9,46 @@ export class ExampleScenePlugin implements IPlugin {
 
   apply(context: IPluginContext): void {
 
-    const s1 = Shape2dPlugin.createPreviewRect({ x: 60, y: 60, w: 100, h: 90, fill: 'red' });
-    const s2 = Shape2dPlugin.createPreviewRect({ x: 220, y: 140, w: 100, h: 90, fill: 'blue' });
+    const s1 = Shape2dPlugin.createPreviewRect({
+      id: '1',
+      x: 60,
+      y: 60,
+      angle: 0,
+      bindings: [],
+      createdAt: Date.now(),
+      locked: false,
+      parentGroupId: null,
+      updatedAt: Date.now(),
+      zIndex: '',
+      data: {
+        type: 'rect',
+        w: 100,
+        h: 90,
+      },
+      style: {
+        backgroundColor: 'red'
+      }
+    });
+    const s2 = Shape2dPlugin.createPreviewRect({
+      id: '2',
+      x: 220,
+      y: 140,
+      angle: 0,
+      bindings: [],
+      createdAt: Date.now(),
+      locked: false,
+      parentGroupId: null,
+      updatedAt: Date.now(),
+      zIndex: '',
+      data: {
+        type: 'rect',
+        w: 100,
+        h: 90,
+      },
+      style: {
+        backgroundColor: 'blue'
+      }
+    });
 
     Shape2dPlugin.syncShape(s1, context);
     Shape2dPlugin.syncShape(s2, context);
