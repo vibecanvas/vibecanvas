@@ -70,6 +70,13 @@ export class ToolbarPlugin implements IPlugin {
       this.#mountElement = null;
     })
 
+    context.hooks.customEvent.tap((event, payload) => {
+      if (event === CustomEvents.TOOL_SELECT) {
+        this.#setActiveTool(payload)
+      }
+      return false;
+    })
+
 
     this.setupKeyShortcuts(context)
     this.setupEffects(context)

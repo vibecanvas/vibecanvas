@@ -59,6 +59,8 @@ export class Shape2dPlugin implements IPlugin {
       const shape = this.#previewDrawing?.clone()
       this.#previewDrawing?.destroy()
       this.#previewDrawing = null;
+      context.setState('mode', CanvasMode.SELECT)
+      context.hooks.customEvent.call(CustomEvents.TOOL_SELECT, 'select')
 
       Shape2dPlugin.syncShape(shape, context)
     })
