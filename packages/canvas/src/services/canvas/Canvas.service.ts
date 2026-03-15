@@ -9,13 +9,13 @@ import { ExampleScenePlugin } from "../../plugins/ExampleScene.plugin";
 import { GridPlugin } from "../../plugins/Grid.plugin";
 import type { IPluginContext, TMouseEvent, TPointerEvent, TWheelEvent } from "../../plugins/interface";
 import { SelectPlugin } from "../../plugins/Select.plugin";
+import { Shape2dPlugin } from "../../plugins/Shape2d.plugin";
 import { ToolbarPlugin } from "../../plugins/Toolbar.plugin";
 import { TransformPlugin } from "../../plugins/Transform.plugin";
 import { AsyncParallelHook, SyncExitHook, SyncHook } from "../../tapable";
 import { Camera } from "./Camera";
 import { CanvasMode, Theme } from "./enum";
 import type { IState } from "./interface";
-import { createEffect } from "solid-js";
 
 
 export class CanvasService {
@@ -89,6 +89,7 @@ export class CanvasService {
       new ToolbarPlugin(onToggleSidebar),
       new SelectPlugin(),
       new TransformPlugin(),
+      new Shape2dPlugin(),
       new ExampleScenePlugin()
     ];
 

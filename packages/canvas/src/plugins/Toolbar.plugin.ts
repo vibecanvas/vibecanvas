@@ -146,6 +146,10 @@ export class ToolbarPlugin implements IPlugin {
 
       const tool = getShortcutTool(event);
       if (tool) {
+        if (tool !== 'hand') {
+          context.setState('selection', [])
+        }
+
         this.#setActiveTool(tool);
         return true;
       }
