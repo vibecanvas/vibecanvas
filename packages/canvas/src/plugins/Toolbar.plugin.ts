@@ -54,7 +54,6 @@ export class ToolbarPlugin implements IPlugin {
     const [gridVisible, setGridVisible] = createSignal(true);
     this.#gridVisible = gridVisible;
     this.#setGridVisible = setGridVisible;
-
   }
 
   apply(context: IPluginContext): void {
@@ -75,9 +74,6 @@ export class ToolbarPlugin implements IPlugin {
     this.setupKeyShortcuts(context)
     this.setupEffects(context)
     this.setupDrawElement(context)
-
-
-
   }
 
   private setupDrawElement(context: IPluginContext) { }

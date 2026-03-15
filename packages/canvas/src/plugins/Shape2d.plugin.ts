@@ -26,7 +26,7 @@ export class Shape2dPlugin implements IPlugin {
       draggable: true,
     });
 
-    shape.on('click', e => {
+    shape.on('click dragstart', e => {
       console.log('click', e.type)
       e.cancelBubble = true
       context.setState('selection', produce(selection => {
@@ -35,6 +35,16 @@ export class Shape2dPlugin implements IPlugin {
           selection.push(shape)
         }
       }))
+    })
+
+    shape.on('dragmove', e => {
+      console.log('dragmove', e.type)
+      e.cancelBubble = true
+    })
+
+    shape.on('transform', e => {
+      console.log('transform', e.type)
+      e.cancelBubble = true
     })
 
     context.staticForegroundLayer.add(shape);
