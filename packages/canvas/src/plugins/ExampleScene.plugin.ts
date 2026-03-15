@@ -50,8 +50,10 @@ export class ExampleScenePlugin implements IPlugin {
       }
     });
 
-    Shape2dPlugin.syncShape(s1, context);
-    Shape2dPlugin.syncShape(s2, context);
+    Shape2dPlugin.setupShapeListeners(s1, context);
+    Shape2dPlugin.setupShapeListeners(s2, context);
+    s1.setDraggable(true)
+    s2.setDraggable(true)
 
 
   }

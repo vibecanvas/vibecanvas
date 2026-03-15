@@ -1,3 +1,5 @@
+import type { DocHandle } from "@automerge/automerge-repo";
+import type { TCanvasDoc } from "@vibecanvas/shell/automerge/index";
 import Konva from "konva";
 import type { Group } from "konva/lib/Group";
 import type { Shape, ShapeConfig } from "konva/lib/Shape";
@@ -7,6 +9,7 @@ import { CameraControlPlugin } from "../../plugins/CameraControl.plugin";
 import { EventListenerPlugin } from "../../plugins/EventListener.plugin";
 import { ExampleScenePlugin } from "../../plugins/ExampleScene.plugin";
 import { GridPlugin } from "../../plugins/Grid.plugin";
+import { GroupPlugin } from "../../plugins/Group.plugin";
 import type { IPluginContext, TMouseEvent, TPointerEvent, TWheelEvent } from "../../plugins/interface";
 import { SelectPlugin } from "../../plugins/Select.plugin";
 import { Shape2dPlugin } from "../../plugins/Shape2d.plugin";
@@ -14,12 +17,9 @@ import { ToolbarPlugin } from "../../plugins/Toolbar.plugin";
 import { TransformPlugin } from "../../plugins/Transform.plugin";
 import { AsyncParallelHook, SyncExitHook, SyncHook } from "../../tapable";
 import { Camera } from "./Camera";
+import { Crdt } from "./crdt";
 import { CanvasMode, Theme } from "./enum";
 import type { IState } from "./interface";
-import type { DocHandle } from "@automerge/automerge-repo";
-import type { TCanvasDoc } from "@vibecanvas/shell/automerge/index";
-import { Crdt } from "./crdt";
-import { TBackendCanvas } from "src/components/Canvas";
 
 
 export class CanvasService {
@@ -44,6 +44,8 @@ export class CanvasService {
       width: container.clientWidth,
       height: container.clientHeight,
     });
+    // @ts-ignore
+    window.stage = this.#stage
 
     const [state, setState] = createStore({
       mode: CanvasMode.SELECT,
@@ -98,7 +100,8 @@ export class CanvasService {
       new SelectPlugin(),
       new TransformPlugin(),
       new Shape2dPlugin(),
-      // new ExampleScenePlugin()
+      new GroupPlugin(),
+      new ExampleScenePlugin()
     ];
 
     this.#instancePromise = (async () => {

@@ -11,6 +11,7 @@ import { TCanvasDoc, TElement, TElementData, TElementStyle, TRectData } from "@v
 export class Shape2dPlugin implements IPlugin {
   #previewDrawing: Konva.Shape | null = null;
   #activeTool: TTool = 'select';
+  static supportedTypes: Set<TElementData['type']> = new Set(['rect', 'diamond', 'ellipse']);
 
   constructor() {
 
@@ -72,25 +73,27 @@ export class Shape2dPlugin implements IPlugin {
 
     context.hooks.pointerUp.tap(() => {
       if (context.state.mode !== CanvasMode.DRAW_CREATE) return;
-      const shape = this.#previewDrawing?.clone()
+      const shape: Konva.Shape | undefined = this.#previewDrawing?.clone()
       this.#previewDrawing?.destroy()
       this.#previewDrawing = null;
       context.setState('mode', CanvasMode.SELECT)
       context.hooks.customEvent.call(CustomEvents.TOOL_SELECT, 'select')
 
-      Shape2dPlugin.syncShape(shape, context)
+      if (!shape) return;
+      Shape2dPlugin.setupShapeListeners(shape, context)
+      shape.setDraggable(true)
+
     })
   }
 
-  static syncShape(shape: Konva.Shape, context: IPluginContext) {
-    shape.setDraggable(true)
-    shape.on('click dragstart', e => {
+  static setupShapeListeners(shape: Konva.Shape, context: IPluginContext) {
+    shape.on('pointerclick dragstart', e => {
       if (context.state.mode !== CanvasMode.SELECT) {
         shape.stopDrag()
         return
       }
 
-      if (e.type === 'click')
+      if (e.type === 'pointerclick')
         context.setState('selection', produce(selection => {
           if (!e.evt.shiftKey) selection.length = 0
           if (!selection.includes(shape)) {
@@ -98,9 +101,8 @@ export class Shape2dPlugin implements IPlugin {
           }
         }))
 
-      if (e.type === 'dragstart' && e.evt.altKey) {
+      else if (e.type === 'dragstart' && e.evt.altKey) {
         shape.stopDrag()
-        console.log('drag clone')
         Shape2dPlugin.createCloneDrag(shape, context)
       }
     })
@@ -131,6 +133,18 @@ export class Shape2dPlugin implements IPlugin {
     context.staticForegroundLayer.add(shape);
   }
 
+  static removeShapeListeners(shape: Konva.Shape) {
+    shape
+      .off('pointerclick')
+      .off('pointerdblclick')
+      .off('dragstart')
+      .off('dragmove')
+      .off('dragend')
+      .off('transformstart')
+      .off('transformmove')
+      .off('transformend')
+  }
+
   static createCloneDrag(shape: Konva.Shape, context: IPluginContext) {
     const backendData = shape.getAttr('backendData') as TElement
     let newShape: Konva.Shape | null = null;
@@ -151,9 +165,10 @@ export class Shape2dPlugin implements IPlugin {
       newShape.on('dragend', () => {
         newShape.off('dragend')
         newShape.off('dragmove')
-        Shape2dPlugin.syncShape(newShape, context)
+        Shape2dPlugin.setupShapeListeners(newShape, context)
+        newShape.moveToTop()
+        newShape.setDraggable(true)
       })
-      newShape.moveToTop()
     }
     return newShape;
 
@@ -163,7 +178,7 @@ export class Shape2dPlugin implements IPlugin {
     const data = backendData.data as TRectData
     const shape = new Konva.Rect({
       id: backendData.id,
-      rotationDeg: backendData.angle,
+      rotation: backendData.angle,
       x: backendData.x,
       y: backendData.y,
       width: data.w,
