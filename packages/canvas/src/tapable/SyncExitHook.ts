@@ -10,14 +10,15 @@ export class SyncExitHook<T> {
     this.#callbacks.push(fn);
   }
 
-  call(...argsArr: TAsArray<T>): void {
+  call(...argsArr: TAsArray<T>): boolean {
     if (this.#callbacks.length) {
       for (let i = 0; i < this.#callbacks.length; i++) {
         const callback = this.#callbacks[i];
         const cancel = callback(...(argsArr as TAsArray<T>));
-        if (cancel) break;
+        if (cancel) return true;
       }
-
     }
+
+    return false;
   }
 }
