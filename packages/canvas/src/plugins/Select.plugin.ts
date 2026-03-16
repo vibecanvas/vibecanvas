@@ -44,8 +44,9 @@ export class SelectPlugin implements IPlugin {
 
     context.hooks.customEvent.tap((event, payload) => {
       if (context.state.mode !== CanvasMode.SELECT) return false;
-      if (event === CustomEvents.ELEMENT_POINTERDOWN) {
-        SelectPlugin.handleElementPointerDown(context, payload)
+      switch (event) {
+        case CustomEvents.ELEMENT_POINTERDOWN: SelectPlugin.handleElementPointerDown(context, payload); break;
+        case CustomEvents.ELEMENT_POINTERDBLCLICK: SelectPlugin.handleElementDoubleClick(context, payload); break;
       }
 
       return false;
@@ -111,5 +112,12 @@ export class SelectPlugin implements IPlugin {
         else context.setState('selection', produce(sel => sel.push(payload.currentTarget)))
       }
     }
+  }
+
+  private static handleElementDoubleClick(context: IPluginContext, payload: KonvaEventObject<PointerEvent, Shape<ShapeConfig> | Group>) {
+    const isRoot = payload.currentTarget.parent === context.staticForegroundLayer
+
+    console.log('select plugin handle dbl click', isRoot, payload)
+
   }
 }

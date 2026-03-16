@@ -4,6 +4,7 @@ import { CustomEvents } from "../custom-events";
 import { CanvasMode } from "../services/canvas/enum";
 import type { IPlugin, IPluginContext } from "./interface";
 import { Shape2dPlugin } from "./Shape2d.plugin";
+import { TElement } from "@vibecanvas/shell/automerge/index";
 
 
 export class GroupPlugin implements IPlugin {
@@ -179,9 +180,8 @@ export class GroupPlugin implements IPlugin {
         this.refreshCloneSubtree(node)
       }
 
-      if (node instanceof Konva.Shape) {
-        Shape2dPlugin.removeShapeListeners(node)
-        const backendData = node.getAttr('backendData')
+      if (node instanceof Konva.Shape && Shape2dPlugin.supportedTypes.has(node.getAttr('backendData').data.type)) {
+        const backendData = node.getAttr('backendData') as TElement
         if (backendData) {
           node.setAttr('backendData', {
             ...structuredClone(backendData),

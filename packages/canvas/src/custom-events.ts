@@ -6,13 +6,15 @@ import type { Group } from "konva/lib/Group";
 export enum CustomEvents {
   GRID_VISIBLE = 'grid-visible',
   TOOL_SELECT = 'tool-select',
-  ELEMENT_POINTERDOWN = 'element-pointerdown'
+  ELEMENT_POINTERDOWN = 'element-pointerdown',
+  ELEMENT_POINTERDBLCLICK = 'element-pointerdblclick'
 }
 
 export type CustomEventMap = {
   [CustomEvents.GRID_VISIBLE]: boolean
   [CustomEvents.TOOL_SELECT]: TTool
   [CustomEvents.ELEMENT_POINTERDOWN]: KonvaEventObject<PointerEvent, Shape<ShapeConfig> | Group>
+  [CustomEvents.ELEMENT_POINTERDBLCLICK]: KonvaEventObject<PointerEvent, Shape<ShapeConfig> | Group>
 }
 
 export type TCustomEventName = keyof CustomEventMap & string;

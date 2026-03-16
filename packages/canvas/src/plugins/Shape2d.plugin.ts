@@ -105,6 +105,11 @@ export class Shape2dPlugin implements IPlugin {
 
     shape.on('click', e => { })
 
+    shape.on('pointerdblclick', e => {
+      if (context.state.mode !== CanvasMode.SELECT) return
+      context.hooks.customEvent.call(CustomEvents.ELEMENT_POINTERDBLCLICK, e)
+    })
+
     shape.on('dragmove', e => {
       const backendData: TElement = shape.getAttr('backendData');
       const { x, y } = shape.position();
@@ -131,19 +136,20 @@ export class Shape2dPlugin implements IPlugin {
     context.staticForegroundLayer.add(shape);
   }
 
-  static removeShapeListeners(shape: Konva.Shape) {
-    shape
-      .off('pointerclick')
-      .off('pointerdown')
-      .off('pointerup')
-      .off('pointerdblclick')
-      .off('dragstart')
-      .off('dragmove')
-      .off('dragend')
-      .off('transformstart')
-      .off('transformmove')
-      .off('transformend')
-  }
+  // TODO: remove 
+  // static removeShapeListeners(shape: Konva.Shape) {
+  //   shape
+  //     .off('pointerclick')
+  //     .off('pointerdown')
+  //     .off('pointerup')
+  //     .off('pointerdblclick')
+  //     .off('dragstart')
+  //     .off('dragmove')
+  //     .off('dragend')
+  //     .off('transformstart')
+  //     .off('transformmove')
+  //     .off('transformend')
+  // }
 
   static createCloneDrag(shape: Konva.Shape, context: IPluginContext) {
     const backendData = shape.getAttr('backendData') as TElement
@@ -163,7 +169,7 @@ export class Shape2dPlugin implements IPlugin {
         newShape.setAttr('backendData', { ...newShape.getAttr('backendData'), x, y })
       })
       newShape.on('dragend', () => {
-        Shape2dPlugin.removeShapeListeners(newShape)
+        // Shape2dPlugin.removeShapeListeners(newShape)
         Shape2dPlugin.setupShapeListeners(newShape, context)
         newShape.moveToTop()
         newShape.setDraggable(true)
