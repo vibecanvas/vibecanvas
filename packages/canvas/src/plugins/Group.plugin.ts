@@ -14,6 +14,13 @@ export class GroupPlugin implements IPlugin {
   }
 
   apply(context: IPluginContext): void {
+    context.hooks.cameraChange.tap(() => {
+      this.#boundaries.forEach(boundary => {
+        if (boundary.node.visible()) {
+          boundary.update()
+        }
+      })
+    })
 
     context.hooks.keydown.tap(event => {
       if (context.state.mode !== CanvasMode.SELECT) return;
@@ -181,11 +188,12 @@ export class GroupPlugin implements IPlugin {
     })
   }
 
-  selectGroup(context: IPluginContext, group: Konva.Group) {
+  private selectGroup(context: IPluginContext, group: Konva.Group) {
     const { getBoundaryBox, hide, node, show, update } = this.#boundaries.get(group.id()) ?? GroupPlugin.createBoundaryRect(context, group)
     this.#boundaries.set(group.id(), { getBoundaryBox, hide, node, show, update })
-    context.dynamicLayer.add(node)
-    context.hooks.cameraChange.tap(update)
+    if (node.getLayer() !== context.dynamicLayer) {
+      context.dynamicLayer.add(node)
+    }
     show()
   }
 
