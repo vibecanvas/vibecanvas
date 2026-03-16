@@ -93,19 +93,23 @@ export class Shape2dPlugin implements IPlugin {
         return
       }
 
-      if (e.type === 'pointerdown')
-        context.setState('selection', produce(selection => {
-          if (!e.evt.shiftKey) selection.length = 0
-          if (!selection.includes(shape)) {
-            selection.push(shape)
-          }
-        }))
+      if (e.type === 'pointerdown') {
+        console.log('pointerdown')
+        context.hooks.customEvent.call(CustomEvents.ELEMENT_POINTERDOWN, e)
+      }
 
-      else if (e.type === 'dragstart' && e.evt.altKey) {
+      // move to selection plugin
+      // if (e.type === 'pointerdown') {
+      //   if (!context.state.selection.includes(shape))
+      //     context.setState('selection', context.state.selection.length, shape)
+      // } 
+      if (e.type === 'dragstart' && e.evt.altKey) {
         shape.stopDrag()
         Shape2dPlugin.createCloneDrag(shape, context)
       }
     })
+
+    shape.on('click', e => { })
 
     shape.on('dragmove', e => {
       const backendData: TElement = shape.getAttr('backendData');
@@ -165,8 +169,7 @@ export class Shape2dPlugin implements IPlugin {
         newShape.setAttr('backendData', { ...newShape.getAttr('backendData'), x, y })
       })
       newShape.on('dragend', () => {
-        newShape.off('dragend')
-        newShape.off('dragmove')
+        Shape2dPlugin.removeShapeListeners(newShape)
         Shape2dPlugin.setupShapeListeners(newShape, context)
         newShape.moveToTop()
         newShape.setDraggable(true)

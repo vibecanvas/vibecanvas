@@ -88,7 +88,9 @@ export class GroupPlugin implements IPlugin {
       node.setAbsolutePosition(absolutePosition)
       node.setDraggable(false)
       if (node instanceof Konva.Shape && Shape2dPlugin.supportedTypes.has(node.getAttr('backendData').data.type)) {
-        Shape2dPlugin.removeShapeListeners(node)
+        // TODO: must find better solution without group changes node
+        // Shape2dPlugin.removeShapeListeners(node)
+        // node.listening(false)
       } else if (node instanceof Konva.Group) {
         GroupPlugin.removeGroupListeners(context, node)
       }
@@ -181,6 +183,10 @@ export class GroupPlugin implements IPlugin {
     //     console.log('child', e)
     //   })
     // })
+    group.on('pointerdblclick', e => {
+      console.log(e)
+      context.setState('selection', produce(sel => sel.push(e.target)))
+    })
     group.on('pointerclick pointerdown', e => {
       this.selectGroup(context, group)
       context.setState('selection', [group])

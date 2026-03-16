@@ -12,25 +12,29 @@ export class TransformPlugin implements IPlugin {
     });
 
     this.#transformer.on('pointerclick pointerdown', e => {
-      e.cancelBubble = true
+      // e.cancelBubble = true
     })
 
   }
 
   apply(context: IPluginContext): void {
-    context.dynamicLayer.add(this.#transformer);
-    createEffect(() => {
-      if (context.state.selection.length === 1 && context.state.selection[0] instanceof Konva.Group) {
-        this.#transformer.borderEnabled(false)
-      } else if (context.state.selection.length > 1) {
-        this.#transformer.borderEnabled(true)
-        this.#transformer.borderDash([2, 2])
-      } else if (context.state.selection.length === 1) {
-        this.#transformer.borderEnabled(true)
-        this.#transformer.borderDash([0, 0])
-      }
-      this.#transformer.setNodes(TransformPlugin.filterSelection(context.state.selection))
-      this.#transformer.update()
+    context.hooks.init.tap(() => {
+      // this.#transformer.on('dragmove', console.log)
+      context.dynamicLayer.add(this.#transformer);
+      createEffect(() => {
+        if (context.state.selection.length === 1 && context.state.selection[0] instanceof Konva.Group) {
+          this.#transformer.borderEnabled(false)
+        } else if (context.state.selection.length > 1) {
+          this.#transformer.borderEnabled(true)
+          this.#transformer.borderDash([2, 2])
+        } else if (context.state.selection.length === 1) {
+          this.#transformer.borderEnabled(true)
+          this.#transformer.borderDash([0, 0])
+        }
+        this.#transformer.setNodes(TransformPlugin.filterSelection(context.state.selection))
+        this.#transformer.update()
+      })
+
     })
   }
 

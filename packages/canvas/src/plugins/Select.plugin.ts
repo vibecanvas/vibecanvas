@@ -1,4 +1,8 @@
 import Konva from "konva";
+import type { KonvaEventObject } from "konva/lib/Node";
+import type { Shape, ShapeConfig } from "konva/lib/Shape";
+import { produce } from "solid-js/store";
+import { CustomEvents } from "../custom-events";
 import { CanvasMode } from "../services/canvas/enum";
 import type { IPlugin, IPluginContext } from "./interface";
 
@@ -33,12 +37,15 @@ export class SelectPlugin implements IPlugin {
   }
 
   apply(context: IPluginContext): void {
-    context.dynamicLayer.add(this.#selectionRectangle);
+    context.hooks.init.tap(() => {
+      context.dynamicLayer.add(this.#selectionRectangle);
+    })
 
-    context.hooks.customEvent.tap(() => {
-      if (context.state.mode === CanvasMode.SELECT) return false;
-      this.#selectionRectangle.visible(false);
-      context.dynamicLayer.batchDraw();
+    context.hooks.customEvent.tap((event, payload) => {
+      if (context.state.mode !== CanvasMode.SELECT) return false;
+      if (event === CustomEvents.ELEMENT_POINTERDOWN) {
+        SelectPlugin.handleElementPointerDown(context, payload)
+      }
 
       return false;
     });
@@ -86,5 +93,14 @@ export class SelectPlugin implements IPlugin {
       this.#selectionRectangle.visible(false);
       context.dynamicLayer.batchDraw();
     });
+  }
+
+  private static handleElementPointerDown(context: IPluginContext, payload: KonvaEventObject<PointerEvent, Shape<ShapeConfig>>) {
+    if (payload.target instanceof Konva.Shape) {
+      if (!context.state.selection.includes(payload.target)) {
+        if (!payload.evt.shiftKey) context.setState('selection', [payload.target])
+        else context.setState('selection', produce(sel => sel.push(payload.target)))
+      }
+    }
   }
 }
