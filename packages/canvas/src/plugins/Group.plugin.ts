@@ -167,6 +167,31 @@ export class GroupPlugin implements IPlugin {
       .off('transformend')
   }
 
+  private static refreshCloneSubtree(clone: Konva.Group) {
+    clone.id(crypto.randomUUID())
+    clone.setDraggable(true)
+
+    clone.getChildren().forEach(node => {
+      node.id(crypto.randomUUID())
+      node.setDraggable(false)
+
+      if (node instanceof Konva.Group) {
+        this.refreshCloneSubtree(node)
+      }
+
+      if (node instanceof Konva.Shape) {
+        Shape2dPlugin.removeShapeListeners(node)
+        const backendData = node.getAttr('backendData')
+        if (backendData) {
+          node.setAttr('backendData', {
+            ...structuredClone(backendData),
+            id: node.id(),
+          })
+        }
+      }
+    })
+  }
+
   private setupReaction(context: IPluginContext) {
     createEffect(() => {
       const markedToRemove = new Set(this.#boundaries.keys())
@@ -197,6 +222,26 @@ export class GroupPlugin implements IPlugin {
     show()
   }
 
+  private createCloneDrag(context: IPluginContext, group: Konva.Group) {
+    const clone = group.clone()
+    GroupPlugin.removeGroupListeners(context, clone)
+    GroupPlugin.refreshCloneSubtree(clone)
+
+    context.dynamicLayer.add(clone)
+    this.setupGroupListeners(context, clone)
+    this.selectGroup(context, clone)
+    context.setState('selection', [clone])
+
+    clone.startDrag()
+    clone.on('dragend', () => {
+      clone.moveTo(context.staticForegroundLayer)
+      clone.setDraggable(true)
+      context.setState('selection', [clone])
+    })
+
+    return clone
+  }
+
   setupGroupListeners(context: IPluginContext, group: Konva.Group) {
     // group.children.forEach(node => {
     //   node.on('pointerclick', e => {
@@ -207,10 +252,20 @@ export class GroupPlugin implements IPlugin {
       // console.log(e)
       // context.setState('selection', produce(sel => sel.push(e.target)))
     })
-    group.on('pointerdown', e => {
-      // this.selectGroup(context, group)
-      // context.setState('selection', [group])
-      context.hooks.customEvent.call(CustomEvents.ELEMENT_POINTERDOWN, e)
+    group.on('pointerdown dragstart', e => {
+      if (context.state.mode !== CanvasMode.SELECT) {
+        group.stopDrag()
+        return
+      }
+
+      if (e.type === 'pointerdown') {
+        context.hooks.customEvent.call(CustomEvents.ELEMENT_POINTERDOWN, e)
+      }
+
+      if (e.type === 'dragstart' && e.evt?.altKey) {
+        group.stopDrag()
+        this.createCloneDrag(context, group)
+      }
     })
 
     group.on('dragmove transform', e => {
