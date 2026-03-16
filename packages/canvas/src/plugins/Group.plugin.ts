@@ -93,11 +93,11 @@ export class GroupPlugin implements IPlugin {
       y: 0,
       width: 0,
       height: 0,
-      draggable: false,
       stroke: '#1e1e1e',
       dash: [11, 11],
       strokeWidth: 2,
       strokeScaleEnabled: false,
+      draggable: false,
       listening: false,
       visible: false,
       name: 'group-boundary:' + group.id(),
@@ -118,15 +118,19 @@ export class GroupPlugin implements IPlugin {
 
     const update = () => {
       const box = getBoundaryBox()
-      const topLeft = group.getTransform().point({ x: box.x, y: box.y })
-      const topRight = group.getTransform().point({
+      const groupTransform = group.getAbsoluteTransform()
+      const dynamicLayerInverseTransform = context.dynamicLayer.getAbsoluteTransform().copy()
+      dynamicLayerInverseTransform.invert()
+
+      const topLeft = dynamicLayerInverseTransform.point(groupTransform.point({ x: box.x, y: box.y }))
+      const topRight = dynamicLayerInverseTransform.point(groupTransform.point({
         x: box.x + box.width,
         y: box.y,
-      })
-      const bottomLeft = group.getTransform().point({
+      }))
+      const bottomLeft = dynamicLayerInverseTransform.point(groupTransform.point({
         x: box.x,
         y: box.y + box.height,
-      })
+      }))
 
       const width = Math.hypot(topRight.x - topLeft.x, topRight.y - topLeft.y)
       const height = Math.hypot(bottomLeft.x - topLeft.x, bottomLeft.y - topLeft.y)
@@ -211,7 +215,6 @@ export class GroupPlugin implements IPlugin {
 
   private createCloneDrag(context: IPluginContext, group: Konva.Group) {
     const clone = group.clone()
-    // GroupPlugin.removeGroupListeners(context, clone)
     GroupPlugin.refreshCloneSubtree(clone)
 
     context.dynamicLayer.add(clone)
@@ -231,6 +234,9 @@ export class GroupPlugin implements IPlugin {
 
   setupGroupListeners(context: IPluginContext, group: Konva.Group) {
     group.on('pointerdblclick', e => {
+      if (context.state.mode !== CanvasMode.SELECT) return
+      const earlyExit = context.hooks.customEvent.call(CustomEvents.ELEMENT_POINTERDBLCLICK, e)
+      if (earlyExit) e.cancelBubble = true
     })
     group.on('pointerdown dragstart', e => {
       if (context.state.mode !== CanvasMode.SELECT) {
@@ -249,9 +255,7 @@ export class GroupPlugin implements IPlugin {
     })
 
     group.on('dragmove transform', e => {
-      const boundary = this.#boundaries.get(group.id())
-      if (!boundary) return
-      boundary.update()
+      this.#boundaries.values().forEach(b => b.update())
     })
   }
 

@@ -45,8 +45,8 @@ export class SelectPlugin implements IPlugin {
     context.hooks.customEvent.tap((event, payload) => {
       if (context.state.mode !== CanvasMode.SELECT) return false;
       switch (event) {
-        case CustomEvents.ELEMENT_POINTERDOWN: SelectPlugin.handleElementPointerDown(context, payload); break;
-        case CustomEvents.ELEMENT_POINTERDBLCLICK: SelectPlugin.handleElementDoubleClick(context, payload); break;
+        case CustomEvents.ELEMENT_POINTERDOWN: return SelectPlugin.handleElementPointerDown(context, payload); break;
+        case CustomEvents.ELEMENT_POINTERDBLCLICK: return SelectPlugin.handleElementDoubleClick(context, payload); break;
       }
 
       return false;
@@ -101,23 +101,30 @@ export class SelectPlugin implements IPlugin {
     const isRoot = payload.currentTarget.parent === context.staticForegroundLayer
     if (payload.currentTarget instanceof Konva.Shape) {
       if (isRoot && !context.state.selection.includes(payload.currentTarget)) {
-        console.log('shape', payload)
         if (!payload.evt.shiftKey) context.setState('selection', [payload.currentTarget])
         else context.setState('selection', produce(sel => sel.push(payload.currentTarget)))
       }
     } else if (payload.currentTarget instanceof Konva.Group) {
       if (isRoot && !context.state.selection.includes(payload.currentTarget)) {
-        console.log('group', payload)
         if (!payload.evt.shiftKey) context.setState('selection', [payload.currentTarget])
         else context.setState('selection', produce(sel => sel.push(payload.currentTarget)))
       }
     }
+
+    return false
   }
 
-  private static handleElementDoubleClick(context: IPluginContext, payload: KonvaEventObject<PointerEvent, Shape<ShapeConfig> | Group>) {
+  private static handleElementDoubleClick(context: IPluginContext, payload: KonvaEventObject<PointerEvent, Shape<ShapeConfig> | Group>): boolean {
     const isRoot = payload.currentTarget.parent === context.staticForegroundLayer
+    const isGrouped = payload.currentTarget.parent instanceof Konva.Group
 
-    console.log('select plugin handle dbl click', isRoot, payload)
+    if (isGrouped && context.state.selection.includes(payload.currentTarget.parent as Group)) {
+      if (!context.state.selection.includes(payload.currentTarget)) {
+        context.setState('selection', context.state.selection.length, payload.currentTarget)
+        return true
+      }
+    }
 
+    return false
   }
 }

@@ -101,11 +101,10 @@ export class Shape2dPlugin implements IPlugin {
       }
     })
 
-    shape.on('click', e => { })
-
     shape.on('pointerdblclick', e => {
       if (context.state.mode !== CanvasMode.SELECT) return
-      context.hooks.customEvent.call(CustomEvents.ELEMENT_POINTERDBLCLICK, e)
+      const earlyExit = context.hooks.customEvent.call(CustomEvents.ELEMENT_POINTERDBLCLICK, e)
+      if (earlyExit) e.cancelBubble = true
     })
 
     shape.on('dragmove', e => {
