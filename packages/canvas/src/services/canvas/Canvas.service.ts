@@ -46,6 +46,8 @@ export class CanvasService {
     });
     // @ts-ignore
     window.stage = this.#stage
+    // @ts-ignore
+    window.canvas = this
 
     const [state, setState] = createStore({
       mode: CanvasMode.SELECT,
