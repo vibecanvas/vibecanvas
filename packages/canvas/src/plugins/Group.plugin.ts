@@ -4,7 +4,7 @@ import { CustomEvents } from "../custom-events";
 import { CanvasMode } from "../services/canvas/enum";
 import type { IPlugin, IPluginContext } from "./interface";
 import { Shape2dPlugin } from "./Shape2d.plugin";
-import { TElement } from "@vibecanvas/shell/automerge/index";
+import { TElement, TGroup } from "@vibecanvas/shell/automerge/index";
 
 
 export class GroupPlugin implements IPlugin {
@@ -53,12 +53,21 @@ export class GroupPlugin implements IPlugin {
   }
 
   static group(context: IPluginContext, selections: (Konva.Group | Konva.Shape)[]) {
+    const backendData: TGroup = {
+      id: crypto.randomUUID(),
+      color: null,
+      createdAt: Date.now(),
+      parentGroupId: null,
+      locked: false,
+      name: ''
+    }
     const x = Math.min(...selections.map(s => s.x()))
     const y = Math.min(...selections.map(s => s.y()))
     const width = Math.max(...selections.map(s => s.x() + s.width())) - x
     const height = Math.max(...selections.map(s => s.y() + s.height())) - y
 
     const newGroup = new Konva.Group({
+      id: crypto.randomUUID(),
       x,
       y,
       width,
@@ -77,7 +86,7 @@ export class GroupPlugin implements IPlugin {
         // Shape2dPlugin.removeShapeListeners(node)
         // node.listening(false)
       } else if (node instanceof Konva.Group) {
-        GroupPlugin.removeGroupListeners(context, node)
+        // GroupPlugin.removeGroupListeners(context, node)
       }
     })
 
@@ -154,19 +163,19 @@ export class GroupPlugin implements IPlugin {
   }
 
 
-  private static removeGroupListeners(context: IPluginContext, group: Konva.Group) {
-    group
-      .off('pointerclick')
-      .off('pointerdown')
-      .off('pointerup')
-      .off('pointerdblclick')
-      .off('dragstart')
-      .off('dragmove')
-      .off('dragend')
-      .off('transformstart')
-      .off('transformmove')
-      .off('transformend')
-  }
+  // private static removeGroupListeners(context: IPluginContext, group: Konva.Group) {
+  //   group
+  //     .off('pointerclick')
+  //     .off('pointerdown')
+  //     .off('pointerup')
+  //     .off('pointerdblclick')
+  //     .off('dragstart')
+  //     .off('dragmove')
+  //     .off('dragend')
+  //     .off('transformstart')
+  //     .off('transformmove')
+  //     .off('transformend')
+  // }
 
   private static refreshCloneSubtree(clone: Konva.Group) {
     clone.id(crypto.randomUUID())
@@ -216,15 +225,14 @@ export class GroupPlugin implements IPlugin {
   private selectGroup(context: IPluginContext, group: Konva.Group) {
     const { getBoundaryBox, hide, node, show, update } = this.#boundaries.get(group.id()) ?? GroupPlugin.createBoundaryRect(context, group)
     this.#boundaries.set(group.id(), { getBoundaryBox, hide, node, show, update })
-    if (node.getLayer() !== context.dynamicLayer) {
-      context.dynamicLayer.add(node)
-    }
+    context.dynamicLayer.add(node)
+    console.log(this.#boundaries, group.id())
     show()
   }
 
   private createCloneDrag(context: IPluginContext, group: Konva.Group) {
     const clone = group.clone()
-    GroupPlugin.removeGroupListeners(context, clone)
+    // GroupPlugin.removeGroupListeners(context, clone)
     GroupPlugin.refreshCloneSubtree(clone)
 
     context.dynamicLayer.add(clone)
