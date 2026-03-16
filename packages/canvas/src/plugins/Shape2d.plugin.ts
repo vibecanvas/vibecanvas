@@ -87,13 +87,13 @@ export class Shape2dPlugin implements IPlugin {
   }
 
   static setupShapeListeners(shape: Konva.Shape, context: IPluginContext) {
-    shape.on('pointerclick dragstart', e => {
+    shape.on('pointerdown dragstart', e => {
       if (context.state.mode !== CanvasMode.SELECT) {
         shape.stopDrag()
         return
       }
 
-      if (e.type === 'pointerclick')
+      if (e.type === 'pointerdown')
         context.setState('selection', produce(selection => {
           if (!e.evt.shiftKey) selection.length = 0
           if (!selection.includes(shape)) {
@@ -136,6 +136,8 @@ export class Shape2dPlugin implements IPlugin {
   static removeShapeListeners(shape: Konva.Shape) {
     shape
       .off('pointerclick')
+      .off('pointerdown')
+      .off('pointerup')
       .off('pointerdblclick')
       .off('dragstart')
       .off('dragmove')

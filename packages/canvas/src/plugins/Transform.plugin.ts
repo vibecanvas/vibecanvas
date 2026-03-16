@@ -11,7 +11,7 @@ export class TransformPlugin implements IPlugin {
     this.#transformer = new Konva.Transformer({
     });
 
-    this.#transformer.on('click pointerdown', e => {
+    this.#transformer.on('pointerclick pointerdown', e => {
       e.cancelBubble = true
     })
 

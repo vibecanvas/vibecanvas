@@ -19,6 +19,7 @@ export class GroupPlugin implements IPlugin {
   apply(context: IPluginContext): void {
 
     context.hooks.keydown.tap(event => {
+      if (context.state.mode !== CanvasMode.SELECT) return;
       if (event.key === 'g' && event.metaKey && !event.shiftKey) {
         // prevent default search popup
         event.preventDefault()
@@ -40,6 +41,12 @@ export class GroupPlugin implements IPlugin {
         }
       }
     })
+
+    context.hooks.pointerDown.tap(e => {
+      if (this.#boundaries.size === 0) return;
+      this.#boundaries.forEach(b => b.node.destroy())
+      this.#boundaries.clear()
+    })
   }
 
   static group(context: IPluginContext, selections: (Konva.Group | Konva.Shape)[]) {
@@ -55,8 +62,12 @@ export class GroupPlugin implements IPlugin {
       height,
       draggable: true
     })
+    context.staticForegroundLayer.add(newGroup)
+
     selections.forEach(node => {
+      const absolutePosition = node.getAbsolutePosition(context.staticForegroundLayer)
       newGroup.add(node)
+      node.setAbsolutePosition(absolutePosition)
       node.setDraggable(false)
       if (node instanceof Konva.Shape && Shape2dPlugin.supportedTypes.has(node.getAttr('backendData').data.type)) {
         Shape2dPlugin.removeShapeListeners(node)
@@ -65,19 +76,18 @@ export class GroupPlugin implements IPlugin {
       }
     })
 
-    context.staticForegroundLayer.add(newGroup)
-
     return newGroup;
   }
 
-  private static createBoundaryRect(stage: Konva.Stage, group: Konva.Group) {
+  private static createBoundaryRect(context: IPluginContext, group: Konva.Group) {
     const boundary = new Konva.Rect({
       x: 0,
       y: 0,
       width: 0,
       height: 0,
       draggable: false,
-      stroke: 'pink',
+      stroke: '1e1e1e',
+      dash: [11, 11],
       strokeWidth: 2,
       listening: false,
       visible: false,
@@ -85,24 +95,15 @@ export class GroupPlugin implements IPlugin {
     })
 
     const getBoundaryBox = () => {
-      const invTransform = stage.getAbsoluteTransform().copy().invert()
-      const groupRect = group.getClientRect()
-
-      const p1 = invTransform.point({
-        x: groupRect.x,
-        y: groupRect.y,
-      })
-
-      const p2 = invTransform.point({
-        x: groupRect.x + groupRect.width,
-        y: groupRect.y + groupRect.height,
+      const groupRect = group.getClientRect({
+        relativeTo: context.staticForegroundLayer,
       })
 
       return {
-        x: p1.x,
-        y: p1.y,
-        width: p2.x - p1.x,
-        height: p2.y - p1.y,
+        x: groupRect.x,
+        y: groupRect.y,
+        width: groupRect.width,
+        height: groupRect.height,
       }
     }
 
@@ -134,6 +135,8 @@ export class GroupPlugin implements IPlugin {
   private static removeGroupListeners(context: IPluginContext, group: Konva.Group) {
     group
       .off('pointerclick')
+      .off('pointerdown')
+      .off('pointerup')
       .off('pointerdblclick')
       .off('dragstart')
       .off('dragmove')
@@ -149,12 +152,14 @@ export class GroupPlugin implements IPlugin {
     //     console.log('child', e)
     //   })
     // })
-    group.on('pointerclick', e => {
-      const { getBoundaryBox, hide, node, show, update } = this.#boundaries.get(group.id()) ?? GroupPlugin.createBoundaryRect(context.stage, group)
+    group.on('pointerclick pointerdown', e => {
+      const { getBoundaryBox, hide, node, show, update } = this.#boundaries.get(group.id()) ?? GroupPlugin.createBoundaryRect(context, group)
       this.#boundaries.set(group.id(), { getBoundaryBox, hide, node, show, update })
       context.dynamicLayer.add(node)
+      context.hooks.cameraChange.tap(update)
       show()
       context.setState('selection', [group])
+      e.cancelBubble = true
     })
   }
 
