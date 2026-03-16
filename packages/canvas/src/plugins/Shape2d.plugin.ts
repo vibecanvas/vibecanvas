@@ -1,11 +1,9 @@
+import { TElement, TElementData, TRectData } from "@vibecanvas/shell/automerge/index";
 import Konva from "konva";
-import { CanvasMode } from "../services/canvas/enum";
-import type { IPlugin, IPluginContext } from "./interface";
-import { createEffect } from "solid-js";
-import { produce } from "solid-js/store";
 import type { TTool } from "../components/FloatingCanvasToolbar/toolbar.types";
 import { CustomEvents } from "../custom-events";
-import { TCanvasDoc, TElement, TElementData, TElementStyle, TRectData } from "@vibecanvas/shell/automerge/index";
+import { CanvasMode } from "../services/canvas/enum";
+import type { IPlugin, IPluginContext } from "./interface";
 
 
 export class Shape2dPlugin implements IPlugin {
@@ -136,21 +134,6 @@ export class Shape2dPlugin implements IPlugin {
     context.staticForegroundLayer.add(shape);
   }
 
-  // TODO: remove 
-  // static removeShapeListeners(shape: Konva.Shape) {
-  //   shape
-  //     .off('pointerclick')
-  //     .off('pointerdown')
-  //     .off('pointerup')
-  //     .off('pointerdblclick')
-  //     .off('dragstart')
-  //     .off('dragmove')
-  //     .off('dragend')
-  //     .off('transformstart')
-  //     .off('transformmove')
-  //     .off('transformend')
-  // }
-
   static createCloneDrag(shape: Konva.Shape, context: IPluginContext) {
     const backendData = shape.getAttr('backendData') as TElement
     let newShape: Konva.Shape | null = null;
@@ -169,7 +152,6 @@ export class Shape2dPlugin implements IPlugin {
         newShape.setAttr('backendData', { ...newShape.getAttr('backendData'), x, y })
       })
       newShape.on('dragend', () => {
-        // Shape2dPlugin.removeShapeListeners(newShape)
         Shape2dPlugin.setupShapeListeners(newShape, context)
         newShape.moveToTop()
         newShape.setDraggable(true)

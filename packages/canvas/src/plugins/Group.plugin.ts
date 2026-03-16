@@ -67,12 +67,13 @@ export class GroupPlugin implements IPlugin {
     const height = Math.max(...selections.map(s => s.y() + s.height())) - y
 
     const newGroup = new Konva.Group({
-      id: crypto.randomUUID(),
+      id: backendData.id,
       x,
       y,
       width,
       height,
-      draggable: true
+      draggable: true,
+      backendData
     })
     context.staticForegroundLayer.add(newGroup)
 
@@ -81,13 +82,6 @@ export class GroupPlugin implements IPlugin {
       newGroup.add(node)
       node.setAbsolutePosition(absolutePosition)
       node.setDraggable(false)
-      if (node instanceof Konva.Shape && Shape2dPlugin.supportedTypes.has(node.getAttr('backendData').data.type)) {
-        // TODO: must find better solution without group changes node
-        // Shape2dPlugin.removeShapeListeners(node)
-        // node.listening(false)
-      } else if (node instanceof Konva.Group) {
-        // GroupPlugin.removeGroupListeners(context, node)
-      }
     })
 
     return newGroup;
@@ -161,21 +155,6 @@ export class GroupPlugin implements IPlugin {
       getBoundaryBox,
     }
   }
-
-
-  // private static removeGroupListeners(context: IPluginContext, group: Konva.Group) {
-  //   group
-  //     .off('pointerclick')
-  //     .off('pointerdown')
-  //     .off('pointerup')
-  //     .off('pointerdblclick')
-  //     .off('dragstart')
-  //     .off('dragmove')
-  //     .off('dragend')
-  //     .off('transformstart')
-  //     .off('transformmove')
-  //     .off('transformend')
-  // }
 
   private static refreshCloneSubtree(clone: Konva.Group) {
     clone.id(crypto.randomUUID())
@@ -251,14 +230,7 @@ export class GroupPlugin implements IPlugin {
   }
 
   setupGroupListeners(context: IPluginContext, group: Konva.Group) {
-    // group.children.forEach(node => {
-    //   node.on('pointerclick', e => {
-    //     console.log('child', e)
-    //   })
-    // })
     group.on('pointerdblclick', e => {
-      // console.log(e)
-      // context.setState('selection', produce(sel => sel.push(e.target)))
     })
     group.on('pointerdown dragstart', e => {
       if (context.state.mode !== CanvasMode.SELECT) {
