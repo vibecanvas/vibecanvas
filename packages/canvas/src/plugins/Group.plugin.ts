@@ -83,9 +83,10 @@ export class GroupPlugin implements IPlugin {
       width: 0,
       height: 0,
       draggable: false,
-      stroke: '1e1e1e',
+      stroke: '#1e1e1e',
       dash: [11, 11],
       strokeWidth: 2,
+      strokeScaleEnabled: false,
       listening: false,
       visible: false,
       name: 'group-boundary:' + group.id(),
@@ -107,10 +108,23 @@ export class GroupPlugin implements IPlugin {
     const update = () => {
       const box = getBoundaryBox()
       const topLeft = group.getTransform().point({ x: box.x, y: box.y })
+      const topRight = group.getTransform().point({
+        x: box.x + box.width,
+        y: box.y,
+      })
+      const bottomLeft = group.getTransform().point({
+        x: box.x,
+        y: box.y + box.height,
+      })
+
+      const width = Math.hypot(topRight.x - topLeft.x, topRight.y - topLeft.y)
+      const height = Math.hypot(bottomLeft.x - topLeft.x, bottomLeft.y - topLeft.y)
+      const rotation = Math.atan2(topRight.y - topLeft.y, topRight.x - topLeft.x) * 180 / Math.PI
+
       boundary.position(topLeft)
-      boundary.rotation(group.rotation())
-      boundary.scale(group.scale())
-      boundary.size({ width: box.width, height: box.height })
+      boundary.rotation(rotation)
+      boundary.scale({ x: 1, y: 1 })
+      boundary.size({ width, height })
     }
 
     const show = () => {
