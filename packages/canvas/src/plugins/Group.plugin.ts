@@ -47,6 +47,24 @@ export class GroupPlugin implements IPlugin {
       this.#boundaries.forEach(b => b.node.destroy())
       this.#boundaries.clear()
     })
+
+    context.hooks.init.tap(() => {
+      createEffect(() => {
+        const markedToRemove = new Set(this.#boundaries.keys())
+        context.state.selection.filter(sel => sel instanceof Konva.Group).forEach(group => {
+          this.selectGroup(context, group)
+          markedToRemove.delete(group.id())
+        })
+        markedToRemove.forEach(id => {
+          const boundary = this.#boundaries.get(id)
+          if (!boundary) return
+          boundary.hide()
+          boundary.node.destroy()
+          this.#boundaries.delete(id)
+        })
+      })
+
+    })
   }
 
   static group(context: IPluginContext, selections: (Konva.Group | Konva.Shape)[]) {
@@ -149,6 +167,14 @@ export class GroupPlugin implements IPlugin {
       .off('transformend')
   }
 
+  selectGroup(context: IPluginContext, group: Konva.Group) {
+    const { getBoundaryBox, hide, node, show, update } = this.#boundaries.get(group.id()) ?? GroupPlugin.createBoundaryRect(context, group)
+    this.#boundaries.set(group.id(), { getBoundaryBox, hide, node, show, update })
+    context.dynamicLayer.add(node)
+    context.hooks.cameraChange.tap(update)
+    show()
+  }
+
   setupGroupListeners(context: IPluginContext, group: Konva.Group) {
     // group.children.forEach(node => {
     //   node.on('pointerclick', e => {
@@ -156,11 +182,7 @@ export class GroupPlugin implements IPlugin {
     //   })
     // })
     group.on('pointerclick pointerdown', e => {
-      const { getBoundaryBox, hide, node, show, update } = this.#boundaries.get(group.id()) ?? GroupPlugin.createBoundaryRect(context, group)
-      this.#boundaries.set(group.id(), { getBoundaryBox, hide, node, show, update })
-      context.dynamicLayer.add(node)
-      context.hooks.cameraChange.tap(update)
-      show()
+      this.selectGroup(context, group)
       context.setState('selection', [group])
       e.cancelBubble = true
     })
