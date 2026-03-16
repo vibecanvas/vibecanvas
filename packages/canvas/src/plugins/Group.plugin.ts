@@ -96,7 +96,7 @@ export class GroupPlugin implements IPlugin {
 
     const getBoundaryBox = () => {
       const groupRect = group.getClientRect({
-        relativeTo: context.staticForegroundLayer,
+        relativeTo: group,
       })
 
       return {
@@ -109,7 +109,10 @@ export class GroupPlugin implements IPlugin {
 
     const update = () => {
       const box = getBoundaryBox()
-      boundary.position({ x: box.x, y: box.y })
+      const topLeft = group.getTransform().point({ x: box.x, y: box.y })
+      boundary.position(topLeft)
+      boundary.rotation(group.rotation())
+      boundary.scale(group.scale())
       boundary.size({ width: box.width, height: box.height })
     }
 
@@ -160,6 +163,12 @@ export class GroupPlugin implements IPlugin {
       show()
       context.setState('selection', [group])
       e.cancelBubble = true
+    })
+
+    group.on('dragmove transform', e => {
+      const boundary = this.#boundaries.get(group.id())
+      if (!boundary) return
+      boundary.update()
     })
   }
 
