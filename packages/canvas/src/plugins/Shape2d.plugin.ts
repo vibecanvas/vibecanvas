@@ -94,15 +94,9 @@ export class Shape2dPlugin implements IPlugin {
       }
 
       if (e.type === 'pointerdown') {
-        console.log('pointerdown')
         context.hooks.customEvent.call(CustomEvents.ELEMENT_POINTERDOWN, e)
       }
 
-      // move to selection plugin
-      // if (e.type === 'pointerdown') {
-      //   if (!context.state.selection.includes(shape))
-      //     context.setState('selection', context.state.selection.length, shape)
-      // } 
       if (e.type === 'dragstart' && e.evt.altKey) {
         shape.stopDrag()
         Shape2dPlugin.createCloneDrag(shape, context)

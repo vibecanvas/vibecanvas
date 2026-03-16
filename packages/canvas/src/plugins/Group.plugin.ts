@@ -1,11 +1,8 @@
 import Konva from "konva";
+import { createEffect } from "solid-js";
+import { CustomEvents } from "../custom-events";
 import { CanvasMode } from "../services/canvas/enum";
 import type { IPlugin, IPluginContext } from "./interface";
-import { createEffect } from "solid-js";
-import { produce } from "solid-js/store";
-import type { TTool } from "../components/FloatingCanvasToolbar/toolbar.types";
-import { CustomEvents } from "../custom-events";
-import { TCanvasDoc, TElement, TElementData, TElementStyle, TRectData } from "@vibecanvas/shell/automerge/index";
 import { Shape2dPlugin } from "./Shape2d.plugin";
 
 
@@ -42,28 +39,8 @@ export class GroupPlugin implements IPlugin {
       }
     })
 
-    context.hooks.pointerDown.tap(e => {
-      if (this.#boundaries.size === 0) return;
-      this.#boundaries.forEach(b => b.node.destroy())
-      this.#boundaries.clear()
-    })
-
     context.hooks.init.tap(() => {
-      createEffect(() => {
-        const markedToRemove = new Set(this.#boundaries.keys())
-        context.state.selection.filter(sel => sel instanceof Konva.Group).forEach(group => {
-          this.selectGroup(context, group)
-          markedToRemove.delete(group.id())
-        })
-        markedToRemove.forEach(id => {
-          const boundary = this.#boundaries.get(id)
-          if (!boundary) return
-          boundary.hide()
-          boundary.node.destroy()
-          this.#boundaries.delete(id)
-        })
-      })
-
+      this.setupReaction(context)
     })
   }
 
@@ -169,6 +146,27 @@ export class GroupPlugin implements IPlugin {
       .off('transformend')
   }
 
+  private setupReaction(context: IPluginContext) {
+    createEffect(() => {
+      const markedToRemove = new Set(this.#boundaries.keys())
+      context.state.selection.filter(sel => sel instanceof Konva.Group).forEach(group => {
+        console.log('show', group)
+        setTimeout(() => {
+          // circumvent set fighting
+          this.selectGroup(context, group)
+        })
+        markedToRemove.delete(group.id())
+      })
+      markedToRemove.forEach(id => {
+        const boundary = this.#boundaries.get(id)
+        if (!boundary) return
+        boundary.hide()
+        boundary.node.destroy()
+        this.#boundaries.delete(id)
+      })
+    })
+  }
+
   selectGroup(context: IPluginContext, group: Konva.Group) {
     const { getBoundaryBox, hide, node, show, update } = this.#boundaries.get(group.id()) ?? GroupPlugin.createBoundaryRect(context, group)
     this.#boundaries.set(group.id(), { getBoundaryBox, hide, node, show, update })
@@ -184,13 +182,13 @@ export class GroupPlugin implements IPlugin {
     //   })
     // })
     group.on('pointerdblclick', e => {
-      console.log(e)
-      context.setState('selection', produce(sel => sel.push(e.target)))
+      // console.log(e)
+      // context.setState('selection', produce(sel => sel.push(e.target)))
     })
-    group.on('pointerclick pointerdown', e => {
-      this.selectGroup(context, group)
-      context.setState('selection', [group])
-      e.cancelBubble = true
+    group.on('pointerdown', e => {
+      // this.selectGroup(context, group)
+      // context.setState('selection', [group])
+      context.hooks.customEvent.call(CustomEvents.ELEMENT_POINTERDOWN, e)
     })
 
     group.on('dragmove transform', e => {

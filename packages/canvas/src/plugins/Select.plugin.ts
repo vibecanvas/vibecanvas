@@ -5,6 +5,7 @@ import { produce } from "solid-js/store";
 import { CustomEvents } from "../custom-events";
 import { CanvasMode } from "../services/canvas/enum";
 import type { IPlugin, IPluginContext } from "./interface";
+import type { Group } from "konva/lib/Group";
 
 function getSelectionLayerPointerPosition(context: IPluginContext) {
   const pointer = context.dynamicLayer.getRelativePointerPosition();
@@ -95,11 +96,19 @@ export class SelectPlugin implements IPlugin {
     });
   }
 
-  private static handleElementPointerDown(context: IPluginContext, payload: KonvaEventObject<PointerEvent, Shape<ShapeConfig>>) {
-    if (payload.target instanceof Konva.Shape) {
-      if (!context.state.selection.includes(payload.target)) {
-        if (!payload.evt.shiftKey) context.setState('selection', [payload.target])
-        else context.setState('selection', produce(sel => sel.push(payload.target)))
+  private static handleElementPointerDown(context: IPluginContext, payload: KonvaEventObject<PointerEvent, Shape<ShapeConfig> | Group>) {
+    const isRoot = payload.currentTarget.parent === context.staticForegroundLayer
+    if (payload.currentTarget instanceof Konva.Shape) {
+      if (isRoot && !context.state.selection.includes(payload.currentTarget)) {
+        console.log('shape', payload)
+        if (!payload.evt.shiftKey) context.setState('selection', [payload.currentTarget])
+        else context.setState('selection', produce(sel => sel.push(payload.currentTarget)))
+      }
+    } else if (payload.currentTarget instanceof Konva.Group) {
+      if (isRoot && !context.state.selection.includes(payload.currentTarget)) {
+        console.log('group', payload)
+        if (!payload.evt.shiftKey) context.setState('selection', [payload.currentTarget])
+        else context.setState('selection', produce(sel => sel.push(payload.currentTarget)))
       }
     }
   }
