@@ -37,7 +37,6 @@ export interface IHooks {
   keydown: SyncHook<[KeyboardEvent]>;
   keyup: SyncHook<[KeyboardEvent]>;
   cameraChange: SyncHook<[]>;
-  modeChange: SyncHook<[CanvasMode, CanvasMode]>;
   customEvent: SyncExitHook<TCustomEvent>;
 }
 

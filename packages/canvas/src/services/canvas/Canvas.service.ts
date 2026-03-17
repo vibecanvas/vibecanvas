@@ -96,7 +96,6 @@ export class CanvasService {
         pointerWheel: new SyncHook<TWheelEvent>(),
         keydown: new SyncHook<KeyboardEvent>(),
         keyup: new SyncHook<KeyboardEvent>(),
-        modeChange: new SyncHook<[CanvasMode, CanvasMode]>(),
         customEvent: new SyncExitHook<TCustomEvent>()
       },
       staticBackgroundLayer: this.#staticBackgroundLayer,

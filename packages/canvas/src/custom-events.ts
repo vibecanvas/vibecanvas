@@ -8,7 +8,7 @@ export enum CustomEvents {
   TOOL_SELECT = 'tool-select',
   ELEMENT_POINTERCLICK = 'element-pointerclick',
   ELEMENT_POINTERDOWN = 'element-pointerdown',
-  ELEMENT_POINTERDBLCLICK = 'element-pointerdblclick'
+  ELEMENT_POINTERDBLCLICK = 'element-pointerdblclick',
 }
 
 export type CustomEventMap = {
