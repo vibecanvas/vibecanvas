@@ -83,9 +83,8 @@ export class SelectPlugin implements IPlugin {
       if (context.state.mode !== CanvasMode.SELECT) return;
       this.#selectionRectangle.visible(false);
     });
-  }
 
-  private static handleKeyDown(context: IPluginContext, payload: KeyboardEvent) { }
+  }
 
   private static handleElementPointerDown(context: IPluginContext, payload: KonvaEventObject<PointerEvent, Shape<ShapeConfig> | Group>) {
     const path = getSelectionPath(context, payload.currentTarget);
