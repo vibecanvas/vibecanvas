@@ -1,7 +1,6 @@
 import Konva from "konva";
 import type { KonvaEventObject } from "konva/lib/Node";
 import type { Shape, ShapeConfig } from "konva/lib/Shape";
-import { produce } from "solid-js/store";
 import { CustomEvents } from "../custom-events";
 import { CanvasMode } from "../services/canvas/enum";
 import type { IPlugin, IPluginContext } from "./interface";
@@ -21,6 +20,24 @@ function hasSameSelectionOrder(
   if (currentSelection.length != nextSelection.length) return false;
 
   return currentSelection.every((node, index) => node.id() === nextSelection[index]?.id());
+}
+
+function getSelectionPath(
+  context: IPluginContext,
+  node: Konva.Group | Konva.Shape,
+): Array<Konva.Group | Konva.Shape> {
+  const path: Array<Konva.Group | Konva.Shape> = [];
+  let current: Konva.Node | null = node;
+
+  while (current && current !== context.staticForegroundLayer) {
+    if (current instanceof Konva.Group || current instanceof Konva.Shape) {
+      path.push(current);
+    }
+
+    current = current.parent;
+  }
+
+  return path.reverse();
 }
 
 export class SelectPlugin implements IPlugin {
@@ -98,20 +115,15 @@ export class SelectPlugin implements IPlugin {
   }
 
   private static handleElementPointerDown(context: IPluginContext, payload: KonvaEventObject<PointerEvent, Shape<ShapeConfig> | Group>) {
-    const isRoot = payload.currentTarget.parent === context.staticForegroundLayer
-    if (payload.currentTarget instanceof Konva.Shape) {
-      if (isRoot && !context.state.selection.includes(payload.currentTarget)) {
-        if (!payload.evt.shiftKey) context.setState('selection', [payload.currentTarget])
-        else context.setState('selection', produce(sel => sel.push(payload.currentTarget)))
-      }
-    } else if (payload.currentTarget instanceof Konva.Group) {
-      if (isRoot && !context.state.selection.includes(payload.currentTarget)) {
-        if (!payload.evt.shiftKey) context.setState('selection', [payload.currentTarget])
-        else context.setState('selection', produce(sel => sel.push(payload.currentTarget)))
-      }
+    const path = getSelectionPath(context, payload.currentTarget);
+    const hasFocusedAncestor = path.some(node => node instanceof Konva.Group && context.state.selection.includes(node));
+    const nextSelection = hasFocusedAncestor ? path : path[0] ? [path[0]] : [];
+
+    if (!hasSameSelectionOrder(context.state.selection, nextSelection)) {
+      context.setState('selection', nextSelection)
     }
 
-    return false
+    return true
   }
 
   private static handleElementDoubleClick(context: IPluginContext, payload: KonvaEventObject<PointerEvent, Shape<ShapeConfig> | Group>): boolean {

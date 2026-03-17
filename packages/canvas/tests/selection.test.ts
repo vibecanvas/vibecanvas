@@ -79,10 +79,12 @@ async function createNestedSelectionSceneHarness() {
 
   const { staticForegroundLayer, dynamicLayer } = harness;
   const s1 = staticForegroundLayer.findOne<Konva.Rect>("#1");
+  const s3 = staticForegroundLayer.findOne<Konva.Rect>("#3");
   const g1 = staticForegroundLayer.getChildren().find((node): node is Konva.Group => node instanceof Konva.Group);
   const g2 = g1?.findOne<Konva.Group>((node: any) => node instanceof Konva.Group) ?? null;
 
   expect(s1).toBeTruthy();
+  expect(s3).toBeTruthy();
   expect(g1).toBeTruthy();
   expect(g2).toBeTruthy();
 
@@ -91,6 +93,7 @@ async function createNestedSelectionSceneHarness() {
     dynamicLayer,
     selectionProbePlugin,
     s1: s1!,
+    s3: s3!,
     g1: g1!,
     g2: g2!,
   };
@@ -274,6 +277,66 @@ describe("SelectPlugin", () => {
     expect(g1Boundary!.visible()).toBe(true);
     expect(g2Boundary).toBeTruthy();
     expect(g2Boundary!.visible()).toBe(true);
+
+    harness.destroy();
+    setNodesSpy.mockRestore();
+    vi.useRealTimers();
+  });
+
+  test("scene2: s1 pointerdblclick twice then s3 pointerdown -> focus switches to s3", async () => {
+    vi.useFakeTimers();
+
+    const setNodesSpy = vi.spyOn(Konva.Transformer.prototype, "setNodes");
+    const { harness, dynamicLayer, selectionProbePlugin, s1, s3, g1 } = await createNestedSelectionSceneHarness();
+
+    s1.fire(
+      "pointerdown",
+      {
+        evt: new MouseEvent("pointerdown", { bubbles: true, button: 0 }),
+      },
+      true,
+    );
+    await flushCanvasEffects();
+
+    s1.fire(
+      "pointerdblclick",
+      {
+        evt: new MouseEvent("pointerdblclick", { bubbles: true, button: 0 }),
+      },
+      true,
+    );
+    await flushCanvasEffects();
+
+    s1.fire(
+      "pointerdblclick",
+      {
+        evt: new MouseEvent("pointerdblclick", { bubbles: true, button: 0 }),
+      },
+      true,
+    );
+    await flushCanvasEffects();
+
+    s3.fire(
+      "pointerdown",
+      {
+        evt: new MouseEvent("pointerdown", { bubbles: true, button: 0 }),
+      },
+      true,
+    );
+    await flushCanvasEffects();
+
+    expect(selectionProbePlugin.observedSelectionIds).toEqual([g1.id(), s3.id()]);
+
+    const transformer = dynamicLayer.getChildren().find(
+      (node): node is Konva.Transformer => node instanceof Konva.Transformer,
+    );
+    expect(transformer).toBeTruthy();
+    expect(transformer!.isVisible()).toBe(true);
+    expect(setNodesSpy).toHaveBeenLastCalledWith([s3]);
+
+    const g1Boundary = dynamicLayer.findOne<Konva.Rect>(`.group-boundary\:${g1.id()}`);
+    expect(g1Boundary).toBeTruthy();
+    expect(g1Boundary!.visible()).toBe(true);
 
     harness.destroy();
     setNodesSpy.mockRestore();

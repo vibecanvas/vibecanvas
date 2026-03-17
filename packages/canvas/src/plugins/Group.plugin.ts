@@ -256,6 +256,11 @@ export class GroupPlugin implements IPlugin {
   }
 
   setupGroupListeners(context: IPluginContext, group: Konva.Group) {
+    group.on('pointerclick', e => {
+      if (context.state.mode !== CanvasMode.SELECT) return
+      context.hooks.customEvent.call(CustomEvents.ELEMENT_POINTERCLICK, e)
+    })
+
     group.on('pointerdblclick', e => {
       if (context.state.mode !== CanvasMode.SELECT) return
       const earlyExit = context.hooks.customEvent.call(CustomEvents.ELEMENT_POINTERDBLCLICK, e)
@@ -268,7 +273,8 @@ export class GroupPlugin implements IPlugin {
       }
 
       if (e.type === 'pointerdown') {
-        context.hooks.customEvent.call(CustomEvents.ELEMENT_POINTERDOWN, e)
+        const earlyExit = context.hooks.customEvent.call(CustomEvents.ELEMENT_POINTERDOWN, e)
+        if (earlyExit) e.cancelBubble = true
       }
 
       if (e.type === 'dragstart' && e.evt?.altKey) {
@@ -278,7 +284,6 @@ export class GroupPlugin implements IPlugin {
     })
 
     group.on('dragmove transform', e => {
-      console.log('dragmove', e.currentTarget)
       this.#boundaries.values().forEach(b => b.update())
     })
   }

@@ -85,6 +85,11 @@ export class Shape2dPlugin implements IPlugin {
   }
 
   static setupShapeListeners(shape: Konva.Shape, context: IPluginContext) {
+    shape.on('pointerclick', e => {
+      if (context.state.mode !== CanvasMode.SELECT) return
+      context.hooks.customEvent.call(CustomEvents.ELEMENT_POINTERCLICK, e)
+    })
+
     shape.on('pointerdown dragstart', e => {
       if (context.state.mode !== CanvasMode.SELECT) {
         shape.stopDrag()
@@ -92,7 +97,8 @@ export class Shape2dPlugin implements IPlugin {
       }
 
       if (e.type === 'pointerdown') {
-        context.hooks.customEvent.call(CustomEvents.ELEMENT_POINTERDOWN, e)
+        const earlyExit = context.hooks.customEvent.call(CustomEvents.ELEMENT_POINTERDOWN, e)
+        if (earlyExit) e.cancelBubble = true
       }
 
       if (e.type === 'dragstart' && e.evt.altKey) {
