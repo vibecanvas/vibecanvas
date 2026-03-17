@@ -60,10 +60,10 @@ export class ExampleScenePlugin implements IPlugin {
     const [s1, s2, s3] = shapes
     if (!s1 || !s2 || !s3) return
 
-    ;[s1, s2, s3].forEach(shape => {
-      Shape2dPlugin.setupShapeListeners(shape, context)
-      shape.setDraggable(true)
-    })
+      ;[s1, s2, s3].forEach(shape => {
+        Shape2dPlugin.setupShapeListeners(context, shape)
+        shape.setDraggable(true)
+      })
 
     const g1 = GroupPlugin.group(context, [s1, s2])
     groupPlugin.setupGroupListeners(context, g1)
@@ -73,10 +73,10 @@ export class ExampleScenePlugin implements IPlugin {
     const [s1, s2, s3, s4, s5, s6] = shapes
     if (!s1 || !s2 || !s3 || !s4 || !s5 || !s6) return
 
-    ;[s1, s2, s3, s4, s5, s6].forEach(shape => {
-      Shape2dPlugin.setupShapeListeners(shape, context)
-      shape.setDraggable(true)
-    })
+      ;[s1, s2, s3, s4, s5, s6].forEach(shape => {
+        Shape2dPlugin.setupShapeListeners(context, shape)
+        shape.setDraggable(true)
+      })
 
     const g1 = GroupPlugin.group(context, [s1, s2])
     groupPlugin.setupGroupListeners(context, g1)

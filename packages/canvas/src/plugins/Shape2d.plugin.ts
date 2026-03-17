@@ -78,13 +78,13 @@ export class Shape2dPlugin implements IPlugin {
       context.hooks.customEvent.call(CustomEvents.TOOL_SELECT, 'select')
 
       if (!shape) return;
-      Shape2dPlugin.setupShapeListeners(shape, context)
+      Shape2dPlugin.setupShapeListeners(context, shape)
       shape.setDraggable(true)
 
     })
   }
 
-  static setupShapeListeners(shape: Konva.Shape, context: IPluginContext) {
+  static setupShapeListeners(context: IPluginContext, shape: Konva.Shape) {
     shape.on('pointerclick', e => {
       if (context.state.mode !== CanvasMode.SELECT) return
       context.hooks.customEvent.call(CustomEvents.ELEMENT_POINTERCLICK, e)
@@ -103,7 +103,7 @@ export class Shape2dPlugin implements IPlugin {
 
       if (e.type === 'dragstart' && e.evt.altKey) {
         shape.stopDrag()
-        Shape2dPlugin.createCloneDrag(shape, context)
+        Shape2dPlugin.createCloneDrag(context, shape)
       }
     })
 
@@ -139,7 +139,7 @@ export class Shape2dPlugin implements IPlugin {
     context.staticForegroundLayer.add(shape);
   }
 
-  static createCloneDrag(shape: Konva.Shape, context: IPluginContext) {
+  static createCloneDrag(context: IPluginContext, shape: Konva.Shape) {
     const backendData = shape.getAttr('backendData') as TElement
     let newShape: Konva.Shape | null = null;
     if (backendData.data.type === 'rect') {
@@ -157,7 +157,7 @@ export class Shape2dPlugin implements IPlugin {
         newShape.setAttr('backendData', { ...newShape.getAttr('backendData'), x, y })
       })
       newShape.on('dragend', () => {
-        Shape2dPlugin.setupShapeListeners(newShape, context)
+        Shape2dPlugin.setupShapeListeners(context, newShape)
         newShape.moveToTop()
         newShape.setDraggable(true)
       })

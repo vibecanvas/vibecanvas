@@ -88,7 +88,7 @@ export function initializeScene02NestedGroupsLeafShapes(args: {
   });
 
   [s1, s2, s3].forEach((shape) => {
-    Shape2dPlugin.setupShapeListeners(shape, args.context);
+    Shape2dPlugin.setupShapeListeners(args.context, shape);
     shape.setDraggable(true);
   });
 
