@@ -1,5 +1,5 @@
 import Konva from "konva";
-import type { KonvaEventObject } from "konva/lib/Node";
+import type { KonvaEventObject, Node } from "konva/lib/Node";
 import type { Shape, ShapeConfig } from "konva/lib/Shape";
 import { CustomEvents } from "../custom-events";
 import { CanvasMode } from "../services/canvas/enum";
@@ -71,48 +71,21 @@ export class SelectPlugin implements IPlugin {
 
     context.hooks.pointerDown.tap((e) => {
       if (context.state.mode !== CanvasMode.SELECT) return;
-      const pointer = getSelectionLayerPointerPosition(context);
-      if (!pointer) return;
-      if (e.target !== context.stage) return;
-
-      this.#selectionRectangle.visible(true);
-      this.#selectionRectangle.position(pointer);
-      this.#selectionRectangle.size({ width: 0, height: 0 });
-      this.#selectionRectangle.moveToTop();
-
-      context.setState('selection', []);
-
-      context.dynamicLayer.batchDraw();
+      this.handlePointerDown(context, e)
     });
 
-    context.hooks.pointerMove.tap(() => {
+    context.hooks.pointerMove.tap((e) => {
       if (context.state.mode !== CanvasMode.SELECT || !this.#selectionRectangle.visible()) return;
-      const pointer = getSelectionLayerPointerPosition(context);
-      if (!pointer) return;
-
-      this.#selectionRectangle.size({
-        width: pointer.x - this.#selectionRectangle.x(),
-        height: pointer.y - this.#selectionRectangle.y(),
-      });
-
-      const topNodes = context.staticForegroundLayer.getChildren(item => item.parent?.id === context.staticForegroundLayer.id)
-      const inSelection = topNodes.filter(node => {
-        return Konva.Util.haveIntersection(node.getClientRect(), this.#selectionRectangle.getClientRect());
-      }).sort((a, b) => a.id().localeCompare(b.id()))
-
-      if (!hasSameSelectionOrder(context.state.selection, inSelection)) {
-        context.setState('selection', inSelection);
-      }
-
-      context.dynamicLayer.batchDraw();
+      this.handlePointerMove(context, e)
     });
 
     context.hooks.pointerUp.tap(() => {
       if (context.state.mode !== CanvasMode.SELECT) return;
       this.#selectionRectangle.visible(false);
-      context.dynamicLayer.batchDraw();
     });
   }
+
+  private static handleKeyDown(context: IPluginContext, payload: KeyboardEvent) { }
 
   private static handleElementPointerDown(context: IPluginContext, payload: KonvaEventObject<PointerEvent, Shape<ShapeConfig> | Group>) {
     const path = getSelectionPath(context, payload.currentTarget);
@@ -139,4 +112,37 @@ export class SelectPlugin implements IPlugin {
 
     return false
   }
+
+  private handlePointerDown(context: IPluginContext, payload: KonvaEventObject<PointerEvent, Node>) {
+    const pointer = getSelectionLayerPointerPosition(context);
+    if (!pointer) return;
+    if (payload.target !== context.stage) return;
+
+    this.#selectionRectangle.visible(true);
+    this.#selectionRectangle.position(pointer);
+    this.#selectionRectangle.size({ width: 0, height: 0 });
+    this.#selectionRectangle.moveToTop();
+
+    context.setState('selection', []);
+  }
+
+  private handlePointerMove(context: IPluginContext, payload: KonvaEventObject<MouseEvent, Node>) {
+    const pointer = getSelectionLayerPointerPosition(context);
+    if (!pointer) return;
+
+    this.#selectionRectangle.size({
+      width: pointer.x - this.#selectionRectangle.x(),
+      height: pointer.y - this.#selectionRectangle.y(),
+    });
+
+    const topNodes = context.staticForegroundLayer.getChildren(item => item.parent?.id === context.staticForegroundLayer.id)
+    const inSelection = topNodes.filter(node => {
+      return Konva.Util.haveIntersection(node.getClientRect(), this.#selectionRectangle.getClientRect());
+    }).sort((a, b) => a.id().localeCompare(b.id()))
+
+    if (!hasSameSelectionOrder(context.state.selection, inSelection)) {
+      context.setState('selection', inSelection);
+    }
+  }
+
 }
