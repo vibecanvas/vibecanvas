@@ -15,6 +15,8 @@ export class TransformPlugin implements IPlugin {
       // e.cancelBubble = true
     })
 
+
+
   }
 
   apply(context: IPluginContext): void {
@@ -47,7 +49,7 @@ export class TransformPlugin implements IPlugin {
    * @param selection 
    * @returns selection
    */
-  private static filterSelection(selection: (Konva.Group | Konva.Shape)[]) {
+  static filterSelection(selection: (Konva.Group | Konva.Shape)[]) {
     let subGroup = selection.find(sel => sel.parent instanceof Konva.Group)
     if (!subGroup) return selection
 

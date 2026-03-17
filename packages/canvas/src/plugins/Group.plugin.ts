@@ -5,6 +5,7 @@ import { CanvasMode } from "../services/canvas/enum";
 import type { IPlugin, IPluginContext } from "./interface";
 import { Shape2dPlugin } from "./Shape2d.plugin";
 import { TElement, TGroup } from "@vibecanvas/shell/automerge/index";
+import { TransformPlugin } from "./Transform.plugin";
 
 
 export class GroupPlugin implements IPlugin {
@@ -201,7 +202,31 @@ export class GroupPlugin implements IPlugin {
         boundary.node.destroy()
         this.#boundaries.delete(id)
       })
+
+
     })
+
+    /**
+     * Set draggable state for all groups on selection change
+     * to allow nested group dragging
+     */
+    createEffect(() => {
+      const allNodes = context.staticForegroundLayer.find(
+        (node: any) => node instanceof Konva.Group || node instanceof Konva.Shape
+      ) as Array<Konva.Group | Konva.Shape>;
+      // disable drag for everything first
+      allNodes.forEach(node => node.draggable(false));
+      // deepest selected node wins
+      const active = TransformPlugin.filterSelection(context.state.selection)[0];
+      if (active) {
+        active.draggable(true);
+        return;
+      }
+      // fallback: only top-level groups draggable
+      context.staticForegroundLayer.getChildren().forEach(node => {
+        if (node instanceof Konva.Group) node.draggable(true);
+      });
+    });
   }
 
   private selectGroup(context: IPluginContext, group: Konva.Group) {
