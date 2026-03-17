@@ -188,7 +188,6 @@ export class GroupPlugin implements IPlugin {
     createEffect(() => {
       const markedToRemove = new Set(this.#boundaries.keys())
       context.state.selection.filter(sel => sel instanceof Konva.Group).forEach(group => {
-        console.log('show', group)
         setTimeout(() => {
           // circumvent set fighting
           this.selectGroup(context, group)
@@ -209,7 +208,6 @@ export class GroupPlugin implements IPlugin {
     const { getBoundaryBox, hide, node, show, update } = this.#boundaries.get(group.id()) ?? GroupPlugin.createBoundaryRect(context, group)
     this.#boundaries.set(group.id(), { getBoundaryBox, hide, node, show, update })
     context.dynamicLayer.add(node)
-    console.log(this.#boundaries, group.id())
     show()
   }
 
@@ -255,6 +253,7 @@ export class GroupPlugin implements IPlugin {
     })
 
     group.on('dragmove transform', e => {
+      console.log('dragmove', e.currentTarget)
       this.#boundaries.values().forEach(b => b.update())
     })
   }

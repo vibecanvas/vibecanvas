@@ -3,7 +3,7 @@ import { TCanvasDoc } from "@vibecanvas/shell/automerge/index";
 import type * as schema from "@vibecanvas/shell/database/schema";
 import { createEffect, createResource, Match, Switch } from "solid-js";
 import { findDocument } from "../services/automerge";
-import { CanvasService } from "../services/canvas/Canvas.service";
+import { CanvasService, defaultPlugins } from "../services/canvas/Canvas.service";
 
 export type TBackendCanvas = typeof schema.canvas.$inferSelect;
 
@@ -44,7 +44,7 @@ export function Canvas(props: CanvasPageProps) {
       canvasService = null;
     }
 
-    canvasService = new CanvasService(containerRef, props.store.onToggleSidebar, activeHandle);
+    canvasService = new CanvasService(containerRef, activeHandle, defaultPlugins({ onToggleSidebar: props.store.onToggleSidebar }));
     canvasService.initialized.then(() => {
       console.log("[CanvasPage] CanvasService initialized");
     });

@@ -12,10 +12,10 @@ export class ExampleScenePlugin implements IPlugin {
   }
 
   apply(context: IPluginContext): void {
-    ExampleScenePlugin.scene2(this.#groupPlugin, context, this.createShapes(6))
+    ExampleScenePlugin.scene2(this.#groupPlugin, context, ExampleScenePlugin.createShapes(6))
   }
 
-  private createShapes(n: number) {
+  static createShapes(n: number) {
     const colors = ['red', 'blue', 'orange', 'green', 'gold', 'teal']
     const widths = [96, 132, 88, 148, 112, 124]
     const heights = [84, 104, 156, 92, 136, 76]

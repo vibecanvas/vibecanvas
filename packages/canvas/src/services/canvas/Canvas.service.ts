@@ -5,22 +5,36 @@ import type { Group } from "konva/lib/Group";
 import type { Shape, ShapeConfig } from "konva/lib/Shape";
 import { createStore, SetStoreFunction } from 'solid-js/store';
 import type { TCustomEvent } from "../../custom-events";
-import { CameraControlPlugin } from "../../plugins/CameraControl.plugin";
-import { EventListenerPlugin } from "../../plugins/EventListener.plugin";
-import { ExampleScenePlugin } from "../../plugins/ExampleScene.plugin";
-import { GridPlugin } from "../../plugins/Grid.plugin";
-import { GroupPlugin } from "../../plugins/Group.plugin";
-import type { IPluginContext, TMouseEvent, TPointerEvent, TWheelEvent } from "../../plugins/interface";
-import { SelectPlugin } from "../../plugins/Select.plugin";
-import { Shape2dPlugin } from "../../plugins/Shape2d.plugin";
-import { ToolbarPlugin } from "../../plugins/Toolbar.plugin";
-import { TransformPlugin } from "../../plugins/Transform.plugin";
+import {
+  CameraControlPlugin, EventListenerPlugin, ExampleScenePlugin,
+  GridPlugin, GroupPlugin, SelectPlugin, Shape2dPlugin, ToolbarPlugin,
+  TransformPlugin
+} from "../../plugins";
+import type { IPlugin, IPluginContext, TMouseEvent, TPointerEvent, TWheelEvent } from "../../plugins/interface";
 import { AsyncParallelHook, SyncExitHook, SyncHook } from "../../tapable";
 import { Camera } from "./Camera";
-import { Crdt } from "./crdt";
+import { Crdt } from "./Crdt";
 import { CanvasMode, Theme } from "./enum";
 import type { IState } from "./interface";
 
+export function defaultPlugins(
+  args: { onToggleSidebar: () => void }
+): IPlugin[] {
+  const groupPlugin = new GroupPlugin();
+  const plugins = [
+    new EventListenerPlugin(),
+    new GridPlugin(),
+    new CameraControlPlugin(),
+    new ToolbarPlugin(args.onToggleSidebar),
+    new SelectPlugin(),
+    new TransformPlugin(),
+    new Shape2dPlugin(),
+    groupPlugin,
+    new ExampleScenePlugin(groupPlugin)
+  ];
+
+  return plugins
+}
 
 export class CanvasService {
   #stage: Konva.Stage;
@@ -36,7 +50,7 @@ export class CanvasService {
   #docHandle: DocHandle<TCanvasDoc>;
   #crdt: Crdt;
 
-  constructor(container: HTMLDivElement, onToggleSidebar: () => void, docHandle: DocHandle<TCanvasDoc>) {
+  constructor(container: HTMLDivElement, docHandle: DocHandle<TCanvasDoc>, plugins: IPlugin[]) {
     this.#docHandle = docHandle;
     this.#crdt = new Crdt(docHandle);
     this.#stage = new Konva.Stage({
@@ -93,20 +107,6 @@ export class CanvasService {
       state: this.#state,
       setState: this.#setState,
     }
-
-    // needs instance beforehand
-    const groupPlugin = new GroupPlugin();
-    const plugins = [
-      new EventListenerPlugin(),
-      new GridPlugin(),
-      new CameraControlPlugin(),
-      new ToolbarPlugin(onToggleSidebar),
-      new SelectPlugin(),
-      new TransformPlugin(),
-      new Shape2dPlugin(),
-      groupPlugin,
-      new ExampleScenePlugin(groupPlugin)
-    ];
 
     this.#instancePromise = (async () => {
       // @ts-expect-error is assigned in constructor
