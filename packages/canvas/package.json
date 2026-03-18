@@ -29,14 +29,15 @@
     "@automerge/automerge-repo-network-broadcastchannel": "^2.5.1",
     "@automerge/automerge-repo-network-websocket": "catalog:",
     "@automerge/automerge-repo-storage-indexeddb": "^2.5.1",
-    "@opencode-ai/sdk": "catalog:",
-    "@vibecanvas/shell": "workspace:*",
-    "@orpc/contract": "catalog:",
-    "zod": "catalog:",
-    "konva": "^9.3.22",
-    "perfect-freehand": "^1.2.2",
     "@kobalte/core": "catalog:",
+    "@opencode-ai/sdk": "catalog:",
+    "@orpc/contract": "catalog:",
+    "@vibecanvas/shell": "workspace:*",
+    "konva": "^9.3.22",
     "lucide-solid": "catalog:",
-    "solid-js": "catalog:"
+    "microdiff": "^1.5.0",
+    "perfect-freehand": "^1.2.2",
+    "solid-js": "catalog:",
+    "zod": "catalog:"
   }
 }
