@@ -228,6 +228,63 @@ describe("SelectPlugin", () => {
     vi.useRealTimers();
   });
 
+  test("scene2: s1 pointerdown twice with delay -> only outer group stays focused", async () => {
+    vi.useFakeTimers();
+
+    const setNodesSpy = vi.spyOn(Konva.Transformer.prototype, "setNodes");
+    const { harness, dynamicLayer, selectionProbePlugin, s1, g1, g2 } = await createNestedSelectionSceneHarness();
+
+    s1.fire(
+      "pointerdown",
+      {
+        evt: new MouseEvent("pointerdown", { bubbles: true, button: 0 }),
+      },
+      true,
+    );
+
+    await flushCanvasEffects();
+
+    expect(selectionProbePlugin.observedSelectionIds).toEqual([g1.id()]);
+
+    const transformer = dynamicLayer.getChildren().find(
+      (node): node is Konva.Transformer => node instanceof Konva.Transformer,
+    );
+    expect(transformer).toBeTruthy();
+    expect(transformer!.isVisible()).toBe(true);
+    expect(setNodesSpy).toHaveBeenLastCalledWith([g1]);
+
+    const g1Boundary = dynamicLayer.findOne<Konva.Rect>(`.group-boundary\:${g1.id()}`);
+    const g2BoundaryBefore = dynamicLayer.findOne<Konva.Rect>(`.group-boundary\:${g2.id()}`);
+    expect(g1Boundary).toBeTruthy();
+    expect(g1Boundary!.visible()).toBe(true);
+    expect(g2BoundaryBefore).toBeFalsy();
+
+    vi.advanceTimersByTime(20);
+    await flushCanvasEffects();
+
+    s1.fire(
+      "pointerdown",
+      {
+        evt: new MouseEvent("pointerdown", { bubbles: true, button: 0 }),
+      },
+      true,
+    );
+
+    await flushCanvasEffects();
+
+    expect(selectionProbePlugin.observedSelectionIds).toEqual([g1.id()]);
+    expect(setNodesSpy).toHaveBeenLastCalledWith([g1]);
+
+    const g2BoundaryAfter = dynamicLayer.findOne<Konva.Rect>(`.group-boundary\:${g2.id()}`);
+    expect(g1Boundary!.visible()).toBe(true);
+    expect(g2BoundaryAfter).toBeFalsy();
+    expect(transformer!.isVisible()).toBe(true);
+
+    harness.destroy();
+    setNodesSpy.mockRestore();
+    vi.useRealTimers();
+  });
+
   test("scene2: s1 pointerdblclick twice -> g1 and g2 keep boundaries and transformer targets s1", async () => {
     vi.useFakeTimers();
 
