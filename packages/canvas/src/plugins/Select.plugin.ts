@@ -40,6 +40,15 @@ function getSelectionPath(
   return path.reverse();
 }
 
+function isSelectionPathPrefix(
+  currentSelection: Array<Konva.Group | Konva.Shape>,
+  path: Array<Konva.Group | Konva.Shape>,
+) {
+  if (currentSelection.length > path.length) return false;
+
+  return currentSelection.every((node, index) => node === path[index]);
+}
+
 export class SelectPlugin implements IPlugin {
   #selectionRectangle: Konva.Rect;
 
@@ -88,8 +97,8 @@ export class SelectPlugin implements IPlugin {
 
   private static handleElementPointerDown(context: IPluginContext, payload: KonvaEventObject<PointerEvent, Shape<ShapeConfig> | Group>) {
     const path = getSelectionPath(context, payload.currentTarget);
-    const hasFocusedAncestor = path.some(node => node instanceof Konva.Group && context.state.selection.includes(node));
-    const nextSelection = hasFocusedAncestor ? path : path[0] ? [path[0]] : [];
+    const nextDepth = Math.min(Math.max(context.state.selection.length, 1), path.length);
+    const nextSelection = path.slice(0, nextDepth);
 
     if (!hasSameSelectionOrder(context.state.selection, nextSelection)) {
       context.setState('selection', nextSelection)
@@ -99,14 +108,11 @@ export class SelectPlugin implements IPlugin {
   }
 
   private static handleElementDoubleClick(context: IPluginContext, payload: KonvaEventObject<PointerEvent, Shape<ShapeConfig> | Group>): boolean {
-    const isRoot = payload.currentTarget.parent === context.staticForegroundLayer
-    const isGrouped = payload.currentTarget.parent instanceof Konva.Group
+    const path = getSelectionPath(context, payload.currentTarget);
 
-    if (isGrouped && context.state.selection.includes(payload.currentTarget.parent as Group)) {
-      if (!context.state.selection.includes(payload.currentTarget)) {
-        context.setState('selection', context.state.selection.length, payload.currentTarget)
-        return true
-      }
+    if (isSelectionPathPrefix(context.state.selection, path) && context.state.selection.length < path.length) {
+      context.setState('selection', path.slice(0, context.state.selection.length + 1))
+      return true
     }
 
     return false
