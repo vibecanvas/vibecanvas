@@ -33,7 +33,7 @@ function createRect(args: {
 }) {
   const now = Date.now();
 
-  return Shape2dPlugin.createPreviewRect({
+  return Shape2dPlugin.createRectFromElement({
     id: args.id,
     x: args.x,
     y: args.y,

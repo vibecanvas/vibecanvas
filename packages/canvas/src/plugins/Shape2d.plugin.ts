@@ -1,4 +1,4 @@
-import { TElement, TElementData, TRectData } from "@vibecanvas/shell/automerge/index";
+import { TElement, TElementData, TElementStyle, TRectData } from "@vibecanvas/shell/automerge/index";
 import Konva from "konva";
 import type { TTool } from "../components/FloatingCanvasToolbar/toolbar.types";
 import { CustomEvents } from "../custom-events";
@@ -34,7 +34,7 @@ export class Shape2dPlugin implements IPlugin {
       if (!pointer) return;
 
       if (this.#activeTool === 'rectangle') {
-        this.#previewDrawing = Shape2dPlugin.createPreviewRect({
+        this.#previewDrawing = Shape2dPlugin.createRectFromElement({
           id: crypto.randomUUID(),
           angle: 0,
           x: pointer.x,
@@ -80,8 +80,44 @@ export class Shape2dPlugin implements IPlugin {
       if (!shape) return;
       Shape2dPlugin.setupShapeListeners(context, shape)
       shape.setDraggable(true)
-
+      console.log('finalize')
+      context.crdt.patch({ elements: [Shape2dPlugin.toTElement(shape)], groups: [] })
     })
+  }
+
+  static toTElement(shape: Konva.Shape): TElement {
+    let data!: TElementData
+    if (shape instanceof Konva.Rect) {
+      data = {
+        type: 'rect',
+        w: shape.width() * shape.scaleX(),
+        h: shape.height() * shape.scaleY(),
+      }
+    } else
+      throw new Error('Unsupported shape type')
+
+    let style: TElementStyle = {
+      opacity: shape.opacity(),
+      strokeWidth: shape.strokeWidth(),
+    }
+
+    if (typeof shape.fill() === 'string') style.backgroundColor = shape.fill() as string
+    if (typeof shape.stroke() === 'string') style.strokeColor = shape.stroke() as string
+
+    return {
+      id: shape.id(),
+      angle: shape.rotation(),
+      x: shape.x(),
+      y: shape.y(),
+      bindings: [],
+      createdAt: Date.now(),
+      locked: false,
+      parentGroupId: null,
+      updatedAt: Date.now(),
+      zIndex: '',
+      data,
+      style,
+    }
   }
 
   static setupShapeListeners(context: IPluginContext, shape: Konva.Shape) {
@@ -145,7 +181,7 @@ export class Shape2dPlugin implements IPlugin {
     return previewShape;
   }
 
-  static createPreviewRect(element: TElement) {
+  static createRectFromElement(element: TElement) {
     const data = element.data as TRectData
     const shape = new Konva.Rect({
       id: element.id,
@@ -159,13 +195,12 @@ export class Shape2dPlugin implements IPlugin {
     });
 
     return shape
-
   }
 
   static createShapeFromNode(shape: Konva.Shape) {
     if (!(shape instanceof Konva.Rect)) return null
 
-    return Shape2dPlugin.createPreviewRect({
+    return Shape2dPlugin.createRectFromElement({
       id: shape.id() || crypto.randomUUID(),
       angle: shape.rotation(),
       x: shape.x(),

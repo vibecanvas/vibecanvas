@@ -5,6 +5,7 @@ import type { Camera } from '../services/canvas/Camera';
 import type { History } from "../services/canvas/History";
 import type { IState } from '../services/canvas/interface';
 import type { AsyncParallelHook, SyncExitHook, SyncHook } from '../tapable';
+import type { Crdt } from "../services/canvas/Crdt";
 
 export type TPointerEvent = Konva.KonvaEventObject<PointerEvent>;
 export type TMouseEvent = Konva.KonvaEventObject<MouseEvent>;
@@ -50,6 +51,7 @@ export interface IPluginContext {
   state: IState;
   setState: SetStoreFunction<IState>;
   history: History;
+  crdt: Crdt;
 
 }
 

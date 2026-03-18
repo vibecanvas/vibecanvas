@@ -33,7 +33,7 @@ export class ExampleScenePlugin implements IPlugin {
       const now = Date.now()
       const position = positions[index % positions.length]
 
-      return Shape2dPlugin.createPreviewRect({
+      return Shape2dPlugin.createRectFromElement({
         id: String(index + 1),
         x: position.x,
         y: position.y,

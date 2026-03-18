@@ -32,7 +32,7 @@ export function defaultPlugins(
     new TransformPlugin(),
     new Shape2dPlugin(),
     groupPlugin,
-    new ExampleScenePlugin(groupPlugin)
+    // new ExampleScenePlugin(groupPlugin)
   ];
 
   return plugins
@@ -49,12 +49,10 @@ export class CanvasService {
   #resizeObserver: ResizeObserver;
   #state: IState;
   #setState: SetStoreFunction<IState>;
-  #docHandle: DocHandle<TCanvasDoc>;
   #crdt: Crdt;
   #history: History;
 
   constructor(container: HTMLDivElement, docHandle: DocHandle<TCanvasDoc>, plugins: IPlugin[]) {
-    this.#docHandle = docHandle;
     this.#history = new History();
     this.#crdt = new Crdt(docHandle);
     this.#stage = new Konva.Stage({
@@ -110,16 +108,19 @@ export class CanvasService {
       state: this.#state,
       setState: this.#setState,
       history: this.#history,
+      crdt: this.#crdt,
     }
 
     this.#instancePromise = (async () => {
       // @ts-expect-error is assigned in constructor
       const { hooks } = this.#pluginContext;
       plugins.forEach((plugin) => {
-        plugin?.apply(this.#pluginContext);
+        plugin.apply(this.#pluginContext);
       });
       hooks.init.call();
       await hooks.initAsync.promise();
+      // @ts-expect-error is assigned in constructor
+      await this.#crdt.loadCanvas(this.#pluginContext)
       return this;
     })();
 
@@ -145,24 +146,6 @@ export class CanvasService {
     this.#stage.destroy();
     this.#resizeObserver.disconnect();
     this.#pluginContext.hooks.destroy.call();
-  }
-
-  private loadCanvas() {
-    const doc = this.#docHandle.doc()
-    const supportedTypes: TCanvasDoc['elements'][number]['data']['type'][] = ['rect']
-
-    // build all groups first
-
-    // add all elements to their groups or stage
-    Object.values(doc.elements).forEach((element) => {
-      const parent = this.#staticForegroundLayer; // no groups yet
-
-      if (supportedTypes.includes(element.data.type)) {
-
-      }
-
-
-    })
   }
 
 } 
