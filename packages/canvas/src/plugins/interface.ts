@@ -1,10 +1,10 @@
 import type Konva from "konva";
 import type { SetStoreFunction } from 'solid-js/store';
-import type { Camera } from 'src/services/canvas/Camera';
-import type { CanvasMode } from 'src/services/canvas/enum';
-import type { IState } from 'src/services/canvas/interface';
 import type { TCustomEvent } from '../custom-events';
-import { AsyncParallelHook, SyncExitHook, SyncHook } from '../tapable';
+import type { Camera } from '../services/canvas/Camera';
+import type { History } from "../services/canvas/History";
+import type { IState } from '../services/canvas/interface';
+import type { AsyncParallelHook, SyncExitHook, SyncHook } from '../tapable';
 
 export type TPointerEvent = Konva.KonvaEventObject<PointerEvent>;
 export type TMouseEvent = Konva.KonvaEventObject<MouseEvent>;
@@ -49,6 +49,7 @@ export interface IPluginContext {
   camera: Camera;
   state: IState;
   setState: SetStoreFunction<IState>;
+  history: History;
 
 }
 
