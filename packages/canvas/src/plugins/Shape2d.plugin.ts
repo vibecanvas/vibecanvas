@@ -86,6 +86,7 @@ export class Shape2dPlugin implements IPlugin {
 
   static setupShapeListeners(context: IPluginContext, shape: Konva.Shape) {
     shape.on('pointerclick', e => {
+      console.log(shape.getType(), shape.fill(), shape.x(), shape.y())
       if (context.state.mode !== CanvasMode.SELECT) return
       context.hooks.customEvent.call(CustomEvents.ELEMENT_POINTERCLICK, e)
     })
@@ -114,74 +115,85 @@ export class Shape2dPlugin implements IPlugin {
     })
 
     shape.on('dragmove', e => {
-      const backendData: TElement = shape.getAttr('backendData');
-      const { x, y } = shape.position();
-      backendData.x = x
-      backendData.y = y
-      shape.setAttr('backendData', backendData)
+      const { x, y } = shape.absolutePosition();
     })
 
     shape.on('transform', e => {
-      const backendData: TElement = shape.getAttr('backendData');
-      const rotation = shape.rotation()
-      const { x, y } = shape.position();
-      const { height, width } = shape.size()
-      backendData.angle = rotation
-      backendData.x = x
-      backendData.y = y
-      if (backendData.data.type === 'rect' || backendData.data.type === 'diamond') {
-        backendData.data.h = height
-        backendData.data.w = width
-      }
-      shape.setAttr('backendData', backendData)
     })
 
     context.staticForegroundLayer.add(shape);
   }
 
   static createCloneDrag(context: IPluginContext, shape: Konva.Shape) {
-    const backendData = shape.getAttr('backendData') as TElement
-    let newShape: Konva.Shape | null = null;
-    if (backendData.data.type === 'rect') {
-      const newBackendData = structuredClone(backendData)
-      newBackendData.id = crypto.randomUUID()
-      newShape = Shape2dPlugin.createPreviewRect(newBackendData)
-    }
+    const previewShape = Shape2dPlugin.createPreviewClone(shape)
+    if (!previewShape) return null
 
-    if (newShape) {
-      context.dynamicLayer.add(newShape)
-      newShape.startDrag()
-      newShape.on('dragmove', e => {
-        const { x, y } = newShape.getPosition()
-        // NOTE: better to selectivly set data, idk how
-        newShape.setAttr('backendData', { ...newShape.getAttr('backendData'), x, y })
-      })
-      newShape.on('dragend', () => {
-        Shape2dPlugin.setupShapeListeners(context, newShape)
-        newShape.moveToTop()
-        newShape.setDraggable(true)
-      })
-    }
-    return newShape;
+    context.dynamicLayer.add(previewShape)
+    previewShape.startDrag()
+    previewShape.on('dragend', () => {
+      const newShape = Shape2dPlugin.createShapeFromNode(previewShape)
+      previewShape.destroy()
 
+      if (!newShape) return
+
+      Shape2dPlugin.setupShapeListeners(context, newShape)
+      newShape.moveToTop()
+      newShape.setDraggable(true)
+      context.setState('selection', [newShape])
+    })
+
+    return previewShape;
   }
 
-  static createPreviewRect(backendData: TElement) {
-    const data = backendData.data as TRectData
+  static createPreviewRect(element: TElement) {
+    const data = element.data as TRectData
     const shape = new Konva.Rect({
-      id: backendData.id,
-      rotation: backendData.angle,
-      x: backendData.x,
-      y: backendData.y,
+      id: element.id,
+      rotation: element.angle,
+      x: element.x,
+      y: element.y,
       width: data.w,
       height: data.h,
-      fill: backendData.style.backgroundColor,
+      fill: element.style.backgroundColor,
       draggable: false,
-      backendData: backendData
     });
 
     return shape
 
+  }
+
+  static createShapeFromNode(shape: Konva.Shape) {
+    if (!(shape instanceof Konva.Rect)) return null
+
+    return Shape2dPlugin.createPreviewRect({
+      id: shape.id() || crypto.randomUUID(),
+      angle: shape.rotation(),
+      x: shape.x(),
+      y: shape.y(),
+      bindings: [],
+      createdAt: Date.now(),
+      locked: false,
+      parentGroupId: null,
+      updatedAt: Date.now(),
+      zIndex: '',
+      data: {
+        type: 'rect',
+        w: shape.width() * shape.scaleX(),
+        h: shape.height() * shape.scaleY(),
+      },
+      style: {
+        backgroundColor: shape.fill() as string || 'red',
+      },
+    })
+  }
+
+  static createPreviewClone(shape: Konva.Shape) {
+    const newShape = Shape2dPlugin.createShapeFromNode(shape)
+    if (!newShape) return null
+
+    newShape.id(crypto.randomUUID())
+    newShape.setDraggable(true)
+    return newShape
   }
 
 }

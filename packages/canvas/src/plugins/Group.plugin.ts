@@ -54,27 +54,18 @@ export class GroupPlugin implements IPlugin {
   }
 
   static group(context: IPluginContext, selections: (Konva.Group | Konva.Shape)[]) {
-    const backendData: TGroup = {
-      id: crypto.randomUUID(),
-      color: null,
-      createdAt: Date.now(),
-      parentGroupId: null,
-      locked: false,
-      name: ''
-    }
     const x = Math.min(...selections.map(s => s.x()))
     const y = Math.min(...selections.map(s => s.y()))
     const width = Math.max(...selections.map(s => s.x() + s.width())) - x
     const height = Math.max(...selections.map(s => s.y() + s.height())) - y
 
     const newGroup = new Konva.Group({
-      id: backendData.id,
+      id: crypto.randomUUID(),
       x,
       y,
       width,
       height,
       draggable: true,
-      backendData
     })
     context.staticForegroundLayer.add(newGroup)
 
@@ -166,21 +157,11 @@ export class GroupPlugin implements IPlugin {
     clone.setDraggable(true)
 
     clone.getChildren().forEach(node => {
-      node.id(crypto.randomUUID())
-      node.setDraggable(false)
-
       if (node instanceof Konva.Group) {
         this.refreshCloneSubtree(node)
-      }
-
-      if (node instanceof Konva.Shape && Shape2dPlugin.supportedTypes.has(node.getAttr('backendData').data.type)) {
-        const backendData = node.getAttr('backendData') as TElement
-        if (backendData) {
-          node.setAttr('backendData', {
-            ...structuredClone(backendData),
-            id: node.id(),
-          })
-        }
+      } else {
+        node.id(crypto.randomUUID())
+        node.setDraggable(false)
       }
     })
   }
