@@ -80,7 +80,7 @@ export class Shape2dPlugin implements IPlugin {
       if (!shape) return;
       Shape2dPlugin.setupShapeListeners(context, shape)
       shape.setDraggable(true)
-      console.log('finalize')
+      context.staticForegroundLayer.add(shape);
       context.crdt.patch({ elements: [Shape2dPlugin.toTElement(shape)], groups: [] })
     })
   }
@@ -103,16 +103,19 @@ export class Shape2dPlugin implements IPlugin {
 
     if (typeof shape.fill() === 'string') style.backgroundColor = shape.fill() as string
     if (typeof shape.stroke() === 'string') style.strokeColor = shape.stroke() as string
+    const parent = shape.getParent()
+    const parentGroupId = parent instanceof Konva.Group ? parent.id() : null
+    const { x, y } = shape.absolutePosition()
 
     return {
       id: shape.id(),
       angle: shape.rotation(),
-      x: shape.x(),
-      y: shape.y(),
+      x,
+      y,
       bindings: [],
       createdAt: Date.now(),
       locked: false,
-      parentGroupId: null,
+      parentGroupId,
       updatedAt: Date.now(),
       zIndex: '',
       data,
@@ -152,12 +155,12 @@ export class Shape2dPlugin implements IPlugin {
 
     shape.on('dragmove', e => {
       const { x, y } = shape.absolutePosition();
+      context.crdt.patch({ elements: [Shape2dPlugin.toTElement(shape)], groups: [] })
     })
 
     shape.on('transform', e => {
     })
 
-    context.staticForegroundLayer.add(shape);
   }
 
   static createCloneDrag(context: IPluginContext, shape: Konva.Shape) {
@@ -175,6 +178,8 @@ export class Shape2dPlugin implements IPlugin {
       Shape2dPlugin.setupShapeListeners(context, newShape)
       newShape.moveToTop()
       newShape.setDraggable(true)
+      context.staticForegroundLayer.add(newShape);
+      context.crdt.patch({ elements: [Shape2dPlugin.toTElement(newShape)], groups: [] })
       context.setState('selection', [newShape])
     })
 
