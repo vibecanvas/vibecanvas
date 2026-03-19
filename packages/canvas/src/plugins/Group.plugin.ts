@@ -70,7 +70,7 @@ export class GroupPlugin implements IPlugin {
     context.staticForegroundLayer.add(newGroup)
 
     selections.forEach(node => {
-      const absolutePosition = node.getAbsolutePosition(context.staticForegroundLayer)
+      const absolutePosition = node.getAbsolutePosition()
       newGroup.add(node)
       node.setAbsolutePosition(absolutePosition)
       node.setDraggable(false)
