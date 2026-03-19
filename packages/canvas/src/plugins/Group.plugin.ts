@@ -62,19 +62,30 @@ export class GroupPlugin implements IPlugin {
   }
 
   static group(context: IPluginContext, selections: (Konva.Group | Konva.Shape)[]) {
+    return GroupPlugin.groupWithOptions(context, selections)
+  }
+
+  private static groupWithOptions(
+    context: IPluginContext,
+    selections: (Konva.Group | Konva.Shape)[],
+    args?: { groupId?: string, recordHistory?: boolean },
+  ) {
     const x = Math.min(...selections.map(s => s.x()))
     const y = Math.min(...selections.map(s => s.y()))
     const width = Math.max(...selections.map(s => s.x() + s.width())) - x
     const height = Math.max(...selections.map(s => s.y() + s.height())) - y
+    const selectionIds = selections.map(node => node.id())
+    const groupId = args?.groupId ?? crypto.randomUUID()
 
-    const newGroup = new Konva.Group({
-      id: crypto.randomUUID(),
-      x,
-      y,
-      width,
-      height,
-      draggable: true,
-    })
+    const newGroup = context.capabilities.createGroupFromTGroup?.({
+      id: groupId,
+      name: '',
+      color: null,
+      parentGroupId: null,
+      locked: false,
+      createdAt: Date.now(),
+    }) ?? new Konva.Group({ id: groupId, draggable: true })
+    newGroup.setAttrs({ x, y, width, height, draggable: true })
     context.staticForegroundLayer.add(newGroup)
 
     const parentNode = newGroup.getParent()
@@ -112,14 +123,44 @@ export class GroupPlugin implements IPlugin {
 
     context.crdt.patch({ elements: elementPatches, groups: groupPatches })
 
+    if (args?.recordHistory !== false) {
+      context.history.record({
+        label: 'group',
+        undo: () => {
+          const existingGroup = GroupPlugin.findGroupById(context, newGroup.id())
+          if (!existingGroup) return
+          const children = GroupPlugin.ungroupWithOptions(context, existingGroup, { recordHistory: false })
+          context.setState('selection', children)
+        },
+        redo: () => {
+          const nodes = GroupPlugin.findNodesByIds(context, selectionIds)
+          if (nodes.length !== selectionIds.length) return
+          const regrouped = GroupPlugin.groupWithOptions(context, nodes, {
+            groupId: newGroup.id(),
+            recordHistory: false,
+          })
+          context.setState('selection', [regrouped])
+        },
+      })
+    }
+
     return newGroup;
   }
 
   static ungroup(context: IPluginContext, group: Konva.Group) {
+    return GroupPlugin.ungroupWithOptions(context, group)
+  }
+
+  private static ungroupWithOptions(
+    context: IPluginContext,
+    group: Konva.Group,
+    args?: { recordHistory?: boolean },
+  ) {
     const parent = group.getParent()
     if (!parent) return []
 
     const children = group.getChildren().slice() as (Konva.Group | Konva.Shape)[]
+    const childIds = children.map(node => node.id())
     const nextParentGroupId = parent instanceof Konva.Group ? parent.id() : null
     const elementPatches: TElement[] = []
     const groupPatches: TGroup[] = []
@@ -149,7 +190,45 @@ export class GroupPlugin implements IPlugin {
     context.crdt.patch({ elements: elementPatches, groups: groupPatches })
     context.crdt.deleteById({ groupIds: [group.id()] })
 
+    if (args?.recordHistory !== false) {
+      context.history.record({
+        label: 'ungroup',
+        undo: () => {
+          const nodes = GroupPlugin.findNodesByIds(context, childIds)
+          if (nodes.length !== childIds.length) return
+          const regrouped = GroupPlugin.groupWithOptions(context, nodes, {
+            groupId: group.id(),
+            recordHistory: false,
+          })
+          context.setState('selection', [regrouped])
+        },
+        redo: () => {
+          const existingGroup = GroupPlugin.findGroupById(context, group.id())
+          if (!existingGroup) return
+          const ungroupedChildren = GroupPlugin.ungroupWithOptions(context, existingGroup, { recordHistory: false })
+          context.setState('selection', ungroupedChildren)
+        },
+      })
+    }
+
     return children
+  }
+
+  private static findNodeById(context: IPluginContext, id: string) {
+    return context.staticForegroundLayer.findOne((node: any) => {
+      return (node instanceof Konva.Group || node instanceof Konva.Shape) && node.id() === id
+    }) as Konva.Group | Konva.Shape | null
+  }
+
+  private static findGroupById(context: IPluginContext, id: string) {
+    const node = GroupPlugin.findNodeById(context, id)
+    return node instanceof Konva.Group ? node : null
+  }
+
+  private static findNodesByIds(context: IPluginContext, ids: string[]) {
+    return ids
+      .map(id => GroupPlugin.findNodeById(context, id))
+      .filter((node): node is Konva.Group | Konva.Shape => Boolean(node))
   }
 
   private static createBoundaryRect(context: IPluginContext, group: Konva.Group) {

@@ -129,4 +129,96 @@ describe("GroupPlugin", () => {
 
     harness.destroy();
   });
+
+  test("group action can be undone and redone", async () => {
+    let pluginContext!: IPluginContext;
+    const docHandle = createMockDocHandle() as DocHandle<TCanvasDoc>;
+
+    const harness = await createCanvasTestHarness({
+      docHandle,
+      plugins: [new GroupPlugin()],
+      initializeScene: (context) => {
+        pluginContext = context;
+
+        const rect1 = new Konva.Rect({ id: "rect-1", x: 30, y: 40, width: 50, height: 40 });
+        const rect2 = new Konva.Rect({ id: "rect-2", x: 120, y: 90, width: 60, height: 30 });
+        context.staticForegroundLayer.add(rect1);
+        context.staticForegroundLayer.add(rect2);
+      },
+    });
+
+    const rect1 = harness.staticForegroundLayer.findOne<Konva.Rect>("#rect-1")!;
+    const rect2 = harness.staticForegroundLayer.findOne<Konva.Rect>("#rect-2")!;
+
+    const group = GroupPlugin.group(pluginContext, [rect1, rect2]);
+    expect(pluginContext.history.canUndo()).toBe(true);
+    expect(rect1.getParent()).toBe(group);
+    expect(rect2.getParent()).toBe(group);
+    expect(docHandle.doc().groups[group.id()]).toBeTruthy();
+
+    pluginContext.history.undo();
+
+    expect(rect1.getParent()).toBe(harness.staticForegroundLayer);
+    expect(rect2.getParent()).toBe(harness.staticForegroundLayer);
+    expect(docHandle.doc().groups[group.id()]).toBeUndefined();
+    expect(docHandle.doc().elements[rect1.id()].parentGroupId).toBeNull();
+    expect(docHandle.doc().elements[rect2.id()].parentGroupId).toBeNull();
+
+    pluginContext.history.redo();
+
+    const regrouped = harness.staticForegroundLayer.findOne<Konva.Group>((node: any) => node instanceof Konva.Group && node.id() === group.id());
+    expect(regrouped).toBeTruthy();
+    expect(rect1.getParent()).toBe(regrouped);
+    expect(rect2.getParent()).toBe(regrouped);
+    expect(docHandle.doc().groups[group.id()]).toBeTruthy();
+    expect(docHandle.doc().elements[rect1.id()].parentGroupId).toBe(group.id());
+    expect(docHandle.doc().elements[rect2.id()].parentGroupId).toBe(group.id());
+
+    harness.destroy();
+  });
+
+  test("ungroup action can be undone and redone", async () => {
+    let pluginContext!: IPluginContext;
+    const docHandle = createMockDocHandle() as DocHandle<TCanvasDoc>;
+
+    const harness = await createCanvasTestHarness({
+      docHandle,
+      plugins: [new GroupPlugin()],
+      initializeScene: (context) => {
+        pluginContext = context;
+
+        const rect1 = new Konva.Rect({ id: "rect-1", x: 30, y: 40, width: 50, height: 40 });
+        const rect2 = new Konva.Rect({ id: "rect-2", x: 120, y: 90, width: 60, height: 30 });
+        context.staticForegroundLayer.add(rect1);
+        context.staticForegroundLayer.add(rect2);
+      },
+    });
+
+    const rect1 = harness.staticForegroundLayer.findOne<Konva.Rect>("#rect-1")!;
+    const rect2 = harness.staticForegroundLayer.findOne<Konva.Rect>("#rect-2")!;
+    const group = GroupPlugin.group(pluginContext, [rect1, rect2]);
+    GroupPlugin.ungroup(pluginContext, group);
+
+    expect(rect1.getParent()).toBe(harness.staticForegroundLayer);
+    expect(rect2.getParent()).toBe(harness.staticForegroundLayer);
+    expect(docHandle.doc().groups[group.id()]).toBeUndefined();
+
+    pluginContext.history.undo();
+
+    const regrouped = harness.staticForegroundLayer.findOne<Konva.Group>((node: any) => node instanceof Konva.Group && node.id() === group.id());
+    expect(regrouped).toBeTruthy();
+    expect(rect1.getParent()).toBe(regrouped);
+    expect(rect2.getParent()).toBe(regrouped);
+    expect(docHandle.doc().groups[group.id()]).toBeTruthy();
+
+    pluginContext.history.redo();
+
+    expect(rect1.getParent()).toBe(harness.staticForegroundLayer);
+    expect(rect2.getParent()).toBe(harness.staticForegroundLayer);
+    expect(docHandle.doc().groups[group.id()]).toBeUndefined();
+    expect(docHandle.doc().elements[rect1.id()].parentGroupId).toBeNull();
+    expect(docHandle.doc().elements[rect2.id()].parentGroupId).toBeNull();
+
+    harness.destroy();
+  });
 });
