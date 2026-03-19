@@ -15,6 +15,19 @@ import { initializeScene01SelectOuterGroupFromChild } from "../scenarios/01-sele
 import { initializeScene03TopLevelMixedSelection } from "../scenarios/03-top-level-mixed-selection";
 import { createCanvasTestHarness, exportStageSnapshot, flushCanvasEffects } from "../test-setup";
 
+function getAbsoluteRectMetrics(shape: Konva.Rect) {
+  const absolutePosition = shape.absolutePosition();
+  const absoluteScale = shape.getAbsoluteScale();
+
+  return {
+    x: absolutePosition.x,
+    y: absolutePosition.y,
+    width: shape.width() * absoluteScale.x,
+    height: shape.height() * absoluteScale.y,
+    rotation: shape.getAbsoluteRotation(),
+  };
+}
+
 function createBroaderPluginStack() {
   const groupPlugin = new GroupPlugin();
 
@@ -245,6 +258,17 @@ describe("TransformPlugin", () => {
     expect(boundary!.width()).not.toBeCloseTo(boundaryOriginal.width, 8);
     expect(transformer.getClientRect().width).not.toBeCloseTo(transformerOriginal.width, 8);
 
+    const s1ResizedMetrics = getAbsoluteRectMetrics(s1!);
+    const s2ResizedMetrics = getAbsoluteRectMetrics(s2!);
+    const boundaryResized = {
+      x: boundary!.x(),
+      y: boundary!.y(),
+      width: boundary!.width(),
+      height: boundary!.height(),
+      rotation: boundary!.rotation(),
+    };
+    const transformerResized = transformer.getClientRect();
+
     await exportStageSnapshot({
       stage: harness.stage,
       label: "scene1 g1 focused - after resize",
@@ -295,10 +319,23 @@ describe("TransformPlugin", () => {
       waitMs: 60,
     });
 
-    expect(s1!.absolutePosition().x).not.toBeCloseTo(s1OriginalPosition.x, 8);
-    expect(s2!.absolutePosition().x).not.toBeCloseTo(s2OriginalPosition.x, 8);
-    expect(boundary!.width()).not.toBeCloseTo(boundaryOriginal.width, 8);
-    expect(transformer.getClientRect().width).not.toBeCloseTo(transformerOriginal.width, 8);
+    expect(getAbsoluteRectMetrics(s1!).x).toBeCloseTo(s1ResizedMetrics.x, 8);
+    expect(getAbsoluteRectMetrics(s1!).y).toBeCloseTo(s1ResizedMetrics.y, 8);
+    expect(getAbsoluteRectMetrics(s2!).x).toBeCloseTo(s2ResizedMetrics.x, 8);
+    expect(getAbsoluteRectMetrics(s2!).y).toBeCloseTo(s2ResizedMetrics.y, 8);
+    expect(getAbsoluteRectMetrics(s1!).width).toBeCloseTo(s1ResizedMetrics.width, 8);
+    expect(getAbsoluteRectMetrics(s1!).height).toBeCloseTo(s1ResizedMetrics.height, 8);
+    expect(getAbsoluteRectMetrics(s2!).width).toBeCloseTo(s2ResizedMetrics.width, 8);
+    expect(getAbsoluteRectMetrics(s2!).height).toBeCloseTo(s2ResizedMetrics.height, 8);
+    expect(boundary!.x()).toBeCloseTo(boundaryResized.x, 8);
+    expect(boundary!.y()).toBeCloseTo(boundaryResized.y, 8);
+    expect(boundary!.width()).toBeCloseTo(boundaryResized.width, 8);
+    expect(boundary!.height()).toBeCloseTo(boundaryResized.height, 8);
+    expect(boundary!.rotation()).toBeCloseTo(boundaryResized.rotation, 8);
+    expect(transformer.getClientRect().x).toBeCloseTo(transformerResized.x, 8);
+    expect(transformer.getClientRect().y).toBeCloseTo(transformerResized.y, 8);
+    expect(transformer.getClientRect().width).toBeCloseTo(transformerResized.width, 8);
+    expect(transformer.getClientRect().height).toBeCloseTo(transformerResized.height, 8);
 
     harness.destroy();
   }, 15000);
@@ -365,6 +402,17 @@ describe("TransformPlugin", () => {
     });
     await flushCanvasEffects();
 
+    const s1RotatedMetrics = getAbsoluteRectMetrics(s1!);
+    const s2RotatedMetrics = getAbsoluteRectMetrics(s2!);
+    const boundaryRotated = {
+      x: boundary!.x(),
+      y: boundary!.y(),
+      width: boundary!.width(),
+      height: boundary!.height(),
+      rotation: boundary!.rotation(),
+    };
+    const transformerRotated = transformer.getClientRect();
+
     await exportStageSnapshot({
       stage: harness.stage,
       label: "scene1 g1 focused - after rotate",
@@ -406,8 +454,21 @@ describe("TransformPlugin", () => {
       waitMs: 60,
     });
 
-    expect(s1!.rotation()).not.toBeCloseTo(s1OriginalRotation, 8);
-    expect(s2!.rotation()).not.toBeCloseTo(s2OriginalRotation, 8);
+    expect(getAbsoluteRectMetrics(s1!).x).toBeCloseTo(s1RotatedMetrics.x, 8);
+    expect(getAbsoluteRectMetrics(s1!).y).toBeCloseTo(s1RotatedMetrics.y, 8);
+    expect(getAbsoluteRectMetrics(s2!).x).toBeCloseTo(s2RotatedMetrics.x, 8);
+    expect(getAbsoluteRectMetrics(s2!).y).toBeCloseTo(s2RotatedMetrics.y, 8);
+    expect(getAbsoluteRectMetrics(s1!).rotation).toBeCloseTo(s1RotatedMetrics.rotation, 8);
+    expect(getAbsoluteRectMetrics(s2!).rotation).toBeCloseTo(s2RotatedMetrics.rotation, 8);
+    expect(boundary!.x()).toBeCloseTo(boundaryRotated.x, 8);
+    expect(boundary!.y()).toBeCloseTo(boundaryRotated.y, 8);
+    expect(boundary!.width()).toBeCloseTo(boundaryRotated.width, 8);
+    expect(boundary!.height()).toBeCloseTo(boundaryRotated.height, 8);
+    expect(boundary!.rotation()).toBeCloseTo(boundaryRotated.rotation, 8);
+    expect(transformer.getClientRect().x).toBeCloseTo(transformerRotated.x, 8);
+    expect(transformer.getClientRect().y).toBeCloseTo(transformerRotated.y, 8);
+    expect(transformer.getClientRect().width).toBeCloseTo(transformerRotated.width, 8);
+    expect(transformer.getClientRect().height).toBeCloseTo(transformerRotated.height, 8);
 
     harness.destroy();
   }, 15000);
