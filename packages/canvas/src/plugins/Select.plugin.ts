@@ -22,6 +22,13 @@ function hasSameSelectionOrder(
   return currentSelection.every((node, index) => node.id() === nextSelection[index]?.id());
 }
 
+/**
+ * Walks konva node tree to get path traced from the node to the static foreground layer
+ * 
+ * @param context 
+ * @param node 
+ * @returns 
+ */
 function getSelectionPath(
   context: IPluginContext,
   node: Konva.Group | Konva.Shape,
@@ -40,6 +47,13 @@ function getSelectionPath(
   return path.reverse();
 }
 
+/**
+ * Checks if the current selection is a prefix of the given path
+ * 
+ * @param currentSelection 
+ * @param path 
+ * @returns 
+ */
 function isSelectionPathPrefix(
   currentSelection: Array<Konva.Group | Konva.Shape>,
   path: Array<Konva.Group | Konva.Shape>,
@@ -100,10 +114,28 @@ export class SelectPlugin implements IPlugin {
     const nextDepth = Math.min(Math.max(context.state.selection.length, 1), path.length);
     const nextSelection = path.slice(0, nextDepth);
 
+    // Case 1: shift-click toggles the item on the currently focused depth.
+    // This extends multi-selection without drilling deeper, and clicking an
+    // already selected same-level item removes it from the selection.
+    if (payload.evt.shiftKey) {
+      const focusedLevelNode = nextSelection[nextSelection.length - 1];
+      if (focusedLevelNode) {
+        if (context.state.selection.includes(focusedLevelNode)) {
+          context.setState('selection', context.state.selection.filter(node => node !== focusedLevelNode))
+        } else {
+          context.setState('selection', [...context.state.selection, focusedLevelNode])
+        }
+      }
+      return true
+    }
+
+    // Case 2: regular click changes focus only inside the current depth.
+    // Single click should never drill deeper into nested groups.
     if (!hasSameSelectionOrder(context.state.selection, nextSelection)) {
       context.setState('selection', nextSelection)
     }
 
+    // Case 3: clicking the already focused item leaves selection unchanged.
     return true
   }
 

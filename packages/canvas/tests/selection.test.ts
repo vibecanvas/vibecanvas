@@ -7,6 +7,7 @@ import { SelectPlugin } from "../src/plugins/Select.plugin";
 import { TransformPlugin } from "../src/plugins/Transform.plugin";
 import { initializeScene01SelectOuterGroupFromChild } from "./scenarios/01-select-outer-group-from-child";
 import { initializeScene02NestedGroupsLeafShapes } from "./scenarios/02-nested-groups-leaf-shapes";
+import { initializeScene03TopLevelMixedSelection } from "./scenarios/03-top-level-mixed-selection";
 import { createCanvasTestHarness, flushCanvasEffects } from "./test-setup";
 
 class SelectionProbePlugin implements IPlugin {
@@ -99,6 +100,45 @@ async function createNestedSelectionSceneHarness() {
   };
 }
 
+async function createTopLevelSelectionSceneHarness() {
+  const groupPlugin = new GroupPlugin();
+  const selectionProbePlugin = new SelectionProbePlugin();
+  const plugins: IPlugin[] = [
+    new SelectPlugin(),
+    new TransformPlugin(),
+    groupPlugin,
+    selectionProbePlugin,
+  ];
+
+  const harness = await createCanvasTestHarness({
+    plugins,
+    initializeScene: (context) => {
+      initializeScene03TopLevelMixedSelection({
+        context,
+        groupPlugin,
+      });
+    },
+  });
+
+  const { staticForegroundLayer } = harness;
+  const groups = staticForegroundLayer.getChildren().filter((node): node is Konva.Group => node instanceof Konva.Group);
+  const g1 = groups[0];
+  const g2 = groups[1];
+  const s4 = staticForegroundLayer.getChildren().find((node): node is Konva.Rect => node instanceof Konva.Rect && node.id() === "4");
+
+  expect(g1).toBeTruthy();
+  expect(g2).toBeTruthy();
+  expect(s4).toBeTruthy();
+
+  return {
+    harness,
+    selectionProbePlugin,
+    g1,
+    g2,
+    s4: s4!,
+  };
+}
+
 describe("SelectPlugin", () => {
   test("scene1: s1 pointerdown -> outergroup is selected with transformer and boundary box", async () => {
     vi.useFakeTimers();
@@ -179,6 +219,100 @@ describe("SelectPlugin", () => {
 
     harness.destroy();
     setNodesSpy.mockRestore();
+    vi.useRealTimers();
+  });
+
+  test("scene3: shift+pointerdown adds top-level group and top-level shape", async () => {
+    vi.useFakeTimers();
+
+    const { harness, selectionProbePlugin, g1, g2, s4 } = await createTopLevelSelectionSceneHarness();
+
+    g1.fire(
+      "pointerdown",
+      {
+        evt: new MouseEvent("pointerdown", { bubbles: true, button: 0 }),
+      },
+      true,
+    );
+
+    await flushCanvasEffects();
+
+    expect(selectionProbePlugin.observedSelectionIds).toEqual([g1.id()]);
+
+    g2.fire(
+      "pointerdown",
+      {
+        evt: new MouseEvent("pointerdown", { bubbles: true, button: 0, shiftKey: true }),
+      },
+      true,
+    );
+
+    await flushCanvasEffects();
+
+    expect(selectionProbePlugin.observedSelectionIds).toEqual([g1.id(), g2.id()]);
+
+    s4.fire(
+      "pointerdown",
+      {
+        evt: new MouseEvent("pointerdown", { bubbles: true, button: 0, shiftKey: true }),
+      },
+      true,
+    );
+
+    await flushCanvasEffects();
+
+    expect(selectionProbePlugin.observedSelectionIds).toEqual([g1.id(), g2.id(), s4.id()]);
+
+    harness.destroy();
+    vi.useRealTimers();
+  });
+
+  test("scene3: shift+pointerdown on an already selected top-level node removes it", async () => {
+    vi.useFakeTimers();
+
+    const { harness, selectionProbePlugin, g1, g2, s4 } = await createTopLevelSelectionSceneHarness();
+
+    g1.fire(
+      "pointerdown",
+      {
+        evt: new MouseEvent("pointerdown", { bubbles: true, button: 0 }),
+      },
+      true,
+    );
+    await flushCanvasEffects();
+
+    g2.fire(
+      "pointerdown",
+      {
+        evt: new MouseEvent("pointerdown", { bubbles: true, button: 0, shiftKey: true }),
+      },
+      true,
+    );
+    await flushCanvasEffects();
+
+    s4.fire(
+      "pointerdown",
+      {
+        evt: new MouseEvent("pointerdown", { bubbles: true, button: 0, shiftKey: true }),
+      },
+      true,
+    );
+    await flushCanvasEffects();
+
+    expect(selectionProbePlugin.observedSelectionIds).toEqual([g1.id(), g2.id(), s4.id()]);
+
+    g2.fire(
+      "pointerdown",
+      {
+        evt: new MouseEvent("pointerdown", { bubbles: true, button: 0, shiftKey: true }),
+      },
+      true,
+    );
+    await flushCanvasEffects();
+
+    expect(selectionProbePlugin.observedSelectionIds).toEqual([g1.id(), s4.id()]);
+
+    harness.destroy();
     vi.useRealTimers();
   });
 
