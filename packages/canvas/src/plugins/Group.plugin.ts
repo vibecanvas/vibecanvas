@@ -34,7 +34,7 @@ export class GroupPlugin implements IPlugin {
           console.log('group')
           const newGroup = GroupPlugin.group(context, context.state.selection)
           this.setupGroupListeners(context, newGroup)
-
+          context.setState('selection', [newGroup])
         }
 
       } else if (event.key === 'g' && event.metaKey && event.shiftKey) {
