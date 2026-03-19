@@ -185,7 +185,6 @@ export class Shape2dPlugin implements IPlugin {
 
   static setupShapeListeners(context: IPluginContext, shape: Konva.Shape) {
     shape.on('pointerclick', e => {
-      console.log(shape.getType(), shape.fill(), shape.x(), shape.y())
       if (context.state.mode !== CanvasMode.SELECT) return
       context.hooks.customEvent.call(CustomEvents.ELEMENT_POINTERCLICK, e)
     })

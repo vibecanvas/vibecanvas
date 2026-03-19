@@ -8,6 +8,22 @@ import { TElement } from "@vibecanvas/shell/automerge/index";
  */
 export class TransformPlugin implements IPlugin {
   #transformer: Konva.Transformer;
+  static readonly GROUP_ANCHORS = [
+    'top-left',
+    'top-right',
+    'bottom-left',
+    'bottom-right',
+  ] as const
+  static readonly DEFAULT_ANCHORS = [
+    'top-left',
+    'top-center',
+    'top-right',
+    'middle-right',
+    'middle-left',
+    'bottom-left',
+    'bottom-center',
+    'bottom-right',
+  ] as const
 
   constructor() {
     this.#transformer = new Konva.Transformer({
@@ -17,7 +33,6 @@ export class TransformPlugin implements IPlugin {
 
   apply(context: IPluginContext): void {
     context.hooks.init.tap(() => {
-      // this.#transformer.on('dragmove', console.log)
       context.dynamicLayer.add(this.#transformer);
       this.createReaction(context)
       this.setupHistory(context)
@@ -38,9 +53,11 @@ export class TransformPlugin implements IPlugin {
       originalElements = shapes.map(shape => context.capabilities.toElement?.(shape)).filter(Boolean) as TElement[]
     })
     this.#transformer.on('transformend', e => {
-      console.log('transformend', e)
-      const shapes = TransformPlugin.getShapesFromTransformer(this.#transformer.getNodes())
+      const transformerNodes = this.#transformer.getNodes()
+      const shapes = TransformPlugin.getShapesFromTransformer(transformerNodes)
       const elements = shapes.map(shape => context.capabilities.toElement?.(shape)).filter(Boolean) as TElement[]
+      TransformPlugin.normalizeSelectedGroupTransforms(transformerNodes)
+      TransformPlugin.applyElementsToShapes(context, elements)
       TransformPlugin.refreshSelectedGroups(context)
       refreshTransformer()
       const beforeElements = structuredClone(originalElements)
@@ -71,6 +88,16 @@ export class TransformPlugin implements IPlugin {
       if (node instanceof Konva.Shape) return node
       return []
     }).flat()
+  }
+
+  private static normalizeSelectedGroupTransforms(nodes: Konva.Node[]) {
+    nodes.forEach(node => {
+      if (!(node instanceof Konva.Group)) return
+
+      node.scale({ x: 1, y: 1 })
+      node.rotation(0)
+      node.skew({ x: 0, y: 0 })
+    })
   }
 
   private static applyElementsToShapes(context: IPluginContext, elements: TElement[]) {
@@ -107,6 +134,9 @@ export class TransformPlugin implements IPlugin {
 
   private createReaction(context: IPluginContext) {
     createEffect(() => {
+      const filteredSelection = TransformPlugin.filterSelection(context.state.selection)
+      const isSingleGroupSelection = filteredSelection.length === 1 && filteredSelection[0] instanceof Konva.Group
+
       if (context.state.selection.length === 1 && context.state.selection[0] instanceof Konva.Group) {
         this.#transformer.borderEnabled(false)
       } else if (context.state.selection.length > 1) {
@@ -116,7 +146,14 @@ export class TransformPlugin implements IPlugin {
         this.#transformer.borderEnabled(true)
         this.#transformer.borderDash([0, 0])
       }
-      this.#transformer.setNodes(TransformPlugin.filterSelection(context.state.selection))
+
+      this.#transformer.keepRatio(isSingleGroupSelection)
+      this.#transformer.enabledAnchors(
+        isSingleGroupSelection
+          ? [...TransformPlugin.GROUP_ANCHORS]
+          : [...TransformPlugin.DEFAULT_ANCHORS]
+      )
+      this.#transformer.setNodes(filteredSelection)
       this.#transformer.update()
     })
   }

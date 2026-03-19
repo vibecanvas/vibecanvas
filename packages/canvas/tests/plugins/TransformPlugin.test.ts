@@ -161,6 +161,29 @@ describe("TransformPlugin", () => {
     harness.destroy();
   });
 
+  test("single element selection keeps free resize anchors enabled", async () => {
+    const { harness, pluginContext, s4, transformer } = await createTransformSceneHarness();
+
+    pluginContext.setState("selection", [s4]);
+    await flushCanvasEffects();
+
+    expect(transformer.keepRatio()).toBe(false);
+    expect(transformer.enabledAnchors()).toEqual([
+      "top-left",
+      "top-center",
+      "top-right",
+      "middle-right",
+      "middle-left",
+      "bottom-left",
+      "bottom-center",
+      "bottom-right",
+    ]);
+    expect(transformer.enabledAnchors()).toContain("middle-left");
+    expect(transformer.enabledAnchors()).toContain("middle-right");
+
+    harness.destroy();
+  });
+
   test("scene1: undo after resizing focused g1 restores children and boundary box position", async () => {
     const { harness, pluginContext, s1, g1, transformer } = await createScene01TransformHarness();
     const s2 = g1.findOne<Konva.Rect>("#2");
@@ -192,6 +215,17 @@ describe("TransformPlugin", () => {
     expect(pluginContext.state.selection.map(node => node.id())).toEqual([g1.id()]);
     expect(boundary).toBeTruthy();
     expect(boundary!.visible()).toBe(true);
+    expect(transformer.keepRatio()).toBe(true);
+    expect(transformer.enabledAnchors()).toEqual([
+      "top-left",
+      "top-right",
+      "bottom-left",
+      "bottom-right",
+    ]);
+    expect(transformer.enabledAnchors()).not.toContain("top-center");
+    expect(transformer.enabledAnchors()).not.toContain("middle-left");
+    expect(transformer.enabledAnchors()).not.toContain("middle-right");
+    expect(transformer.enabledAnchors()).not.toContain("bottom-center");
 
     const boundaryOriginal = {
       x: boundary!.x(),
@@ -251,6 +285,9 @@ describe("TransformPlugin", () => {
       evt: new MouseEvent("transformend", { bubbles: true }),
     });
     await flushCanvasEffects();
+
+    expect(g1.scaleX()).toBeCloseTo(1, 8);
+    expect(g1.scaleY()).toBeCloseTo(1, 8);
 
     expect(getStaticLayerStructure().topLevelGroups).toHaveLength(1);
     expect(getStaticLayerStructure().topLevelShapes).toHaveLength(0);
@@ -401,6 +438,8 @@ describe("TransformPlugin", () => {
       evt: new MouseEvent("transformend", { bubbles: true }),
     });
     await flushCanvasEffects();
+
+    expect(g1.rotation()).toBeCloseTo(0, 8);
 
     const s1RotatedMetrics = getAbsoluteRectMetrics(s1!);
     const s2RotatedMetrics = getAbsoluteRectMetrics(s2!);
