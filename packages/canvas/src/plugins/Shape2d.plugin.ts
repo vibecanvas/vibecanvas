@@ -17,6 +17,7 @@ export class Shape2dPlugin implements IPlugin {
 
   apply(context: IPluginContext): void {
     this.setupPreview(context);
+    Shape2dPlugin.setupCapablities(context)
 
   }
 
@@ -83,6 +84,30 @@ export class Shape2dPlugin implements IPlugin {
       context.staticForegroundLayer.add(shape);
       context.crdt.patch({ elements: [Shape2dPlugin.toTElement(shape)], groups: [] })
     })
+  }
+
+  private static setupCapablities(context: IPluginContext) {
+    const currentCreateShapeFromTElement = context.capabilities.createShapeFromTElement
+    context.capabilities.createShapeFromTElement = (element) => {
+      if (!Shape2dPlugin.supportedTypes.has(element.data.type)) {
+        return currentCreateShapeFromTElement?.(element) || null
+      } else {
+        const shape = Shape2dPlugin.createRectFromElement(element)
+        if (shape) {
+          Shape2dPlugin.setupShapeListeners(context, shape)
+          shape.setDraggable(true)
+        }
+        return shape
+      }
+    }
+
+    const currentToElement = context.capabilities.toElement
+    context.capabilities.toElement = (node) => {
+      if (node instanceof Konva.Rect) {
+        return Shape2dPlugin.toTElement(node)
+      }
+      return currentToElement?.(node) || null
+    }
   }
 
   static toTElement(shape: Konva.Shape): TElement {

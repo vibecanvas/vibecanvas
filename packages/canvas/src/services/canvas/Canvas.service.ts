@@ -7,8 +7,8 @@ import { createStore, SetStoreFunction } from 'solid-js/store';
 import type { TCustomEvent } from "../../custom-events";
 import {
   CameraControlPlugin, EventListenerPlugin, ExampleScenePlugin,
-  GridPlugin, GroupPlugin, HistoryControlPlugin, SelectPlugin, Shape2dPlugin,
-  ToolbarPlugin, TransformPlugin
+  GridPlugin, GroupPlugin, HistoryControlPlugin, SceneHydratorPlugin,
+  SelectPlugin, Shape2dPlugin, ToolbarPlugin, TransformPlugin
 } from "../../plugins";
 import type { IPlugin, IPluginContext, TMouseEvent, TPointerEvent, TWheelEvent } from "../../plugins/interface";
 import { AsyncParallelHook, SyncExitHook, SyncHook } from "../../tapable";
@@ -33,6 +33,7 @@ export function defaultPlugins(
     new Shape2dPlugin(),
     groupPlugin,
     // new ExampleScenePlugin(groupPlugin)
+    new SceneHydratorPlugin()
   ];
 
   return plugins
@@ -98,7 +99,7 @@ export class CanvasService {
         pointerWheel: new SyncHook<TWheelEvent>(),
         keydown: new SyncHook<KeyboardEvent>(),
         keyup: new SyncHook<KeyboardEvent>(),
-        customEvent: new SyncExitHook<TCustomEvent>()
+        customEvent: new SyncExitHook<TCustomEvent>(),
       },
       staticBackgroundLayer: this.#staticBackgroundLayer,
       staticForegroundLayer: this.#staticForegroundLayer,
@@ -109,6 +110,7 @@ export class CanvasService {
       setState: this.#setState,
       history: this.#history,
       crdt: this.#crdt,
+      capabilities: {}
     }
 
     this.#instancePromise = (async () => {
@@ -119,8 +121,6 @@ export class CanvasService {
       });
       hooks.init.call();
       await hooks.initAsync.promise();
-      // @ts-expect-error is assigned in constructor
-      await this.#crdt.loadCanvas(this.#pluginContext)
       return this;
     })();
 

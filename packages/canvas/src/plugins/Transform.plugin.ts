@@ -1,8 +1,6 @@
 import Konva from "konva";
-import { CanvasMode } from "../services/canvas/enum";
-import type { IPlugin, IPluginContext } from "./interface";
 import { createEffect } from "solid-js";
-import { TElement } from "@vibecanvas/shell/automerge/index";
+import type { IPlugin, IPluginContext } from "./interface";
 
 /**
  * Handles rotation and resizing

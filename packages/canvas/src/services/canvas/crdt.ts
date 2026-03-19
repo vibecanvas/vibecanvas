@@ -2,7 +2,7 @@ import type { DocHandle } from "@automerge/automerge-repo";
 import type { TCanvasDoc, TElement, TGroup } from "@vibecanvas/shell/automerge/index";
 import Konva from "konva";
 import diff from "microdiff";
-import { IPluginContext, Shape2dPlugin } from "../../plugins";
+import { GroupPlugin, IPluginContext, Shape2dPlugin } from "../../plugins";
 
 type TDeepPartial<T> = T extends Array<infer U>
   ? Array<TDeepPartial<U>>
@@ -15,7 +15,7 @@ type TElementPatch = TEntityPatch<TElement>;
 type TGroupPatch = TEntityPatch<TGroup>;
 
 export class Crdt {
-  constructor(private readonly docHandle: DocHandle<TCanvasDoc>) {
+  constructor(public readonly docHandle: DocHandle<TCanvasDoc>) {
     console.log(this.docHandle.doc())
   }
 
@@ -36,36 +36,6 @@ export class Crdt {
         delete doc.groups[id];
       }
     });
-  }
-
-  async loadCanvas(context: IPluginContext) {
-    console.log('loading canvas')
-    const doc = this.docHandle.doc()
-    const groupsToLoad = new Set(Object.values(doc.groups))
-    const elementsToLoad = new Set(Object.values(doc.elements))
-
-    // load toplevel elements
-    for (const element of elementsToLoad) {
-      if (!element.parentGroupId) {
-        const shape = Crdt.elementToShape(context, element)
-        if (shape) {
-          context.staticForegroundLayer.add(shape)
-        }
-      }
-    }
-
-  }
-
-  private static elementToShape(context: IPluginContext, element: TElement) {
-    let shape: Konva.Shape | null = null
-    switch (element.data.type) {
-      case 'rect':
-        shape = Shape2dPlugin.createRectFromElement(element)
-        Shape2dPlugin.setupShapeListeners(context, shape)
-        break
-    }
-
-    return shape
   }
 
   private patchCollection<TItem extends { id: string }>(

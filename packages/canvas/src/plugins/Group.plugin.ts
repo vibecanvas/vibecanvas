@@ -57,6 +57,7 @@ export class GroupPlugin implements IPlugin {
 
     context.hooks.init.tap(() => {
       this.setupReaction(context)
+      this.setupCapablities(context)
     })
   }
 
@@ -236,6 +237,33 @@ export class GroupPlugin implements IPlugin {
         node.setDraggable(false)
       }
     })
+  }
+
+  static toTGroup(group: Konva.Group): TGroup {
+    const parentGroupId = group.getParent() instanceof Konva.Group ? group.getParent()!.id() : null
+    return {
+      id: group.id(),
+      name: '',
+      color: null,
+      parentGroupId,
+      locked: false,
+      createdAt: Date.now(),
+    }
+  }
+
+  private setupCapablities(context: IPluginContext) {
+    context.capabilities.createGroupFromTGroup = (group) => {
+      const konvaGroup = new Konva.Group({
+        id: group.id,
+        draggable: true,
+      })
+      this.setupGroupListeners(context, konvaGroup)
+      return konvaGroup
+    }
+
+    context.capabilities.toGroup = (node) => {
+      return GroupPlugin.toTGroup(node)
+    }
   }
 
   private setupReaction(context: IPluginContext) {

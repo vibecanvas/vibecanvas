@@ -6,6 +6,7 @@ import type { History } from "../services/canvas/History";
 import type { IState } from '../services/canvas/interface';
 import type { AsyncParallelHook, SyncExitHook, SyncHook } from '../tapable';
 import type { Crdt } from "../services/canvas/Crdt";
+import type { TElement, TGroup } from "@vibecanvas/shell/automerge/index";
 
 export type TPointerEvent = Konva.KonvaEventObject<PointerEvent>;
 export type TMouseEvent = Konva.KonvaEventObject<MouseEvent>;
@@ -52,6 +53,12 @@ export interface IPluginContext {
   setState: SetStoreFunction<IState>;
   history: History;
   crdt: Crdt;
+  capabilities: {
+    createShapeFromTElement?: (element: TElement) => Konva.Shape | null;
+    createGroupFromTGroup?: (element: TGroup) => Konva.Group | null;
+    toElement?: (node: Konva.Shape) => TElement | null;
+    toGroup?: (node: Konva.Group) => TGroup | null;
+  }
 
 }
 
