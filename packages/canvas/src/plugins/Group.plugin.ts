@@ -43,6 +43,13 @@ export class GroupPlugin implements IPlugin {
         event.stopPropagation()
         if (context.state.mode === CanvasMode.SELECT && context.state.selection.length > 0) {
           console.log('ungroup')
+          const group = [...context.state.selection].reverse().find(
+            (selection): selection is Konva.Group => selection instanceof Konva.Group,
+          )
+          if (!group) return
+
+          const children = GroupPlugin.ungroup(context, group)
+          context.setState('selection', children)
 
         }
       }
@@ -69,14 +76,79 @@ export class GroupPlugin implements IPlugin {
     })
     context.staticForegroundLayer.add(newGroup)
 
+    const parentNode = newGroup.getParent()
+    const parentGroupId = parentNode instanceof Konva.Group ? parentNode.id() : null
+    const groupPatches: TGroup[] = [{
+      id: newGroup.id(),
+      name: '',
+      color: null,
+      parentGroupId,
+      locked: false,
+      createdAt: Date.now(),
+    }]
+    const elementPatches: TElement[] = []
+
     selections.forEach(node => {
       const absolutePosition = node.getAbsolutePosition()
       newGroup.add(node)
       node.setAbsolutePosition(absolutePosition)
       node.setDraggable(false)
+
+      if (node instanceof Konva.Group) {
+        groupPatches.push({
+          id: node.id(),
+          name: '',
+          color: null,
+          parentGroupId: newGroup.id(),
+          locked: false,
+          createdAt: Date.now(),
+        })
+        return
+      }
+
+      elementPatches.push(Shape2dPlugin.toTElement(node))
     })
 
+    context.crdt.patch({ elements: elementPatches, groups: groupPatches })
+
     return newGroup;
+  }
+
+  static ungroup(context: IPluginContext, group: Konva.Group) {
+    const parent = group.getParent()
+    if (!parent) return []
+
+    const children = group.getChildren().slice() as (Konva.Group | Konva.Shape)[]
+    const nextParentGroupId = parent instanceof Konva.Group ? parent.id() : null
+    const elementPatches: TElement[] = []
+    const groupPatches: TGroup[] = []
+
+    children.forEach(node => {
+      const absolutePosition = node.getAbsolutePosition()
+      parent.add(node)
+      node.setAbsolutePosition(absolutePosition)
+
+      if (node instanceof Konva.Group) {
+        groupPatches.push({
+          id: node.id(),
+          name: '',
+          color: null,
+          parentGroupId: nextParentGroupId,
+          locked: false,
+          createdAt: Date.now(),
+        })
+        return
+      }
+
+      node.setDraggable(true)
+      elementPatches.push(Shape2dPlugin.toTElement(node))
+    })
+
+    group.destroy()
+    context.crdt.patch({ elements: elementPatches, groups: groupPatches })
+    context.crdt.deleteById({ groupIds: [group.id()] })
+
+    return children
   }
 
   private static createBoundaryRect(context: IPluginContext, group: Konva.Group) {

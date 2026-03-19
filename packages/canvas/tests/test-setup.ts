@@ -30,14 +30,19 @@ export function ensureResizeObserver() {
 }
 
 export function createMockDocHandle(overrides?: Partial<TCanvasDoc>): DocHandle<TCanvasDoc> {
+  const docState: TCanvasDoc = {
+    id: "test-doc",
+    name: "test-doc",
+    elements: {},
+    groups: {},
+    ...overrides,
+  };
+
   return {
-    doc: () => ({
-      id: "test-doc",
-      name: "test-doc",
-      elements: {},
-      groups: {},
-      ...overrides,
-    }),
+    doc: () => docState,
+    change: (callback) => {
+      callback(docState);
+    },
   } as DocHandle<TCanvasDoc>;
 }
 
