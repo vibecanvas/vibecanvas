@@ -1,0 +1,291 @@
+import Konva from "konva";
+import { describe, expect, test, vi } from "vitest";
+import { GroupPlugin } from "../../src/plugins/Group.plugin";
+import type { IPluginContext } from "../../src/plugins/interface";
+import { defaultPlugins } from "../../src/services/canvas/Canvas.service";
+import { initializeScene01SelectOuterGroupFromChild } from "../scenarios/01-select-outer-group-from-child";
+import { initializeScene03TopLevelMixedSelection } from "../scenarios/03-top-level-mixed-selection";
+import { createCanvasTestHarness, exportStageSnapshot, flushCanvasEffects } from "../test-setup";
+
+async function createTransformSceneHarness() {
+  let pluginContext!: IPluginContext;
+  const plugins = defaultPlugins({ onToggleSidebar: () => { } });
+  const groupPlugin = plugins.find((plugin): plugin is GroupPlugin => plugin instanceof GroupPlugin);
+
+  if (!groupPlugin) {
+    throw new Error("defaultPlugins did not include GroupPlugin");
+  }
+
+  const harness = await createCanvasTestHarness({
+    plugins,
+    initializeScene: (context) => {
+      pluginContext = context;
+      initializeScene03TopLevelMixedSelection({
+        context,
+        groupPlugin,
+      });
+    },
+  });
+
+  const s4 = harness.staticForegroundLayer.getChildren().find(
+    (node): node is Konva.Rect => node instanceof Konva.Rect && node.id() === "4",
+  );
+  const groups = harness.staticForegroundLayer.getChildren().filter(
+    (node): node is Konva.Group => node instanceof Konva.Group,
+  );
+  const g1 = groups[0];
+  const transformer = harness.dynamicLayer.getChildren().find(
+    (node): node is Konva.Transformer => node instanceof Konva.Transformer,
+  );
+
+  expect(g1).toBeTruthy();
+  expect(s4).toBeTruthy();
+  expect(transformer).toBeTruthy();
+
+  return {
+    harness,
+    pluginContext,
+    g1,
+    s4: s4!,
+    transformer: transformer!,
+  };
+}
+
+async function createScene01TransformHarness() {
+  let pluginContext!: IPluginContext;
+  const plugins = defaultPlugins({ onToggleSidebar: () => { } });
+  const groupPlugin = plugins.find((plugin): plugin is GroupPlugin => plugin instanceof GroupPlugin);
+
+  if (!groupPlugin) {
+    throw new Error("defaultPlugins did not include GroupPlugin");
+  }
+
+  const harness = await createCanvasTestHarness({
+    plugins,
+    initializeScene: (context) => {
+      pluginContext = context;
+      initializeScene01SelectOuterGroupFromChild({
+        context,
+        groupPlugin,
+      });
+    },
+  });
+
+  const s1 = harness.staticForegroundLayer.findOne<Konva.Rect>("#1");
+  const transformer = harness.dynamicLayer.getChildren().find(
+    (node): node is Konva.Transformer => node instanceof Konva.Transformer,
+  );
+  const g1 = harness.staticForegroundLayer.getChildren().find(
+    (node): node is Konva.Group => node instanceof Konva.Group,
+  );
+
+  expect(s1).toBeTruthy();
+  expect(g1).toBeTruthy();
+  expect(transformer).toBeTruthy();
+
+  return {
+    harness,
+    pluginContext,
+    s1: s1!,
+    g1: g1!,
+    transformer: transformer!,
+  };
+}
+
+describe("TransformPlugin", () => {
+  test("undo after resizing s4 restores original absolute position and size", async () => {
+    const { harness, pluginContext, s4, transformer } = await createTransformSceneHarness();
+    const originalPosition = s4.absolutePosition();
+    const originalWidth = s4.width() * s4.scaleX();
+    const originalHeight = s4.height() * s4.scaleY();
+
+    pluginContext.setState("selection", [s4]);
+    await flushCanvasEffects();
+
+    transformer.fire("transformstart", {
+      target: s4,
+      currentTarget: transformer,
+      evt: new MouseEvent("transformstart", { bubbles: true }),
+    });
+
+    s4.x(s4.x() + 48);
+    s4.y(s4.y() + 14);
+    s4.scaleX(1.6);
+    s4.scaleY(1.35);
+
+    transformer.fire("transformend", {
+      target: s4,
+      currentTarget: transformer,
+      evt: new MouseEvent("transformend", { bubbles: true }),
+    });
+
+    pluginContext.history.undo();
+    await flushCanvasEffects();
+
+    expect(s4.absolutePosition().x).toBeCloseTo(originalPosition.x, 8);
+    expect(s4.absolutePosition().y).toBeCloseTo(originalPosition.y, 8);
+    expect(s4.width() * s4.scaleX()).toBeCloseTo(originalWidth, 8);
+    expect(s4.height() * s4.scaleY()).toBeCloseTo(originalHeight, 8);
+
+    harness.destroy();
+  });
+
+  test("scene1: undo after resizing focused g1 restores children and boundary box position", async () => {
+    const { harness, pluginContext, s1, g1, transformer } = await createScene01TransformHarness();
+    const s2 = g1.findOne<Konva.Rect>("#2");
+
+    expect(s1).toBeTruthy();
+    expect(s2).toBeTruthy();
+
+    const s1OriginalPosition = s1!.absolutePosition();
+    const s2OriginalPosition = s2!.absolutePosition();
+    const s1OriginalWidth = s1!.width() * s1!.scaleX();
+    const s1OriginalHeight = s1!.height() * s1!.scaleY();
+    const s2OriginalWidth = s2!.width() * s2!.scaleX();
+    const s2OriginalHeight = s2!.height() * s2!.scaleY();
+    const selectEvent = new MouseEvent("pointerdown", { bubbles: true, button: 0 });
+
+    s1.fire(
+      "pointerdown",
+      {
+        evt: selectEvent,
+      },
+      true,
+    );
+    await flushCanvasEffects();
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    await flushCanvasEffects();
+
+    const boundary = harness.dynamicLayer.findOne<Konva.Rect>(`.group-boundary\:${g1.id()}`);
+
+    expect(pluginContext.state.selection.map(node => node.id())).toEqual([g1.id()]);
+    expect(boundary).toBeTruthy();
+    expect(boundary!.visible()).toBe(true);
+
+    const boundaryOriginal = {
+      x: boundary!.x(),
+      y: boundary!.y(),
+      width: boundary!.width(),
+      height: boundary!.height(),
+      rotation: boundary!.rotation(),
+    };
+    const transformerOriginal = transformer.getClientRect();
+    const getStaticLayerStructure = () => {
+      const topLevelChildren = harness.staticForegroundLayer.getChildren();
+      const topLevelGroups = topLevelChildren.filter(
+        (node): node is Konva.Group => node instanceof Konva.Group,
+      );
+      const topLevelShapes = topLevelChildren.filter(
+        (node): node is Konva.Shape => node instanceof Konva.Shape,
+      );
+      const groupChildShapes = topLevelGroups.flatMap((group) => {
+        return group.getChildren().filter(
+          (node): node is Konva.Shape => node instanceof Konva.Shape,
+        );
+      });
+
+      return {
+        topLevelGroups,
+        topLevelShapes,
+        groupChildShapes,
+      };
+    };
+
+    expect(getStaticLayerStructure().topLevelGroups).toHaveLength(1);
+    expect(getStaticLayerStructure().topLevelShapes).toHaveLength(1);
+    expect(getStaticLayerStructure().groupChildShapes).toHaveLength(2);
+
+    const snapshotDir = "tests/artifacts/transform-plugin/scene1-g1";
+    await exportStageSnapshot({
+      stage: harness.stage,
+      label: "scene1 g1 focused - before resize",
+      relativeFilePath: `${snapshotDir}/01-focused-before-resize.png`,
+      waitMs: 60,
+    });
+
+    transformer.fire("transformstart", {
+      target: g1,
+      currentTarget: transformer,
+      evt: new MouseEvent("transformstart", { bubbles: true }),
+    });
+
+    s1!.x(s1!.x() + 20);
+    s1!.y(s1!.y() + 12);
+    s1!.scaleX(1.2);
+    s1!.scaleY(1.15);
+    s2!.x(s2!.x() - 16);
+    s2!.y(s2!.y() + 18);
+    s2!.scaleX(1.35);
+    s2!.scaleY(1.1);
+
+    transformer.fire("transformend", {
+      target: g1,
+      currentTarget: transformer,
+      evt: new MouseEvent("transformend", { bubbles: true }),
+    });
+    await flushCanvasEffects();
+
+    expect(getStaticLayerStructure().topLevelGroups).toHaveLength(1);
+    expect(getStaticLayerStructure().topLevelShapes).toHaveLength(1);
+    expect(getStaticLayerStructure().groupChildShapes).toHaveLength(2);
+    expect(boundary!.width()).not.toBeCloseTo(boundaryOriginal.width, 8);
+    expect(transformer.getClientRect().width).not.toBeCloseTo(transformerOriginal.width, 8);
+
+    await exportStageSnapshot({
+      stage: harness.stage,
+      label: "scene1 g1 focused - after resize",
+      relativeFilePath: `${snapshotDir}/02-after-resize.png`,
+      waitMs: 60,
+    });
+
+    pluginContext.history.undo();
+    await flushCanvasEffects();
+    expect(getStaticLayerStructure().topLevelGroups).toHaveLength(1);
+    expect(getStaticLayerStructure().topLevelShapes).toHaveLength(1);
+    expect(getStaticLayerStructure().groupChildShapes).toHaveLength(2);
+    await exportStageSnapshot({
+      stage: harness.stage,
+      label: "scene1 g1 focused - after undo",
+      relativeFilePath: `${snapshotDir}/03-after-undo.png`,
+      waitMs: 60,
+    });
+
+    expect(s1!.absolutePosition().x).toBeCloseTo(s1OriginalPosition.x, 8);
+    expect(s1!.absolutePosition().y).toBeCloseTo(s1OriginalPosition.y, 8);
+    expect(s2!.absolutePosition().x).toBeCloseTo(s2OriginalPosition.x, 8);
+    expect(s2!.absolutePosition().y).toBeCloseTo(s2OriginalPosition.y, 8);
+    expect(s1!.width() * s1!.scaleX()).toBeCloseTo(s1OriginalWidth, 8);
+    expect(s1!.height() * s1!.scaleY()).toBeCloseTo(s1OriginalHeight, 8);
+    expect(s2!.width() * s2!.scaleX()).toBeCloseTo(s2OriginalWidth, 8);
+    expect(s2!.height() * s2!.scaleY()).toBeCloseTo(s2OriginalHeight, 8);
+    expect(boundary!.visible()).toBe(true);
+    expect(boundary!.x()).toBeCloseTo(boundaryOriginal.x, 8);
+    expect(boundary!.y()).toBeCloseTo(boundaryOriginal.y, 8);
+    expect(boundary!.width()).toBeCloseTo(boundaryOriginal.width, 8);
+    expect(boundary!.height()).toBeCloseTo(boundaryOriginal.height, 8);
+    expect(boundary!.rotation()).toBeCloseTo(boundaryOriginal.rotation, 8);
+    expect(transformer.getClientRect().x).toBeCloseTo(transformerOriginal.x, 8);
+    expect(transformer.getClientRect().y).toBeCloseTo(transformerOriginal.y, 8);
+    expect(transformer.getClientRect().width).toBeCloseTo(transformerOriginal.width, 8);
+    expect(transformer.getClientRect().height).toBeCloseTo(transformerOriginal.height, 8);
+
+    pluginContext.history.redo();
+    await flushCanvasEffects();
+    expect(getStaticLayerStructure().topLevelGroups).toHaveLength(1);
+    expect(getStaticLayerStructure().topLevelShapes).toHaveLength(1);
+    expect(getStaticLayerStructure().groupChildShapes).toHaveLength(2);
+    await exportStageSnapshot({
+      stage: harness.stage,
+      label: "scene1 g1 focused - after redo",
+      relativeFilePath: `${snapshotDir}/04-after-redo.png`,
+      waitMs: 60,
+    });
+
+    expect(s1!.absolutePosition().x).not.toBeCloseTo(s1OriginalPosition.x, 8);
+    expect(s2!.absolutePosition().x).not.toBeCloseTo(s2OriginalPosition.x, 8);
+    expect(boundary!.width()).not.toBeCloseTo(boundaryOriginal.width, 8);
+    expect(transformer.getClientRect().width).not.toBeCloseTo(transformerOriginal.width, 8);
+
+    harness.destroy();
+  }, 15000);
+});

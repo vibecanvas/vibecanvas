@@ -55,6 +55,7 @@ export interface IPluginContext {
   crdt: Crdt;
   capabilities: {
     createShapeFromTElement?: (element: TElement) => Konva.Shape | null;
+    updateShapeFromTElement?: (element: TElement) => Konva.Shape | null;
     createGroupFromTGroup?: (element: TGroup) => Konva.Group | null;
     toElement?: (node: Konva.Shape) => TElement | null;
     toGroup?: (node: Konva.Group) => TGroup | null;

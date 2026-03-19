@@ -4,6 +4,7 @@ import type { TTool } from "../components/FloatingCanvasToolbar/toolbar.types";
 import { CustomEvents } from "../custom-events";
 import { CanvasMode } from "../services/canvas/enum";
 import type { IPlugin, IPluginContext } from "./interface";
+import { throttle } from "@solid-primitives/scheduled";
 
 
 export class Shape2dPlugin implements IPlugin {
@@ -108,6 +109,39 @@ export class Shape2dPlugin implements IPlugin {
       }
       return currentToElement?.(node) || null
     }
+
+    context.capabilities.updateShapeFromTElement = (element) => {
+      if (!Shape2dPlugin.supportedTypes.has(element.data.type)) {
+        return currentCreateShapeFromTElement?.(element) || null
+      } else {
+        const shape = context.staticForegroundLayer.findOne((node: Konva.Node) => node.id() === element.id) as Konva.Shape
+        if (shape) {
+          Shape2dPlugin.updateShapeFromTElement(context, shape, element)
+          return shape
+        }
+        return null
+      }
+    }
+  }
+
+  private static updateShapeFromTElement(context: IPluginContext, shape: Konva.Shape, element: TElement) {
+    // TODO: add for other shapes
+    if (shape instanceof Konva.Rect && element.data.type === 'rect') {
+      const absolutePosition = shape.absolutePosition()
+      if (absolutePosition.x !== element.x || absolutePosition.y !== element.y) {
+        shape.setAbsolutePosition({ x: element.x, y: element.y })
+      }
+      if (shape.rotation() !== element.angle) shape.rotation(element.angle)
+      if (shape.width() !== element.data.w) shape.width(element.data.w)
+      if (shape.height() !== element.data.h) shape.height(element.data.h)
+      if (shape.scaleX() !== 1) shape.scaleX(1)
+      if (shape.scaleY() !== 1) shape.scaleY(1)
+      if (element.style.backgroundColor !== shape.fill()) shape.fill(element.style.backgroundColor)
+      if (element.style.strokeColor !== shape.stroke()) shape.stroke(element.style.strokeColor)
+      if (element.style.strokeWidth !== shape.strokeWidth()) shape.strokeWidth(element.style.strokeWidth)
+      if (element.style.opacity !== shape.opacity()) shape.opacity(element.style.opacity)
+    }
+
   }
 
   static toTElement(shape: Konva.Shape): TElement {
@@ -134,7 +168,7 @@ export class Shape2dPlugin implements IPlugin {
 
     return {
       id: shape.id(),
-      angle: shape.rotation(),
+      angle: shape.getAbsoluteRotation(),
       x,
       y,
       bindings: [],
@@ -178,9 +212,12 @@ export class Shape2dPlugin implements IPlugin {
       if (earlyExit) e.cancelBubble = true
     })
 
+    const throttledPatch = throttle((shape: Konva.Shape) => {
+      context.crdt.patch({ elements: [Shape2dPlugin.toTElement(shape)], groups: [] })
+    }, 100)
     shape.on('dragmove', e => {
       const { x, y } = shape.absolutePosition();
-      context.crdt.patch({ elements: [Shape2dPlugin.toTElement(shape)], groups: [] })
+      throttledPatch(shape)
     })
 
     shape.on('transform', e => {

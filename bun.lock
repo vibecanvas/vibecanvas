@@ -193,6 +193,7 @@
         "@kobalte/core": "catalog:",
         "@opencode-ai/sdk": "catalog:",
         "@orpc/contract": "catalog:",
+        "@solid-primitives/scheduled": "^1.5.3",
         "@vibecanvas/shell": "workspace:*",
         "konva": "^9.3.22",
         "lucide-solid": "catalog:",

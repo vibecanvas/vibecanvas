@@ -1,6 +1,7 @@
 import Konva from "konva";
 import { createEffect } from "solid-js";
 import type { IPlugin, IPluginContext } from "./interface";
+import { TElement } from "@vibecanvas/shell/automerge/index";
 
 /**
  * Handles rotation and resizing
@@ -19,43 +20,90 @@ export class TransformPlugin implements IPlugin {
       // this.#transformer.on('dragmove', console.log)
       context.dynamicLayer.add(this.#transformer);
       this.createReaction(context)
-      // this.setupHistory(context)
+      this.setupHistory(context)
     })
   }
 
   private setupHistory(context: IPluginContext) {
-    this.#transformer.on('transformstart', e => {
-      console.log('transformstart', e)
-      if (e.currentTarget instanceof Konva.Transformer) {
-
-        console.log(e.currentTarget.getNodes())
-        e.currentTarget.getNodes().forEach(node => {
-          if (node instanceof Konva.Group) {
-            const ogRotation = node.rotation()
-            const ogX = node.x()
-            const ogY = node.y()
-            const ogWidth = node.width()
-            const ogHeight = node.height()
-            setTimeout(() => {
-              node.rotation(ogRotation)
-              node.x(ogX)
-              node.y(ogY)
-              node.width(ogWidth)
-              node.height(ogHeight)
-            }, 1000)
-          }
-        })
-
+    let originalElements: TElement[] = []
+    const refreshTransformer = () => {
+      if (typeof this.#transformer.forceUpdate === 'function') {
+        this.#transformer.forceUpdate()
       }
+      this.#transformer.update()
+      context.dynamicLayer.batchDraw()
+    }
+
+    this.#transformer.on('transformstart', e => {
+      const shapes = TransformPlugin.getShapesFromTransformer(this.#transformer.getNodes())
+      originalElements = shapes.map(shape => context.capabilities.toElement?.(shape)).filter(Boolean) as TElement[]
     })
     this.#transformer.on('transformend', e => {
       console.log('transformend', e)
+      const shapes = TransformPlugin.getShapesFromTransformer(this.#transformer.getNodes())
+      const elements = shapes.map(shape => context.capabilities.toElement?.(shape)).filter(Boolean) as TElement[]
+      TransformPlugin.refreshSelectedGroups(context)
+      refreshTransformer()
+      context.crdt.patch({ elements, groups: [] })
+      context.history.record({
+        undo() {
+          TransformPlugin.applyElementsToShapes(context, originalElements)
+          refreshTransformer()
+          context.crdt.patch({ elements: originalElements, groups: [] })
+        }, redo() {
+          TransformPlugin.applyElementsToShapes(context, elements)
+          refreshTransformer()
+          context.crdt.patch({ elements, groups: [] })
+        },
+      })
     })
     this.#transformer.on('transform', e => {
       console.log('transform', e)
+      TransformPlugin.refreshSelectedGroups(context)
+      refreshTransformer()
     })
 
 
+  }
+
+  private static getShapesFromTransformer(nodes: Konva.Node[]): Konva.Shape[] {
+    return nodes.map(node => {
+      if (node instanceof Konva.Group && node.hasChildren()) return TransformPlugin.getShapesFromTransformer(node.getChildren())
+      if (node instanceof Konva.Shape) return node
+      return []
+    }).flat()
+  }
+
+  private static applyElementsToShapes(context: IPluginContext, elements: TElement[]) {
+    elements.forEach(element => {
+      context.capabilities.updateShapeFromTElement?.(element)
+    })
+    TransformPlugin.refreshGroupsForElements(context, elements)
+  }
+
+  private static refreshSelectedGroups(context: IPluginContext) {
+    context.state.selection.forEach(node => {
+      if (node instanceof Konva.Group) {
+        node.fire('transform')
+      }
+    })
+  }
+
+  private static refreshGroupsForElements(context: IPluginContext, elements: TElement[]) {
+    const refreshedGroups = new Set<string>()
+
+    elements.forEach(element => {
+      const shape = context.staticForegroundLayer.findOne((node: Konva.Node) => node.id() === element.id)
+      let parent = shape?.getParent()
+
+      while (parent instanceof Konva.Group) {
+        if (!refreshedGroups.has(parent.id())) {
+          parent.fire('transform')
+          refreshedGroups.add(parent.id())
+        }
+        parent = parent.getParent()
+      }
+    })
   }
 
   private createReaction(context: IPluginContext) {
