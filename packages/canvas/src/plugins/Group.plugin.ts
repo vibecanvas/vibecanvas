@@ -26,7 +26,7 @@ export class GroupPlugin implements IPlugin {
 
     context.hooks.keydown.tap(event => {
       if (context.state.mode !== CanvasMode.SELECT) return;
-      if (event.key === 'g' && event.metaKey && !event.shiftKey) {
+      if (event.key === 'g' && (event.metaKey || event.ctrlKey) && !event.shiftKey) {
         // prevent default search popup
         event.preventDefault()
         event.stopPropagation()
@@ -37,7 +37,7 @@ export class GroupPlugin implements IPlugin {
           context.setState('selection', [newGroup])
         }
 
-      } else if (event.key === 'g' && event.metaKey && event.shiftKey) {
+      } else if (event.key === 'g' && (event.metaKey || event.ctrlKey) && event.shiftKey) {
         // prevent default search popup
         event.preventDefault()
         event.stopPropagation()

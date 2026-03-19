@@ -161,7 +161,7 @@ export class ToolbarPlugin implements IPlugin {
         return true;
       }
 
-      if (event.key.toLowerCase() === "g" && !event.metaKey) {
+      if (event.key.toLowerCase() === "g" && !event.metaKey && !event.ctrlKey && !event.altKey) {
         this.#setGridVisible((value) => !value);
         return true;
       }
