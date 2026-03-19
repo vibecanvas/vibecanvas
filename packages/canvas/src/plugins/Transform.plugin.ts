@@ -31,7 +31,6 @@ export class TransformPlugin implements IPlugin {
         this.#transformer.forceUpdate()
       }
       this.#transformer.update()
-      context.dynamicLayer.batchDraw()
     }
 
     this.#transformer.on('transformstart', e => {
@@ -44,23 +43,23 @@ export class TransformPlugin implements IPlugin {
       const elements = shapes.map(shape => context.capabilities.toElement?.(shape)).filter(Boolean) as TElement[]
       TransformPlugin.refreshSelectedGroups(context)
       refreshTransformer()
-      context.crdt.patch({ elements, groups: [] })
+      const beforeElements = structuredClone(originalElements)
+      const afterElements = structuredClone(elements)
+      context.crdt.patch({ elements: afterElements, groups: [] })
       context.history.record({
         undo() {
-          TransformPlugin.applyElementsToShapes(context, originalElements)
+          TransformPlugin.applyElementsToShapes(context, beforeElements)
           refreshTransformer()
-          context.crdt.patch({ elements: originalElements, groups: [] })
+          context.crdt.patch({ elements: beforeElements, groups: [] })
         }, redo() {
-          TransformPlugin.applyElementsToShapes(context, elements)
+          TransformPlugin.applyElementsToShapes(context, afterElements)
           refreshTransformer()
           context.crdt.patch({ elements, groups: [] })
         },
       })
     })
     this.#transformer.on('transform', e => {
-      console.log('transform', e)
-      TransformPlugin.refreshSelectedGroups(context)
-      refreshTransformer()
+      // 
     })
 
 
