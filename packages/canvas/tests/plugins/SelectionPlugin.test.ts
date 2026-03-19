@@ -1,14 +1,14 @@
 import Konva from "konva";
 import { createEffect } from "solid-js";
 import { describe, expect, test, vi } from "vitest";
-import { GroupPlugin } from "../src/plugins/Group.plugin";
-import type { IPlugin, IPluginContext } from "../src/plugins/interface";
-import { SelectPlugin } from "../src/plugins/Select.plugin";
-import { TransformPlugin } from "../src/plugins/Transform.plugin";
-import { initializeScene01SelectOuterGroupFromChild } from "./scenarios/01-select-outer-group-from-child";
-import { initializeScene02NestedGroupsLeafShapes } from "./scenarios/02-nested-groups-leaf-shapes";
-import { initializeScene03TopLevelMixedSelection } from "./scenarios/03-top-level-mixed-selection";
-import { createCanvasTestHarness, flushCanvasEffects } from "./test-setup";
+import { GroupPlugin } from "../../src/plugins/Group.plugin";
+import type { IPlugin, IPluginContext } from "../../src/plugins/interface";
+import { SelectPlugin } from "../../src/plugins/Select.plugin";
+import { TransformPlugin } from "../../src/plugins/Transform.plugin";
+import { initializeScene01SelectOuterGroupFromChild } from "../scenarios/01-select-outer-group-from-child";
+import { initializeScene02NestedGroupsLeafShapes } from "../scenarios/02-nested-groups-leaf-shapes";
+import { initializeScene03TopLevelMixedSelection } from "../scenarios/03-top-level-mixed-selection";
+import { createCanvasTestHarness, flushCanvasEffects } from "../test-setup";
 
 class SelectionProbePlugin implements IPlugin {
   observedSelectionIds: string[] = [];
