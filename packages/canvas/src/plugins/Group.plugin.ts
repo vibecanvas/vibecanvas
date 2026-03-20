@@ -6,6 +6,7 @@ import type { IPlugin, IPluginContext } from "./interface";
 import { Shape2dPlugin } from "./Shape2d.plugin";
 import { TElement, TGroup } from "@vibecanvas/shell/automerge/index";
 import { TransformPlugin } from "./Transform.plugin";
+import { throttle } from "@solid-primitives/scheduled";
 
 
 export class GroupPlugin implements IPlugin {
@@ -443,8 +444,24 @@ export class GroupPlugin implements IPlugin {
       }
     })
 
+    const throttledPatch = throttle((elements: TElement[]) => {
+      context.crdt.patch({ elements, groups: [] })
+    }, 100)
+
     group.on('dragmove transform', e => {
       this.#boundaries.values().forEach(b => b.update())
+      // update shape position, dont propagate to parent
+      if (e.currentTarget instanceof Konva.Group && e.type === 'dragmove') {
+        const childElements = e.currentTarget
+          .find((node: Konva.Node) => node instanceof Konva.Shape)
+          .map((node) => {
+            const shape = node as Konva.Shape
+            return context.capabilities.toElement?.(shape)
+          })
+          .filter(Boolean) as TElement[]
+        throttledPatch(childElements)
+        e.cancelBubble = true
+      }
     })
   }
 
