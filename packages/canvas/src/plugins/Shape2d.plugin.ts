@@ -5,6 +5,7 @@ import { CustomEvents } from "../custom-events";
 import { CanvasMode } from "../services/canvas/enum";
 import type { IPlugin, IPluginContext } from "./interface";
 import { throttle } from "@solid-primitives/scheduled";
+import { TransformPlugin } from "./Transform.plugin";
 
 
 export class Shape2dPlugin implements IPlugin {
@@ -188,6 +189,8 @@ export class Shape2dPlugin implements IPlugin {
 
   static setupShapeListeners(context: IPluginContext, shape: Konva.Shape) {
     let originalElement: TElement | null = null
+    const multiDragStartPositions = new Map<string, { x: number; y: number }>()
+    const passengerOriginalElements = new Map<string, TElement[]>()
 
     shape.on('pointerclick', e => {
       if (context.state.mode !== CanvasMode.SELECT) return
@@ -233,10 +236,44 @@ export class Shape2dPlugin implements IPlugin {
 
     shape.on('dragstart', e => {
       originalElement = Shape2dPlugin.toTElement(shape)
+      // Capture start positions of all selected nodes for multi-drag sync
+      multiDragStartPositions.clear()
+      passengerOriginalElements.clear()
+      const selected = TransformPlugin.filterSelection(context.state.selection)
+      selected.forEach(n => {
+        multiDragStartPositions.set(n.id(), { ...n.absolutePosition() })
+        if (n === shape) return
+        if (n instanceof Konva.Shape) {
+          const el = context.capabilities.toElement?.(n)
+          if (el) passengerOriginalElements.set(n.id(), [structuredClone(el)])
+        } else if (n instanceof Konva.Group) {
+          const childEls = (n.find((child: Konva.Node) => child instanceof Konva.Shape) as Konva.Shape[])
+            .map(child => context.capabilities.toElement?.(child))
+            .filter(Boolean) as TElement[]
+          passengerOriginalElements.set(n.id(), structuredClone(childEls))
+        }
+      })
     })
 
     shape.on('dragmove', e => {
       throttledPatch(Shape2dPlugin.toTElement(shape))
+      // Sync other selected nodes by the same delta.
+      // Skip nodes already dragging independently (e.g. via Transformer proxyDrag)
+      // to avoid conflicting with Konva's own drag tracking.
+      const selected = TransformPlugin.filterSelection(context.state.selection)
+      if (selected.length <= 1) return
+      const start = multiDragStartPositions.get(shape.id())
+      if (!start) return
+      const cur = shape.absolutePosition()
+      const dx = cur.x - start.x
+      const dy = cur.y - start.y
+      selected.forEach(other => {
+        if (other === shape) return
+        if (other.isDragging()) return
+        const os = multiDragStartPositions.get(other.id())
+        if (!os) return
+        other.absolutePosition({ x: os.x + dx, y: os.y + dy })
+      })
     })
 
     shape.on('dragend', e => {
@@ -246,9 +283,34 @@ export class Shape2dPlugin implements IPlugin {
 
       context.crdt.patch({ elements: [afterElement], groups: [] })
 
+      // Patch CRDT for passenger nodes that moved with this shape
+      const selected = TransformPlugin.filterSelection(context.state.selection)
+      const passengers = selected.filter(n => n !== shape)
+      const passengerAfterElements = new Map<string, TElement[]>()
+      passengers.forEach(passenger => {
+        if (passenger instanceof Konva.Shape) {
+          const el = context.capabilities.toElement?.(passenger)
+          if (el) {
+            const els = [structuredClone(el)]
+            passengerAfterElements.set(passenger.id(), els)
+            context.crdt.patch({ elements: els, groups: [] })
+          }
+        } else if (passenger instanceof Konva.Group) {
+          const childEls = (passenger.find((child: Konva.Node) => child instanceof Konva.Shape) as Konva.Shape[])
+            .map(child => context.capabilities.toElement?.(child))
+            .filter(Boolean) as TElement[]
+          const cloned = structuredClone(childEls)
+          passengerAfterElements.set(passenger.id(), cloned)
+          if (cloned.length > 0) context.crdt.patch({ elements: cloned, groups: [] })
+        }
+      })
+
       if (!beforeElement) return
 
       const didMove = beforeElement.x !== afterElement.x || beforeElement.y !== afterElement.y
+      const capturedStartPositions = new Map(multiDragStartPositions)
+      const capturedPassengerOriginals = new Map(passengerOriginalElements)
+      multiDragStartPositions.clear()
       originalElement = null
       if (!didMove) return
 
@@ -257,10 +319,39 @@ export class Shape2dPlugin implements IPlugin {
         undo() {
           applyElement(beforeElement)
           context.crdt.patch({ elements: [beforeElement], groups: [] })
+          // Restore passengers to their original positions
+          passengers.forEach(passenger => {
+            const startPos = capturedStartPositions.get(passenger.id())
+            if (startPos) passenger.absolutePosition(startPos)
+            const originalEls = capturedPassengerOriginals.get(passenger.id())
+            if (originalEls && originalEls.length > 0) {
+              context.crdt.patch({ elements: originalEls, groups: [] })
+            }
+          })
         },
         redo() {
           applyElement(afterElement)
           context.crdt.patch({ elements: [afterElement], groups: [] })
+          // Restore passengers to their after-drag positions
+          passengers.forEach(passenger => {
+            const afterEls = passengerAfterElements.get(passenger.id())
+            if (!afterEls || afterEls.length === 0) return
+            if (passenger instanceof Konva.Shape) {
+              context.capabilities.updateShapeFromTElement?.(afterEls[0])
+              context.crdt.patch({ elements: afterEls, groups: [] })
+            } else if (passenger instanceof Konva.Group) {
+              const afterPos = passengerAfterElements.get(passenger.id())
+              const startPos = capturedStartPositions.get(passenger.id())
+              const afterStart = capturedStartPositions.get(shape.id())
+              const afterCur = afterElement
+              if (startPos && afterStart) {
+                const dx = afterCur.x - beforeElement.x
+                const dy = afterCur.y - beforeElement.y
+                passenger.absolutePosition({ x: startPos.x + dx, y: startPos.y + dy })
+              }
+              if (afterPos && afterPos.length > 0) context.crdt.patch({ elements: afterPos, groups: [] })
+            }
+          })
         },
       })
     })

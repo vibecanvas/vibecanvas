@@ -377,10 +377,10 @@ export class GroupPlugin implements IPlugin {
       ) as Array<Konva.Group | Konva.Shape>;
       // disable drag for everything first
       allNodes.forEach(node => node.draggable(false));
-      // deepest selected node wins
-      const active = TransformPlugin.filterSelection(context.state.selection)[0];
-      if (active) {
-        active.draggable(true);
+      // all selected nodes are draggable so multi-select drag works
+      const activeNodes = TransformPlugin.filterSelection(context.state.selection);
+      if (activeNodes.length > 0) {
+        activeNodes.forEach(node => node.draggable(true));
         return;
       }
       // fallback: only top-level groups draggable

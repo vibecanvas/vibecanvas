@@ -129,6 +129,19 @@ export class SelectPlugin implements IPlugin {
       return true
     }
 
+    // Case 2a: flat multi-selection is active and the clicked top-level node is
+    // already in the selection — preserve it so drag applies to all selected nodes.
+    // Only applies to flat multi-select (no node is nested inside another group in
+    // the current selection). Depth/drill selections (e.g. [outerGroup, innerGroup, shape])
+    // must still allow normal focus switching.
+    const topLevelNode = path[0];
+    const isFlatMultiSelect =
+      context.state.selection.length > 1 &&
+      !context.state.selection.some(n => n.parent instanceof Konva.Group);
+    if (isFlatMultiSelect && topLevelNode && context.state.selection.includes(topLevelNode)) {
+      return true;
+    }
+
     // Case 2: regular click changes focus only inside the current depth.
     // Single click should never drill deeper into nested groups.
     if (!hasSameSelectionOrder(context.state.selection, nextSelection)) {
