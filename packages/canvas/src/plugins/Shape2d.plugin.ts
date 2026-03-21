@@ -187,6 +187,8 @@ export class Shape2dPlugin implements IPlugin {
   }
 
   static setupShapeListeners(context: IPluginContext, shape: Konva.Shape) {
+    let originalElement: TElement | null = null
+
     shape.on('pointerclick', e => {
       if (context.state.mode !== CanvasMode.SELECT) return
       context.hooks.customEvent.call(CustomEvents.ELEMENT_POINTERCLICK, e)
@@ -215,12 +217,52 @@ export class Shape2dPlugin implements IPlugin {
       if (earlyExit) e.cancelBubble = true
     })
 
-    const throttledPatch = throttle((shape: Konva.Shape) => {
-      context.crdt.patch({ elements: [Shape2dPlugin.toTElement(shape)], groups: [] })
+    const applyElement = (element: TElement) => {
+      context.capabilities.updateShapeFromTElement?.(element)
+      let parent = shape.getParent()
+
+      while (parent instanceof Konva.Group) {
+        parent.fire('transform')
+        parent = parent.getParent()
+      }
+    }
+
+    const throttledPatch = throttle((element: TElement) => {
+      context.crdt.patch({ elements: [element], groups: [] })
     }, 100)
+
+    shape.on('dragstart', e => {
+      originalElement = Shape2dPlugin.toTElement(shape)
+    })
+
     shape.on('dragmove', e => {
-      const { x, y } = shape.absolutePosition();
-      throttledPatch(shape)
+      throttledPatch(Shape2dPlugin.toTElement(shape))
+    })
+
+    shape.on('dragend', e => {
+      const nextElement = Shape2dPlugin.toTElement(shape)
+      const beforeElement = originalElement ? structuredClone(originalElement) : null
+      const afterElement = structuredClone(nextElement)
+
+      context.crdt.patch({ elements: [afterElement], groups: [] })
+
+      if (!beforeElement) return
+
+      const didMove = beforeElement.x !== afterElement.x || beforeElement.y !== afterElement.y
+      originalElement = null
+      if (!didMove) return
+
+      context.history.record({
+        label: 'drag-shape',
+        undo() {
+          applyElement(beforeElement)
+          context.crdt.patch({ elements: [beforeElement], groups: [] })
+        },
+        redo() {
+          applyElement(afterElement)
+          context.crdt.patch({ elements: [afterElement], groups: [] })
+        },
+      })
     })
 
     shape.on('transform', e => {

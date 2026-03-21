@@ -25,6 +25,8 @@ async function createShapeSceneHarness() {
 
   expect(s4).toBeTruthy();
 
+  pluginContext.history.clear();
+
   return {
     harness,
     pluginContext,
@@ -35,6 +37,12 @@ async function createShapeSceneHarness() {
 function dragShapeInScreenSpace(shape: Konva.Shape, args: { deltaX: number; deltaY?: number }) {
   const beforeAbsolutePosition = shape.absolutePosition();
 
+  shape.fire("dragstart", {
+    target: shape,
+    currentTarget: shape,
+    evt: new MouseEvent("dragstart", { bubbles: true }),
+  });
+
   shape.setAbsolutePosition({
     x: beforeAbsolutePosition.x + args.deltaX,
     y: beforeAbsolutePosition.y + (args.deltaY ?? 0),
@@ -44,6 +52,12 @@ function dragShapeInScreenSpace(shape: Konva.Shape, args: { deltaX: number; delt
     target: shape,
     currentTarget: shape,
     evt: new MouseEvent("dragmove", { bubbles: true }),
+  });
+
+  shape.fire("dragend", {
+    target: shape,
+    currentTarget: shape,
+    evt: new MouseEvent("dragend", { bubbles: true }),
   });
 }
 
@@ -59,7 +73,7 @@ function expectShapePosition(shape: Konva.Shape, args: {
   expect(shape.y()).toBeCloseTo(args.localY, 8);
 }
 
-describe.skip("Shape2dPlugin", () => {
+describe("Shape2dPlugin", () => {
   test("scene3: dragging top-level s4 to the right without camera change updates its position and drag history", async () => {
     const { harness, pluginContext, s4 } = await createShapeSceneHarness();
     const snapshotDir = "tests/artifacts/shape2d-plugin/scene3-s4-drag-no-camera";
