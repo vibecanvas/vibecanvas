@@ -148,10 +148,13 @@ export class Shape2dPlugin implements IPlugin {
     let data!: TElementData
     if (shape instanceof Konva.Rect) {
       const absoluteScale = shape.getAbsoluteScale()
+      const layer = shape.getLayer()
+      const layerScaleX = layer?.scaleX() ?? 1
+      const layerScaleY = layer?.scaleY() ?? 1
       data = {
         type: 'rect',
-        w: shape.width() * absoluteScale.x,
-        h: shape.height() * absoluteScale.y,
+        w: shape.width() * (absoluteScale.x / layerScaleX),
+        h: shape.height() * (absoluteScale.y / layerScaleY),
       }
     } else
       throw new Error('Unsupported shape type')

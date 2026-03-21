@@ -45,7 +45,7 @@ export class Crdt {
     for (const item of items) {
       const existing = collection[item.id];
       if (!existing) {
-        collection[item.id] = item as TItem;
+        collection[item.id] = cloneValue(item) as TItem;
         continue;
       }
 
