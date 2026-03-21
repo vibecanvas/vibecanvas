@@ -8,7 +8,7 @@ import type { TCustomEvent } from "../../custom-events";
 import {
   CameraControlPlugin, EventListenerPlugin, ExampleScenePlugin,
   GridPlugin, GroupPlugin, HelpPlugin, HistoryControlPlugin, SceneHydratorPlugin,
-  SelectPlugin, Shape2dPlugin, ToolbarPlugin, TransformPlugin
+  SelectPlugin, Shape2dPlugin, ToolbarPlugin, TransformPlugin, VisualDebugPlugin
 } from "../../plugins";
 import type { IPlugin, IPluginContext, TMouseEvent, TPointerEvent, TWheelEvent } from "../../plugins/interface";
 import { AsyncParallelHook, SyncExitHook, SyncHook } from "../../tapable";
@@ -25,6 +25,7 @@ export function defaultPlugins(
   const plugins = [
     new EventListenerPlugin(),
     new GridPlugin(),
+    new VisualDebugPlugin(),
     new CameraControlPlugin(),
     new HistoryControlPlugin(),
     new ToolbarPlugin(args.onToggleSidebar),
