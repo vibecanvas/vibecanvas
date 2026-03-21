@@ -377,6 +377,105 @@ describe("TransformPlugin", () => {
     harness.destroy();
   }, 15000);
 
+  test("undo/redo after resizing s4 under camera zoom restores correct world-space position", async () => {
+    const { harness, pluginContext, s4, transformer } = await createTransformSceneHarness();
+    const snapshotDir = "tests/artifacts/transform-plugin/camera-zoom-undo-redo";
+
+    // 1. Snapshot original world-space metrics
+    const originalWorldX = s4.x();
+    const originalWorldY = s4.y();
+    const originalWorldW = s4.width() * s4.scaleX();
+    const originalWorldH = s4.height() * s4.scaleY();
+
+    await exportStageSnapshot({
+      stage: harness.stage,
+      label: "camera zoom undo redo - 01 initial",
+      relativeFilePath: `${snapshotDir}/01-initial.png`,
+      waitMs: 60,
+    });
+
+    // 2. Zoom out to 0.5x
+    pluginContext.camera.zoomAtScreenPoint(0.5, { x: 400, y: 300 });
+    pluginContext.hooks.cameraChange.call();
+    await flushCanvasEffects();
+
+    await exportStageSnapshot({
+      stage: harness.stage,
+      label: "camera zoom undo redo - 02 zoomed out 0.5x",
+      relativeFilePath: `${snapshotDir}/02-zoomed-out.png`,
+      waitMs: 60,
+    });
+
+    // 3. Select s4 and resize
+    pluginContext.setState("selection", [s4]);
+    await flushCanvasEffects();
+
+    transformer.fire("transformstart", {
+      target: s4,
+      currentTarget: transformer,
+      evt: new MouseEvent("transformstart", { bubbles: true }),
+    });
+
+    s4.x(s4.x() + 80);
+    s4.y(s4.y() + 30);
+    s4.scaleX(1.8);
+    s4.scaleY(1.5);
+
+    transformer.fire("transformend", {
+      target: s4,
+      currentTarget: transformer,
+      evt: new MouseEvent("transformend", { bubbles: true }),
+    });
+    await flushCanvasEffects();
+
+    // 4. Capture post-resize world metrics
+    const resizedWorldX = s4.x();
+    const resizedWorldY = s4.y();
+    const resizedWorldW = s4.width() * s4.scaleX();
+    const resizedWorldH = s4.height() * s4.scaleY();
+
+    await exportStageSnapshot({
+      stage: harness.stage,
+      label: "camera zoom undo redo - 03 after resize",
+      relativeFilePath: `${snapshotDir}/03-after-resize.png`,
+      waitMs: 60,
+    });
+
+    // 5. Undo — world-space must be restored to original
+    pluginContext.history.undo();
+    await flushCanvasEffects();
+
+    await exportStageSnapshot({
+      stage: harness.stage,
+      label: "camera zoom undo redo - 04 after undo",
+      relativeFilePath: `${snapshotDir}/04-after-undo.png`,
+      waitMs: 60,
+    });
+
+    expect(s4.x()).toBeCloseTo(originalWorldX, 8);
+    expect(s4.y()).toBeCloseTo(originalWorldY, 8);
+    expect(s4.width() * s4.scaleX()).toBeCloseTo(originalWorldW, 8);
+    expect(s4.height() * s4.scaleY()).toBeCloseTo(originalWorldH, 8);
+
+    // 6. Redo — world-space must be back to post-resize values
+    pluginContext.history.redo();
+    await flushCanvasEffects();
+
+    await exportStageSnapshot({
+      stage: harness.stage,
+      label: "camera zoom undo redo - 05 after redo",
+      relativeFilePath: `${snapshotDir}/05-after-redo.png`,
+      waitMs: 60,
+    });
+
+    expect(s4.x()).toBeCloseTo(resizedWorldX, 8);
+    expect(s4.y()).toBeCloseTo(resizedWorldY, 8);
+    expect(s4.width() * s4.scaleX()).toBeCloseTo(resizedWorldW, 8);
+    expect(s4.height() * s4.scaleY()).toBeCloseTo(resizedWorldH, 8);
+
+    harness.destroy();
+  }, 15000);
+
   test("scene1: undo after rotating focused g1 restores children, boundary box, and transformer", async () => {
     const { harness, pluginContext, s1, g1, transformer } = await createScene01TransformHarness();
     const s2 = g1.findOne<Konva.Rect>("#2");
