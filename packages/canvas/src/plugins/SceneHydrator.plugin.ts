@@ -4,6 +4,8 @@ import type { IPlugin, IPluginContext } from "./interface";
 
 type TMountedGroups = Map<string, Konva.Group>;
 
+const CLEAN_ON_LOAD = true;
+
 export class SceneHydratorPlugin implements IPlugin {
   apply(context: IPluginContext): void {
     context.hooks.initAsync.tapPromise(async () => {
@@ -31,12 +33,33 @@ export class SceneHydratorPlugin implements IPlugin {
       mountedGroups,
     });
 
-    if (remainingGroupIds.size > 0 || remainingElementIds.size > 0) {
-      context.crdt.deleteById({
-        groupIds: [...remainingGroupIds],
-        elementIds: [...remainingElementIds],
-      });
+    this.cleanupUnresolvedNodes(context, {
+      remainingGroupIds,
+      remainingElementIds,
+      cleanOnLoad: CLEAN_ON_LOAD,
+    });
+  }
+
+  private cleanupUnresolvedNodes(
+    context: IPluginContext,
+    args: {
+      remainingGroupIds: Set<string>;
+      remainingElementIds: Set<string>;
+      cleanOnLoad: boolean;
+    },
+  ) {
+    if (!args.cleanOnLoad) {
+      return;
     }
+
+    if (args.remainingGroupIds.size === 0 && args.remainingElementIds.size === 0) {
+      return;
+    }
+
+    context.crdt.deleteById({
+      groupIds: [...args.remainingGroupIds],
+      elementIds: [...args.remainingElementIds],
+    });
   }
 
   private loadGroupsTopDown(

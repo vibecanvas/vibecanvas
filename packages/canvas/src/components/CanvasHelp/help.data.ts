@@ -1,3 +1,5 @@
+import { TOOLS } from "../FloatingCanvasToolbar/toolbar.types";
+
 export type THelpShortcutItem = {
   label: string;
   keys?: string[];
@@ -9,24 +11,34 @@ export type THelpSection = {
   items: THelpShortcutItem[];
 };
 
+const TOOL_LABELS = {
+  hand: "Hand",
+  select: "Select",
+  rectangle: "Rectangle",
+  diamond: "Diamond",
+  ellipse: "Ellipse",
+  arrow: "Arrow",
+  line: "Line",
+  pen: "Pen",
+  text: "Text",
+  image: "Image",
+  chat: "Chat",
+  filesystem: "Filesystem",
+  terminal: "Terminal",
+} as const;
+
+const TOOL_SHORTCUT_LABELS = TOOLS.map((tool) => ({
+  label: TOOL_LABELS[tool.tool],
+  keys: [tool.shortcut, tool.letterShortcut]
+    .filter((value): value is string => Boolean(value))
+    .map((value) => value.toUpperCase()),
+  note: tool.tool === "select" ? "Esc also returns to select" : undefined,
+}));
+
 export const HELP_SECTIONS: THelpSection[] = [
   {
     title: "Tools",
-    items: [
-      { label: "Hand", keys: ["H"] },
-      { label: "Select", keys: ["1"], note: "Esc also returns to select" },
-      { label: "Rectangle", keys: ["2", "R"] },
-      { label: "Diamond", keys: ["3", "D"] },
-      { label: "Ellipse", keys: ["4", "O"] },
-      { label: "Arrow", keys: ["5", "A"] },
-      { label: "Line", keys: ["6", "L"] },
-      { label: "Pen", keys: ["7", "P"] },
-      { label: "Text", keys: ["8", "T"] },
-      { label: "Image", keys: ["9"] },
-      { label: "Chat", keys: ["C"] },
-      { label: "Filesystem", keys: ["F"] },
-      { label: "Terminal", keys: ["J"] },
-    ],
+    items: TOOL_SHORTCUT_LABELS,
   },
   {
     title: "Canvas",
