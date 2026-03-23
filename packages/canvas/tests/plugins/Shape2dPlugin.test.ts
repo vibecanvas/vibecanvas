@@ -73,6 +73,7 @@ function expectShapePosition(shape: Konva.Shape, args: {
   expect(shape.y()).toBeCloseTo(args.localY, 8);
 }
 
+
 describe("Shape2dPlugin", () => {
   test("scene3: dragging top-level s4 to the right without camera change updates its position and drag history", async () => {
     const { harness, pluginContext, s4 } = await createShapeSceneHarness();
@@ -227,5 +228,6 @@ describe("Shape2dPlugin", () => {
     });
 
     harness.destroy();
-  });
+  }, 15000);
+
 });

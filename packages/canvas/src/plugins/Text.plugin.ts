@@ -9,6 +9,8 @@ import { TransformPlugin } from "./Transform.plugin";
 
 export class TextPlugin implements IPlugin {
   #activeTool: TTool = 'select';
+  static readonly ATTACHED_TEXT_NAME = 'attached-text';
+  static readonly FREE_TEXT_NAME = 'free-text';
 
   apply(context: IPluginContext): void {
     this.setupClickCreate(context);
@@ -79,7 +81,7 @@ export class TextPlugin implements IPlugin {
       if (element.data.type !== 'text') return prevCreate?.(element) ?? null;
       const node = TextPlugin.createTextNode(element);
       TextPlugin.setupShapeListeners(context, node);
-      node.draggable(true);
+      node.draggable(element.data.containerId === null);
       return node;
     };
 
@@ -103,7 +105,8 @@ export class TextPlugin implements IPlugin {
 
   static createTextNode(element: TElement): Konva.Text {
     const data = element.data as TTextData;
-    return new Konva.Text({
+    const isAttached = data.containerId !== null;
+    const node = new Konva.Text({
       id: element.id,
       x: element.x,
       y: element.y,
@@ -116,9 +119,62 @@ export class TextPlugin implements IPlugin {
       align: data.textAlign,
       verticalAlign: data.verticalAlign,
       lineHeight: data.lineHeight,
-      wrap: 'none',
+      wrap: isAttached ? 'word' : 'none',
       draggable: false,
+      listening: !isAttached,
       fill: '#000000',
+    });
+
+    node.name(isAttached ? TextPlugin.ATTACHED_TEXT_NAME : TextPlugin.FREE_TEXT_NAME);
+    node.setAttr('vcContainerId', data.containerId);
+
+    return node;
+  }
+
+  static getContainerId(node: Konva.Node): string | null {
+    const containerId = node.getAttr('vcContainerId');
+    return typeof containerId === 'string' ? containerId : null;
+  }
+
+  static isAttachedTextNode(node: Konva.Node): node is Konva.Text {
+    return node instanceof Konva.Text && TextPlugin.getContainerId(node) !== null;
+  }
+
+  static findAttachedTextByContainerId(context: IPluginContext, containerId: string): Konva.Text | null {
+    const node = context.staticForegroundLayer.findOne((candidate: Konva.Node) => {
+      return candidate instanceof Konva.Text && TextPlugin.getContainerId(candidate) === containerId;
+    });
+
+    return node instanceof Konva.Text ? node : null;
+  }
+
+  static findAttachedContainerRect(context: IPluginContext, containerId: string): Konva.Rect | null {
+    const node = context.staticForegroundLayer.findOne((candidate: Konva.Node) => {
+      return candidate instanceof Konva.Rect && candidate.id() === containerId;
+    });
+
+    return node instanceof Konva.Rect ? node : null;
+  }
+
+  static getAttachedTextPadding(rect: Konva.Rect): number {
+    return Math.min(16, Math.max(8, Math.min(rect.width(), rect.height()) * 0.12));
+  }
+
+  static syncAttachedTextToRect(rect: Konva.Rect, node: Konva.Text) {
+    node.setAttrs({
+      x: rect.x(),
+      y: rect.y(),
+      rotation: rect.rotation(),
+      width: Math.max(4, rect.width()),
+      height: Math.max(4, rect.height()),
+      align: 'center',
+      verticalAlign: 'middle',
+      wrap: 'word',
+      draggable: false,
+      listening: false,
+      padding: TextPlugin.getAttachedTextPadding(rect),
+      scaleX: rect.scaleX(),
+      scaleY: rect.scaleY(),
     });
   }
 
@@ -160,7 +216,7 @@ export class TextPlugin implements IPlugin {
       verticalAlign: node.verticalAlign() as TTextData['verticalAlign'],
       lineHeight: node.lineHeight(),
       link: null,
-      containerId: null,
+      containerId: TextPlugin.getContainerId(node),
       autoResize: false,
     };
 
@@ -204,6 +260,11 @@ export class TextPlugin implements IPlugin {
     node.lineHeight(data.lineHeight);
     node.scaleX(1);
     node.scaleY(1);
+    node.wrap(data.containerId !== null ? 'word' : 'none');
+    node.listening(data.containerId === null);
+    node.draggable(data.containerId === null);
+    node.name(data.containerId !== null ? TextPlugin.ATTACHED_TEXT_NAME : TextPlugin.FREE_TEXT_NAME);
+    node.setAttr('vcContainerId', data.containerId);
   }
 
   static setupShapeListeners(context: IPluginContext, node: Konva.Text) {
@@ -394,6 +455,13 @@ export class TextPlugin implements IPlugin {
 
   static enterEditMode(context: IPluginContext, node: Konva.Text, isNew: boolean) {
     const originalText = node.text();
+    const containerId = TextPlugin.getContainerId(node);
+    const isAttached = containerId !== null;
+    const attachedRect = isAttached && containerId ? TextPlugin.findAttachedContainerRect(context, containerId) : null;
+    const originalRectElement = attachedRect ? context.capabilities.toElement?.(attachedRect) : null;
+    const originalRectWidth = attachedRect?.width() ?? null;
+    const originalRectHeight = attachedRect?.height() ?? null;
+    const originalTextElement = TextPlugin.toTElement(node);
     context.setState('editingTextId', node.id());
     node.visible(false);
     context.stage.batchDraw();
@@ -406,6 +474,7 @@ export class TextPlugin implements IPlugin {
     // Match Konva text rendering: font size scaled by camera, correct family and spacing
     const scaledFontSize = node.fontSize() * absScale.x;
     const scaledWidth = Math.max(node.width() * absScale.x, 4);
+    const scaledHeight = Math.max(node.height() * absScale.y, scaledFontSize);
 
     const getMinScreenHeight = (text: string) => {
       return Math.max(TextPlugin.computeTextHeight(node, text) * absScale.y, scaledFontSize);
@@ -428,8 +497,8 @@ export class TextPlugin implements IPlugin {
       lineHeight: String(node.lineHeight()),
       transform: `rotate(${absRot}deg)`,
       transformOrigin: 'top left',
-      // preserve explicit newlines/whitespace while letting the box grow for long lines
-      whiteSpace: 'pre',
+      whiteSpace: isAttached ? 'pre-wrap' : 'pre',
+      wordBreak: isAttached ? 'break-word' : 'normal',
       outline: '2px solid #3b82f6',
       background: 'transparent',
       border: 'none',
@@ -446,10 +515,14 @@ export class TextPlugin implements IPlugin {
     // Width tracks the longest explicit line so edit mode does not force-wrap single-line text.
     // Height follows current content, allowing deleted lines to shrink the box.
     const autoGrow = () => {
-      textarea.style.width = 'auto';
-      textarea.style.width = Math.max(textarea.scrollWidth, getMinScreenWidth(textarea.value)) + 'px';
+      if (isAttached) {
+        textarea.style.width = scaledWidth + 'px';
+      } else {
+        textarea.style.width = 'auto';
+        textarea.style.width = Math.max(textarea.scrollWidth, getMinScreenWidth(textarea.value)) + 'px';
+      }
       textarea.style.height = 'auto';
-      textarea.style.height = Math.max(textarea.scrollHeight, getMinScreenHeight(textarea.value)) + 'px';
+      textarea.style.height = (isAttached ? Math.max(scaledHeight, textarea.scrollHeight) : Math.max(textarea.scrollHeight, getMinScreenHeight(textarea.value))) + 'px';
     };
     textarea.addEventListener('input', autoGrow);
 
@@ -487,39 +560,46 @@ export class TextPlugin implements IPlugin {
       const textToSet = (!isNew && newText === '') ? originalText : newText;
 
       // Capture height before edit for undo
-      const beforeWidth = node.width();
-      const beforeHeight = node.height();
-
       node.text(textToSet);
-      node.width(Math.max(worldWidthFromTextarea, TextPlugin.computeTextWidth(node, textToSet)));
+      if (isAttached && attachedRect && originalRectWidth !== null && originalRectHeight !== null) {
+        attachedRect.width(originalRectWidth);
+        attachedRect.height(Math.max(originalRectHeight, worldHeightFromTextarea));
+        TextPlugin.syncAttachedTextToRect(attachedRect, node);
+      } else {
+        node.width(Math.max(worldWidthFromTextarea, TextPlugin.computeTextWidth(node, textToSet)));
+        node.height(Math.max(worldHeightFromTextarea, TextPlugin.computeTextHeight(node, textToSet)));
+      }
       node.visible(true);
-      // Primary source: textarea's displayed height.
-      // Floor: explicit \n count so JSDOM tests get a correct minimum.
-      node.height(Math.max(worldHeightFromTextarea, TextPlugin.computeTextHeight(node, textToSet)));
-      const afterWidth = node.width();
-      // Capture height after edit for redo (exact value, no recomputation needed)
-      const afterHeight = node.height();
       context.stage.batchDraw();
 
-      const element = TextPlugin.toTElement(node);
-      context.crdt.patch({ elements: [element], groups: [] });
+      const textElement = TextPlugin.toTElement(node);
+      const rectElement = attachedRect ? context.capabilities.toElement?.(attachedRect) : null;
+      context.crdt.patch({ elements: [rectElement, textElement].filter(Boolean) as TElement[], groups: [] });
 
       if (textToSet !== originalText) {
-        const beforeText = originalText;
-        const afterText = textToSet;
+        const afterRectElement = attachedRect ? context.capabilities.toElement?.(attachedRect) : null;
+        const afterTextElement = TextPlugin.toTElement(node);
         context.history.record({
           label: 'edit-text',
           undo() {
-            node.text(beforeText);
-            node.width(beforeWidth);
-            node.height(beforeHeight);
-            context.crdt.patch({ elements: [TextPlugin.toTElement(node)], groups: [] });
+            if (attachedRect && originalRectElement) {
+              context.capabilities.updateShapeFromTElement?.(originalRectElement);
+            }
+            context.capabilities.updateShapeFromTElement?.(originalTextElement);
+            context.crdt.patch({
+              elements: [originalRectElement, originalTextElement].filter(Boolean) as TElement[],
+              groups: [],
+            });
           },
           redo() {
-            node.text(afterText);
-            node.width(afterWidth);
-            node.height(afterHeight);
-            context.crdt.patch({ elements: [TextPlugin.toTElement(node)], groups: [] });
+            if (attachedRect && afterRectElement) {
+              context.capabilities.updateShapeFromTElement?.(afterRectElement);
+            }
+            context.capabilities.updateShapeFromTElement?.(afterTextElement);
+            context.crdt.patch({
+              elements: [afterRectElement, afterTextElement].filter(Boolean) as TElement[],
+              groups: [],
+            });
           },
         });
       }

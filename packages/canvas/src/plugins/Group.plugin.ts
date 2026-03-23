@@ -71,6 +71,7 @@ export class GroupPlugin implements IPlugin {
     selections: (Konva.Group | Konva.Shape)[],
     args?: { groupId?: string, recordHistory?: boolean },
   ) {
+    selections = GroupPlugin.expandSelectionsWithAttachedText(context, selections)
     const x = Math.min(...selections.map(s => s.x()))
     const y = Math.min(...selections.map(s => s.y()))
     const width = Math.max(...selections.map(s => s.x() + s.width())) - x
@@ -147,6 +148,30 @@ export class GroupPlugin implements IPlugin {
     }
 
     return newGroup;
+  }
+
+  private static expandSelectionsWithAttachedText(
+    context: IPluginContext,
+    selections: (Konva.Group | Konva.Shape)[],
+  ) {
+    const expanded = [...selections]
+    const seen = new Set(expanded.map(node => node.id()))
+
+    selections.forEach(node => {
+      if (!(node instanceof Konva.Rect)) return
+
+      const attachedText = context.staticForegroundLayer.findOne((candidate: Konva.Node) => {
+        return candidate instanceof Konva.Text && candidate.getAttr('vcContainerId') === node.id()
+      })
+
+      if (!(attachedText instanceof Konva.Text)) return
+      if (seen.has(attachedText.id())) return
+
+      expanded.push(attachedText)
+      seen.add(attachedText.id())
+    })
+
+    return expanded
   }
 
   static ungroup(context: IPluginContext, group: Konva.Group) {

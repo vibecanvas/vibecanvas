@@ -187,6 +187,7 @@ export class SelectPlugin implements IPlugin {
 
     const topNodes = context.staticForegroundLayer.getChildren(item => item.parent?.id === context.staticForegroundLayer.id)
     const inSelection = topNodes.filter(node => {
+      if (!node.isListening()) return false;
       return Konva.Util.haveIntersection(node.getClientRect(), this.#selectionRectangle.getClientRect());
     }).sort((a, b) => a.id().localeCompare(b.id()))
 

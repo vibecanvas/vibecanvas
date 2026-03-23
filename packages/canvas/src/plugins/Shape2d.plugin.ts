@@ -5,6 +5,7 @@ import { CustomEvents } from "../custom-events";
 import { CanvasMode } from "../services/canvas/enum";
 import type { IPlugin, IPluginContext } from "./interface";
 import { throttle } from "@solid-primitives/scheduled";
+import { TextPlugin } from "./Text.plugin";
 import { TransformPlugin } from "./Transform.plugin";
 
 
@@ -20,7 +21,38 @@ export class Shape2dPlugin implements IPlugin {
   apply(context: IPluginContext): void {
     this.setupPreview(context);
     Shape2dPlugin.setupCapablities(context)
+    this.setupAttachedTextShortcut(context)
 
+  }
+
+  private setupAttachedTextShortcut(context: IPluginContext) {
+    context.hooks.keydown.tap((event) => {
+      if (event.key !== 'Enter') return;
+      if (context.state.mode !== CanvasMode.SELECT) return;
+      if (context.state.editingTextId !== null) return;
+
+      const activeSelection = TransformPlugin.filterSelection(context.state.selection);
+      if (activeSelection.length !== 1) return;
+
+      const rect = activeSelection[0];
+      if (!(rect instanceof Konva.Rect)) return;
+
+      const target = event.target;
+      if (target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement) return;
+      if (target instanceof HTMLElement && target.isContentEditable) return;
+
+      event.preventDefault();
+      event.stopPropagation();
+
+      let textNode = Shape2dPlugin.getAttachedTextNode(context, rect);
+      const isNew = textNode === null;
+      if (textNode === null) {
+        textNode = Shape2dPlugin.createAttachedTextNode(context, rect);
+      }
+
+      Shape2dPlugin.syncAttachedTextToRect(context, rect, textNode);
+      TextPlugin.enterEditMode(context, textNode, isNew);
+    })
   }
 
   private setupPreview(context: IPluginContext) {
@@ -125,6 +157,73 @@ export class Shape2dPlugin implements IPlugin {
     }
   }
 
+  private static getAttachedTextNode(context: IPluginContext, rect: Konva.Rect) {
+    return TextPlugin.findAttachedTextByContainerId(context, rect.id());
+  }
+
+  private static createAttachedTextNode(context: IPluginContext, rect: Konva.Rect) {
+    const parent = rect.getParent();
+    const parentGroupId = parent instanceof Konva.Group ? parent.id() : null;
+    const textElement: TElement = {
+      id: crypto.randomUUID(),
+      x: rect.x(),
+      y: rect.y(),
+      angle: rect.rotation(),
+      bindings: [],
+      createdAt: Date.now(),
+      locked: false,
+      parentGroupId,
+      updatedAt: Date.now(),
+      zIndex: '',
+      style: {
+        opacity: rect.opacity(),
+      },
+      data: {
+        type: 'text',
+        w: Math.max(4, rect.width()),
+        h: Math.max(4, rect.height()),
+        text: '',
+        originalText: '',
+        fontSize: Math.max(14, Math.min(24, rect.height() * 0.35)),
+        fontFamily: 'Arial',
+        textAlign: 'center',
+        verticalAlign: 'middle',
+        lineHeight: 1.2,
+        link: null,
+        containerId: rect.id(),
+        autoResize: false,
+      },
+    };
+
+    const textNode = TextPlugin.createTextNode(textElement);
+    (parent ?? context.staticForegroundLayer).add(textNode);
+    textNode.moveToTop();
+    context.crdt.patch({ elements: [TextPlugin.toTElement(textNode)], groups: [] });
+
+    return textNode;
+  }
+
+  private static syncAttachedTextToRect(context: IPluginContext, rect: Konva.Rect, textNode?: Konva.Text | null) {
+    const attachedText = textNode ?? Shape2dPlugin.getAttachedTextNode(context, rect);
+    if (!attachedText) return null;
+
+    const parent = rect.getParent();
+    if (parent && attachedText.getParent() !== parent) {
+      parent.add(attachedText);
+    }
+
+    TextPlugin.syncAttachedTextToRect(rect, attachedText);
+
+    attachedText.name(TextPlugin.ATTACHED_TEXT_NAME);
+    attachedText.setAttr('vcContainerId', rect.id());
+
+    const linkedElement = TextPlugin.toTElement(attachedText);
+    linkedElement.parentGroupId = parent instanceof Konva.Group ? parent.id() : null;
+    context.crdt.patch({ elements: [linkedElement], groups: [] });
+
+    return attachedText;
+  }
+
   private static updateShapeFromTElement(context: IPluginContext, shape: Konva.Shape, element: TElement) {
     // TODO: add for other shapes
     if (shape instanceof Konva.Rect && element.data.type === 'rect') {
@@ -141,6 +240,7 @@ export class Shape2dPlugin implements IPlugin {
       if (element.style.strokeColor !== shape.stroke()) shape.stroke(element.style.strokeColor)
       if (element.style.strokeWidth !== shape.strokeWidth()) shape.strokeWidth(element.style.strokeWidth)
       if (element.style.opacity !== shape.opacity()) shape.opacity(element.style.opacity)
+      Shape2dPlugin.syncAttachedTextToRect(context, shape)
     }
 
   }
@@ -257,6 +357,9 @@ export class Shape2dPlugin implements IPlugin {
 
     shape.on('dragmove', e => {
       throttledPatch(Shape2dPlugin.toTElement(shape))
+      if (shape instanceof Konva.Rect) {
+        Shape2dPlugin.syncAttachedTextToRect(context, shape)
+      }
       // Sync other selected nodes by the same delta.
       // Skip nodes already dragging independently (e.g. via Transformer proxyDrag)
       // to avoid conflicting with Konva's own drag tracking.
@@ -282,6 +385,9 @@ export class Shape2dPlugin implements IPlugin {
       const afterElement = structuredClone(nextElement)
 
       context.crdt.patch({ elements: [afterElement], groups: [] })
+      if (shape instanceof Konva.Rect) {
+        Shape2dPlugin.syncAttachedTextToRect(context, shape)
+      }
 
       // Patch CRDT for passenger nodes that moved with this shape
       const selected = TransformPlugin.filterSelection(context.state.selection)
@@ -319,6 +425,9 @@ export class Shape2dPlugin implements IPlugin {
         undo() {
           applyElement(beforeElement)
           context.crdt.patch({ elements: [beforeElement], groups: [] })
+          if (shape instanceof Konva.Rect) {
+            Shape2dPlugin.syncAttachedTextToRect(context, shape)
+          }
           // Restore passengers to their original positions
           passengers.forEach(passenger => {
             const startPos = capturedStartPositions.get(passenger.id())
@@ -332,6 +441,9 @@ export class Shape2dPlugin implements IPlugin {
         redo() {
           applyElement(afterElement)
           context.crdt.patch({ elements: [afterElement], groups: [] })
+          if (shape instanceof Konva.Rect) {
+            Shape2dPlugin.syncAttachedTextToRect(context, shape)
+          }
           // Restore passengers to their after-drag positions
           passengers.forEach(passenger => {
             const afterEls = passengerAfterElements.get(passenger.id())
@@ -357,6 +469,9 @@ export class Shape2dPlugin implements IPlugin {
     })
 
     shape.on('transform', e => {
+      if (shape instanceof Konva.Rect) {
+        Shape2dPlugin.syncAttachedTextToRect(context, shape)
+      }
     })
 
   }
@@ -374,10 +489,38 @@ export class Shape2dPlugin implements IPlugin {
       if (!newShape) return
 
       Shape2dPlugin.setupShapeListeners(context, newShape)
-      newShape.moveToTop()
       newShape.setDraggable(true)
       context.staticForegroundLayer.add(newShape);
-      context.crdt.patch({ elements: [Shape2dPlugin.toTElement(newShape)], groups: [] })
+      newShape.moveToTop()
+
+      const createdElements: TElement[] = [Shape2dPlugin.toTElement(newShape)]
+      if (shape instanceof Konva.Rect && newShape instanceof Konva.Rect) {
+        const sourceAttachedText = Shape2dPlugin.getAttachedTextNode(context, shape)
+        if (sourceAttachedText) {
+          const sourceElement = TextPlugin.toTElement(sourceAttachedText)
+          const clonedText = TextPlugin.createTextNode({
+            ...sourceElement,
+            id: crypto.randomUUID(),
+            x: newShape.x(),
+            y: newShape.y(),
+            angle: newShape.rotation(),
+            parentGroupId: null,
+            data: {
+              ...sourceElement.data,
+              containerId: newShape.id(),
+              originalText: sourceElement.data.text,
+            },
+          })
+
+          TextPlugin.setupShapeListeners(context, clonedText)
+          context.staticForegroundLayer.add(clonedText)
+          clonedText.moveToTop()
+          Shape2dPlugin.syncAttachedTextToRect(context, newShape, clonedText)
+          createdElements.push(TextPlugin.toTElement(clonedText))
+        }
+      }
+
+      context.crdt.patch({ elements: createdElements, groups: [] })
       context.setState('selection', [newShape])
     })
 

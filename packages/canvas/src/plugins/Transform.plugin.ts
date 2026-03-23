@@ -49,12 +49,12 @@ export class TransformPlugin implements IPlugin {
     }
 
     this.#transformer.on('transformstart', e => {
-      const shapes = TransformPlugin.getShapesFromTransformer(this.#transformer.getNodes())
+      const shapes = TransformPlugin.getSerializableShapes(context, this.#transformer.getNodes())
       originalElements = shapes.map(shape => context.capabilities.toElement?.(shape)).filter(Boolean) as TElement[]
     })
     this.#transformer.on('transformend', e => {
       const transformerNodes = this.#transformer.getNodes()
-      const shapes = TransformPlugin.getShapesFromTransformer(transformerNodes)
+      const shapes = TransformPlugin.getSerializableShapes(context, transformerNodes)
       const elements = shapes.map(shape => context.capabilities.toElement?.(shape)).filter(Boolean) as TElement[]
       TransformPlugin.normalizeSelectedGroupTransforms(transformerNodes)
       TransformPlugin.applyElementsToShapes(context, elements)
@@ -88,6 +88,25 @@ export class TransformPlugin implements IPlugin {
       if (node instanceof Konva.Shape) return node
       return []
     }).flat()
+  }
+
+  private static getSerializableShapes(context: IPluginContext, nodes: Konva.Node[]) {
+    const shapes = TransformPlugin.getShapesFromTransformer(nodes)
+    const byId = new Map(shapes.map(shape => [shape.id(), shape]))
+
+    shapes.forEach(shape => {
+      if (!(shape instanceof Konva.Rect)) return
+
+      const attachedText = context.staticForegroundLayer.findOne((candidate: Konva.Node) => {
+        return candidate instanceof Konva.Text && candidate.getAttr('vcContainerId') === shape.id()
+      })
+
+      if (attachedText instanceof Konva.Text) {
+        byId.set(attachedText.id(), attachedText)
+      }
+    })
+
+    return [...byId.values()]
   }
 
   private static normalizeSelectedGroupTransforms(nodes: Konva.Node[]) {

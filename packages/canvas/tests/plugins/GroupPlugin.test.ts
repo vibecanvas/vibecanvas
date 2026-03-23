@@ -253,6 +253,7 @@ describe("GroupPlugin", () => {
 
     harness.destroy();
   });
+
 });
 
 describe("GroupPlugin – multi-select drag", () => {
