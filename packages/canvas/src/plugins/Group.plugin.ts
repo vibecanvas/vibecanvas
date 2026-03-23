@@ -119,7 +119,8 @@ export class GroupPlugin implements IPlugin {
         return
       }
 
-      elementPatches.push(Shape2dPlugin.toTElement(node))
+      const el = context.capabilities.toElement?.(node) ?? Shape2dPlugin.toTElement(node)
+      elementPatches.push(el)
     })
 
     context.crdt.patch({ elements: elementPatches, groups: groupPatches })
@@ -184,7 +185,8 @@ export class GroupPlugin implements IPlugin {
       }
 
       node.setDraggable(true)
-      elementPatches.push(Shape2dPlugin.toTElement(node))
+      const el = context.capabilities.toElement?.(node) ?? Shape2dPlugin.toTElement(node)
+      elementPatches.push(el)
     })
 
     group.destroy()
@@ -398,7 +400,7 @@ export class GroupPlugin implements IPlugin {
   }
 
   private createCloneDrag(context: IPluginContext, group: Konva.Group) {
-    const clone = group.clone()
+    const clone = Konva.Node.create(group.toJSON()) as Konva.Group
     GroupPlugin.refreshCloneSubtree(clone)
 
     context.dynamicLayer.add(clone)
@@ -407,16 +409,23 @@ export class GroupPlugin implements IPlugin {
     context.setState('selection', [clone])
 
     clone.startDrag()
-    clone.on('dragend', () => {
+    const finalizeCloneDrag = () => {
+      clone.off('dragend', finalizeCloneDrag)
+      if (clone.isDragging()) {
+        clone.stopDrag()
+      }
       clone.moveTo(context.staticForegroundLayer)
       clone.setDraggable(true)
       context.setState('selection', [clone])
-    })
+    }
+    clone.on('dragend', finalizeCloneDrag)
 
     return clone
   }
 
   setupGroupListeners(context: IPluginContext, group: Konva.Group) {
+    let isCloneDrag = false
+
     group.on('pointerclick', e => {
       if (context.state.mode !== CanvasMode.SELECT) return
       context.hooks.customEvent.call(CustomEvents.ELEMENT_POINTERCLICK, e)
@@ -439,7 +448,14 @@ export class GroupPlugin implements IPlugin {
       }
 
       if (e.type === 'dragstart' && e.evt?.altKey) {
-        group.stopDrag()
+        isCloneDrag = true
+        try {
+          if (group.isDragging()) {
+            group.stopDrag()
+          }
+        } catch {
+          // ignore Konva drag-state mismatch in synthetic paths
+        }
         this.createCloneDrag(context, group)
       }
     })
@@ -449,6 +465,11 @@ export class GroupPlugin implements IPlugin {
     }, 100)
 
     group.on('dragmove transform', e => {
+      if (e.type === 'dragmove' && isCloneDrag) {
+        isCloneDrag = false
+        return
+      }
+
       this.#boundaries.values().forEach(b => b.update())
       // update shape position, dont propagate to parent
       if (e.currentTarget instanceof Konva.Group && e.type === 'dragmove') {

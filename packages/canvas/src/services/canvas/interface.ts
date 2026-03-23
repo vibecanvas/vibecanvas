@@ -5,5 +5,6 @@ import { CanvasMode, Theme } from "./enum";
 export interface IState {
   mode: CanvasMode;
   theme: Theme;
-  selection: (Group | Shape<ShapeConfig>)[]
+  selection: (Group | Shape<ShapeConfig>)[];
+  editingTextId: string | null;
 }

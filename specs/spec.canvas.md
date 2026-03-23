@@ -35,7 +35,7 @@ Today it can:
 - boot from a real `DocHandle<TCanvasDoc>`
 - hydrate groups and shapes from `doc.groups` and `doc.elements`
 - write grouped/ungrouped/shape edits back through a CRDT helper
-- maintain local undo/redo history for grouping and transform workflows
+- maintain local undo/redo history for grouping, text editing, drag, and transform workflows
 
 It is still not a full editor yet, but it has crossed from mostly demo runtime into partial document-backed behavior.
 
@@ -52,6 +52,7 @@ The current package provides:
 - marquee selection and depth-aware nested selection
 - shared transformer UI
 - grouping and ungrouping with CRDT updates
+- text creation, inline editing, and text-aware transforms
 - scene hydration from `TCanvasDoc`
 - CRDT patch and delete helpers with deep partial updates
 - package-level tests under `packages/canvas/tests`
@@ -177,7 +178,7 @@ Unlike the earlier version of the package, the resolved `DocHandle` is now direc
 - `staticForegroundLayer`
 - `dynamicLayer`
 - `camera`
-- Solid store state with `mode`, `theme`, and `selection`
+- Solid store state with `mode`, `theme`, `selection`, and `editingTextId`
 - `history`
 - `crdt`
 - hook instances for lifecycle, pointer, keyboard, camera, and custom events
@@ -273,8 +274,9 @@ The runtime uses lightweight tapable-style hooks from `packages/canvas/src/tapab
 7. `SelectPlugin`
 8. `TransformPlugin`
 9. `Shape2dPlugin`
-10. `GroupPlugin`
-11. `SceneHydratorPlugin`
+10. `TextPlugin`
+11. `GroupPlugin`
+12. `SceneHydratorPlugin`
 
 Important notes:
 
@@ -365,6 +367,16 @@ Important limitation:
 
 - `supportedTypes` includes `rect`, `diamond`, and `ellipse`, but only rectangle creation/update serialization is meaningfully implemented right now.
 
+#### `TextPlugin`
+
+Owns text-node support.
+
+- responds to `TOOL_SELECT` for click-to-create text
+- registers text capability functions for hydration, serialization, and updates
+- supports inline textarea editing on double-click when selection drilling does not intercept
+- writes text edits, drag updates, and delete-on-empty-new-text behavior through `crdt.patch()` / `crdt.deleteById()`
+- coordinates with `TransformPlugin` through `editingTextId` so the shared transformer is hidden while editing
+
 #### `GroupPlugin`
 
 Owns grouping behavior and group-specific visual affordances.
@@ -376,6 +388,7 @@ Owns grouping behavior and group-specific visual affordances.
 - writes group and element parent updates through `crdt.patch()`
 - records undo/redo history for group and ungroup actions
 - manages which nodes are draggable based on current focused selection depth
+- supports clone-drag for groups and mixed grouped content
 
 #### `SceneHydratorPlugin`
 
@@ -384,7 +397,7 @@ Owns initial scene load from the current document.
 - reads `doc.groups` and `doc.elements`
 - mounts groups top-down into `staticForegroundLayer`
 - mounts elements after their parents exist
-- deletes orphan groups/elements from CRDT if they cannot be resolved
+- can clean unresolved orphan groups/elements from CRDT during startup cleanup, gated behind a load-time flag
 
 This is the main document-backed scene bootstrap path today.
 
@@ -415,6 +428,7 @@ Current keyboard behaviors include:
 - `Cmd/Ctrl+Shift+Z` redo
 - `Cmd/Ctrl+G` group
 - `Cmd/Ctrl+Shift+G` ungroup
+- `Enter` inside text edit inserts a newline
 
 ### Selection model
 
@@ -444,6 +458,14 @@ This gives the package an intentional depth-navigation model for nested groups i
 - single selected group -> hide transformer border and rely on group boundary visuals
 - multi-selection -> dashed transformer border
 - single selected shape -> standard transformer border
+- text edit mode -> transformer is hidden while the textarea overlay is active
+
+Selection-aware anchor behavior:
+
+- single selected group -> corner-only anchors with keep-ratio
+- text-only selection -> corner-only anchors with keep-ratio
+- multi-selection -> corner-only anchors with keep-ratio
+- single non-text shape -> full anchors without keep-ratio
 
 On `transformstart`, it snapshots original serialized elements.
 On `transformend`, it:
@@ -490,6 +512,12 @@ They update on:
 - group drag and transform changes
 - selection changes
 
+### Group clone-drag
+
+`Alt+drag` on a group creates a cloned group subtree in `dynamicLayer`, then finalizes it into `staticForegroundLayer` on drag end.
+
+The clone path refreshes ids through the subtree so duplicated groups and child elements can be serialized as distinct document entities.
+
 ## CRDT and Scene Hydration
 
 Automerge bootstrap still lives in `packages/canvas/src/services/automerge.ts`, but the runtime now uses document data more directly than before.
@@ -522,6 +550,8 @@ Flow:
 3. mount elements once their parent group exists
 4. delete unresolved orphan groups/elements from the document
 
+The cleanup step is now isolated behind a dedicated cleanup method and `CLEAN_ON_LOAD` flag so load behavior and mutation policy are explicit even though the default remains cleanup-on-load.
+
 This means startup now trusts `TCanvasDoc` as the scene source for supported groups and shapes.
 
 ### Current document write paths
@@ -529,7 +559,10 @@ This means startup now trusts `TCanvasDoc` as the scene source for supported gro
 The package writes back to CRDT for:
 
 - created rectangles
+- created text nodes
 - drag updates for shapes
+- text drag updates
+- text edit commits
 - transform updates for shapes
 - group creation
 - ungroup
@@ -570,13 +603,15 @@ Toolbar tools include:
 
 Important limitation:
 
-- the toolbar exposes more tools than the runtime currently implements. Rectangle, selection, grouping, transforms, and history are the most complete workflows today.
+ - the toolbar exposes more tools than the runtime currently implements. Rectangle, text, selection, grouping, transforms, and history are the most complete workflows today.
 
 ### Help
 
 `HelpPlugin` mounts `CanvasHelp`, which documents the current tool and shortcut vocabulary.
 
-The help content intentionally calls out that rectangle, selection, grouping, and history are the most complete flows.
+The tools section in help now derives from `toolbar.types.ts` so the visible tool list and the documented tool list stay aligned.
+
+The help content intentionally calls out that rectangle, text, selection, grouping, and history are the most complete flows.
 
 ## Testing Strategy
 
@@ -619,6 +654,16 @@ Verifies:
 - ungrouping preserves absolute positions
 - CRDT `parentGroupId` updates are correct
 - group and ungroup actions support undo/redo
+- clone-dragging groups creates distinct duplicated group nodes
+
+#### `plugins/TextPlugin.test.ts`
+
+Verifies:
+
+- text creation from the toolbar tool flow
+- inline editing commit and cancel behavior
+- delete-on-empty behavior for newly created text
+- text serialization and hydration behavior
 
 #### `plugins/SelectionPlugin.test.ts`
 
@@ -634,6 +679,8 @@ Verifies:
 Verifies:
 
 - undo after resize restores absolute position and size
+- multi-select anchor behavior for rect/text combinations
+- text-aware transform behavior while editing
 
 ### Scenario fixtures
 
@@ -642,6 +689,8 @@ Verifies:
 - outer group selected from child hits
 - nested groups with leaf shapes
 - mixed top-level groups plus top-level shape
+- mixed rect and text multi-selection
+- grouped scenes containing text and rect nodes
 
 These fixtures encode the intended interaction semantics for selection depth and transformer targeting.
 
@@ -707,7 +756,7 @@ Current incomplete or rough areas:
 - scene hydration is startup-only, not a full reactive reconcile loop
 - selection still stores live Konva nodes instead of durable ids
 - toolbar exposes many tools that have no real runtime implementation yet
-- shape creation/update support is effectively rectangle-first today
+- shape creation support is still rectangle-first for non-text 2D shapes
 - `Shape2dPlugin.supportedTypes` is broader than the actual implemented factories
 - `ToolbarPlugin` still hardcodes `sidebarVisible: () => true`
 - runtime state still contains `theme`, but theme-specific behavior is minimal
@@ -752,6 +801,7 @@ Current incomplete or rough areas:
 - `packages/canvas/src/plugins/Select.plugin.ts`
 - `packages/canvas/src/plugins/Transform.plugin.ts`
 - `packages/canvas/src/plugins/Shape2d.plugin.ts`
+- `packages/canvas/src/plugins/Text.plugin.ts`
 - `packages/canvas/src/plugins/Group.plugin.ts`
 - `packages/canvas/src/plugins/SceneHydrator.plugin.ts`
 
@@ -781,11 +831,14 @@ Current incomplete or rough areas:
 - `packages/canvas/tests/services/canvas/Crdt.test.ts`
 - `packages/canvas/tests/plugins/SceneHydratorPlugin.test.ts`
 - `packages/canvas/tests/plugins/GroupPlugin.test.ts`
+- `packages/canvas/tests/plugins/TextPlugin.test.ts`
 - `packages/canvas/tests/plugins/SelectionPlugin.test.ts`
 - `packages/canvas/tests/plugins/TransformPlugin.test.ts`
 - `packages/canvas/tests/scenarios/01-select-outer-group-from-child.ts`
 - `packages/canvas/tests/scenarios/02-nested-groups-leaf-shapes.ts`
 - `packages/canvas/tests/scenarios/03-top-level-mixed-selection.ts`
+- `packages/canvas/tests/scenarios/04-multiselect-rect-and-text.ts`
+- `packages/canvas/tests/scenarios/05-group-with-text-and-rect.ts`
 
 ### Shared document model reference
 
@@ -807,7 +860,7 @@ flowchart TD
   D --> J[Install default plugins]
 
   J --> K[EventListenerPlugin publishes hooks]
-  J --> L[Shape2d and Group plugins register capabilities]
+  J --> L[Shape2d, Text, and Group plugins register capabilities]
   J --> M[SceneHydratorPlugin initAsync load]
 
   M --> N[Read doc.groups]
@@ -828,6 +881,7 @@ flowchart TD
   S --> Z[TOOL_SELECT and GRID_VISIBLE custom events]
   Z --> AA[Shape draw mode]
   Z --> AB[Grid visibility]
+  Z --> AC2[Text click-create mode]
 
   T --> AC[state.selection path of Konva nodes]
   AC --> AD[TransformPlugin filters active node]
@@ -836,6 +890,11 @@ flowchart TD
   AA --> AF[preview shape in dynamicLayer]
   AF --> AG[commit shape into staticForegroundLayer]
   AG --> AH[crdt.patch element]
+
+  AC2 --> AT[create text node in staticForegroundLayer]
+  AT --> AU[enter textarea edit mode]
+  AU --> AV[editingTextId hides transformer]
+  AU --> AH
 
   AD --> AI[transformend serializes shapes]
   AI --> AH

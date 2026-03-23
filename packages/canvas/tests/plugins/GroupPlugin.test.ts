@@ -17,6 +17,35 @@ function expectPointCloseTo(
   expect(actual.y).toBeCloseTo(expected.y, 8);
 }
 
+function altDragGroup(group: Konva.Group, args: { deltaX: number; deltaY?: number }) {
+  const beforeNodeIds = new Set(
+    group.getStage()?.getLayers().flatMap((layer) => layer.getChildren()).map((child) => child._id) ?? [],
+  );
+
+  group.fire("dragstart", {
+    target: group,
+    currentTarget: group,
+    evt: new MouseEvent("dragstart", { bubbles: true, altKey: true }),
+  });
+
+  const previewClone = group.getStage()?.getLayers()
+    .flatMap((layer) => layer.getChildren())
+    .find((child) => !beforeNodeIds.has(child._id) && child instanceof Konva.Group) as Konva.Group | undefined;
+
+  if (!previewClone) throw new Error("Expected preview clone after alt-drag start");
+
+  const beforePos = previewClone.absolutePosition();
+  previewClone.setAbsolutePosition({
+    x: beforePos.x + args.deltaX,
+    y: beforePos.y + (args.deltaY ?? 0),
+  });
+  previewClone.fire("dragend", {
+    target: previewClone,
+    currentTarget: previewClone,
+    evt: new MouseEvent("dragend", { bubbles: true, altKey: true }),
+  });
+}
+
 describe("GroupPlugin", () => {
   test("grouping preserves child absolute positions under camera pan and zoom", async () => {
     let pluginContext!: IPluginContext;
@@ -348,6 +377,57 @@ describe("GroupPlugin – multi-select drag", () => {
 
     expect(s4.absolutePosition().x).toBeCloseTo(s4StartPos.x, 2);
     expect(g1.absolutePosition().x).toBeCloseTo(g1StartPos.x, 2);
+
+    harness.destroy();
+  });
+});
+
+describe("GroupPlugin – clone drag", () => {
+  async function createCloneHarness() {
+    let pluginContext!: IPluginContext;
+    const groupPlugin = new GroupPlugin();
+    let g1!: Konva.Group;
+
+    const harness = await createCanvasTestHarness({
+      plugins: [new SelectPlugin(), new Shape2dPlugin(), groupPlugin],
+      initializeScene: (context) => {
+        pluginContext = context;
+        const rect1 = new Konva.Rect({ id: "rect-a", x: 40, y: 60, width: 80, height: 50, fill: "red" });
+        const rect2 = new Konva.Rect({ id: "rect-b", x: 150, y: 90, width: 90, height: 60, fill: "blue" });
+        context.staticForegroundLayer.add(rect1);
+        context.staticForegroundLayer.add(rect2);
+        g1 = GroupPlugin.group(context, [rect1, rect2]);
+        groupPlugin.setupGroupListeners(context, g1);
+      },
+    });
+
+    return { harness, pluginContext, g1 };
+  }
+
+  test("alt-dragging a cloned group adds exactly one more group", async () => {
+    const { harness, pluginContext, g1 } = await createCloneHarness();
+
+    pluginContext.setState("selection", [g1]);
+    await flushCanvasEffects();
+    const originalPosition = { ...g1.absolutePosition() };
+
+    altDragGroup(g1, { deltaX: 80, deltaY: 10 });
+    await flushCanvasEffects();
+
+    expect(g1.absolutePosition()).toEqual(originalPosition);
+
+    const firstClone = (harness.staticForegroundLayer.find((node: any) => node instanceof Konva.Group) as Konva.Group[])
+      .find((group) => group.id() !== g1.id())!;
+
+    pluginContext.setState("selection", [firstClone]);
+    await flushCanvasEffects();
+
+    altDragGroup(firstClone, { deltaX: 70, deltaY: 15 });
+    await flushCanvasEffects();
+
+    const groups = harness.staticForegroundLayer.find((node: any) => node instanceof Konva.Group) as Konva.Group[];
+    expect(groups).toHaveLength(3);
+    expect(new Set(groups.map((group) => group.id())).size).toBe(3);
 
     harness.destroy();
   });

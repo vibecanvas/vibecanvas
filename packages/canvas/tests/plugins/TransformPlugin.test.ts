@@ -13,7 +13,9 @@ import { ToolbarPlugin } from "../../src/plugins/Toolbar.plugin";
 import { TransformPlugin } from "../../src/plugins/Transform.plugin";
 import { initializeScene01SelectOuterGroupFromChild } from "../scenarios/01-select-outer-group-from-child";
 import { initializeScene03TopLevelMixedSelection } from "../scenarios/03-top-level-mixed-selection";
+import { initializeScene04MultiselectRectAndText } from "../scenarios/04-multiselect-rect-and-text";
 import { createCanvasTestHarness, exportStageSnapshot, flushCanvasEffects } from "../test-setup";
+import { TextPlugin } from "../../src/plugins/Text.plugin";
 
 function getAbsoluteRectMetrics(shape: Konva.Rect) {
   const absolutePosition = shape.absolutePosition();
@@ -43,9 +45,35 @@ function createBroaderPluginStack() {
       new SelectPlugin(),
       new TransformPlugin(),
       new Shape2dPlugin(),
+      new TextPlugin(),
       groupPlugin,
     ],
   };
+}
+
+async function createScene04MultiselectHarness() {
+  let pluginContext!: IPluginContext;
+  const { plugins } = createBroaderPluginStack();
+
+  const harness = await createCanvasTestHarness({
+    plugins,
+    initializeScene: (context) => {
+      pluginContext = context;
+      initializeScene04MultiselectRectAndText({ context });
+    },
+  });
+
+  const rect = harness.staticForegroundLayer.findOne<Konva.Rect>("#r1")!;
+  const text = harness.staticForegroundLayer.findOne<Konva.Text>("#t1")!;
+  const transformer = harness.dynamicLayer.getChildren().find(
+    (node): node is Konva.Transformer => node instanceof Konva.Transformer,
+  )!;
+
+  expect(rect).toBeInstanceOf(Konva.Rect);
+  expect(text).toBeInstanceOf(Konva.Text);
+  expect(transformer).toBeTruthy();
+
+  return { harness, pluginContext, rect, text, transformer };
 }
 
 async function createTransformSceneHarness() {
@@ -122,6 +150,169 @@ async function createScene01TransformHarness() {
     transformer: transformer!,
   };
 }
+
+// ---------------------------------------------------------------------------
+// Multi-select transformer anchor / keepRatio tests
+// ---------------------------------------------------------------------------
+
+describe("TransformPlugin – multi-select anchors", () => {
+  const CORNER_ANCHORS = ["top-left", "top-right", "bottom-left", "bottom-right"];
+  const ALL_ANCHORS = [
+    "top-left", "top-center", "top-right",
+    "middle-right", "middle-left",
+    "bottom-left", "bottom-center", "bottom-right",
+  ];
+
+  test("selecting two nodes (rect + text) uses corner-only anchors with keepRatio", async () => {
+    const { harness, pluginContext, rect, text, transformer } = await createScene04MultiselectHarness();
+    const snapshotDir = "tests/artifacts/transform-plugin/multiselect";
+
+    pluginContext.setState("selection", [rect, text]);
+    await flushCanvasEffects();
+
+    await exportStageSnapshot({
+      stage: harness.stage,
+      label: "multiselect rect+text – anchors",
+      relativeFilePath: `${snapshotDir}/01-rect-text-selected.png`,
+      waitMs: 60,
+    });
+
+    expect(transformer.keepRatio()).toBe(true);
+    expect(transformer.enabledAnchors()).toEqual(CORNER_ANCHORS);
+    // No edge-only handles
+    expect(transformer.enabledAnchors()).not.toContain("top-center");
+    expect(transformer.enabledAnchors()).not.toContain("bottom-center");
+    expect(transformer.enabledAnchors()).not.toContain("middle-left");
+    expect(transformer.enabledAnchors()).not.toContain("middle-right");
+
+    harness.destroy();
+  });
+
+  test("selecting two rects uses corner-only anchors with keepRatio", async () => {
+    const { harness, pluginContext, transformer } = await createTransformSceneHarness();
+
+    const s4 = harness.staticForegroundLayer.findOne<Konva.Rect>("#4")!;
+    // Pick any second top-level shape by taking the rect from g1 after ungrouping:
+    // Instead, use scene04 for a simpler two-rect setup
+    // Here we reuse scene03's s4 + manually add another rect at top level
+    const second = new Konva.Rect({ id: "extra", x: 50, y: 50, width: 80, height: 60 });
+    harness.staticForegroundLayer.add(second);
+
+    pluginContext.setState("selection", [s4, second]);
+    await flushCanvasEffects();
+
+    expect(transformer.keepRatio()).toBe(true);
+    expect(transformer.enabledAnchors()).toEqual(CORNER_ANCHORS);
+    expect(transformer.enabledAnchors()).not.toContain("middle-left");
+    expect(transformer.enabledAnchors()).not.toContain("middle-right");
+    expect(transformer.enabledAnchors()).not.toContain("top-center");
+    expect(transformer.enabledAnchors()).not.toContain("bottom-center");
+
+    harness.destroy();
+  });
+
+  test("single rect selection keeps all 8 anchors without keepRatio", async () => {
+    const { harness, pluginContext, rect, transformer } = await createScene04MultiselectHarness();
+
+    pluginContext.setState("selection", [rect]);
+    await flushCanvasEffects();
+
+    expect(transformer.keepRatio()).toBe(false);
+    expect(transformer.enabledAnchors()).toEqual(ALL_ANCHORS);
+    expect(transformer.enabledAnchors()).toContain("top-center");
+    expect(transformer.enabledAnchors()).toContain("middle-left");
+    expect(transformer.enabledAnchors()).toContain("middle-right");
+    expect(transformer.enabledAnchors()).toContain("bottom-center");
+
+    harness.destroy();
+  });
+
+  test("going from multi-select back to single-select restores all anchors", async () => {
+    const { harness, pluginContext, rect, text, transformer } = await createScene04MultiselectHarness();
+
+    // Multi-select
+    pluginContext.setState("selection", [rect, text]);
+    await flushCanvasEffects();
+    expect(transformer.keepRatio()).toBe(true);
+    expect(transformer.enabledAnchors()).toEqual(CORNER_ANCHORS);
+
+    // Back to single rect
+    pluginContext.setState("selection", [rect]);
+    await flushCanvasEffects();
+    expect(transformer.keepRatio()).toBe(false);
+    expect(transformer.enabledAnchors()).toEqual(ALL_ANCHORS);
+
+    harness.destroy();
+  });
+
+  test("multi-select: transformend records undo that restores both shapes", async () => {
+    const { harness, pluginContext, rect, text, transformer } = await createScene04MultiselectHarness();
+    const snapshotDir = "tests/artifacts/transform-plugin/multiselect";
+
+    pluginContext.setState("selection", [rect, text]);
+    await flushCanvasEffects();
+
+    const origRectPos = { ...rect.absolutePosition() };
+    const origRectW = rect.width();
+    const origRectH = rect.height();
+    const origTextPos = { ...text.absolutePosition() };
+    const origTextFontSize = text.fontSize();
+
+    transformer.fire("transformstart", {
+      target: rect,
+      currentTarget: transformer,
+      evt: new MouseEvent("transformstart", { bubbles: true }),
+    });
+
+    // Simulate uniform scale (keepRatio) on both nodes
+    rect.scaleX(1.5);
+    rect.scaleY(1.5);
+    rect.x(rect.x() + 20);
+    text.scaleX(1.5);
+    text.scaleY(1.5);
+    text.x(text.x() + 60);
+    // Fire transform on text so fontSize gets baked
+    text.fire("transform", { target: text, currentTarget: text, evt: {} as Event });
+
+    transformer.fire("transformend", {
+      target: rect,
+      currentTarget: transformer,
+      evt: new MouseEvent("transformend", { bubbles: true }),
+    });
+    await flushCanvasEffects();
+
+    await exportStageSnapshot({
+      stage: harness.stage,
+      label: "multiselect – after resize",
+      relativeFilePath: `${snapshotDir}/02-after-resize.png`,
+      waitMs: 60,
+    });
+
+    // Rect should have grown
+    expect(rect.width()).toBeGreaterThan(origRectW);
+
+    // Undo restores both shapes
+    pluginContext.history.undo();
+    await flushCanvasEffects();
+
+    await exportStageSnapshot({
+      stage: harness.stage,
+      label: "multiselect – after undo",
+      relativeFilePath: `${snapshotDir}/03-after-undo.png`,
+      waitMs: 60,
+    });
+
+    expect(rect.absolutePosition().x).toBeCloseTo(origRectPos.x, 1);
+    expect(rect.absolutePosition().y).toBeCloseTo(origRectPos.y, 1);
+    expect(rect.width()).toBeCloseTo(origRectW, 1);
+    expect(rect.height()).toBeCloseTo(origRectH, 1);
+    expect(text.absolutePosition().x).toBeCloseTo(origTextPos.x, 1);
+    expect(text.absolutePosition().y).toBeCloseTo(origTextPos.y, 1);
+    expect(text.fontSize()).toBeCloseTo(origTextFontSize, 1);
+
+    harness.destroy();
+  });
+});
 
 describe("TransformPlugin", () => {
   test("undo after resizing s4 restores original absolute position and size", async () => {

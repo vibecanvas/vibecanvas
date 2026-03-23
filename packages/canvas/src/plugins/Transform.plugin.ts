@@ -134,6 +134,13 @@ export class TransformPlugin implements IPlugin {
 
   private createReaction(context: IPluginContext) {
     createEffect(() => {
+      const editingTextId = context.state.editingTextId
+      if (editingTextId !== null) {
+        this.#transformer.setNodes([])
+        this.#transformer.update()
+        return
+      }
+
       const filteredSelection = TransformPlugin.filterSelection(context.state.selection)
       const isSingleGroupSelection = filteredSelection.length === 1 && filteredSelection[0] instanceof Konva.Group
 
@@ -147,9 +154,16 @@ export class TransformPlugin implements IPlugin {
         this.#transformer.borderDash([0, 0])
       }
 
-      this.#transformer.keepRatio(isSingleGroupSelection)
+      const hasTextOnly = filteredSelection.length > 0 &&
+        filteredSelection.every(n => n instanceof Konva.Text)
+      // Multi-select must use corner-only anchors with keepRatio to prevent skewing.
+      // Single-shape selections keep free resize (all 8 anchors, no keepRatio),
+      // except for groups and text-only selections which always lock ratio.
+      const isMultiSelect = filteredSelection.length > 1
+      const useCornerAnchors = isSingleGroupSelection || hasTextOnly || isMultiSelect
+      this.#transformer.keepRatio(useCornerAnchors)
       this.#transformer.enabledAnchors(
-        isSingleGroupSelection
+        useCornerAnchors
           ? [...TransformPlugin.GROUP_ANCHORS]
           : [...TransformPlugin.DEFAULT_ANCHORS]
       )

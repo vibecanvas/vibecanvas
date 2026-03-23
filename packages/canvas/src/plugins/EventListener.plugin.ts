@@ -55,14 +55,6 @@ export class EventListenerPlugin implements IPlugin {
 
     stage.on(`wheel`, onpointerwheel);
 
-    stage.on(`pointerout`, onpointerout);
-
-    stage.on(`pointerover`, onpointerover);
-
-    stage.on(`pointercancel`, onpointercancel);
-
-    stage.on(`wheel`, onpointerwheel);
-
     stage.container().addEventListener(`keydown`, onkeydown);
 
     stage.container().addEventListener(`keyup`, onkeyup);

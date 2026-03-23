@@ -131,6 +131,10 @@ export class ToolbarPlugin implements IPlugin {
   private setupKeyShortcuts(context: IPluginContext) {
     context.hooks.keydown.tap(event => {
       if (event.key === " ") {
+        if (context.state.selection.length > 0) {
+          return false;
+        }
+
         event.preventDefault();
 
         if (this.#toolBeforeSpaceHold === null) {
@@ -171,6 +175,10 @@ export class ToolbarPlugin implements IPlugin {
 
     context.hooks.keyup.tap(event => {
       if (event.key !== " ") {
+        return false;
+      }
+
+      if (context.state.selection.length > 0 && this.#toolBeforeSpaceHold === null) {
         return false;
       }
 
