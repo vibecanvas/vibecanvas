@@ -12,16 +12,21 @@ describe("RecorderPlugin", () => {
 
   test("mounts recorder UI, defaults to reduced events, and captures filtered events plus CRDT ops", async () => {
     let context: IPluginContext | null = null;
-    let exportedBlob: Blob | null = null;
+    let savedText = "";
     let dragNode: Konva.Rect | null = null;
+    const createWritable = vi.fn(async () => ({
+      write: vi.fn(async (content: string) => {
+        savedText = content;
+      }),
+      close: vi.fn(async () => {}),
+    }));
+    const showSaveFilePicker = vi.fn(async () => ({ createWritable }));
 
     vi.stubGlobal("URL", {
-      createObjectURL: vi.fn((blob: Blob) => {
-        exportedBlob = blob;
-        return "blob:test-recording";
-      }),
+      createObjectURL: vi.fn(() => "blob:test-recording"),
       revokeObjectURL: vi.fn(),
     });
+    vi.stubGlobal("showSaveFilePicker", showSaveFilePicker);
     vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => {});
 
     const harness = await createCanvasTestHarness({
@@ -121,9 +126,13 @@ describe("RecorderPlugin", () => {
     expect(readPanelText()).toContain("Steps8CRDTOps1");
 
     exportButton?.click();
+    await Promise.resolve();
+    await Promise.resolve();
 
-    expect(exportedBlob).toBeTruthy();
-    expect((exportedBlob as { size?: number }).size).toBeGreaterThan(0);
+    expect(showSaveFilePicker).toHaveBeenCalledTimes(1);
+    expect(createWritable).toHaveBeenCalledTimes(1);
+    expect(savedText.length).toBeGreaterThan(0);
+    expect(savedText).toContain('"reducedEvents": false');
 
     clearButton?.click();
     expect(readPanelText()).toContain("RecorderIDLE");

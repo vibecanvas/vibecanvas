@@ -125,6 +125,49 @@ function downloadJsonFile(fileName: string, content: string) {
   URL.revokeObjectURL(href);
 }
 
+async function saveJsonFile(fileName: string, content: string) {
+  const picker = (window as typeof window & {
+    showSaveFilePicker?: (options?: {
+      suggestedName?: string;
+      types?: Array<{
+        description?: string;
+        accept: Record<string, string[]>;
+      }>;
+    }) => Promise<{
+      createWritable: () => Promise<{
+        write: (data: string) => Promise<void>;
+        close: () => Promise<void>;
+      }>;
+    }>;
+  }).showSaveFilePicker;
+
+  if (!picker) {
+    downloadJsonFile(fileName, content);
+    return;
+  }
+
+  try {
+    const handle = await picker({
+      suggestedName: fileName,
+      types: [
+        {
+          description: "JSON files",
+          accept: { "application/json": [".json"] },
+        },
+      ],
+    });
+    const writable = await handle.createWritable();
+    await writable.write(content);
+    await writable.close();
+  } catch (error) {
+    if (error instanceof DOMException && error.name === "AbortError") {
+      return;
+    }
+
+    throw error;
+  }
+}
+
 function createButton(label: string) {
   const button = document.createElement("button");
   button.type = "button";
@@ -408,8 +451,8 @@ export class RecorderPlugin implements IPlugin {
     this.syncUi();
   }
 
-  private exportRecording() {
-    downloadJsonFile(`${this.#recordingData.name}.json`, JSON.stringify(this.#recordingData, null, 2));
+  private async exportRecording() {
+    await saveJsonFile(`${this.#recordingData.name}.json`, JSON.stringify(this.#recordingData, null, 2));
   }
 
   private pushStep(step: TStep) {
