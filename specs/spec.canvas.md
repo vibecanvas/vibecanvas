@@ -99,6 +99,7 @@ Current examples:
 - grid rendering
 - toolbar overlay
 - help overlay
+- recorder overlay
 - selection rules
 - transform UI
 - shape creation
@@ -126,6 +127,11 @@ Current custom events:
 - `ELEMENT_POINTERCLICK`
 - `ELEMENT_POINTERDOWN`
 - `ELEMENT_POINTERDBLCLICK`
+
+Keyboard events are the one exception.
+
+- pointer and wheel replay can target Konva stage/node events directly
+- `keydown` / `keyup` do not go through Konva and should be replayed on `stage.container()` DOM listeners
 
 ### 6. Keep document access behind `Crdt` and plugin capabilities
 
@@ -271,12 +277,13 @@ The runtime uses lightweight tapable-style hooks from `packages/canvas/src/tapab
 4. `HistoryControlPlugin`
 5. `ToolbarPlugin`
 6. `HelpPlugin`
-7. `SelectPlugin`
-8. `TransformPlugin`
-9. `Shape2dPlugin`
-10. `TextPlugin`
-11. `GroupPlugin`
-12. `SceneHydratorPlugin`
+7. `RecorderPlugin`
+8. `SelectPlugin`
+9. `TransformPlugin`
+10. `Shape2dPlugin`
+11. `TextPlugin`
+12. `GroupPlugin`
+13. `SceneHydratorPlugin`
 
 Important notes:
 
@@ -334,6 +341,35 @@ Owns the help overlay.
 
 - mounts a Solid help widget into the stage container
 - opens on `?`
+
+Planned layout note:
+
+- help lives in the bottom-right overlay rail
+- recorder UI should mount next to help in that same corner instead of creating a separate floating region
+
+#### `RecorderPlugin`
+
+Owns test recording controls and runtime event capture.
+
+- mounts a compact recorder UI into the stage container beside `HelpPlugin` in the bottom-right corner
+- exposes start, stop, clear, and export actions for test recordings
+- records minimal replay data instead of raw browser event dumps
+- captures the initial document snapshot used to boot the scene
+- currently captures normalized stage-hook pointer events, wheel events, DOM keyboard events, and CRDT writes
+- currently captures normalized stage-hook pointer events, node drag events, wheel events, DOM keyboard events, and CRDT writes
+- captures normalized CRDT write operations from `crdt.patch()` and `crdt.deleteById()`
+- exports JSON fixtures suitable for `packages/canvas/tests/recordings`
+
+Current recorder filtering behavior:
+
+- the recorder defaults to `REDUCED_EVENTS = true`
+- reduced mode is exposed as a UI toggle in the recorder panel
+- when reduced mode is on, idle `pointermove` events are skipped and move events are only kept while the pointer is pressed
+- drag events are still captured in reduced mode because they are semantic gesture events and not hover noise
+
+Current limitation:
+
+- node-targeted Konva replay steps and textarea edit lifecycle capture are not implemented yet, so the recorder is currently strongest for runtime-level event/CRDT regression capture rather than full editor-session replay
 
 #### `SelectPlugin`
 
@@ -414,7 +450,18 @@ Konva stage / stage.container()
   -> feature plugins react
 ```
 
+Replay should mirror the real runtime boundaries instead of introducing a separate gesture layer:
+
+- stage and node pointer events should be replayed with Konva `.fire(...)`
+- keyboard events should be replayed with DOM dispatch on `stage.container()`
+- textarea editing should be replayed through the real textarea DOM element created by `TextPlugin`
+
 ### Keyboard behavior
+
+Keyboard handling is DOM-based today.
+
+- `keydown` / `keyup` are attached to `stage.container()`
+- they do not flow through Konva's event system
 
 Current keyboard behaviors include:
 
@@ -627,6 +674,49 @@ Tests live in `packages/canvas/tests` and focus on runtime behavior instead of o
 - exposes stage and all three layers
 - supports scene initialization hooks
 
+Planned extension for regression recordings:
+
+- load an `initialDoc` fixture into a mock `DocHandle`
+- replay recorded Konva and DOM events against the live runtime
+- collect normalized CRDT writes during replay
+- assert against `finalDoc` and/or recorded CRDT ops
+
+Current implementation status:
+
+- `RecorderPlugin` is implemented and mounted in the default plugin stack
+- a focused `RecorderPlugin.test.ts` verifies the recorder UI, reduced-events default/toggle, filtered pointermove capture, keyboard capture, CRDT capture, and export wiring
+
+### Planned recording format
+
+Recordings should live in `packages/canvas/tests/recordings` and prefer a small semantic JSON shape such as:
+
+```ts
+type TCanvasRecording = {
+  name: string;
+  initialDoc: TCanvasDoc;
+  steps: Array<
+    | { type: "tool-select"; tool: string }
+    | { type: "stage-pointer"; event: "pointerdown" | "pointermove" | "pointerup" | "wheel"; x: number; y: number; modifiers?: Record<string, boolean> }
+    | { type: "node-pointer"; event: "pointerclick" | "pointerdblclick" | "pointerdown" | "dragstart" | "dragmove" | "dragend"; nodeId: string; x?: number; y?: number; modifiers?: Record<string, boolean> }
+    | { type: "key"; event: "keydown" | "keyup"; key: string; modifiers?: Record<string, boolean> }
+    | { type: "text-edit"; nodeId: string; action: "enter" | "input" | "commit" | "cancel"; value?: string }
+    | { type: "history"; action: "undo" | "redo" }
+  >;
+  crdtOps?: Array<
+    | { type: "patch"; elements: Array<{ id: string } & Record<string, unknown>>; groups: Array<{ id: string } & Record<string, unknown>> }
+    | { type: "delete"; elementIds?: string[]; groupIds?: string[] }
+  >;
+  finalDoc?: TCanvasDoc;
+};
+```
+
+Guiding rules:
+
+- store stable node ids, not live Konva node references
+- record semantic steps, not raw serialized event objects
+- treat keyboard and textarea edits as DOM interactions
+- prefer `finalDoc` and normalized CRDT ops as assertions over timing-sensitive intermediate states
+
 ### Covered areas
 
 #### `services/canvas/Crdt.test.ts`
@@ -752,7 +842,7 @@ The package is more capable than before, but it is still mid-build.
 
 Current incomplete or rough areas:
 
-- `Canvas.input.ts` is still empty; there is no formal gesture ownership system
+- there is no separate `Canvas.input.ts` input abstraction planned; replay should target Konva `.fire(...)` and DOM event dispatch directly
 - scene hydration is startup-only, not a full reactive reconcile loop
 - selection still stores live Konva nodes instead of durable ids
 - toolbar exposes many tools that have no real runtime implementation yet
@@ -762,6 +852,7 @@ Current incomplete or rough areas:
 - runtime state still contains `theme`, but theme-specific behavior is minimal
 - document ordering, richer widgets, and deeper content types from `TCanvasDoc` are not fully hydrated yet
 - `ExampleScenePlugin` remains in the repo as scaffolding/reference code
+- deterministic replay still needs explicit control of `Date.now()`, `crypto.randomUUID()`, and text measurement side effects
 
 ## File Index
 
@@ -778,7 +869,6 @@ Current incomplete or rough areas:
 - `packages/canvas/src/services/canvas/History.ts`
 - `packages/canvas/src/services/canvas/interface.ts`
 - `packages/canvas/src/services/canvas/enum.ts`
-- `packages/canvas/src/services/canvas/Canvas.input.ts`
 
 ### Automerge bootstrap
 
@@ -798,6 +888,7 @@ Current incomplete or rough areas:
 - `packages/canvas/src/plugins/HistoryControl.plugin.ts`
 - `packages/canvas/src/plugins/Toolbar.plugin.ts`
 - `packages/canvas/src/plugins/Help.plugin.ts`
+- `packages/canvas/src/plugins/Recorder.plugin.ts`
 - `packages/canvas/src/plugins/Select.plugin.ts`
 - `packages/canvas/src/plugins/Transform.plugin.ts`
 - `packages/canvas/src/plugins/Shape2d.plugin.ts`
@@ -816,6 +907,7 @@ Current incomplete or rough areas:
 - `packages/canvas/src/components/FloatingCanvasToolbar/toolbar.types.ts`
 - `packages/canvas/src/components/CanvasHelp/index.tsx`
 - `packages/canvas/src/components/CanvasHelp/help.data.ts`
+- `packages/canvas/src/components/CanvasRecorder/index.tsx` (planned)
 
 ### Hook implementation
 
@@ -828,6 +920,8 @@ Current incomplete or rough areas:
 ### Tests
 
 - `packages/canvas/tests/test-setup.ts`
+- `packages/canvas/tests/recordings/` (planned)
+- `packages/canvas/tests/plugins/RecorderPlugin.test.ts`
 - `packages/canvas/tests/services/canvas/Crdt.test.ts`
 - `packages/canvas/tests/plugins/SceneHydratorPlugin.test.ts`
 - `packages/canvas/tests/plugins/GroupPlugin.test.ts`
@@ -860,6 +954,7 @@ flowchart TD
   D --> J[Install default plugins]
 
   J --> K[EventListenerPlugin publishes hooks]
+  J --> K2[RecorderPlugin mounts bottom-right recorder UI]
   J --> L[Shape2d, Text, and Group plugins register capabilities]
   J --> M[SceneHydratorPlugin initAsync load]
 
@@ -872,6 +967,7 @@ flowchart TD
   K --> S[Toolbar and Help keyboard handling]
   K --> T[Selection pointer handling]
   K --> U[Camera wheel handling]
+  K --> U2[Recorder captures normalized stage and keyboard events]
 
   U --> V[Camera updates foreground and dynamic layers]
   V --> W[cameraChange hook]
@@ -890,6 +986,7 @@ flowchart TD
   AA --> AF[preview shape in dynamicLayer]
   AF --> AG[commit shape into staticForegroundLayer]
   AG --> AH[crdt.patch element]
+  AH --> AH2[Recorder stores normalized CRDT op]
 
   AC2 --> AT[create text node in staticForegroundLayer]
   AT --> AU[enter textarea edit mode]
@@ -903,4 +1000,5 @@ flowchart TD
   AE --> AK[group or ungroup reparents nodes]
   AK --> AL[crdt.patch groups and elements]
   AK --> AM[history.record group undo redo]
+  AL --> AH2
 ```
