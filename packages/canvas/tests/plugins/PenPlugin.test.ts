@@ -1,0 +1,376 @@
+import Konva from "konva";
+import { describe, expect, test } from "vitest";
+import { CustomEvents } from "../../src/custom-events";
+import { PenPlugin } from "../../src/plugins/Pen.plugin";
+import { SceneHydratorPlugin } from "../../src/plugins/SceneHydrator.plugin";
+import type { IPluginContext } from "../../src/plugins/interface";
+import { TransformPlugin } from "../../src/plugins/Transform.plugin";
+import { CanvasMode } from "../../src/services/canvas/enum";
+import { createPenDataFromStrokePoints, type TStrokePoint } from "../../src/plugins/pen.math";
+import { createCanvasTestHarness, createMockDocHandle, flushCanvasEffects } from "../test-setup";
+import type { TElement } from "@vibecanvas/shell/automerge/index";
+
+function createPenElement(args?: {
+  id?: string;
+  angle?: number;
+  points?: TStrokePoint[];
+}) {
+  const strokePoints = args?.points ?? [
+    { x: 120, y: 80, pressure: 0.5 },
+    { x: 150, y: 100, pressure: 0.55 },
+    { x: 185, y: 110, pressure: 0.6 },
+    { x: 220, y: 135, pressure: 0.5 },
+  ];
+  const penData = createPenDataFromStrokePoints(strokePoints);
+  if (!penData) throw new Error("Failed to create pen data for test");
+
+  return {
+    id: args?.id ?? "pen-1",
+    x: penData.x,
+    y: penData.y,
+    angle: args?.angle ?? 0,
+    bindings: [],
+    createdAt: 1,
+    updatedAt: 1,
+    locked: false,
+    parentGroupId: null,
+    zIndex: "",
+    style: {
+      backgroundColor: "#0f172a",
+      opacity: 0.92,
+      strokeWidth: 7,
+    },
+    data: {
+      type: "pen",
+      points: penData.points,
+      pressures: penData.pressures,
+      simulatePressure: penData.simulatePressure,
+    },
+  } satisfies TElement;
+}
+
+function createPointerEvent(type: string, pressure = 0.5) {
+  return {
+    evt: new PointerEvent(type, { pressure }),
+  } as Konva.KonvaEventObject<PointerEvent>;
+}
+
+function withDynamicPointer(context: IPluginContext, point: { x: number; y: number }, callback: () => void) {
+  const original = context.dynamicLayer.getRelativePointerPosition.bind(context.dynamicLayer);
+  context.dynamicLayer.getRelativePointerPosition = () => point;
+  callback();
+  context.dynamicLayer.getRelativePointerPosition = original;
+}
+
+function mountPenNode(context: IPluginContext, element: TElement) {
+  const node = context.capabilities.createShapeFromTElement?.(element);
+  if (!(node instanceof Konva.Path)) {
+    throw new Error("Expected PenPlugin to create a Konva.Path");
+  }
+
+  context.staticForegroundLayer.add(node);
+  return node;
+}
+
+function getPersistedPenElement(docHandle: ReturnType<typeof createMockDocHandle>, id: string) {
+  const element = docHandle.doc().elements[id];
+  if (!element || element.data.type !== "pen") {
+    throw new Error(`Expected persisted pen element '${id}'`);
+  }
+
+  return element;
+}
+
+function dragNode(node: Konva.Path, args: { dx: number; dy: number; altKey?: boolean }) {
+  const before = node.absolutePosition();
+  node.fire("dragstart", {
+    target: node,
+    currentTarget: node,
+    evt: new MouseEvent("dragstart", { bubbles: true, altKey: args.altKey }),
+  });
+  node.setAbsolutePosition({ x: before.x + args.dx, y: before.y + args.dy });
+  node.fire("dragmove", {
+    target: node,
+    currentTarget: node,
+    evt: new MouseEvent("dragmove", { bubbles: true, altKey: args.altKey }),
+  });
+  node.fire("dragend", {
+    target: node,
+    currentTarget: node,
+    evt: new MouseEvent("dragend", { bubbles: true, altKey: args.altKey }),
+  });
+}
+
+describe("PenPlugin", () => {
+  test("draw-create commits a pen path to scene and CRDT", async () => {
+    let context!: IPluginContext;
+    const docHandle = createMockDocHandle();
+
+    const harness = await createCanvasTestHarness({
+      docHandle,
+      plugins: [new PenPlugin()],
+      initializeScene(ctx) {
+        context = ctx;
+      },
+    });
+
+    context.setState("mode", CanvasMode.DRAW_CREATE);
+    context.hooks.customEvent.call(CustomEvents.TOOL_SELECT, "pen");
+
+    withDynamicPointer(context, { x: 120, y: 80 }, () => {
+      context.hooks.pointerDown.call(createPointerEvent("pointerdown", 0.4));
+    });
+    withDynamicPointer(context, { x: 160, y: 110 }, () => {
+      context.hooks.pointerMove.call(createPointerEvent("pointermove", 0.6) as Konva.KonvaEventObject<MouseEvent>);
+    });
+    withDynamicPointer(context, { x: 210, y: 140 }, () => {
+      context.hooks.pointerMove.call(createPointerEvent("pointermove", 0.5) as Konva.KonvaEventObject<MouseEvent>);
+    });
+    context.hooks.pointerUp.call(createPointerEvent("pointerup", 0.5));
+
+    await flushCanvasEffects();
+
+    const penNodes = harness.staticForegroundLayer.find((node: Konva.Node) => node instanceof Konva.Path) as Konva.Path[];
+    expect(penNodes).toHaveLength(1);
+    expect(context.state.mode).toBe(CanvasMode.SELECT);
+
+    const docElements = Object.values(docHandle.doc().elements);
+    expect(docElements).toHaveLength(1);
+    expect(docElements[0]?.data.type).toBe("pen");
+    if (docElements[0]?.data.type !== "pen") {
+      throw new Error("Expected created document element to be a pen");
+    }
+    expect(docElements[0].data.points.length).toBeGreaterThanOrEqual(3);
+
+    const visiblePreviewPaths = harness.dynamicLayer.find((node: Konva.Node) => {
+      return node instanceof Konva.Path && node.visible();
+    });
+    expect(visiblePreviewPaths).toHaveLength(0);
+
+    harness.destroy();
+  });
+
+  test("SceneHydratorPlugin mounts persisted pen elements", async () => {
+    const element = createPenElement();
+    const docHandle = createMockDocHandle({
+      elements: {
+        [element.id]: element,
+      },
+    });
+
+    const harness = await createCanvasTestHarness({
+      docHandle,
+      plugins: [new PenPlugin(), new SceneHydratorPlugin()],
+    });
+
+    const node = harness.staticForegroundLayer.findOne<Konva.Path>(`#${element.id}`);
+    expect(node).toBeInstanceOf(Konva.Path);
+    expect(node?.data().length).toBeGreaterThan(0);
+    expect(node?.fill()).toBe(element.style.backgroundColor);
+
+    harness.destroy();
+  });
+
+  test("drag updates pen position in CRDT and history undo/redo", async () => {
+    let context!: IPluginContext;
+    const element = createPenElement();
+    const docHandle = createMockDocHandle({
+      elements: {
+        [element.id]: structuredClone(element),
+      },
+    });
+
+    const harness = await createCanvasTestHarness({
+      docHandle,
+      plugins: [new PenPlugin()],
+      initializeScene(ctx) {
+        context = ctx;
+        mountPenNode(ctx, element);
+      },
+    });
+
+    const node = harness.staticForegroundLayer.findOne<Konva.Path>(`#${element.id}`)!;
+    const before = node.absolutePosition();
+
+    dragNode(node, { dx: 45, dy: 20 });
+    await flushCanvasEffects();
+
+    expect(node.absolutePosition().x).toBeCloseTo(before.x + 45, 8);
+    expect(node.absolutePosition().y).toBeCloseTo(before.y + 20, 8);
+    expect(docHandle.doc().elements[element.id]?.x).toBeCloseTo(before.x + 45, 8);
+    expect(docHandle.doc().elements[element.id]?.y).toBeCloseTo(before.y + 20, 8);
+
+    context.history.undo();
+    await flushCanvasEffects();
+    expect(node.absolutePosition().x).toBeCloseTo(before.x, 8);
+    expect(node.absolutePosition().y).toBeCloseTo(before.y, 8);
+
+    context.history.redo();
+    await flushCanvasEffects();
+    expect(node.absolutePosition().x).toBeCloseTo(before.x + 45, 8);
+    expect(node.absolutePosition().y).toBeCloseTo(before.y + 20, 8);
+
+    harness.destroy();
+  });
+
+  test("alt-drag clone creates a second persisted pen element", async () => {
+    let context!: IPluginContext;
+    const element = createPenElement();
+    const docHandle = createMockDocHandle({
+      elements: {
+        [element.id]: structuredClone(element),
+      },
+    });
+
+    const harness = await createCanvasTestHarness({
+      docHandle,
+      plugins: [new PenPlugin()],
+      initializeScene(ctx) {
+        context = ctx;
+        mountPenNode(ctx, element);
+      },
+    });
+
+    const sourceNode = harness.staticForegroundLayer.findOne<Konva.Path>(`#${element.id}`)!;
+    sourceNode.fire("dragstart", {
+      target: sourceNode,
+      currentTarget: sourceNode,
+      evt: new MouseEvent("dragstart", { bubbles: true, altKey: true }),
+    });
+
+    const cloneNode = harness.dynamicLayer.find((node: Konva.Node) => {
+      return node instanceof Konva.Path && node.id() !== sourceNode.id();
+    })[0] as Konva.Path | undefined;
+
+    expect(cloneNode).toBeInstanceOf(Konva.Path);
+    cloneNode!.setAbsolutePosition({ x: sourceNode.absolutePosition().x + 70, y: sourceNode.absolutePosition().y + 30 });
+    cloneNode!.fire("dragend", {
+      target: cloneNode,
+      currentTarget: cloneNode,
+      evt: new MouseEvent("dragend", { bubbles: true, altKey: true }),
+    });
+    await flushCanvasEffects();
+
+    const persistedPenElements = Object.values(docHandle.doc().elements).filter((candidate) => candidate.data.type === "pen");
+    expect(persistedPenElements).toHaveLength(2);
+
+    const createdClone = persistedPenElements.find((candidate) => candidate.id !== element.id);
+    expect(createdClone).toBeTruthy();
+    if (!createdClone || createdClone.data.type !== "pen") {
+      throw new Error("Expected cloned document element to be a pen");
+    }
+    expect(createdClone.data.points).toEqual(element.data.points);
+    expect(createdClone.data.pressures).toEqual(element.data.pressures);
+    expect(context.state.selection[0]?.id()).toBe(createdClone?.id);
+
+    harness.destroy();
+  });
+
+  test("shared transformer resize bakes scale into pen points and resets node scale", async () => {
+    let context!: IPluginContext;
+    const element = createPenElement();
+    const docHandle = createMockDocHandle({
+      elements: {
+        [element.id]: structuredClone(element),
+      },
+    });
+
+    const harness = await createCanvasTestHarness({
+      docHandle,
+      plugins: [new PenPlugin(), new TransformPlugin()],
+      initializeScene(ctx) {
+        context = ctx;
+        mountPenNode(ctx, element);
+      },
+    });
+
+    const node = harness.staticForegroundLayer.findOne<Konva.Path>(`#${element.id}`)!;
+    const transformer = harness.dynamicLayer.find((candidate: Konva.Node) => candidate instanceof Konva.Transformer)[0] as Konva.Transformer;
+    const originalPoints = structuredClone(getPersistedPenElement(docHandle, element.id).data.points);
+
+    context.setState("selection", [node]);
+    await flushCanvasEffects();
+
+    transformer.fire("transformstart", {
+      target: node,
+      currentTarget: transformer,
+      evt: new MouseEvent("transformstart", { bubbles: true }),
+    });
+    node.scaleX(1.8);
+    node.scaleY(1.4);
+    node.x(node.x() + 25);
+    node.y(node.y() + 10);
+    transformer.fire("transformend", {
+      target: node,
+      currentTarget: transformer,
+      evt: new MouseEvent("transformend", { bubbles: true }),
+    });
+    await flushCanvasEffects();
+
+    const resizedElement = getPersistedPenElement(docHandle, element.id);
+    expect(resizedElement.data.points[1]?.[0]).toBeGreaterThan(originalPoints[1]?.[0] ?? 0);
+    expect(resizedElement.data.points[1]?.[1]).toBeGreaterThan(originalPoints[1]?.[1] ?? 0);
+    expect(node.scaleX()).toBeCloseTo(1, 8);
+    expect(node.scaleY()).toBeCloseTo(1, 8);
+
+    context.history.undo();
+    await flushCanvasEffects();
+    expect(getPersistedPenElement(docHandle, element.id).data.points).toEqual(originalPoints);
+
+    context.history.redo();
+    await flushCanvasEffects();
+    expect(getPersistedPenElement(docHandle, element.id).data.points[1]?.[0]).toBeGreaterThan(originalPoints[1]?.[0] ?? 0);
+
+    harness.destroy();
+  });
+
+  test("shared transformer rotate persists angle and supports undo/redo", async () => {
+    let context!: IPluginContext;
+    const element = createPenElement();
+    const docHandle = createMockDocHandle({
+      elements: {
+        [element.id]: structuredClone(element),
+      },
+    });
+
+    const harness = await createCanvasTestHarness({
+      docHandle,
+      plugins: [new PenPlugin(), new TransformPlugin()],
+      initializeScene(ctx) {
+        context = ctx;
+        mountPenNode(ctx, element);
+      },
+    });
+
+    const node = harness.staticForegroundLayer.findOne<Konva.Path>(`#${element.id}`)!;
+    const transformer = harness.dynamicLayer.find((candidate: Konva.Node) => candidate instanceof Konva.Transformer)[0] as Konva.Transformer;
+
+    context.setState("selection", [node]);
+    await flushCanvasEffects();
+
+    transformer.fire("transformstart", {
+      target: node,
+      currentTarget: transformer,
+      evt: new MouseEvent("transformstart", { bubbles: true }),
+    });
+    node.rotation(33);
+    transformer.fire("transformend", {
+      target: node,
+      currentTarget: transformer,
+      evt: new MouseEvent("transformend", { bubbles: true }),
+    });
+    await flushCanvasEffects();
+
+    expect(docHandle.doc().elements[element.id]!.angle).toBeCloseTo(33, 8);
+
+    context.history.undo();
+    await flushCanvasEffects();
+    expect(docHandle.doc().elements[element.id]!.angle).toBeCloseTo(0, 8);
+
+    context.history.redo();
+    await flushCanvasEffects();
+    expect(docHandle.doc().elements[element.id]!.angle).toBeCloseTo(33, 8);
+
+    harness.destroy();
+  });
+});

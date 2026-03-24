@@ -92,7 +92,7 @@ export class ToolbarPlugin implements IPlugin {
         context.setState('mode', CanvasMode.SELECT)
       } else if (value === 'hand') {
         context.setState('mode', CanvasMode.HAND)
-      } else if (["rectangle", "diamond", "ellipse"].includes(value)) {
+      } else if (["rectangle", "diamond", "ellipse", "pen"].includes(value)) {
         context.setState('mode', CanvasMode.DRAW_CREATE)
       } else {
         context.setState('mode', CanvasMode.CLICK_CREATE)

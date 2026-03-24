@@ -7,7 +7,7 @@ import { createStore, SetStoreFunction } from 'solid-js/store';
 import type { TCustomEvent } from "../../custom-events";
 import {
   CameraControlPlugin, EventListenerPlugin, ExampleScenePlugin,
-  GridPlugin, GroupPlugin, HelpPlugin, HistoryControlPlugin, SceneHydratorPlugin,
+  GridPlugin, GroupPlugin, HelpPlugin, HistoryControlPlugin, PenPlugin, SceneHydratorPlugin,
   SelectPlugin, Shape2dPlugin, TextPlugin, ToolbarPlugin, TransformPlugin, VisualDebugPlugin
 } from "../../plugins";
 import type { IPlugin, IPluginContext, TMouseEvent, TPointerEvent, TWheelEvent } from "../../plugins/interface";
@@ -33,6 +33,7 @@ export function defaultPlugins(
     new SelectPlugin(),
     new TransformPlugin(),
     new Shape2dPlugin(),
+    new PenPlugin(),
     new TextPlugin(),
     groupPlugin,
     // new ExampleScenePlugin(groupPlugin)
