@@ -5,6 +5,9 @@ import { CustomEvents } from "../custom-events";
 import { CanvasMode } from "../services/canvas/enum";
 import type { IPlugin, IPluginContext } from "./interface";
 import type { Group } from "konva/lib/Group";
+import type { TElement, TGroup } from "@vibecanvas/shell/automerge/index";
+import { GroupPlugin } from "./Group.plugin";
+import { Shape2dPlugin } from "./Shape2d.plugin";
 
 function getSelectionLayerPointerPosition(context: IPluginContext) {
   const pointer = context.dynamicLayer.getRelativePointerPosition();
@@ -63,6 +66,225 @@ function isSelectionPathPrefix(
   return currentSelection.every((node, index) => node === path[index]);
 }
 
+function isEditableTarget(target: EventTarget | null) {
+  if (target instanceof HTMLInputElement) return true;
+  if (target instanceof HTMLTextAreaElement) return true;
+  if (target instanceof HTMLElement && target.isContentEditable) return true;
+
+  return false;
+}
+
+function isNodeDescendantOf(node: Konva.Node, ancestor: Konva.Node) {
+  let current = node.getParent();
+
+  while (current) {
+    if (current === ancestor) return true;
+    current = current.getParent();
+  }
+
+  return false;
+}
+
+function collapseSelectionToDeleteRoots(selection: Array<Konva.Group | Konva.Shape>) {
+  return selection.filter((node, index) => {
+    return !selection.some((candidate, candidateIndex) => {
+      if (candidateIndex === index) return false;
+      return isNodeDescendantOf(node, candidate);
+    });
+  });
+}
+
+type TDeleteSnapshot = {
+  rootIds: string[];
+  groups: TGroup[];
+  elements: TElement[];
+  groupIds: string[];
+  elementIds: string[];
+};
+
+type TCollectedDeleteData = {
+  snapshot: TDeleteSnapshot;
+  destroyNodes: Array<Konva.Group | Konva.Shape>;
+};
+
+function collectDeleteSnapshot(
+  context: IPluginContext,
+  roots: Array<Konva.Group | Konva.Shape>,
+): TCollectedDeleteData {
+  const groups: TGroup[] = [];
+  const elements: TElement[] = [];
+  const groupIds = new Set<string>();
+  const elementIds = new Set<string>();
+  const visitedNodeIds = new Set<string>();
+  const visitedNodes: Array<Konva.Group | Konva.Shape> = [];
+
+  const visitNode = (node: Konva.Group | Konva.Shape) => {
+    if (visitedNodeIds.has(node.id())) return;
+    visitedNodeIds.add(node.id());
+    visitedNodes.push(node);
+
+    if (node instanceof Konva.Group) {
+      if (!groupIds.has(node.id())) {
+        groupIds.add(node.id());
+        groups.push(context.capabilities.toGroup?.(node) ?? GroupPlugin.toTGroup(node));
+      }
+
+      node.getChildren().forEach((child) => {
+        if (child instanceof Konva.Group || child instanceof Konva.Shape) {
+          visitNode(child);
+        }
+      });
+
+      return;
+    }
+
+    if (!elementIds.has(node.id())) {
+      const element = context.capabilities.toElement?.(node) ?? Shape2dPlugin.toTElement(node);
+      elementIds.add(node.id());
+      elements.push(element);
+    }
+
+    if (!(node instanceof Konva.Rect)) return;
+
+    const attachedText = context.staticForegroundLayer.findOne((candidate: Konva.Node) => {
+      return candidate instanceof Konva.Text && candidate.getAttr("vcContainerId") === node.id();
+    });
+
+    if (!(attachedText instanceof Konva.Text)) return;
+    visitNode(attachedText);
+  };
+
+  roots.forEach((root) => visitNode(root));
+
+  return {
+    snapshot: {
+      rootIds: roots.map((root) => root.id()),
+      groups,
+      elements,
+      groupIds: [...groupIds],
+      elementIds: [...elementIds],
+    },
+    destroyNodes: visitedNodes.filter((node, index) => {
+      return !visitedNodes.some((candidate, candidateIndex) => {
+        if (candidateIndex === index) return false;
+        if (!(candidate instanceof Konva.Group)) return false;
+
+        return isNodeDescendantOf(node, candidate);
+      });
+    }),
+  };
+}
+
+function restoreDeleteSnapshot(context: IPluginContext, snapshot: TDeleteSnapshot) {
+  const createdGroups = new Set<string>();
+  const pendingGroups = [...snapshot.groups];
+  let didCreateGroup = true;
+
+  while (pendingGroups.length > 0 && didCreateGroup) {
+    didCreateGroup = false;
+
+    for (let index = 0; index < pendingGroups.length; index += 1) {
+      const group = pendingGroups[index];
+      if (!group) continue;
+
+      const parentNode = group.parentGroupId
+        ? context.staticForegroundLayer.findOne(`#${group.parentGroupId}`)
+        : context.staticForegroundLayer;
+
+      if (
+        group.parentGroupId !== null &&
+        !createdGroups.has(group.parentGroupId) &&
+        !(parentNode instanceof Konva.Group)
+      ) {
+        continue;
+      }
+
+      const groupNode = context.capabilities.createGroupFromTGroup?.(group)
+        ?? new Konva.Group({ id: group.id, draggable: true });
+      const parent = parentNode instanceof Konva.Group || parentNode instanceof Konva.Layer
+        ? parentNode
+        : null;
+
+      if (parent === null) {
+        continue;
+      }
+
+      parent.add(groupNode);
+      createdGroups.add(group.id);
+      pendingGroups.splice(index, 1);
+      index -= 1;
+      didCreateGroup = true;
+    }
+  }
+
+  snapshot.elements.forEach((element) => {
+    const node = context.capabilities.createShapeFromTElement?.(element);
+    if (!node) return;
+
+    const parentNode = element.parentGroupId
+      ? context.staticForegroundLayer.findOne(`#${element.parentGroupId}`)
+      : context.staticForegroundLayer;
+    const parent = parentNode instanceof Konva.Group || parentNode instanceof Konva.Layer
+      ? parentNode
+      : null;
+
+    if (parent === null) return;
+
+    parent.add(node);
+  });
+
+  context.crdt.patch({ groups: snapshot.groups, elements: snapshot.elements });
+
+  const restoredRoots = snapshot.rootIds
+    .map((id) => context.staticForegroundLayer.findOne((node: Konva.Node) => {
+      return (node instanceof Konva.Group || node instanceof Konva.Shape) && node.id() === id;
+    }))
+    .filter((node): node is Konva.Group | Konva.Shape => node instanceof Konva.Group || node instanceof Konva.Shape);
+
+  context.setState("selection", restoredRoots);
+}
+
+function executeDeleteSelection(
+  context: IPluginContext,
+  selection: Array<Konva.Group | Konva.Shape>,
+  args?: { recordHistory?: boolean },
+) {
+  const roots = collapseSelectionToDeleteRoots(selection);
+  if (roots.length === 0) return false;
+
+  const { snapshot, destroyNodes } = collectDeleteSnapshot(context, roots);
+
+  destroyNodes.forEach((node) => {
+    node.destroy();
+  });
+
+  context.crdt.deleteById({
+    elementIds: snapshot.elementIds,
+    groupIds: snapshot.groupIds,
+  });
+  context.setState("selection", []);
+
+  if (args?.recordHistory !== false) {
+    context.history.record({
+      label: "delete-selection",
+      undo: () => {
+        restoreDeleteSnapshot(context, snapshot);
+      },
+      redo: () => {
+        const redoRoots = snapshot.rootIds
+          .map((id) => context.staticForegroundLayer.findOne((node: Konva.Node) => {
+            return (node instanceof Konva.Group || node instanceof Konva.Shape) && node.id() === id;
+          }))
+          .filter((node): node is Konva.Group | Konva.Shape => node instanceof Konva.Group || node instanceof Konva.Shape);
+
+        executeDeleteSelection(context, redoRoots, { recordHistory: false });
+      },
+    });
+  }
+
+  return true;
+}
+
 export class SelectPlugin implements IPlugin {
   #selectionRectangle: Konva.Rect;
 
@@ -105,6 +327,17 @@ export class SelectPlugin implements IPlugin {
     context.hooks.pointerUp.tap(() => {
       if (context.state.mode !== CanvasMode.SELECT) return;
       this.#selectionRectangle.visible(false);
+    });
+
+    context.hooks.keydown.tap((event) => {
+      if (context.state.mode !== CanvasMode.SELECT) return;
+      if (context.state.selection.length === 0) return;
+      if (event.key !== "Backspace" && event.key !== "Delete") return;
+      if (isEditableTarget(event.target)) return;
+
+      event.preventDefault();
+      event.stopPropagation();
+      executeDeleteSelection(context, context.state.selection);
     });
 
   }
