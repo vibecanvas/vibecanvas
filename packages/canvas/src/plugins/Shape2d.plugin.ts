@@ -5,6 +5,7 @@ import { CustomEvents } from "../custom-events";
 import { CanvasMode } from "../services/canvas/enum";
 import type { IPlugin, IPluginContext } from "./interface";
 import { throttle } from "@solid-primitives/scheduled";
+import { startSelectionCloneDrag } from "./clone-drag";
 import { getWorldPosition, setWorldPosition } from "./node-space";
 import { TextPlugin } from "./Text.plugin";
 import { TransformPlugin } from "./Transform.plugin";
@@ -314,6 +315,7 @@ export class Shape2dPlugin implements IPlugin {
 
       if (e.type === 'dragstart' && e.evt.altKey) {
         shape.stopDrag()
+        if (startSelectionCloneDrag(context, shape)) return
         Shape2dPlugin.createCloneDrag(context, shape)
       }
     })
@@ -487,52 +489,58 @@ export class Shape2dPlugin implements IPlugin {
     context.dynamicLayer.add(previewShape)
     previewShape.startDrag()
     previewShape.on('dragend', () => {
-      const newShape = Shape2dPlugin.createShapeFromNode(previewShape)
-      previewShape.destroy()
-
+      const newShape = Shape2dPlugin.finalizePreviewClone(context, shape, previewShape)
       if (!newShape) return
-
-      Shape2dPlugin.setupShapeListeners(context, newShape)
-      newShape.setDraggable(true)
-      context.staticForegroundLayer.add(newShape);
-      newShape.moveToTop()
-
-        const createdElements: TElement[] = [Shape2dPlugin.toTElement(newShape)]
-        if (shape instanceof Konva.Rect && newShape instanceof Konva.Rect) {
-          const sourceAttachedText = Shape2dPlugin.getAttachedTextNode(context, shape)
-          if (sourceAttachedText) {
-            const sourceElement = TextPlugin.toTElement(sourceAttachedText)
-            if (sourceElement.data.type !== 'text') {
-              throw new Error('Expected attached text element data to be text')
-            }
-            const sourceTextData: TTextData = sourceElement.data
-            const clonedText = TextPlugin.createTextNode({
-              ...sourceElement,
-              id: crypto.randomUUID(),
-            x: newShape.x(),
-            y: newShape.y(),
-            angle: newShape.rotation(),
-              parentGroupId: null,
-              data: {
-                ...sourceTextData,
-                containerId: newShape.id(),
-                originalText: sourceTextData.text,
-              },
-            })
-
-          TextPlugin.setupShapeListeners(context, clonedText)
-          context.staticForegroundLayer.add(clonedText)
-          clonedText.moveToTop()
-          Shape2dPlugin.syncAttachedTextToRect(context, newShape, clonedText)
-          createdElements.push(TextPlugin.toTElement(clonedText))
-        }
-      }
-
-      context.crdt.patch({ elements: createdElements, groups: [] })
       context.setState('selection', [newShape])
     })
 
     return previewShape;
+  }
+
+  static finalizePreviewClone(context: IPluginContext, sourceShape: Konva.Shape, previewShape: Konva.Shape) {
+    const newShape = Shape2dPlugin.createShapeFromNode(previewShape)
+    previewShape.destroy()
+
+    if (!newShape) return null
+
+    Shape2dPlugin.setupShapeListeners(context, newShape)
+    newShape.setDraggable(true)
+    context.staticForegroundLayer.add(newShape)
+    newShape.moveToTop()
+
+    const createdElements: TElement[] = [Shape2dPlugin.toTElement(newShape)]
+    if (sourceShape instanceof Konva.Rect && newShape instanceof Konva.Rect) {
+      const sourceAttachedText = Shape2dPlugin.getAttachedTextNode(context, sourceShape)
+      if (sourceAttachedText) {
+        const sourceElement = TextPlugin.toTElement(sourceAttachedText)
+        if (sourceElement.data.type !== 'text') {
+          throw new Error('Expected attached text element data to be text')
+        }
+        const sourceTextData: TTextData = sourceElement.data
+        const clonedText = TextPlugin.createTextNode({
+          ...sourceElement,
+          id: crypto.randomUUID(),
+          x: newShape.x(),
+          y: newShape.y(),
+          angle: newShape.rotation(),
+          parentGroupId: null,
+          data: {
+            ...sourceTextData,
+            containerId: newShape.id(),
+            originalText: sourceTextData.text,
+          },
+        })
+
+        TextPlugin.setupShapeListeners(context, clonedText)
+        context.staticForegroundLayer.add(clonedText)
+        clonedText.moveToTop()
+        Shape2dPlugin.syncAttachedTextToRect(context, newShape, clonedText)
+        createdElements.push(TextPlugin.toTElement(clonedText))
+      }
+    }
+
+    context.crdt.patch({ elements: createdElements, groups: [] })
+    return newShape
   }
 
   static createRectFromElement(element: TElement) {

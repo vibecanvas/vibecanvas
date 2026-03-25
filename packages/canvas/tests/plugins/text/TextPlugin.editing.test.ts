@@ -144,6 +144,28 @@ describe("TextPlugin – group drilling g(t, r)", () => {
     return { harness, ctx, text };
   }
 
+  async function createTopLevelMultiTextHarness() {
+    let ctx!: IPluginContext;
+    const harness = await createCanvasTestHarness({
+      plugins: [new TextPlugin()],
+      initializeScene: (context) => {
+        ctx = context;
+
+        const textA = new Konva.Text({ id: "plain-text-a", x: 120, y: 140, width: 150, height: 30, text: "plain text a", fontSize: 16, fontFamily: "Arial", wrap: "none" });
+        const textB = new Konva.Text({ id: "plain-text-b", x: 340, y: 200, width: 150, height: 30, text: "plain text b", fontSize: 16, fontFamily: "Arial", wrap: "none" });
+
+        [textA, textB].forEach((textNode) => {
+          TextPlugin.setupShapeListeners(context, textNode);
+          textNode.draggable(true);
+          context.staticForegroundLayer.add(textNode);
+        });
+      },
+    });
+    const textA = harness.staticForegroundLayer.findOne<Konva.Text>("#plain-text-a")!;
+    const textB = harness.staticForegroundLayer.findOne<Konva.Text>("#plain-text-b")!;
+    return { harness, ctx, textA, textB };
+  }
+
   function firePointerDown(node: Konva.Node) {
     node.fire("pointerdown", { evt: new PointerEvent("pointerdown", { bubbles: true }) }, true);
   }
@@ -366,6 +388,20 @@ describe("TextPlugin – group drilling g(t, r)", () => {
     const texts = harness.staticForegroundLayer.find("Text") as Konva.Text[];
     expect(texts).toHaveLength(3);
     expect(new Set(texts.map((node) => node.id())).size).toBe(3);
+    harness.destroy();
+  });
+
+  test("alt-dragging one text in a top-level multi-selection should clone both selected texts", async () => {
+    const { harness, ctx, textA, textB } = await createTopLevelMultiTextHarness();
+    ctx.setState("selection", [textA, textB]);
+    await flushCanvasEffects();
+
+    altDragNode(textB, { deltaX: 80, deltaY: 20 });
+    await flushCanvasEffects();
+
+    const texts = harness.staticForegroundLayer.find("Text") as Konva.Text[];
+    expect(texts).toHaveLength(4);
+
     harness.destroy();
   });
 });

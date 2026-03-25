@@ -102,6 +102,34 @@ function dragNode(node: Konva.Path, args: { dx: number; dy: number; altKey?: boo
   });
 }
 
+function altDragPen(node: Konva.Path, args: { dx: number; dy: number }) {
+  const beforeNodeIds = new Set(
+    node.getStage()?.getLayers().flatMap((layer) => layer.getChildren()).map((child) => child._id) ?? [],
+  );
+
+  node.fire("dragstart", {
+    target: node,
+    currentTarget: node,
+    evt: new MouseEvent("dragstart", { bubbles: true, altKey: true }),
+  });
+
+  const previewClone = node.getStage()?.getLayers()
+    .flatMap((layer) => layer.getChildren())
+    .find((child) => !beforeNodeIds.has(child._id) && child instanceof Konva.Path) as Konva.Path | undefined;
+
+  if (!previewClone) {
+    throw new Error("Expected preview clone after alt-drag start");
+  }
+
+  const before = previewClone.absolutePosition();
+  previewClone.setAbsolutePosition({ x: before.x + args.dx, y: before.y + args.dy });
+  previewClone.fire("dragend", {
+    target: previewClone,
+    currentTarget: previewClone,
+    evt: new MouseEvent("dragend", { bubbles: true, altKey: true }),
+  });
+}
+
 describe("PenPlugin", () => {
   test("draw-create commits a pen path to scene and CRDT", async () => {
     let context!: IPluginContext;
@@ -334,6 +362,46 @@ describe("PenPlugin", () => {
     expect(createdClone.data.points).toEqual(element.data.points);
     expect(createdClone.data.pressures).toEqual(element.data.pressures);
     expect(context.state.selection[0]?.id()).toBe(createdClone?.id);
+
+    harness.destroy();
+  });
+
+  test("alt-dragging one pen in a top-level multi-selection should clone both selected pens", async () => {
+    let context!: IPluginContext;
+    const elementA = createPenElement({ id: "pen-a" });
+    const elementB = createPenElement({ id: "pen-b", points: [
+      { x: 320, y: 180, pressure: 0.5 },
+      { x: 350, y: 200, pressure: 0.55 },
+      { x: 385, y: 210, pressure: 0.6 },
+      { x: 420, y: 235, pressure: 0.5 },
+    ] });
+    const docHandle = createMockDocHandle({
+      elements: {
+        [elementA.id]: structuredClone(elementA),
+        [elementB.id]: structuredClone(elementB),
+      },
+    });
+
+    const harness = await createCanvasTestHarness({
+      docHandle,
+      plugins: [new PenPlugin()],
+      initializeScene(ctx) {
+        context = ctx;
+        mountPenNode(ctx, elementA);
+        mountPenNode(ctx, elementB);
+      },
+    });
+
+    const penA = harness.staticForegroundLayer.findOne<Konva.Path>("#pen-a")!;
+    const penB = harness.staticForegroundLayer.findOne<Konva.Path>("#pen-b")!;
+    context.setState("selection", [penA, penB]);
+    await flushCanvasEffects();
+
+    altDragPen(penB, { dx: 70, dy: 30 });
+    await flushCanvasEffects();
+
+    const persistedPenElements = Object.values(docHandle.doc().elements).filter((candidate) => candidate.data.type === "pen");
+    expect(persistedPenElements).toHaveLength(4);
 
     harness.destroy();
   });

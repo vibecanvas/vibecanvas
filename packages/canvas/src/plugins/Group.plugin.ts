@@ -3,7 +3,10 @@ import { createEffect } from "solid-js";
 import { CustomEvents } from "../custom-events";
 import { CanvasMode } from "../services/canvas/enum";
 import type { IPlugin, IPluginContext } from "./interface";
+import { startSelectionCloneDrag } from "./clone-drag";
+import { PenPlugin } from "./Pen.plugin";
 import { Shape2dPlugin } from "./Shape2d.plugin";
+import { TextPlugin } from "./Text.plugin";
 import { TElement, TGroup } from "@vibecanvas/shell/automerge/index";
 import { TransformPlugin } from "./Transform.plugin";
 import { throttle } from "@solid-primitives/scheduled";
@@ -330,7 +333,7 @@ export class GroupPlugin implements IPlugin {
     }
   }
 
-  private static refreshCloneSubtree(clone: Konva.Group) {
+  static refreshCloneSubtree(clone: Konva.Group) {
     clone.id(crypto.randomUUID())
     clone.setDraggable(true)
 
@@ -342,6 +345,72 @@ export class GroupPlugin implements IPlugin {
         node.setDraggable(false)
       }
     })
+  }
+
+  static createPreviewClone(group: Konva.Group) {
+    const clone = Konva.Node.create(group.toJSON()) as Konva.Group
+    GroupPlugin.refreshCloneSubtree(clone)
+    return clone
+  }
+
+  static finalizePreviewClone(context: IPluginContext, clone: Konva.Group) {
+    if (clone.isDragging()) {
+      clone.stopDrag()
+    }
+
+    clone.moveTo(context.staticForegroundLayer)
+
+    const groups: TGroup[] = []
+    const elements: TElement[] = []
+
+    const registerSubtree = (group: Konva.Group) => {
+      GroupPlugin.setupGroupListenersStatic(context, group)
+      groups.push((context.capabilities.toGroup?.(group) ?? GroupPlugin.toTGroup(group)) as TGroup)
+      group.setDraggable(false)
+
+      group.getChildren().forEach(node => {
+        if (node instanceof Konva.Group) {
+          registerSubtree(node)
+          return
+        }
+
+        if (!(node instanceof Konva.Shape)) return
+
+        if (node instanceof Konva.Text) {
+          TextPlugin.setupShapeListeners(context, node)
+        } else if (node instanceof Konva.Path) {
+          PenPlugin.setupShapeListeners(context, node)
+        } else {
+          Shape2dPlugin.setupShapeListeners(context, node)
+        }
+
+        node.setDraggable(false)
+        const element = context.capabilities.toElement?.(node)
+        if (element) elements.push(element)
+      })
+    }
+
+    registerSubtree(clone)
+    context.crdt.patch({ elements, groups })
+    return clone
+  }
+
+  static startSingleCloneDrag(context: IPluginContext, group: Konva.Group) {
+    const clone = GroupPlugin.createPreviewClone(group)
+
+    context.dynamicLayer.add(clone)
+    GroupPlugin.setupGroupListenersStatic(context, clone)
+    context.setState('selection', [clone])
+
+    clone.startDrag()
+    const finalizeCloneDrag = () => {
+      clone.off('dragend', finalizeCloneDrag)
+      const finalizedClone = GroupPlugin.finalizePreviewClone(context, clone)
+      context.setState('selection', finalizedClone ? [finalizedClone] : [])
+    }
+    clone.on('dragend', finalizeCloneDrag)
+
+    return clone
   }
 
   static toTGroup(group: Konva.Group): TGroup {
@@ -423,30 +492,19 @@ export class GroupPlugin implements IPlugin {
   }
 
   private createCloneDrag(context: IPluginContext, group: Konva.Group) {
-    const clone = Konva.Node.create(group.toJSON()) as Konva.Group
-    GroupPlugin.refreshCloneSubtree(clone)
-
-    context.dynamicLayer.add(clone)
-    this.setupGroupListeners(context, clone)
+    const clone = GroupPlugin.startSingleCloneDrag(context, group)
     this.selectGroup(context, clone)
-    context.setState('selection', [clone])
-
-    clone.startDrag()
-    const finalizeCloneDrag = () => {
-      clone.off('dragend', finalizeCloneDrag)
-      if (clone.isDragging()) {
-        clone.stopDrag()
-      }
-      clone.moveTo(context.staticForegroundLayer)
-      clone.setDraggable(true)
-      context.setState('selection', [clone])
-    }
-    clone.on('dragend', finalizeCloneDrag)
-
     return clone
   }
 
   setupGroupListeners(context: IPluginContext, group: Konva.Group) {
+    GroupPlugin.setupGroupListenersStatic(context, group, this)
+  }
+
+  static setupGroupListenersStatic(context: IPluginContext, group: Konva.Group, plugin?: GroupPlugin) {
+    if (group.getAttr('vcGroupListenersSetup')) return
+    group.setAttr('vcGroupListenersSetup', true)
+
     let isCloneDrag = false
 
     group.on('pointerclick', e => {
@@ -479,7 +537,15 @@ export class GroupPlugin implements IPlugin {
         } catch {
           // ignore Konva drag-state mismatch in synthetic paths
         }
-        this.createCloneDrag(context, group)
+        if (startSelectionCloneDrag(context, group)) {
+          isCloneDrag = false
+          return
+        }
+        if (plugin) {
+          plugin.createCloneDrag(context, group)
+        } else {
+          GroupPlugin.startSingleCloneDrag(context, group)
+        }
       }
     })
 
@@ -493,7 +559,9 @@ export class GroupPlugin implements IPlugin {
         return
       }
 
-      this.#boundaries.values().forEach(b => b.update())
+      if (plugin) {
+        plugin.#boundaries.values().forEach(b => b.update())
+      }
       // update shape position, dont propagate to parent
       if (e.currentTarget instanceof Konva.Group && e.type === 'dragmove') {
         const childElements = e.currentTarget

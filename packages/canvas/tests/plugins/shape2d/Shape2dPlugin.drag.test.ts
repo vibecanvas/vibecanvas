@@ -61,6 +61,38 @@ function dragShapeInScreenSpace(shape: Konva.Shape, args: { deltaX: number; delt
   });
 }
 
+function altDragShape(shape: Konva.Shape, args: { deltaX: number; deltaY?: number }) {
+  const beforeNodeIds = new Set(
+    shape.getStage()?.getLayers().flatMap((layer) => layer.getChildren()).map((child) => child._id) ?? [],
+  );
+
+  shape.fire("dragstart", {
+    target: shape,
+    currentTarget: shape,
+    evt: new MouseEvent("dragstart", { bubbles: true, altKey: true }),
+  });
+
+  const previewClone = shape.getStage()?.getLayers()
+    .flatMap((layer) => layer.getChildren())
+    .find((child) => !beforeNodeIds.has(child._id) && child instanceof Konva.Shape) as Konva.Shape | undefined;
+
+  if (!previewClone) {
+    throw new Error("Expected preview clone after alt-drag start");
+  }
+
+  const beforeAbsolutePosition = previewClone.absolutePosition();
+  previewClone.setAbsolutePosition({
+    x: beforeAbsolutePosition.x + args.deltaX,
+    y: beforeAbsolutePosition.y + (args.deltaY ?? 0),
+  });
+
+  previewClone.fire("dragend", {
+    target: previewClone,
+    currentTarget: previewClone,
+    evt: new MouseEvent("dragend", { bubbles: true, altKey: true }),
+  });
+}
+
 function expectShapePosition(shape: Konva.Shape, args: {
   absoluteX: number;
   absoluteY: number;
@@ -229,5 +261,64 @@ describe("Shape2dPlugin", () => {
 
     harness.destroy();
   }, 15000);
+
+  test("scene3: alt-dragging one item in a top-level multi-selection should clone both selected shapes", async () => {
+    let pluginContext!: IPluginContext;
+
+    const harness = await createCanvasTestHarness({
+      plugins: [new Shape2dPlugin()],
+      initializeScene: (context) => {
+        pluginContext = context;
+
+        const s1 = Shape2dPlugin.createRectFromElement({
+          id: "rect-1",
+          x: 120,
+          y: 140,
+          angle: 0,
+          bindings: [],
+          createdAt: 1,
+          locked: false,
+          parentGroupId: null,
+          updatedAt: 1,
+          zIndex: "",
+          data: { type: "rect", w: 110, h: 70 },
+          style: { backgroundColor: "red" },
+        });
+        const s2 = Shape2dPlugin.createRectFromElement({
+          id: "rect-2",
+          x: 320,
+          y: 170,
+          angle: 0,
+          bindings: [],
+          createdAt: 1,
+          locked: false,
+          parentGroupId: null,
+          updatedAt: 1,
+          zIndex: "",
+          data: { type: "rect", w: 110, h: 70 },
+          style: { backgroundColor: "blue" },
+        });
+
+        [s1, s2].forEach((shape) => {
+          Shape2dPlugin.setupShapeListeners(context, shape);
+          shape.setDraggable(true);
+          context.staticForegroundLayer.add(shape);
+        });
+      },
+    });
+
+    const s1 = harness.staticForegroundLayer.findOne<Konva.Rect>("#rect-1")!;
+    const s2 = harness.staticForegroundLayer.findOne<Konva.Rect>("#rect-2")!;
+    pluginContext.setState("selection", [s1, s2]);
+    await flushCanvasEffects();
+
+    altDragShape(s2, { deltaX: 80, deltaY: 25 });
+    await flushCanvasEffects();
+
+    const rects = harness.staticForegroundLayer.find((node: Konva.Node) => node instanceof Konva.Rect) as Konva.Rect[];
+    expect(rects).toHaveLength(4);
+
+    harness.destroy();
+  });
 
 });

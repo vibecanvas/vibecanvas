@@ -384,6 +384,25 @@ describe("GroupPlugin – multi-select drag", () => {
 });
 
 describe("GroupPlugin – clone drag", () => {
+  async function createMixedMultiSelectCloneHarness() {
+    let pluginContext!: IPluginContext;
+    const groupPlugin = new GroupPlugin();
+    let g1!: Konva.Group;
+    let s4!: Konva.Rect;
+
+    const harness = await createCanvasTestHarness({
+      plugins: [new SelectPlugin(), new Shape2dPlugin(), groupPlugin],
+      initializeScene: (context) => {
+        pluginContext = context;
+        const scene = initializeScene03TopLevelMixedSelection({ context, groupPlugin });
+        g1 = scene.g1;
+        s4 = scene.s4;
+      },
+    });
+
+    return { harness, pluginContext, g1, s4 };
+  }
+
   async function createCloneHarness() {
     let pluginContext!: IPluginContext;
     const groupPlugin = new GroupPlugin();
@@ -429,6 +448,51 @@ describe("GroupPlugin – clone drag", () => {
     const groups = harness.staticForegroundLayer.find((node: any) => node instanceof Konva.Group) as Konva.Group[];
     expect(groups).toHaveLength(3);
     expect(new Set(groups.map((group) => group.id())).size).toBe(3);
+
+    harness.destroy();
+  });
+
+  test("alt-dragging one node in a mixed top-level multi-selection should clone all selected roots", async () => {
+    const { harness, pluginContext, g1, s4 } = await createMixedMultiSelectCloneHarness();
+
+    pluginContext.setState("selection", [g1, s4]);
+    await flushCanvasEffects();
+
+    const groupsBefore = harness.staticForegroundLayer.find((node: any) => node instanceof Konva.Group) as Konva.Group[];
+    const rectsBefore = harness.staticForegroundLayer.find((node: any) => node instanceof Konva.Rect) as Konva.Rect[];
+
+    const beforeNodeIds = new Set(
+      harness.stage.getLayers().flatMap((layer) => layer.getChildren()).map((child) => child._id),
+    );
+
+    s4.fire("dragstart", {
+      target: s4,
+      currentTarget: s4,
+      evt: new MouseEvent("dragstart", { bubbles: true, altKey: true }),
+    });
+
+    const previewClone = harness.stage.getLayers()
+      .flatMap((layer) => layer.getChildren())
+      .find((child) => !beforeNodeIds.has(child._id) && child instanceof Konva.Rect) as Konva.Rect | undefined;
+
+    if (!previewClone) {
+      throw new Error("Expected preview clone after alt-drag start");
+    }
+
+    const beforePos = previewClone.absolutePosition();
+    previewClone.setAbsolutePosition({ x: beforePos.x + 80, y: beforePos.y + 20 });
+    previewClone.fire("dragend", {
+      target: previewClone,
+      currentTarget: previewClone,
+      evt: new MouseEvent("dragend", { bubbles: true, altKey: true }),
+    });
+    await flushCanvasEffects();
+
+    const groupsAfter = harness.staticForegroundLayer.find((node: any) => node instanceof Konva.Group) as Konva.Group[];
+    const rectsAfter = harness.staticForegroundLayer.find((node: any) => node instanceof Konva.Rect) as Konva.Rect[];
+
+    expect(groupsAfter).toHaveLength(groupsBefore.length + 1);
+    expect(rectsAfter).toHaveLength(rectsBefore.length + 3);
 
     harness.destroy();
   });

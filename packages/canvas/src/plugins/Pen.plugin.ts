@@ -11,6 +11,7 @@ import {
   scalePenDataPoints,
   type TStrokePoint,
 } from "./pen.math";
+import { startSelectionCloneDrag } from "./clone-drag";
 import { getWorldPosition, setWorldPosition } from "./node-space";
 import { TransformPlugin } from "./Transform.plugin";
 
@@ -258,7 +259,8 @@ export class PenPlugin implements IPlugin {
   }
 
   private static createStyleFromNode(node: Konva.Path, baseStyle: TElementStyle): TElementStyle {
-    const fill = typeof node.fill() === "string" ? node.fill() : DEFAULT_FILL;
+    const nodeFill = node.fill();
+    const fill = typeof nodeFill === "string" ? nodeFill : DEFAULT_FILL;
     const style: TElementStyle = {
       ...structuredClone(baseStyle),
       opacity: node.opacity(),
@@ -371,18 +373,23 @@ export class PenPlugin implements IPlugin {
 
     const finalizeCloneDrag = () => {
       previewClone.off("dragend", finalizeCloneDrag);
-      if (previewClone.isDragging()) {
-        previewClone.stopDrag();
-      }
-
-      previewClone.moveTo(context.staticForegroundLayer);
-      PenPlugin.setupShapeListeners(context, previewClone);
-      previewClone.setDraggable(true);
-      context.crdt.patch({ elements: [PenPlugin.toTElement(previewClone)], groups: [] });
-      context.setState("selection", [previewClone]);
+      const cloned = PenPlugin.finalizePreviewClone(context, previewClone);
+      context.setState("selection", cloned ? [cloned] : []);
     };
 
     previewClone.on("dragend", finalizeCloneDrag);
+    return previewClone;
+  }
+
+  static finalizePreviewClone(context: IPluginContext, previewClone: Konva.Path) {
+    if (previewClone.isDragging()) {
+      previewClone.stopDrag();
+    }
+
+    previewClone.moveTo(context.staticForegroundLayer);
+    PenPlugin.setupShapeListeners(context, previewClone);
+    previewClone.setDraggable(true);
+    context.crdt.patch({ elements: [PenPlugin.toTElement(previewClone)], groups: [] });
     return previewClone;
   }
 
@@ -411,6 +418,10 @@ export class PenPlugin implements IPlugin {
       if (event.type === "dragstart" && event.evt?.altKey) {
         isCloneDrag = true;
         PenPlugin.safeStopDrag(node);
+        if (startSelectionCloneDrag(context, node)) {
+          isCloneDrag = false;
+          return;
+        }
         PenPlugin.createCloneDrag(context, node);
       }
     });

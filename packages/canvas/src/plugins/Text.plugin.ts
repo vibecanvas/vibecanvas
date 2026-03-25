@@ -5,6 +5,7 @@ import type { TTool } from "../components/FloatingCanvasToolbar/toolbar.types";
 import { CustomEvents } from "../custom-events";
 import { CanvasMode } from "../services/canvas/enum";
 import type { IPlugin, IPluginContext } from "./interface";
+import { startSelectionCloneDrag } from "./clone-drag";
 import { getWorldPosition, setWorldPosition } from "./node-space";
 import { TransformPlugin } from "./Transform.plugin";
 
@@ -292,6 +293,10 @@ export class TextPlugin implements IPlugin {
       if (e.type === 'dragstart' && e.evt?.altKey) {
         isCloneDrag = true;
         TextPlugin.safeStopDrag(node);
+        if (startSelectionCloneDrag(context, node)) {
+          isCloneDrag = false;
+          return;
+        }
         TextPlugin.createCloneDrag(context, node);
       }
     });
@@ -662,17 +667,22 @@ export class TextPlugin implements IPlugin {
     previewClone.startDrag();
     const finalizeCloneDrag = () => {
       previewClone.off('dragend', finalizeCloneDrag);
-      if (previewClone.isDragging()) {
-        previewClone.stopDrag();
-      }
-      previewClone.moveTo(context.staticForegroundLayer);
-      TextPlugin.setupShapeListeners(context, previewClone);
-      previewClone.setDraggable(true);
-      context.crdt.patch({ elements: [TextPlugin.toTElement(previewClone)], groups: [] });
-      context.setState('selection', [previewClone]);
+      const cloned = TextPlugin.finalizePreviewClone(context, previewClone);
+      context.setState('selection', cloned ? [cloned] : []);
     };
     previewClone.on('dragend', finalizeCloneDrag);
 
+    return previewClone;
+  }
+
+  static finalizePreviewClone(context: IPluginContext, previewClone: Konva.Text) {
+    if (previewClone.isDragging()) {
+      previewClone.stopDrag();
+    }
+    previewClone.moveTo(context.staticForegroundLayer);
+    TextPlugin.setupShapeListeners(context, previewClone);
+    previewClone.setDraggable(true);
+    context.crdt.patch({ elements: [TextPlugin.toTElement(previewClone)], groups: [] });
     return previewClone;
   }
 
