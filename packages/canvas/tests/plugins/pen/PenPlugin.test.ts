@@ -1,14 +1,14 @@
 import Konva from "konva";
 import { describe, expect, test, vi } from "vitest";
-import { CustomEvents } from "../../src/custom-events";
-import { PenPlugin } from "../../src/plugins/Pen.plugin";
-import { SceneHydratorPlugin } from "../../src/plugins/SceneHydrator.plugin";
-import { Shape2dPlugin } from "../../src/plugins/Shape2d.plugin";
-import type { IPluginContext } from "../../src/plugins/interface";
-import { TransformPlugin } from "../../src/plugins/Transform.plugin";
-import { CanvasMode } from "../../src/services/canvas/enum";
-import { createPenDataFromStrokePoints, type TStrokePoint } from "../../src/plugins/pen.math";
-import { createCanvasTestHarness, createMockDocHandle, flushCanvasEffects } from "../test-setup";
+import { CustomEvents } from "../../../src/custom-events";
+import { PenPlugin } from "../../../src/plugins/Pen.plugin";
+import { SceneHydratorPlugin } from "../../../src/plugins/SceneHydrator.plugin";
+import { Shape2dPlugin } from "../../../src/plugins/Shape2d.plugin";
+import type { IPluginContext } from "../../../src/plugins/interface";
+import { TransformPlugin } from "../../../src/plugins/Transform.plugin";
+import { CanvasMode } from "../../../src/services/canvas/enum";
+import { createPenDataFromStrokePoints, type TStrokePoint } from "../../../src/plugins/pen.math";
+import { createCanvasTestHarness, createMockDocHandle, flushCanvasEffects } from "../../test-setup";
 import type { TElement } from "@vibecanvas/shell/automerge/index";
 
 function createPenElement(args?: {

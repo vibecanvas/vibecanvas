@@ -2,10 +2,10 @@ import type { DocHandle } from "@automerge/automerge-repo";
 import type { TCanvasDoc, TElement, TGroup } from "@vibecanvas/shell/automerge/index";
 import Konva from "konva";
 import { describe, expect, test } from "vitest";
-import { GroupPlugin } from "../../src/plugins/Group.plugin";
-import { SceneHydratorPlugin } from "../../src/plugins/SceneHydrator.plugin";
-import { Shape2dPlugin } from "../../src/plugins/Shape2d.plugin";
-import { createCanvasTestHarness, createMockDocHandle } from "../test-setup";
+import { GroupPlugin } from "../../../src/plugins/Group.plugin";
+import { SceneHydratorPlugin } from "../../../src/plugins/SceneHydrator.plugin";
+import { Shape2dPlugin } from "../../../src/plugins/Shape2d.plugin";
+import { createCanvasTestHarness, createMockDocHandle } from "../../test-setup";
 
 function createRectElement(overrides?: Partial<TElement>): TElement {
   return {

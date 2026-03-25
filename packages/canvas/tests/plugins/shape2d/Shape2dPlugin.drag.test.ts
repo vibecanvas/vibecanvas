@@ -1,10 +1,10 @@
 import Konva from "konva";
 import { describe, expect, test } from "vitest";
-import { GroupPlugin } from "../../src/plugins/Group.plugin";
-import type { IPluginContext } from "../../src/plugins/interface";
-import { Shape2dPlugin } from "../../src/plugins/Shape2d.plugin";
-import { initializeScene03TopLevelMixedSelection } from "../scenarios/03-top-level-mixed-selection";
-import { createCanvasTestHarness, exportStageSnapshot, flushCanvasEffects } from "../test-setup";
+import { GroupPlugin } from "../../../src/plugins/Group.plugin";
+import type { IPluginContext } from "../../../src/plugins/interface";
+import { Shape2dPlugin } from "../../../src/plugins/Shape2d.plugin";
+import { initializeScene03TopLevelMixedSelection } from "../../scenarios/03-top-level-mixed-selection";
+import { createCanvasTestHarness, exportStageSnapshot, flushCanvasEffects } from "../../test-setup";
 
 async function createShapeSceneHarness() {
   let pluginContext!: IPluginContext;

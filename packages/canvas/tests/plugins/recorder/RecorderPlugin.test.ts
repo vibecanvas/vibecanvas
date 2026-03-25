@@ -1,9 +1,9 @@
 import { afterEach, describe, expect, test, vi } from "vitest";
 import Konva from "konva";
-import { EventListenerPlugin } from "../../src/plugins/EventListener.plugin";
-import type { IPluginContext } from "../../src/plugins/interface";
-import { RecorderPlugin } from "../../src/plugins/Recorder.plugin";
-import { createCanvasTestHarness } from "../test-setup";
+import { EventListenerPlugin } from "../../../src/plugins/EventListener.plugin";
+import type { IPluginContext } from "../../../src/plugins/interface";
+import { RecorderPlugin } from "../../../src/plugins/Recorder.plugin";
+import { createCanvasTestHarness } from "../../test-setup";
 
 describe("RecorderPlugin", () => {
   afterEach(() => {
