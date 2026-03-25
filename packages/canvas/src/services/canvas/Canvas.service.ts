@@ -7,7 +7,7 @@ import { createStore, SetStoreFunction } from 'solid-js/store';
 import type { TCustomEvent } from "../../custom-events";
 import {
   CameraControlPlugin, ContextMenuPlugin, EventListenerPlugin, ExampleScenePlugin,
-  GridPlugin, GroupPlugin, HelpPlugin, HistoryControlPlugin, PenPlugin, RecorderPlugin, RenderOrderPlugin, SceneHydratorPlugin,
+  GridPlugin, GroupPlugin, HelpPlugin, HistoryControlPlugin, ImagePlugin, PenPlugin, RecorderPlugin, RenderOrderPlugin, SceneHydratorPlugin,
   SelectPlugin, Shape2dPlugin, TextPlugin, ToolbarPlugin, TransformPlugin, VisualDebugPlugin
 } from "../../plugins";
 import type { IPlugin, IPluginContext, TMouseEvent, TPointerEvent, TWheelEvent } from "../../plugins/interface";
@@ -37,6 +37,7 @@ export function defaultPlugins(
     new Shape2dPlugin(),
     new PenPlugin(),
     new TextPlugin(),
+    new ImagePlugin(),
     groupPlugin,
     new ContextMenuPlugin(),
     // new ExampleScenePlugin(groupPlugin)
@@ -60,7 +61,12 @@ export class CanvasService {
   #crdt: Crdt;
   #history: History;
 
-  constructor(container: HTMLDivElement, docHandle: DocHandle<TCanvasDoc>, plugins: IPlugin[]) {
+  constructor(
+    container: HTMLDivElement,
+    docHandle: DocHandle<TCanvasDoc>,
+    plugins: IPlugin[],
+    appCapabilities: Pick<IPluginContext["capabilities"], "uploadImage" | "cloneImage" | "deleteImage" | "notification"> = {},
+  ) {
     this.#history = new History();
     this.#crdt = new Crdt(docHandle);
     this.#stage = new Konva.Stage({
@@ -118,7 +124,12 @@ export class CanvasService {
       setState: this.#setState,
       history: this.#history,
       crdt: this.#crdt,
-      capabilities: {}
+      capabilities: {
+        uploadImage: appCapabilities.uploadImage,
+        cloneImage: appCapabilities.cloneImage,
+        deleteImage: appCapabilities.deleteImage,
+        notification: appCapabilities.notification,
+      }
     }
 
     this.#instancePromise = (async () => {

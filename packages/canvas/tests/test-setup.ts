@@ -67,6 +67,7 @@ export async function createCanvasTestHarness(args: {
   docHandle?: DocHandle<TCanvasDoc>;
   width?: number;
   height?: number;
+  appCapabilities?: Pick<IPluginContext["capabilities"], "uploadImage" | "cloneImage" | "deleteImage" | "notification">;
 }) : Promise<TCanvasTestHarness> {
   ensureResizeObserver();
 
@@ -78,14 +79,19 @@ export async function createCanvasTestHarness(args: {
 
   createRoot((dispose) => {
     disposeRoot = dispose;
-    service = new CanvasService(container, docHandle, [
-      ...args.plugins,
-      {
-        apply(context) {
-          args.initializeScene?.(context);
+    service = new CanvasService(
+      container,
+      docHandle,
+      [
+        ...args.plugins,
+        {
+          apply(context) {
+            args.initializeScene?.(context);
+          },
         },
-      },
-    ]);
+      ],
+      args.appCapabilities,
+    );
   });
 
   await service!.initialized;

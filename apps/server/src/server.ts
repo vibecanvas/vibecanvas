@@ -248,7 +248,7 @@ export async function startServer(options: StartServerOptions): Promise<void> {
 
           const record = db.query.files.findFirst({
             where: (table, { eq, and }) => and(
-              eq(table.hash, fileMeta.hash),
+              eq(table.id, fileMeta.id),
               eq(table.format, fileMeta.format),
             )
           }).sync()
@@ -256,7 +256,7 @@ export async function startServer(options: StartServerOptions): Promise<void> {
             return new Response('Not Found', { status: 404 })
           }
 
-          const etag = `"${record.hash}"`
+          const etag = `"${record.id}:${record.hash}"`
           const ifNoneMatch = req.headers.get('if-none-match')
           if (ifNoneMatch === etag) {
             return new Response(null, {

@@ -7,6 +7,7 @@ import type { IPlugin, IPluginContext } from "./interface";
 import type { Group } from "konva/lib/Group";
 import type { TElement, TGroup } from "@vibecanvas/shell/automerge/index";
 import { GroupPlugin } from "./Group.plugin";
+import { ImagePlugin } from "./Image.plugin";
 import { Shape2dPlugin } from "./Shape2d.plugin";
 
 function getSelectionLayerPointerPosition(context: IPluginContext) {
@@ -176,6 +177,8 @@ function collectDeleteSnapshot(
 }
 
 function restoreDeleteSnapshot(context: IPluginContext, snapshot: TDeleteSnapshot) {
+  ImagePlugin.retainFilesForElements(context, snapshot.elements);
+
   const createdGroups = new Set<string>();
   const pendingGroups = [...snapshot.groups];
   let didCreateGroup = true;
@@ -253,6 +256,8 @@ function executeDeleteSelection(
   if (roots.length === 0) return false;
 
   const { snapshot, destroyNodes } = collectDeleteSnapshot(context, roots);
+
+  ImagePlugin.releaseFilesForElements(context, snapshot.elements);
 
   destroyNodes.forEach((node) => {
     node.destroy();

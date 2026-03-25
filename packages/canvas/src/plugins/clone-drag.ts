@@ -1,6 +1,7 @@
 import Konva from "konva";
 import type { IPluginContext } from "./interface";
 import { GroupPlugin } from "./Group.plugin";
+import { ImagePlugin } from "./Image.plugin";
 import { PenPlugin } from "./Pen.plugin";
 import { Shape2dPlugin } from "./Shape2d.plugin";
 import { TextPlugin } from "./Text.plugin";
@@ -49,6 +50,7 @@ function createPreviewClone(node: TCloneRoot) {
   if (node instanceof Konva.Group) return GroupPlugin.createPreviewClone(node);
   if (node instanceof Konva.Text) return TextPlugin.createPreviewClone(node);
   if (node instanceof Konva.Path) return PenPlugin.createPreviewClone(node);
+  if (node instanceof Konva.Image) return ImagePlugin.createPreviewClone(node);
   return Shape2dPlugin.createPreviewClone(node);
 }
 
@@ -63,6 +65,10 @@ function finalizePreviewClone(context: IPluginContext, sourceNode: TCloneRoot, p
 
   if (sourceNode instanceof Konva.Path && previewNode instanceof Konva.Path) {
     return PenPlugin.finalizePreviewClone(context, previewNode);
+  }
+
+  if (sourceNode instanceof Konva.Image && previewNode instanceof Konva.Image) {
+    return ImagePlugin.finalizePreviewClone(context, previewNode);
   }
 
   if (previewNode instanceof Konva.Shape) {

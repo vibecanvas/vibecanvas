@@ -53,11 +53,13 @@ export const ZFileTreeSelect = createSelectSchema(filetrees);
 
 export const files = sqliteTable("files", {
   id: text("id").primaryKey(),
-  hash: text("hash").notNull().unique(),
+  hash: text("hash").notNull(),
   format: text("format", { enum: ["image/jpeg", "image/png", "image/gif", "image/webp"] }).notNull(),
   base64: text("base64").notNull(),
   created_at: integer("created_at", { mode: "timestamp" }).notNull().default(sql`(unixepoch())`),
-});
+}, (table) => [
+  index("files_hash_idx").on(table.hash),
+]);
 
 export const ZFilesSelect = createSelectSchema(files);
 

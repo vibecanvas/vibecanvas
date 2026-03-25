@@ -57,6 +57,13 @@
       "when": 1772022166007,
       "tag": "0007_certain_talos",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "6",
+      "when": 1774441701140,
+      "tag": "0008_rainy_puppet_master",
+      "breakpoints": true
     }
   ]
 }
