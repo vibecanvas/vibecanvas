@@ -183,7 +183,7 @@ export class PenPlugin implements IPlugin {
       id: this.#draftElementId ?? crypto.randomUUID(),
       x: penData.x,
       y: penData.y,
-      angle: 0,
+      rotation: 0,
       bindings: [],
       createdAt: Date.now(),
       locked: false,
@@ -297,7 +297,7 @@ export class PenPlugin implements IPlugin {
       id: element.id,
       x: element.x,
       y: element.y,
-      rotation: element.angle,
+      rotation: element.rotation,
       data: getStrokePathFromPenData(element, {
         size: PenPlugin.getStrokeWidthFromStyle(element.style),
       }),
@@ -317,7 +317,7 @@ export class PenPlugin implements IPlugin {
     if (element.data.type !== "pen") return;
 
     setWorldPosition(node, { x: element.x, y: element.y });
-    node.rotation(element.angle);
+    node.rotation(element.rotation);
     node.data(getStrokePathFromPenData(element, {
       size: PenPlugin.getStrokeWidthFromStyle(element.style),
     }));
@@ -348,7 +348,7 @@ export class PenPlugin implements IPlugin {
 
     return {
       id: node.id(),
-      angle: node.getAbsoluteRotation(),
+      rotation: node.getAbsoluteRotation(),
       x: worldPosition.x,
       y: worldPosition.y,
       bindings: [],

@@ -23,7 +23,7 @@ function createPenElement(id: string): TElement {
     id,
     x: penData.x,
     y: penData.y,
-    angle: 0,
+    rotation: 0,
     bindings: [],
     createdAt: 1,
     updatedAt: 1,

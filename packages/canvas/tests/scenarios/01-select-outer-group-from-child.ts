@@ -21,7 +21,7 @@ function createRect(args: {
   id: string;
   x: number;
   y: number;
-  angle: number;
+  rotation: number;
   w: number;
   h: number;
   backgroundColor: string;
@@ -32,7 +32,7 @@ function createRect(args: {
     id: args.id,
     x: args.x,
     y: args.y,
-    angle: args.angle,
+    rotation: args.rotation,
     bindings: [],
     createdAt: now,
     locked: false,
@@ -58,7 +58,7 @@ export function initializeScene01SelectOuterGroupFromChild(args: {
     id: "1",
     x: 82,
     y: 96,
-    angle: -6,
+    rotation: -6,
     w: 96,
     h: 84,
     backgroundColor: "red",
@@ -67,7 +67,7 @@ export function initializeScene01SelectOuterGroupFromChild(args: {
     id: "2",
     x: 194,
     y: 118,
-    angle: 4,
+    rotation: 4,
     w: 132,
     h: 104,
     backgroundColor: "blue",
@@ -76,7 +76,7 @@ export function initializeScene01SelectOuterGroupFromChild(args: {
     id: "3",
     x: 354,
     y: 108,
-    angle: -10,
+    rotation: -10,
     w: 88,
     h: 156,
     backgroundColor: "orange",

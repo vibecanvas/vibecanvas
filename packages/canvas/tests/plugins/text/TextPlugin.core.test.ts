@@ -245,7 +245,7 @@ describe("TextPlugin – hydration capability", () => {
     const harness = await createCanvasTestHarness({ plugins: [new TextPlugin()], initializeScene: (context) => { ctx = context; } });
 
     const element: TElement = {
-      id: "text-hydrate-1", x: 50, y: 80, angle: 0, bindings: [], locked: false, parentGroupId: null, zIndex: "", createdAt: Date.now(), updatedAt: Date.now(), style: {},
+      id: "text-hydrate-1", x: 50, y: 80, rotation: 0, bindings: [], locked: false, parentGroupId: null, zIndex: "", createdAt: Date.now(), updatedAt: Date.now(), style: {},
       data: { type: "text", w: 200, h: 40, text: "Hello world", originalText: "Hello world", fontSize: 16, fontFamily: "Arial", textAlign: "left", verticalAlign: "top", lineHeight: 1.2, link: null, containerId: null, autoResize: false },
     };
 
@@ -259,7 +259,7 @@ describe("TextPlugin – hydration capability", () => {
     const harness = await createCanvasTestHarness({ plugins: [new TextPlugin()], initializeScene: (context) => { ctx = context; } });
 
     const element: TElement = {
-      id: "text-hydrate-nl", x: 50, y: 80, angle: 0, bindings: [], locked: false, parentGroupId: null, zIndex: "", createdAt: Date.now(), updatedAt: Date.now(), style: {},
+      id: "text-hydrate-nl", x: 50, y: 80, rotation: 0, bindings: [], locked: false, parentGroupId: null, zIndex: "", createdAt: Date.now(), updatedAt: Date.now(), style: {},
       data: { type: "text", w: 200, h: 80, text: "line one\nline two\nline three", originalText: "line one\nline two\nline three", fontSize: 16, fontFamily: "Arial", textAlign: "left", verticalAlign: "top", lineHeight: 1.2, link: null, containerId: null, autoResize: false },
     };
 

@@ -39,7 +39,7 @@ export class TextPlugin implements IPlugin {
         id,
         x: pointer.x,
         y: pointer.y,
-        angle: 0,
+        rotation: 0,
         bindings: [],
         locked: false,
         parentGroupId: null,
@@ -112,7 +112,7 @@ export class TextPlugin implements IPlugin {
       id: element.id,
       x: element.x,
       y: element.y,
-      rotation: element.angle,
+      rotation: element.rotation,
       width: data.w,
       height: data.h,
       text: data.text,
@@ -226,7 +226,7 @@ export class TextPlugin implements IPlugin {
       id: node.id(),
       x: worldPosition.x,
       y: worldPosition.y,
-      angle: node.getAbsoluteRotation(),
+      rotation: node.getAbsoluteRotation(),
       bindings: [],
       createdAt: Date.now(),
       updatedAt: Date.now(),
@@ -251,7 +251,7 @@ export class TextPlugin implements IPlugin {
   static updateTextFromElement(node: Konva.Text, element: TElement) {
     const data = element.data as TTextData;
     setWorldPosition(node, { x: element.x, y: element.y });
-    node.rotation(element.angle);
+    node.rotation(element.rotation);
     node.width(data.w);
     node.height(data.h);
     node.text(data.text);

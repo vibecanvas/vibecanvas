@@ -37,7 +37,7 @@ export class ExampleScenePlugin implements IPlugin {
         id: String(index + 1),
         x: position.x,
         y: position.y,
-        angle: rotations[index % rotations.length],
+        rotation: rotations[index % rotations.length],
         bindings: [],
         createdAt: now,
         locked: false,

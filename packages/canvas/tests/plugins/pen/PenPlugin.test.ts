@@ -13,7 +13,7 @@ import type { TElement } from "@vibecanvas/shell/automerge/index";
 
 function createPenElement(args?: {
   id?: string;
-  angle?: number;
+  rotation?: number;
   points?: TStrokePoint[];
 }) {
   const strokePoints = args?.points ?? [
@@ -29,7 +29,7 @@ function createPenElement(args?: {
     id: args?.id ?? "pen-1",
     x: penData.x,
     y: penData.y,
-    angle: args?.angle ?? 0,
+    rotation: args?.rotation ?? 0,
     bindings: [],
     createdAt: 1,
     updatedAt: 1,
@@ -506,7 +506,7 @@ describe("PenPlugin", () => {
     harness.destroy();
   });
 
-  test("shared transformer rotate persists angle and supports undo/redo", async () => {
+  test("shared transformer rotate persists rotation and supports undo/redo", async () => {
     let context!: IPluginContext;
     const element = createPenElement();
     const docHandle = createMockDocHandle({
@@ -543,15 +543,15 @@ describe("PenPlugin", () => {
     });
     await flushCanvasEffects();
 
-    expect(docHandle.doc().elements[element.id]!.angle).toBeCloseTo(33, 8);
+    expect(docHandle.doc().elements[element.id]!.rotation).toBeCloseTo(33, 8);
 
     context.history.undo();
     await flushCanvasEffects();
-    expect(docHandle.doc().elements[element.id]!.angle).toBeCloseTo(0, 8);
+    expect(docHandle.doc().elements[element.id]!.rotation).toBeCloseTo(0, 8);
 
     context.history.redo();
     await flushCanvasEffects();
-    expect(docHandle.doc().elements[element.id]!.angle).toBeCloseTo(33, 8);
+    expect(docHandle.doc().elements[element.id]!.rotation).toBeCloseTo(33, 8);
 
     harness.destroy();
   });

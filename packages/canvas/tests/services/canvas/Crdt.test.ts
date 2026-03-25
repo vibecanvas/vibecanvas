@@ -26,7 +26,7 @@ function createImageElement(overrides?: Partial<TElement>): TElement {
     id: "element-1",
     x: 10,
     y: 20,
-    angle: 0,
+    rotation: 0,
     zIndex: "a0",
     parentGroupId: null,
     bindings: [

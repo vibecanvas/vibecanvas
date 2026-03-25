@@ -266,7 +266,7 @@ async function createAttachedRectTextDeleteHarness() {
         id: "attached-rect-1",
         x: 120,
         y: 100,
-        angle: 0,
+        rotation: 0,
         bindings: [],
         createdAt: Date.now(),
         locked: false,

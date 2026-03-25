@@ -15,7 +15,7 @@ describe("Shape2dPlugin - zoom rehydrate", () => {
           id: rectId,
           x: 120,
           y: 100,
-          angle: 0,
+          rotation: 0,
           bindings: [],
           createdAt: 1,
           locked: false,

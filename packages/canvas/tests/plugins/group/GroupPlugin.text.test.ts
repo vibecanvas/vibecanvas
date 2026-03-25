@@ -70,7 +70,7 @@ describe("GroupPlugin – text integration", () => {
           id: "attached-group-rect",
           x: 120,
           y: 100,
-          angle: 0,
+          rotation: 0,
           bindings: [],
           createdAt: Date.now(),
           locked: false,

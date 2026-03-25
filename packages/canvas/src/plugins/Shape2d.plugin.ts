@@ -87,7 +87,7 @@ export class Shape2dPlugin implements IPlugin {
       if (this.#activeTool === 'rectangle') {
         this.#previewDrawing = Shape2dPlugin.createRectFromElement({
           id: crypto.randomUUID(),
-          angle: 0,
+          rotation: 0,
           x: pointer.x,
           y: pointer.y,
           bindings: [],
@@ -201,7 +201,7 @@ export class Shape2dPlugin implements IPlugin {
       id: crypto.randomUUID(),
       x: rect.x(),
       y: rect.y(),
-      angle: rect.rotation(),
+      rotation: rect.rotation(),
       bindings: [],
       createdAt: Date.now(),
       locked: false,
@@ -264,7 +264,7 @@ export class Shape2dPlugin implements IPlugin {
       if (worldPosition.x !== element.x || worldPosition.y !== element.y) {
         setWorldPosition(shape, { x: element.x, y: element.y })
       }
-      if (shape.rotation() !== element.angle) shape.rotation(element.angle)
+      if (shape.rotation() !== element.rotation) shape.rotation(element.rotation)
       if (shape.width() !== element.data.w) shape.width(element.data.w)
       if (shape.height() !== element.data.h) shape.height(element.data.h)
       if (shape.scaleX() !== 1) shape.scaleX(1)
@@ -306,7 +306,7 @@ export class Shape2dPlugin implements IPlugin {
 
     return {
       id: shape.id(),
-      angle: shape.getAbsoluteRotation(),
+      rotation: shape.getAbsoluteRotation(),
       x,
       y,
       bindings: [],
@@ -550,7 +550,7 @@ export class Shape2dPlugin implements IPlugin {
           id: crypto.randomUUID(),
           x: newShape.x(),
           y: newShape.y(),
-          angle: newShape.rotation(),
+          rotation: newShape.rotation(),
           parentGroupId: null,
           data: {
             ...sourceTextData,
@@ -575,7 +575,7 @@ export class Shape2dPlugin implements IPlugin {
     const data = element.data as TRectData
     const shape = new Konva.Rect({
       id: element.id,
-      rotation: element.angle,
+      rotation: element.rotation,
       x: element.x,
       y: element.y,
       width: data.w,
@@ -592,7 +592,7 @@ export class Shape2dPlugin implements IPlugin {
 
     return Shape2dPlugin.createRectFromElement({
       id: shape.id() || crypto.randomUUID(),
-      angle: shape.rotation(),
+      rotation: shape.rotation(),
       x: shape.x(),
       y: shape.y(),
       bindings: [],

@@ -42,7 +42,7 @@ export type TBaseElement = {
   id: string
   x: number
   y: number
-  angle: number
+  rotation: number
   zIndex: string              // Fractional index for ordering (lexicographic)
   parentGroupId: string | null      // Single parent group (groups nest via parentGroupId)
   bindings: TBinding[]        // Sticky connections with anchor points
