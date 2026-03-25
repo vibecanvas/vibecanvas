@@ -123,6 +123,17 @@ export async function flushCanvasEffects() {
   await Promise.resolve();
 }
 
+export function createStagePointerEvent(stage: Konva.Stage, args?: { x?: number; y?: number; type?: string }) {
+  const evt = new MouseEvent(args?.type ?? "pointermove", {
+    bubbles: true,
+    clientX: args?.x ?? stage.width() / 2,
+    clientY: args?.y ?? stage.height() / 2,
+  });
+
+  stage.setPointersPositions(evt);
+  return evt;
+}
+
 export async function exportStageSnapshot(args: {
   stage: Konva.Stage;
   label: string;

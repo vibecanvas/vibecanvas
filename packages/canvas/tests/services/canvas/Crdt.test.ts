@@ -88,7 +88,7 @@ describe("Crdt", () => {
 
     crdt.patch({ elements: [element], groups: [] });
 
-    const doc = await handle.doc();
+    const doc = handle.doc();
     expect(doc).toBeTruthy();
     expect(doc!.elements[element.id]).toEqual(element);
   });

@@ -29,7 +29,6 @@ export class History {
   }
 
   undo(): boolean {
-    console.log('undo', this.#undoStack.length)
     const entry = this.#undoStack.pop()
     if (!entry) return false
 
@@ -39,7 +38,6 @@ export class History {
   }
 
   redo(): boolean {
-    console.log('redo', this.#redoStack.length)
     const entry = this.#redoStack.pop()
     if (!entry) return false
 

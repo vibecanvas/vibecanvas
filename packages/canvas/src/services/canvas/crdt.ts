@@ -15,9 +15,7 @@ type TElementPatch = TEntityPatch<TElement>;
 type TGroupPatch = TEntityPatch<TGroup>;
 
 export class Crdt {
-  constructor(public readonly docHandle: DocHandle<TCanvasDoc>) {
-    console.log(this.docHandle.doc())
-  }
+  constructor(public readonly docHandle: DocHandle<TCanvasDoc>) {}
 
   patch(data: { elements: TElementPatch[]; groups: TGroupPatch[] }): void {
     this.docHandle.change((doc) => {

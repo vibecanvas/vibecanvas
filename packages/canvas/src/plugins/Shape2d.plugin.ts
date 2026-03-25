@@ -5,6 +5,7 @@ import { CustomEvents } from "../custom-events";
 import { CanvasMode } from "../services/canvas/enum";
 import type { IPlugin, IPluginContext } from "./interface";
 import { throttle } from "@solid-primitives/scheduled";
+import { getWorldPosition, setWorldPosition } from "./node-space";
 import { TextPlugin } from "./Text.plugin";
 import { TransformPlugin } from "./Transform.plugin";
 
@@ -230,9 +231,9 @@ export class Shape2dPlugin implements IPlugin {
   private static updateShapeFromTElement(context: IPluginContext, shape: Konva.Shape, element: TElement) {
     // TODO: add for other shapes
     if (shape instanceof Konva.Rect && element.data.type === 'rect') {
-      const absolutePosition = shape.absolutePosition()
-      if (absolutePosition.x !== element.x || absolutePosition.y !== element.y) {
-        shape.setAbsolutePosition({ x: element.x, y: element.y })
+      const worldPosition = getWorldPosition(shape)
+      if (worldPosition.x !== element.x || worldPosition.y !== element.y) {
+        setWorldPosition(shape, { x: element.x, y: element.y })
       }
       if (shape.rotation() !== element.angle) shape.rotation(element.angle)
       if (shape.width() !== element.data.w) shape.width(element.data.w)
@@ -272,7 +273,7 @@ export class Shape2dPlugin implements IPlugin {
     if (typeof shape.stroke() === 'string') style.strokeColor = shape.stroke() as string
     const parent = shape.getParent()
     const parentGroupId = parent instanceof Konva.Group ? parent.id() : null
-    const { x, y } = shape.absolutePosition()
+    const { x, y } = getWorldPosition(shape)
 
     return {
       id: shape.id(),

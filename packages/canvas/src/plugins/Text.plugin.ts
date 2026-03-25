@@ -5,6 +5,7 @@ import type { TTool } from "../components/FloatingCanvasToolbar/toolbar.types";
 import { CustomEvents } from "../custom-events";
 import { CanvasMode } from "../services/canvas/enum";
 import type { IPlugin, IPluginContext } from "./interface";
+import { getWorldPosition, setWorldPosition } from "./node-space";
 import { TransformPlugin } from "./Transform.plugin";
 
 export class TextPlugin implements IPlugin {
@@ -192,7 +193,7 @@ export class TextPlugin implements IPlugin {
   }
 
   static toTElement(node: Konva.Text): TElement {
-    const absPos = node.absolutePosition();
+    const worldPosition = getWorldPosition(node);
     const absScale = node.getAbsoluteScale();
     const layer = node.getLayer();
     const layerScaleX = layer?.scaleX() ?? 1;
@@ -222,8 +223,8 @@ export class TextPlugin implements IPlugin {
 
     return {
       id: node.id(),
-      x: absPos.x,
-      y: absPos.y,
+      x: worldPosition.x,
+      y: worldPosition.y,
       angle: node.getAbsoluteRotation(),
       bindings: [],
       createdAt: Date.now(),
@@ -248,7 +249,7 @@ export class TextPlugin implements IPlugin {
 
   static updateTextFromElement(node: Konva.Text, element: TElement) {
     const data = element.data as TTextData;
-    node.setAbsolutePosition({ x: element.x, y: element.y });
+    setWorldPosition(node, { x: element.x, y: element.y });
     node.rotation(element.angle);
     node.width(data.w);
     node.height(data.h);

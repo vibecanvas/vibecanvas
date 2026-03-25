@@ -11,6 +11,7 @@ import {
   scalePenDataPoints,
   type TStrokePoint,
 } from "./pen.math";
+import { getWorldPosition, setWorldPosition } from "./node-space";
 import { TransformPlugin } from "./Transform.plugin";
 
 const DEFAULT_FILL = "#0f172a";
@@ -300,7 +301,7 @@ export class PenPlugin implements IPlugin {
   static updatePathFromElement(node: Konva.Path, element: TElement) {
     if (element.data.type !== "pen") return;
 
-    node.setAbsolutePosition({ x: element.x, y: element.y });
+    setWorldPosition(node, { x: element.x, y: element.y });
     node.rotation(element.angle);
     node.data(getStrokePathFromPenData(element, {
       size: PenPlugin.getStrokeWidthFromStyle(element.style),
@@ -326,15 +327,15 @@ export class PenPlugin implements IPlugin {
     const layerScaleY = layer?.scaleY() ?? 1;
     const scaleX = absoluteScale.x / layerScaleX;
     const scaleY = absoluteScale.y / layerScaleY;
-    const absolutePosition = node.absolutePosition();
+    const worldPosition = getWorldPosition(node);
     const parent = node.getParent();
     const parentGroupId = parent instanceof Konva.Group ? parent.id() : null;
 
     return {
       id: node.id(),
       angle: node.getAbsoluteRotation(),
-      x: absolutePosition.x,
-      y: absolutePosition.y,
+      x: worldPosition.x,
+      y: worldPosition.y,
       bindings: [],
       createdAt: Date.now(),
       locked: false,
@@ -565,13 +566,13 @@ export class PenPlugin implements IPlugin {
   }
 
   private static toPositionPatch(node: Konva.Path) {
-    const absolutePosition = node.absolutePosition();
+    const worldPosition = getWorldPosition(node);
     const parent = node.getParent();
 
     return {
       id: node.id(),
-      x: absolutePosition.x,
-      y: absolutePosition.y,
+      x: worldPosition.x,
+      y: worldPosition.y,
       parentGroupId: parent instanceof Konva.Group ? parent.id() : null,
       updatedAt: Date.now(),
     };

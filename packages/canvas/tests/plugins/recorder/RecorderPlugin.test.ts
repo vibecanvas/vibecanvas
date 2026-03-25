@@ -3,7 +3,7 @@ import Konva from "konva";
 import { EventListenerPlugin } from "../../../src/plugins/EventListener.plugin";
 import type { IPluginContext } from "../../../src/plugins/interface";
 import { RecorderPlugin } from "../../../src/plugins/Recorder.plugin";
-import { createCanvasTestHarness } from "../../test-setup";
+import { createCanvasTestHarness, createStagePointerEvent } from "../../test-setup";
 
 describe("RecorderPlugin", () => {
   afterEach(() => {
@@ -63,22 +63,26 @@ describe("RecorderPlugin", () => {
     startButton?.click();
     expect(readPanelText()).toContain("RecorderREC");
 
+    const registerPointer = (type: string, x = 200, y = 150) => {
+      return createStagePointerEvent(harness.stage, { type, x, y });
+    };
+
     context?.hooks.pointerMove.call({
-      evt: { altKey: false, ctrlKey: false, metaKey: false, shiftKey: false },
+      evt: registerPointer("pointermove"),
       target: { id: () => null },
     } as any);
     expect(readPanelText()).toContain("Steps0CRDTOps0");
 
     context?.hooks.pointerDown.call({
-      evt: { altKey: false, ctrlKey: false, metaKey: false, shiftKey: false },
+      evt: registerPointer("pointerdown", 210, 155),
       target: { id: () => null },
     } as any);
     context?.hooks.pointerMove.call({
-      evt: { altKey: false, ctrlKey: false, metaKey: false, shiftKey: false },
+      evt: registerPointer("pointermove", 220, 160),
       target: { id: () => null },
     } as any);
     context?.hooks.pointerUp.call({
-      evt: { altKey: false, ctrlKey: false, metaKey: false, shiftKey: false },
+      evt: registerPointer("pointerup", 220, 160),
       target: { id: () => null },
     } as any);
 
@@ -88,7 +92,7 @@ describe("RecorderPlugin", () => {
     expect(reducedToggle?.checked).toBe(false);
 
     context?.hooks.pointerMove.call({
-      evt: { altKey: false, ctrlKey: false, metaKey: false, shiftKey: false },
+      evt: registerPointer("pointermove", 230, 165),
       target: { id: () => null },
     } as any);
 
@@ -97,17 +101,17 @@ describe("RecorderPlugin", () => {
     dragNode!.fire("dragstart", {
       target: dragNode,
       currentTarget: dragNode,
-      evt: new MouseEvent("dragstart", { bubbles: true }),
+      evt: registerPointer("dragstart", 240, 170),
     });
     dragNode!.fire("dragmove", {
       target: dragNode,
       currentTarget: dragNode,
-      evt: new MouseEvent("dragmove", { bubbles: true }),
+      evt: registerPointer("dragmove", 250, 180),
     });
     dragNode!.fire("dragend", {
       target: dragNode,
       currentTarget: dragNode,
-      evt: new MouseEvent("dragend", { bubbles: true }),
+      evt: registerPointer("dragend", 260, 190),
     });
 
     expect(readPanelText()).toContain("Steps7CRDTOps0");

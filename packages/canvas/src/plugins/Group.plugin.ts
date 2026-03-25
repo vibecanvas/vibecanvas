@@ -32,7 +32,6 @@ export class GroupPlugin implements IPlugin {
         event.preventDefault()
         event.stopPropagation()
         if (context.state.mode === CanvasMode.SELECT && context.state.selection.length > 1) {
-          console.log('group')
           const newGroup = GroupPlugin.group(context, context.state.selection)
           this.setupGroupListeners(context, newGroup)
           context.setState('selection', [newGroup])
@@ -43,7 +42,6 @@ export class GroupPlugin implements IPlugin {
         event.preventDefault()
         event.stopPropagation()
         if (context.state.mode === CanvasMode.SELECT && context.state.selection.length > 0) {
-          console.log('ungroup')
           const group = [...context.state.selection].reverse().find(
             (selection): selection is Konva.Group => selection instanceof Konva.Group,
           )
