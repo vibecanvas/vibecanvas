@@ -1,4 +1,4 @@
-import { TElement, TElementData, TElementStyle, TRectData } from "@vibecanvas/shell/automerge/index";
+import { TElement, TElementData, TElementStyle, TRectData, TTextData } from "@vibecanvas/shell/automerge/index";
 import Konva from "konva";
 import type { TTool } from "../components/FloatingCanvasToolbar/toolbar.types";
 import { CustomEvents } from "../custom-events";
@@ -65,6 +65,7 @@ export class Shape2dPlugin implements IPlugin {
 
     context.hooks.pointerDown.tap((e) => {
       if (context.state.mode !== CanvasMode.DRAW_CREATE) return;
+      if (!['rectangle', 'diamond', 'ellipse'].includes(this.#activeTool)) return;
       const pointer = context.dynamicLayer.getRelativePointerPosition();
       if (!pointer) return;
 
@@ -95,6 +96,7 @@ export class Shape2dPlugin implements IPlugin {
 
     context.hooks.pointerMove.tap((e) => {
       if (context.state.mode !== CanvasMode.DRAW_CREATE) return;
+      if (!this.#previewDrawing) return;
       const pointer = context.dynamicLayer.getRelativePointerPosition();
       if (!pointer) return;
 
@@ -106,6 +108,7 @@ export class Shape2dPlugin implements IPlugin {
 
     context.hooks.pointerUp.tap(() => {
       if (context.state.mode !== CanvasMode.DRAW_CREATE) return;
+      if (!this.#previewDrawing) return;
       const shape: Konva.Shape | undefined = this.#previewDrawing?.clone()
       this.#previewDrawing?.destroy()
       this.#previewDrawing = null;
@@ -493,24 +496,28 @@ export class Shape2dPlugin implements IPlugin {
       context.staticForegroundLayer.add(newShape);
       newShape.moveToTop()
 
-      const createdElements: TElement[] = [Shape2dPlugin.toTElement(newShape)]
-      if (shape instanceof Konva.Rect && newShape instanceof Konva.Rect) {
-        const sourceAttachedText = Shape2dPlugin.getAttachedTextNode(context, shape)
-        if (sourceAttachedText) {
-          const sourceElement = TextPlugin.toTElement(sourceAttachedText)
-          const clonedText = TextPlugin.createTextNode({
-            ...sourceElement,
-            id: crypto.randomUUID(),
+        const createdElements: TElement[] = [Shape2dPlugin.toTElement(newShape)]
+        if (shape instanceof Konva.Rect && newShape instanceof Konva.Rect) {
+          const sourceAttachedText = Shape2dPlugin.getAttachedTextNode(context, shape)
+          if (sourceAttachedText) {
+            const sourceElement = TextPlugin.toTElement(sourceAttachedText)
+            if (sourceElement.data.type !== 'text') {
+              throw new Error('Expected attached text element data to be text')
+            }
+            const sourceTextData: TTextData = sourceElement.data
+            const clonedText = TextPlugin.createTextNode({
+              ...sourceElement,
+              id: crypto.randomUUID(),
             x: newShape.x(),
             y: newShape.y(),
             angle: newShape.rotation(),
-            parentGroupId: null,
-            data: {
-              ...sourceElement.data,
-              containerId: newShape.id(),
-              originalText: sourceElement.data.text,
-            },
-          })
+              parentGroupId: null,
+              data: {
+                ...sourceTextData,
+                containerId: newShape.id(),
+                originalText: sourceTextData.text,
+              },
+            })
 
           TextPlugin.setupShapeListeners(context, clonedText)
           context.staticForegroundLayer.add(clonedText)

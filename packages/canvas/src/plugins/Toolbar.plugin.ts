@@ -24,14 +24,14 @@ function mountSolidComponent(context: IPluginContext, activeTool: Accessor<TTool
 
   const disposeRender = render(
     () =>
-      createComponent(FloatingCanvasToolbar, {
-        activeTool,
-        gridVisible,
-        sidebarVisible: () => true,
-        onToolSelect: setActiveTool,
-        onToggleGrid: () => setGridVisible((value) => !value),
-        onToggleSidebar,
-      }),
+        createComponent(FloatingCanvasToolbar, {
+          activeTool,
+          gridVisible,
+          sidebarVisible: () => true,
+          onToolSelect: setActiveTool,
+          onToggleGrid: () => setGridVisible((value) => !value),
+          onToggleSidebar,
+        }),
     mountElement,
   );
 

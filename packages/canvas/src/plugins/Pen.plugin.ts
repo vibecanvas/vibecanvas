@@ -7,7 +7,6 @@ import { CanvasMode } from "../services/canvas/enum";
 import type { IPlugin, IPluginContext } from "./interface";
 import {
   createPenDataFromStrokePoints,
-  getStrokePath,
   getStrokePathFromPenData,
   scalePenDataPoints,
   type TStrokePoint,
@@ -22,14 +21,16 @@ export class PenPlugin implements IPlugin {
   #activeTool: TTool = "select";
   #points: TStrokePoint[] = [];
   #previewPath: Konva.Path | null = null;
+  #draftElementId: string | null = null;
 
   apply(context: IPluginContext): void {
     this.setupToolState(context);
     this.setupDrawFlow(context);
     PenPlugin.setupCapabilities(context);
     context.hooks.destroy.tap(() => {
-      this.clearPreview();
+      this.resetPreview();
       this.#points = [];
+      this.#draftElementId = null;
     });
   }
 
@@ -40,7 +41,8 @@ export class PenPlugin implements IPlugin {
       this.#activeTool = payload as TTool;
       if (this.#activeTool !== "pen") {
         this.#points = [];
-        this.clearPreview();
+        this.resetPreview();
+        this.#draftElementId = null;
       }
       return false;
     });
@@ -58,6 +60,7 @@ export class PenPlugin implements IPlugin {
         point,
         { ...point, x: point.x + 0.01, y: point.y + 0.01 },
       ];
+      this.#draftElementId = crypto.randomUUID();
       this.syncPreview(context);
     });
 
@@ -80,34 +83,32 @@ export class PenPlugin implements IPlugin {
       if (context.state.mode !== CanvasMode.DRAW_CREATE) return;
       if (this.#activeTool !== "pen") return;
 
-      const element = this.createElementFromPoints();
+      const node = this.#previewPath?.clone();
       this.#points = [];
-      this.clearPreview();
+      this.resetPreview();
+      this.#draftElementId = null;
       context.setState("mode", CanvasMode.SELECT);
       context.hooks.customEvent.call(CustomEvents.TOOL_SELECT, "select");
 
-      if (!element) return;
+      if (!(node instanceof Konva.Path)) return;
 
-      const node = PenPlugin.createPathFromElement(element);
       PenPlugin.setupShapeListeners(context, node);
       node.setDraggable(true);
+      node.listening(true);
+      node.visible(true);
       context.staticForegroundLayer.add(node);
-      context.crdt.patch({ elements: [PenPlugin.toTElement(node)], groups: [] });
+      const element = PenPlugin.toTElement(node);
+      context.crdt.patch({ elements: [element], groups: [] });
     };
 
     const cancelStroke = () => {
       this.#points = [];
-      this.clearPreview();
+      this.resetPreview();
+      this.#draftElementId = null;
     };
 
     context.hooks.pointerUp.tap(finalizeStroke);
     context.hooks.pointerCancel.tap(cancelStroke);
-    context.hooks.pointerOut.tap(() => {
-      if (context.state.mode !== CanvasMode.DRAW_CREATE) return;
-      if (this.#activeTool !== "pen") return;
-      if (this.#points.length === 0) return;
-      cancelStroke();
-    });
   }
 
   private getPointerPoint(context: IPluginContext, event?: MouseEvent | TouchEvent | PointerEvent): TStrokePoint | null {
@@ -122,13 +123,16 @@ export class PenPlugin implements IPlugin {
   }
 
   private syncPreview(context: IPluginContext) {
+    const element = this.createElementFromPoints();
     const previewPath = this.ensurePreviewPath(context);
-    const pathData = getStrokePath(this.#points);
+    if (!element) {
+      this.resetPreview();
+      return;
+    }
 
-    previewPath.setAttrs({
-      data: pathData,
-      visible: Boolean(pathData),
-    });
+    PenPlugin.updatePathFromElement(previewPath, element);
+    previewPath.listening(false);
+    previewPath.visible(true);
     previewPath.getLayer()?.batchDraw();
   }
 
@@ -141,6 +145,7 @@ export class PenPlugin implements IPlugin {
       opacity: DEFAULT_OPACITY,
       listening: false,
       visible: false,
+      draggable: false,
     });
 
     context.dynamicLayer.add(previewPath);
@@ -148,12 +153,11 @@ export class PenPlugin implements IPlugin {
     return previewPath;
   }
 
-  private clearPreview() {
+  private resetPreview() {
     if (!this.#previewPath) return;
 
-    this.#previewPath.hide();
-    this.#previewPath.data("");
-    this.#previewPath.getLayer()?.batchDraw();
+    this.#previewPath.destroy();
+    this.#previewPath = null;
   }
 
   private createElementFromPoints(): TElement | null {
@@ -161,7 +165,7 @@ export class PenPlugin implements IPlugin {
     if (!penData) return null;
 
     return {
-      id: crypto.randomUUID(),
+      id: this.#draftElementId ?? crypto.randomUUID(),
       x: penData.x,
       y: penData.y,
       angle: 0,
@@ -246,6 +250,10 @@ export class PenPlugin implements IPlugin {
   private static isPenPath(node: Konva.Path) {
     const data = node.getAttr("vcElementData") as TPenData | undefined;
     return data?.type === "pen";
+  }
+
+  static isPenNode(node: Konva.Node): node is Konva.Path {
+    return node instanceof Konva.Path && PenPlugin.isPenPath(node);
   }
 
   private static createStyleFromNode(node: Konva.Path, baseStyle: TElementStyle): TElementStyle {
@@ -421,8 +429,8 @@ export class PenPlugin implements IPlugin {
       }
     };
 
-    const throttledPatch = throttle((element: TElement) => {
-      context.crdt.patch({ elements: [element], groups: [] });
+    const throttledPatch = throttle((patch: Pick<TElement, "id" | "x" | "y" | "parentGroupId" | "updatedAt">) => {
+      context.crdt.patch({ elements: [patch], groups: [] });
     }, 100);
 
     node.on("dragstart", (event) => {
@@ -451,7 +459,7 @@ export class PenPlugin implements IPlugin {
     node.on("dragmove", () => {
       if (isCloneDrag) return;
 
-      throttledPatch(PenPlugin.toTElement(node));
+      throttledPatch(PenPlugin.toPositionPatch(node));
       const selected = TransformPlugin.filterSelection(context.state.selection);
       if (selected.length <= 1) return;
 
@@ -554,5 +562,18 @@ export class PenPlugin implements IPlugin {
     } catch {
       return;
     }
+  }
+
+  private static toPositionPatch(node: Konva.Path) {
+    const absolutePosition = node.absolutePosition();
+    const parent = node.getParent();
+
+    return {
+      id: node.id(),
+      x: absolutePosition.x,
+      y: absolutePosition.y,
+      parentGroupId: parent instanceof Konva.Group ? parent.id() : null,
+      updatedAt: Date.now(),
+    };
   }
 }

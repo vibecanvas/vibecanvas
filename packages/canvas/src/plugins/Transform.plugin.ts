@@ -2,6 +2,7 @@ import Konva from "konva";
 import { createEffect } from "solid-js";
 import type { IPlugin, IPluginContext } from "./interface";
 import { TElement } from "@vibecanvas/shell/automerge/index";
+import { PenPlugin } from "./Pen.plugin";
 
 /**
  * Handles rotation and resizing
@@ -175,11 +176,13 @@ export class TransformPlugin implements IPlugin {
 
       const hasTextOnly = filteredSelection.length > 0 &&
         filteredSelection.every(n => n instanceof Konva.Text)
+      const hasPenOnly = filteredSelection.length > 0 &&
+        filteredSelection.every(n => PenPlugin.isPenNode(n))
       // Multi-select must use corner-only anchors with keepRatio to prevent skewing.
       // Single-shape selections keep free resize (all 8 anchors, no keepRatio),
-      // except for groups and text-only selections which always lock ratio.
+      // except for groups, text-only selections, and pen paths which always lock ratio.
       const isMultiSelect = filteredSelection.length > 1
-      const useCornerAnchors = isSingleGroupSelection || hasTextOnly || isMultiSelect
+      const useCornerAnchors = isSingleGroupSelection || hasTextOnly || hasPenOnly || isMultiSelect
       this.#transformer.keepRatio(useCornerAnchors)
       this.#transformer.enabledAnchors(
         useCornerAnchors
