@@ -336,6 +336,7 @@ export class GroupPlugin implements IPlugin {
   static refreshCloneSubtree(clone: Konva.Group) {
     clone.id(crypto.randomUUID())
     clone.setDraggable(true)
+    clone.setAttr('vcGroupListenersSetup', false)
 
     clone.getChildren().forEach(node => {
       if (node instanceof Konva.Group) {

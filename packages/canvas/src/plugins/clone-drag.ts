@@ -36,7 +36,10 @@ function getCloneTargets(context: IPluginContext, touchedNode: TCloneRoot) {
   const filteredSelection = TransformPlugin.filterSelection(context.state.selection);
   const cloneRoots = collapseCloneRoots(filteredSelection.filter(isCloneRoot));
   if (cloneRoots.length > 1 && cloneRoots.includes(touchedNode)) {
-    return cloneRoots;
+    return [
+      touchedNode,
+      ...cloneRoots.filter((node) => node !== touchedNode),
+    ];
   }
 
   return [touchedNode];
