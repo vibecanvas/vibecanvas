@@ -60,9 +60,22 @@ export class Shape2dPlugin implements IPlugin {
   private setupPreview(context: IPluginContext) {
     context.hooks.customEvent.tap((event, payload) => {
       if (event === CustomEvents.TOOL_SELECT) {
+        if (payload !== this.#activeTool && this.#previewDrawing) {
+          this.cancelPreview(context);
+        }
         this.#activeTool = payload;
       }
       return false;
+    })
+
+    context.hooks.keydown.tap((event) => {
+      if (event.key !== 'Escape') return;
+      if (context.state.mode !== CanvasMode.DRAW_CREATE) return;
+      if (!this.#previewDrawing) return;
+
+      event.preventDefault();
+      event.stopPropagation();
+      this.cancelPreview(context);
     })
 
     context.hooks.pointerDown.tap((e) => {
@@ -112,10 +125,7 @@ export class Shape2dPlugin implements IPlugin {
       if (context.state.mode !== CanvasMode.DRAW_CREATE) return;
       if (!this.#previewDrawing) return;
       const shape: Konva.Shape | undefined = this.#previewDrawing?.clone()
-      this.#previewDrawing?.destroy()
-      this.#previewDrawing = null;
-      context.setState('mode', CanvasMode.SELECT)
-      context.hooks.customEvent.call(CustomEvents.TOOL_SELECT, 'select')
+      this.cancelPreview(context);
 
       if (!shape) return;
       Shape2dPlugin.setupShapeListeners(context, shape)
@@ -123,6 +133,24 @@ export class Shape2dPlugin implements IPlugin {
       context.staticForegroundLayer.add(shape);
       context.crdt.patch({ elements: [Shape2dPlugin.toTElement(shape)], groups: [] })
     })
+
+    context.hooks.pointerCancel.tap(() => {
+      if (context.state.mode !== CanvasMode.DRAW_CREATE) return;
+      if (!this.#previewDrawing) return;
+      this.cancelPreview(context);
+    })
+
+    context.hooks.destroy.tap(() => {
+      this.#previewDrawing?.destroy();
+      this.#previewDrawing = null;
+    })
+  }
+
+  private cancelPreview(context: IPluginContext) {
+    this.#previewDrawing?.destroy();
+    this.#previewDrawing = null;
+    context.setState('mode', CanvasMode.SELECT)
+    context.hooks.customEvent.call(CustomEvents.TOOL_SELECT, 'select')
   }
 
   private static setupCapablities(context: IPluginContext) {

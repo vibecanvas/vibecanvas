@@ -56,6 +56,12 @@ function createPointerEvent(type: string, pressure = 0.5) {
   } as Konva.KonvaEventObject<PointerEvent>;
 }
 
+function fireKeydown(context: IPluginContext, key: string) {
+  const event = new KeyboardEvent("keydown", { key, bubbles: true, cancelable: true });
+  Object.defineProperty(event, "target", { configurable: true, value: context.stage.container() });
+  context.hooks.keydown.call(event);
+}
+
 function withDynamicPointer(context: IPluginContext, point: { x: number; y: number }, callback: () => void) {
   const original = context.dynamicLayer.getRelativePointerPosition.bind(context.dynamicLayer);
   context.dynamicLayer.getRelativePointerPosition = () => point;
@@ -131,6 +137,42 @@ function altDragPen(node: Konva.Path, args: { dx: number; dy: number }) {
 }
 
 describe("PenPlugin", () => {
+  test("Escape cancels an in-progress pen preview before pointerup", async () => {
+    let context!: IPluginContext;
+    const docHandle = createMockDocHandle();
+
+    const harness = await createCanvasTestHarness({
+      docHandle,
+      plugins: [new PenPlugin()],
+      initializeScene(ctx) {
+        context = ctx;
+      },
+    });
+
+    context.setState("mode", CanvasMode.DRAW_CREATE);
+    context.hooks.customEvent.call(CustomEvents.TOOL_SELECT, "pen");
+
+    withDynamicPointer(context, { x: 120, y: 80 }, () => {
+      context.hooks.pointerDown.call(createPointerEvent("pointerdown", 0.4));
+    });
+    withDynamicPointer(context, { x: 180, y: 120 }, () => {
+      context.hooks.pointerMove.call(createPointerEvent("pointermove", 0.6) as Konva.KonvaEventObject<MouseEvent>);
+    });
+
+    expect(harness.dynamicLayer.find((node: Konva.Node) => node instanceof Konva.Path)).toHaveLength(1);
+
+    fireKeydown(context, "Escape");
+    context.hooks.pointerUp.call(createPointerEvent("pointerup", 0.5));
+    await flushCanvasEffects();
+
+    expect(harness.dynamicLayer.find((node: Konva.Node) => node instanceof Konva.Path)).toHaveLength(0);
+    expect(harness.staticForegroundLayer.find((node: Konva.Node) => node instanceof Konva.Path)).toHaveLength(0);
+    expect(Object.keys(docHandle.doc().elements)).toHaveLength(0);
+    expect(context.state.mode).toBe(CanvasMode.SELECT);
+
+    harness.destroy();
+  });
+
   test("draw-create commits a pen path to scene and CRDT", async () => {
     let context!: IPluginContext;
     const docHandle = createMockDocHandle();

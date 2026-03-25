@@ -51,6 +51,14 @@ export class PenPlugin implements IPlugin {
   }
 
   private setupDrawFlow(context: IPluginContext) {
+    const cancelStroke = () => {
+      this.#points = [];
+      this.resetPreview();
+      this.#draftElementId = null;
+      context.setState("mode", CanvasMode.SELECT);
+      context.hooks.customEvent.call(CustomEvents.TOOL_SELECT, "select");
+    };
+
     context.hooks.pointerDown.tap((event) => {
       if (context.state.mode !== CanvasMode.DRAW_CREATE) return;
       if (this.#activeTool !== "pen") return;
@@ -103,11 +111,16 @@ export class PenPlugin implements IPlugin {
       context.crdt.patch({ elements: [element], groups: [] });
     };
 
-    const cancelStroke = () => {
-      this.#points = [];
-      this.resetPreview();
-      this.#draftElementId = null;
-    };
+    context.hooks.keydown.tap((event) => {
+      if (event.key !== "Escape") return;
+      if (context.state.mode !== CanvasMode.DRAW_CREATE) return;
+      if (this.#activeTool !== "pen") return;
+      if (!this.#previewPath) return;
+
+      event.preventDefault();
+      event.stopPropagation();
+      cancelStroke();
+    });
 
     context.hooks.pointerUp.tap(finalizeStroke);
     context.hooks.pointerCancel.tap(cancelStroke);
