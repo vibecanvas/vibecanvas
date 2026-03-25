@@ -8,6 +8,7 @@ import type { IPlugin, IPluginContext } from "./interface";
 import { startSelectionCloneDrag } from "./clone-drag";
 import { getWorldPosition, setWorldPosition } from "./node-space";
 import { TransformPlugin } from "./Transform.plugin";
+import { getNodeZIndex, setNodeZIndex } from "./render-order.shared";
 
 export class TextPlugin implements IPlugin {
   #activeTool: TTool = 'select';
@@ -68,6 +69,11 @@ export class TextPlugin implements IPlugin {
       textNode.draggable(true);
       TextPlugin.setupShapeListeners(context, textNode);
       context.staticForegroundLayer.add(textNode);
+      context.capabilities.renderOrder?.assignOrderOnInsert({
+        parent: context.staticForegroundLayer,
+        nodes: [textNode],
+        position: "front",
+      });
 
       // Switch back to select before entering edit mode
       context.setState('mode', CanvasMode.SELECT);
@@ -129,6 +135,7 @@ export class TextPlugin implements IPlugin {
 
     node.name(isAttached ? TextPlugin.ATTACHED_TEXT_NAME : TextPlugin.FREE_TEXT_NAME);
     node.setAttr('vcContainerId', data.containerId);
+    setNodeZIndex(node, element.zIndex);
 
     return node;
   }
@@ -232,7 +239,7 @@ export class TextPlugin implements IPlugin {
       updatedAt: Date.now(),
       locked: false,
       parentGroupId,
-      zIndex: '',
+      zIndex: getNodeZIndex(node),
       style,
       data,
     };
@@ -260,6 +267,7 @@ export class TextPlugin implements IPlugin {
     node.align(data.textAlign);
     node.verticalAlign(data.verticalAlign);
     node.lineHeight(data.lineHeight);
+    setNodeZIndex(node, element.zIndex);
     node.scaleX(1);
     node.scaleY(1);
     node.wrap(data.containerId !== null ? 'word' : 'none');

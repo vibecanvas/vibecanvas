@@ -1,6 +1,7 @@
 import Konva from "konva";
 import { describe, expect, test } from "vitest";
 import { GroupPlugin } from "../../../src/plugins/Group.plugin";
+import { RenderOrderPlugin } from "../../../src/plugins/RenderOrder.plugin";
 import { SceneHydratorPlugin } from "../../../src/plugins/SceneHydrator.plugin";
 import { Shape2dPlugin } from "../../../src/plugins/Shape2d.plugin";
 import type { IPluginContext } from "../../../src/plugins/interface";
@@ -16,9 +17,8 @@ describe("GroupPlugin - zoom rehydrate", () => {
       groups: {
         [groupId]: {
           id: groupId,
-          name: "Group",
-          color: null,
           parentGroupId: null,
+          zIndex: "z00000000",
           locked: false,
           createdAt: 1,
         },
@@ -57,7 +57,7 @@ describe("GroupPlugin - zoom rehydrate", () => {
 
     const firstHarness = await createCanvasTestHarness({
       docHandle,
-      plugins: [new Shape2dPlugin(), new GroupPlugin(), new SceneHydratorPlugin()],
+      plugins: [new RenderOrderPlugin(), new Shape2dPlugin(), new GroupPlugin(), new SceneHydratorPlugin()],
       initializeScene(pluginContext) {
         context = pluginContext;
       },
@@ -103,7 +103,7 @@ describe("GroupPlugin - zoom rehydrate", () => {
 
     const secondHarness = await createCanvasTestHarness({
       docHandle,
-      plugins: [new Shape2dPlugin(), new GroupPlugin(), new SceneHydratorPlugin()],
+      plugins: [new RenderOrderPlugin(), new Shape2dPlugin(), new GroupPlugin(), new SceneHydratorPlugin()],
     });
 
     const rehydratedChildA = secondHarness.staticForegroundLayer.findOne<Konva.Rect>(`#${childAId}`);

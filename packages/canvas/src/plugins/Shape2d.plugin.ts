@@ -9,6 +9,7 @@ import { startSelectionCloneDrag } from "./clone-drag";
 import { getWorldPosition, setWorldPosition } from "./node-space";
 import { TextPlugin } from "./Text.plugin";
 import { TransformPlugin } from "./Transform.plugin";
+import { getNodeZIndex, setNodeZIndex } from "./render-order.shared";
 
 
 export class Shape2dPlugin implements IPlugin {
@@ -131,6 +132,11 @@ export class Shape2dPlugin implements IPlugin {
       Shape2dPlugin.setupShapeListeners(context, shape)
       shape.setDraggable(true)
       context.staticForegroundLayer.add(shape);
+      context.capabilities.renderOrder?.assignOrderOnInsert({
+        parent: context.staticForegroundLayer,
+        nodes: [shape],
+        position: "front",
+      })
       context.crdt.patch({ elements: [Shape2dPlugin.toTElement(shape)], groups: [] })
     })
 
@@ -168,13 +174,27 @@ export class Shape2dPlugin implements IPlugin {
       }
     }
 
-    const currentToElement = context.capabilities.toElement
-    context.capabilities.toElement = (node) => {
-      if (node instanceof Konva.Rect) {
-        return Shape2dPlugin.toTElement(node)
+      const currentToElement = context.capabilities.toElement
+      context.capabilities.toElement = (node) => {
+        if (node instanceof Konva.Rect) {
+          return Shape2dPlugin.toTElement(node)
+        }
+        return currentToElement?.(node) || null
       }
-      return currentToElement?.(node) || null
-    }
+
+      const previousGetBundle = context.capabilities.getReorderBundle
+      context.capabilities.getReorderBundle = (node) => {
+        if (!(node instanceof Konva.Rect)) {
+          return previousGetBundle?.(node) ?? [node]
+        }
+
+        const attachedText = Shape2dPlugin.getAttachedTextNode(context, node)
+        if (!attachedText || attachedText.getParent() !== node.getParent()) {
+          return previousGetBundle?.(node) ?? [node]
+        }
+
+        return [node, attachedText]
+      }
 
     context.capabilities.updateShapeFromTElement = (element) => {
       if (!Shape2dPlugin.supportedTypes.has(element.data.type)) {
@@ -228,10 +248,17 @@ export class Shape2dPlugin implements IPlugin {
       },
     };
 
-    const textNode = TextPlugin.createTextNode(textElement);
-    (parent ?? context.staticForegroundLayer).add(textNode);
-    textNode.moveToTop();
-    context.crdt.patch({ elements: [TextPlugin.toTElement(textNode)], groups: [] });
+      const textParent = parent instanceof Konva.Group || parent instanceof Konva.Layer
+        ? parent
+        : context.staticForegroundLayer
+      const textNode = TextPlugin.createTextNode(textElement);
+      textParent.add(textNode);
+      context.capabilities.renderOrder?.assignOrderOnInsert({
+        parent: textParent,
+        nodes: [rect, textNode],
+        position: "front",
+      });
+      context.crdt.patch({ elements: [TextPlugin.toTElement(textNode)], groups: [] });
 
     return textNode;
   }
@@ -273,6 +300,7 @@ export class Shape2dPlugin implements IPlugin {
       if (element.style.strokeColor !== shape.stroke()) shape.stroke(element.style.strokeColor)
       if (element.style.strokeWidth !== shape.strokeWidth()) shape.strokeWidth(element.style.strokeWidth)
       if (element.style.opacity !== shape.opacity()) shape.opacity(element.style.opacity)
+      setNodeZIndex(shape, element.zIndex)
       Shape2dPlugin.syncAttachedTextToRect(context, shape)
     }
 
@@ -314,7 +342,7 @@ export class Shape2dPlugin implements IPlugin {
       locked: false,
       parentGroupId,
       updatedAt: Date.now(),
-      zIndex: '',
+      zIndex: getNodeZIndex(shape),
       data,
       style,
     }
@@ -534,7 +562,11 @@ export class Shape2dPlugin implements IPlugin {
     Shape2dPlugin.setupShapeListeners(context, newShape)
     newShape.setDraggable(true)
     context.staticForegroundLayer.add(newShape)
-    newShape.moveToTop()
+    context.capabilities.renderOrder?.assignOrderOnInsert({
+      parent: context.staticForegroundLayer,
+      nodes: [newShape],
+      position: "front",
+    })
 
     const createdElements: TElement[] = [Shape2dPlugin.toTElement(newShape)]
     if (sourceShape instanceof Konva.Rect && newShape instanceof Konva.Rect) {
@@ -561,7 +593,11 @@ export class Shape2dPlugin implements IPlugin {
 
         TextPlugin.setupShapeListeners(context, clonedText)
         context.staticForegroundLayer.add(clonedText)
-        clonedText.moveToTop()
+        context.capabilities.renderOrder?.assignOrderOnInsert({
+          parent: context.staticForegroundLayer,
+          nodes: [newShape, clonedText],
+          position: "front",
+        })
         Shape2dPlugin.syncAttachedTextToRect(context, newShape, clonedText)
         createdElements.push(TextPlugin.toTElement(clonedText))
       }
@@ -583,6 +619,8 @@ export class Shape2dPlugin implements IPlugin {
       fill: element.style.backgroundColor,
       draggable: false,
     });
+
+    setNodeZIndex(shape, element.zIndex)
 
     return shape
   }

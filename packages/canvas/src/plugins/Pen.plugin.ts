@@ -1,5 +1,5 @@
 import { throttle } from "@solid-primitives/scheduled";
-import { TElement, TElementStyle, TPenData } from "@vibecanvas/shell/automerge/index";
+import type { TElement, TElementStyle, TPenData } from "@vibecanvas/shell/automerge/index";
 import Konva from "konva";
 import type { TTool } from "../components/FloatingCanvasToolbar/toolbar.types";
 import { CustomEvents } from "../custom-events";
@@ -13,6 +13,7 @@ import {
 } from "./pen.math";
 import { startSelectionCloneDrag } from "./clone-drag";
 import { getWorldPosition, setWorldPosition } from "./node-space";
+import { getNodeZIndex, setNodeZIndex } from "./render-order.shared";
 import { TransformPlugin } from "./Transform.plugin";
 
 const DEFAULT_FILL = "#0f172a";
@@ -107,6 +108,11 @@ export class PenPlugin implements IPlugin {
       node.listening(true);
       node.visible(true);
       context.staticForegroundLayer.add(node);
+      context.capabilities.renderOrder?.assignOrderOnInsert({
+        parent: context.staticForegroundLayer,
+        nodes: [node],
+        position: "front",
+      });
       const element = PenPlugin.toTElement(node);
       context.crdt.patch({ elements: [element], groups: [] });
     };
@@ -310,6 +316,7 @@ export class PenPlugin implements IPlugin {
     node.setAttr("vcElementData", structuredClone(element.data));
     node.setAttr("vcElementStyle", structuredClone(element.style));
     node.setAttr("vcPenStrokeWidth", PenPlugin.getStrokeWidthFromStyle(element.style));
+    setNodeZIndex(node, element.zIndex);
     return node;
   }
 
@@ -327,6 +334,7 @@ export class PenPlugin implements IPlugin {
     node.setAttr("vcElementData", structuredClone(element.data));
     node.setAttr("vcElementStyle", structuredClone(element.style));
     node.setAttr("vcPenStrokeWidth", PenPlugin.getStrokeWidthFromStyle(element.style));
+    setNodeZIndex(node, element.zIndex);
   }
 
   static toTElement(node: Konva.Path): TElement {
@@ -356,7 +364,7 @@ export class PenPlugin implements IPlugin {
       locked: false,
       parentGroupId,
       updatedAt: Date.now(),
-      zIndex: "",
+      zIndex: getNodeZIndex(node),
       data: {
         ...baseData,
         points: scalePenDataPoints(baseData.points, scaleX, scaleY),
@@ -402,6 +410,11 @@ export class PenPlugin implements IPlugin {
     previewClone.moveTo(context.staticForegroundLayer);
     PenPlugin.setupShapeListeners(context, previewClone);
     previewClone.setDraggable(true);
+    context.capabilities.renderOrder?.assignOrderOnInsert({
+      parent: context.staticForegroundLayer,
+      nodes: [previewClone],
+      position: "front",
+    });
     context.crdt.patch({ elements: [PenPlugin.toTElement(previewClone)], groups: [] });
     return previewClone;
   }

@@ -3,6 +3,7 @@ import type { DocHandle } from "@automerge/automerge-repo";
 import type { TCanvasDoc } from "@vibecanvas/shell/automerge/index";
 import { describe, expect, test } from "vitest";
 import { GroupPlugin } from "../../../src/plugins/Group.plugin";
+import { RenderOrderPlugin } from "../../../src/plugins/RenderOrder.plugin";
 import { SelectPlugin } from "../../../src/plugins/Select.plugin";
 import { Shape2dPlugin } from "../../../src/plugins/Shape2d.plugin";
 import type { IPluginContext } from "../../../src/plugins/interface";
@@ -250,6 +251,177 @@ describe("GroupPlugin", () => {
     expect(docHandle.doc().groups[group.id()]).toBeUndefined();
     expect(docHandle.doc().elements[rect1.id()].parentGroupId).toBeNull();
     expect(docHandle.doc().elements[rect2.id()].parentGroupId).toBeNull();
+
+    harness.destroy();
+  });
+
+  test("grouping preserves the grouped selection stack slot instead of moving group to front", async () => {
+    let pluginContext!: IPluginContext;
+    const harness = await createCanvasTestHarness({
+      plugins: [new RenderOrderPlugin(), new Shape2dPlugin(), new GroupPlugin()],
+      initializeScene(context) {
+        pluginContext = context;
+
+        const rectA = Shape2dPlugin.createRectFromElement({
+          id: "rect-a",
+          x: 10,
+          y: 10,
+          rotation: 0,
+          bindings: [],
+          createdAt: 1,
+          locked: false,
+          parentGroupId: null,
+          updatedAt: 1,
+          zIndex: "z00000000",
+          data: { type: "rect", w: 40, h: 40 },
+          style: { backgroundColor: "red" },
+        });
+        const rectB = Shape2dPlugin.createRectFromElement({
+          id: "rect-b",
+          x: 70,
+          y: 10,
+          rotation: 0,
+          bindings: [],
+          createdAt: 2,
+          locked: false,
+          parentGroupId: null,
+          updatedAt: 2,
+          zIndex: "z00000001",
+          data: { type: "rect", w: 40, h: 40 },
+          style: { backgroundColor: "green" },
+        });
+        const rectC = Shape2dPlugin.createRectFromElement({
+          id: "rect-c",
+          x: 130,
+          y: 10,
+          rotation: 0,
+          bindings: [],
+          createdAt: 3,
+          locked: false,
+          parentGroupId: null,
+          updatedAt: 3,
+          zIndex: "z00000002",
+          data: { type: "rect", w: 40, h: 40 },
+          style: { backgroundColor: "blue" },
+        });
+        const rectD = Shape2dPlugin.createRectFromElement({
+          id: "rect-d",
+          x: 190,
+          y: 10,
+          rotation: 0,
+          bindings: [],
+          createdAt: 4,
+          locked: false,
+          parentGroupId: null,
+          updatedAt: 4,
+          zIndex: "z00000003",
+          data: { type: "rect", w: 40, h: 40 },
+          style: { backgroundColor: "yellow" },
+        });
+
+        [rectA, rectB, rectC, rectD].forEach((rect) => {
+          Shape2dPlugin.setupShapeListeners(context, rect);
+          rect.setDraggable(true);
+          context.staticForegroundLayer.add(rect);
+        });
+        context.capabilities.renderOrder?.sortChildren(context.staticForegroundLayer);
+      },
+    });
+
+    const rectB = harness.staticForegroundLayer.findOne<Konva.Rect>("#rect-b")!;
+    const rectC = harness.staticForegroundLayer.findOne<Konva.Rect>("#rect-c")!;
+
+    const group = GroupPlugin.group(pluginContext, [rectB, rectC]);
+    const orderedIds = harness.staticForegroundLayer.getChildren()
+      .filter((node) => node instanceof Konva.Group || node instanceof Konva.Shape)
+      .map((node) => node.id());
+
+    expect(orderedIds).toEqual(["rect-a", group.id(), "rect-d"]);
+
+    harness.destroy();
+  });
+
+  test("ungrouping preserves children stack slot instead of moving them to front", async () => {
+    let pluginContext!: IPluginContext;
+    let group!: Konva.Group;
+    const harness = await createCanvasTestHarness({
+      plugins: [new RenderOrderPlugin(), new Shape2dPlugin(), new GroupPlugin()],
+      initializeScene(context) {
+        pluginContext = context;
+
+        const rectA = Shape2dPlugin.createRectFromElement({
+          id: "rect-a",
+          x: 10,
+          y: 10,
+          rotation: 0,
+          bindings: [],
+          createdAt: 1,
+          locked: false,
+          parentGroupId: null,
+          updatedAt: 1,
+          zIndex: "z00000000",
+          data: { type: "rect", w: 40, h: 40 },
+          style: { backgroundColor: "red" },
+        });
+        const rectB = Shape2dPlugin.createRectFromElement({
+          id: "rect-b",
+          x: 70,
+          y: 10,
+          rotation: 0,
+          bindings: [],
+          createdAt: 2,
+          locked: false,
+          parentGroupId: null,
+          updatedAt: 2,
+          zIndex: "z00000001",
+          data: { type: "rect", w: 40, h: 40 },
+          style: { backgroundColor: "green" },
+        });
+        const rectC = Shape2dPlugin.createRectFromElement({
+          id: "rect-c",
+          x: 130,
+          y: 10,
+          rotation: 0,
+          bindings: [],
+          createdAt: 3,
+          locked: false,
+          parentGroupId: null,
+          updatedAt: 3,
+          zIndex: "z00000002",
+          data: { type: "rect", w: 40, h: 40 },
+          style: { backgroundColor: "blue" },
+        });
+        const rectD = Shape2dPlugin.createRectFromElement({
+          id: "rect-d",
+          x: 190,
+          y: 10,
+          rotation: 0,
+          bindings: [],
+          createdAt: 4,
+          locked: false,
+          parentGroupId: null,
+          updatedAt: 4,
+          zIndex: "z00000003",
+          data: { type: "rect", w: 40, h: 40 },
+          style: { backgroundColor: "yellow" },
+        });
+
+        [rectA, rectB, rectC, rectD].forEach((rect) => {
+          Shape2dPlugin.setupShapeListeners(context, rect);
+          rect.setDraggable(true);
+          context.staticForegroundLayer.add(rect);
+        });
+        context.capabilities.renderOrder?.sortChildren(context.staticForegroundLayer);
+        group = GroupPlugin.group(context, [rectB, rectC]);
+      },
+    });
+
+    GroupPlugin.ungroup(pluginContext, group);
+    const orderedIds = harness.staticForegroundLayer.getChildren()
+      .filter((node) => node instanceof Konva.Group || node instanceof Konva.Shape)
+      .map((node) => node.id());
+
+    expect(orderedIds).toEqual(["rect-a", "rect-b", "rect-c", "rect-d"]);
 
     harness.destroy();
   });

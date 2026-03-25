@@ -220,9 +220,8 @@ export type TElement = TBaseElement & {
 
 export type TGroup = {
   id: string
-  name: string
-  color: string | null         // Optional group highlight color
   parentGroupId: string | null // For nested groups
+  zIndex: string               // Ordering token among siblings in the same parent
   locked: boolean              // Prevents editing of children
   createdAt: number
 }

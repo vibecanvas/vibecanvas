@@ -10,6 +10,7 @@ import { TextPlugin } from "./Text.plugin";
 import { TElement, TGroup } from "@vibecanvas/shell/automerge/index";
 import { TransformPlugin } from "./Transform.plugin";
 import { throttle } from "@solid-primitives/scheduled";
+import { getNodeZIndex, setNodeZIndex } from "./render-order.shared";
 
 
 export class GroupPlugin implements IPlugin {
@@ -73,6 +74,18 @@ export class GroupPlugin implements IPlugin {
     args?: { groupId?: string, recordHistory?: boolean },
   ) {
     selections = GroupPlugin.expandSelectionsWithAttachedText(context, selections)
+    selections = [...selections].sort((a, b) => a.zIndex() - b.zIndex())
+    const resolveParent = (node: Konva.Group | Konva.Shape) => {
+      const candidate = node.getParent()
+      return candidate instanceof Konva.Group || candidate instanceof Konva.Layer
+        ? candidate
+        : context.staticForegroundLayer
+    }
+    const parent = resolveParent(selections[0])
+    if (!selections.every((node) => resolveParent(node) === parent)) {
+      throw new Error('Cannot group selections from different parents')
+    }
+    const insertionPosition = GroupPlugin.getInsertionPosition(parent, selections)
     const x = Math.min(...selections.map(s => s.x()))
     const y = Math.min(...selections.map(s => s.y()))
     const width = Math.max(...selections.map(s => s.x() + s.width())) - x
@@ -82,25 +95,22 @@ export class GroupPlugin implements IPlugin {
 
     const newGroup = context.capabilities.createGroupFromTGroup?.({
       id: groupId,
-      name: '',
-      color: null,
-      parentGroupId: null,
+      parentGroupId: parent instanceof Konva.Group ? parent.id() : null,
+      zIndex: '',
       locked: false,
       createdAt: Date.now(),
     }) ?? new Konva.Group({ id: groupId, draggable: true })
     newGroup.setAttrs({ x, y, width, height, draggable: true })
-    context.staticForegroundLayer.add(newGroup)
+    parent.add(newGroup)
+    context.capabilities.renderOrder?.assignOrderOnInsert({
+      parent,
+      nodes: [newGroup],
+      position: insertionPosition,
+    })
 
     const parentNode = newGroup.getParent()
     const parentGroupId = parentNode instanceof Konva.Group ? parentNode.id() : null
-    const groupPatches: TGroup[] = [{
-      id: newGroup.id(),
-      name: '',
-      color: null,
-      parentGroupId,
-      locked: false,
-      createdAt: Date.now(),
-    }]
+    const groupPatches: TGroup[] = [context.capabilities.toGroup?.(newGroup) ?? GroupPlugin.toTGroup(newGroup)]
     const elementPatches: TElement[] = []
 
     selections.forEach(node => {
@@ -110,20 +120,15 @@ export class GroupPlugin implements IPlugin {
       node.setDraggable(false)
 
       if (node instanceof Konva.Group) {
-        groupPatches.push({
-          id: node.id(),
-          name: '',
-          color: null,
-          parentGroupId: newGroup.id(),
-          locked: false,
-          createdAt: Date.now(),
-        })
+        groupPatches.push(context.capabilities.toGroup?.(node) ?? GroupPlugin.toTGroup(node))
         return
       }
 
       const el = context.capabilities.toElement?.(node) ?? Shape2dPlugin.toTElement(node)
       elementPatches.push(el)
     })
+
+    context.capabilities.renderOrder?.sortChildren(newGroup)
 
     context.crdt.patch({ elements: elementPatches, groups: groupPatches })
 
@@ -186,6 +191,8 @@ export class GroupPlugin implements IPlugin {
   ) {
     const parent = group.getParent()
     if (!parent) return []
+    if (!(parent instanceof Konva.Group || parent instanceof Konva.Layer)) return []
+    const insertionPosition = GroupPlugin.getInsertionPosition(parent, [group])
 
     const children = group.getChildren().slice() as (Konva.Group | Konva.Shape)[]
     const childIds = children.map(node => node.id())
@@ -199,14 +206,7 @@ export class GroupPlugin implements IPlugin {
       node.setAbsolutePosition(absolutePosition)
 
       if (node instanceof Konva.Group) {
-        groupPatches.push({
-          id: node.id(),
-          name: '',
-          color: null,
-          parentGroupId: nextParentGroupId,
-          locked: false,
-          createdAt: Date.now(),
-        })
+        groupPatches.push(context.capabilities.toGroup?.(node) ?? GroupPlugin.toTGroup(node))
         return
       }
 
@@ -216,6 +216,11 @@ export class GroupPlugin implements IPlugin {
     })
 
     group.destroy()
+    context.capabilities.renderOrder?.assignOrderOnInsert({
+      parent,
+      nodes: children,
+      position: insertionPosition,
+    })
     context.crdt.patch({ elements: elementPatches, groups: groupPatches })
     context.crdt.deleteById({ groupIds: [group.id()] })
 
@@ -258,6 +263,30 @@ export class GroupPlugin implements IPlugin {
     return ids
       .map(id => GroupPlugin.findNodeById(context, id))
       .filter((node): node is Konva.Group | Konva.Shape => Boolean(node))
+  }
+
+  private static getInsertionPosition(
+    parent: Konva.Layer | Konva.Group,
+    nodes: Array<Konva.Group | Konva.Shape>,
+  ): "front" | "back" | { beforeId?: string; afterId?: string } {
+    const siblingIds = parent.getChildren()
+      .filter((node): node is Konva.Group | Konva.Shape => node instanceof Konva.Group || node instanceof Konva.Shape)
+      .map((node) => node.id())
+    const selectedIds = new Set(nodes.map((node) => node.id()))
+    const selectedIndexes = siblingIds
+      .map((id, index) => selectedIds.has(id) ? index : -1)
+      .filter((index) => index >= 0)
+
+    if (selectedIndexes.length === 0) return 'front'
+
+    const firstIndex = Math.min(...selectedIndexes)
+    const lastIndex = Math.max(...selectedIndexes)
+    const beforeId = siblingIds[firstIndex - 1]
+    const afterId = siblingIds[lastIndex + 1]
+
+    if (beforeId) return { afterId: beforeId }
+    if (afterId) return { beforeId: afterId }
+    return 'front'
   }
 
   private static createBoundaryRect(context: IPluginContext, group: Konva.Group) {
@@ -360,6 +389,11 @@ export class GroupPlugin implements IPlugin {
     }
 
     clone.moveTo(context.staticForegroundLayer)
+    context.capabilities.renderOrder?.assignOrderOnInsert({
+      parent: context.staticForegroundLayer,
+      nodes: [clone],
+      position: 'front',
+    })
 
     const groups: TGroup[] = []
     const elements: TElement[] = []
@@ -418,9 +452,8 @@ export class GroupPlugin implements IPlugin {
     const parentGroupId = group.getParent() instanceof Konva.Group ? group.getParent()!.id() : null
     return {
       id: group.id(),
-      name: '',
-      color: null,
       parentGroupId,
+      zIndex: getNodeZIndex(group),
       locked: false,
       createdAt: Date.now(),
     }
@@ -432,6 +465,7 @@ export class GroupPlugin implements IPlugin {
         id: group.id,
         draggable: true,
       })
+      setNodeZIndex(konvaGroup, group.zIndex)
       this.setupGroupListeners(context, konvaGroup)
       return konvaGroup
     }

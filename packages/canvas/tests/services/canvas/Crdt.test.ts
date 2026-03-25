@@ -66,9 +66,8 @@ function createImageElement(overrides?: Partial<TElement>): TElement {
 function createGroup(overrides?: Partial<TGroup>): TGroup {
   return {
     id: "group-1",
-    name: "Group 1",
-    color: "#abc",
     parentGroupId: null,
+    zIndex: "a0",
     locked: false,
     createdAt: 1,
     ...overrides,
@@ -180,7 +179,7 @@ describe("Crdt", () => {
 
   test("patch inserts and updates groups", async () => {
     const existingGroup = createGroup();
-    const newGroup = createGroup({ id: "group-2", name: "Group 2" });
+    const newGroup = createGroup({ id: "group-2", zIndex: "a1" });
     const handle = await createLocalHandle({
       groups: {
         [existingGroup.id]: existingGroup,
@@ -193,7 +192,7 @@ describe("Crdt", () => {
       groups: [
         {
           id: existingGroup.id,
-          color: null,
+          zIndex: "z9",
           locked: true,
         },
         newGroup,
@@ -202,8 +201,7 @@ describe("Crdt", () => {
 
     const doc = await handle.doc();
     expect(doc).toBeTruthy();
-    expect(doc!.groups[existingGroup.id].name).toBe(existingGroup.name);
-    expect(doc!.groups[existingGroup.id].color).toBeNull();
+    expect(doc!.groups[existingGroup.id].zIndex).toBe("z9");
     expect(doc!.groups[existingGroup.id].locked).toBe(true);
     expect(doc!.groups[newGroup.id]).toEqual(newGroup);
   });

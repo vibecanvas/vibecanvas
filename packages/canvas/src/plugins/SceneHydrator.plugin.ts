@@ -1,4 +1,4 @@
-import type Konva from "konva";
+import Konva from "konva";
 import type { TElement, TGroup } from "@vibecanvas/shell/automerge/types/canvas-doc";
 import type { IPlugin, IPluginContext } from "./interface";
 
@@ -37,6 +37,17 @@ export class SceneHydratorPlugin implements IPlugin {
       remainingGroupIds,
       remainingElementIds,
       cleanOnLoad: CLEAN_ON_LOAD,
+    });
+
+    this.applyPersistedOrdering(context, context.staticForegroundLayer);
+  }
+
+  private applyPersistedOrdering(context: IPluginContext, parent: Konva.Layer | Konva.Group) {
+    context.capabilities.renderOrder?.sortChildren(parent);
+
+    parent.getChildren().forEach((child) => {
+      if (!(child instanceof Konva.Group)) return;
+      this.applyPersistedOrdering(context, child);
     });
   }
 

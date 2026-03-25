@@ -3,6 +3,7 @@ import type { TCanvasDoc, TElement, TGroup } from "@vibecanvas/shell/automerge/i
 import Konva from "konva";
 import { describe, expect, test } from "vitest";
 import { GroupPlugin } from "../../../src/plugins/Group.plugin";
+import { RenderOrderPlugin } from "../../../src/plugins/RenderOrder.plugin";
 import { SceneHydratorPlugin } from "../../../src/plugins/SceneHydrator.plugin";
 import { Shape2dPlugin } from "../../../src/plugins/Shape2d.plugin";
 import { createCanvasTestHarness, createMockDocHandle } from "../../test-setup";
@@ -37,9 +38,8 @@ function createRectElement(overrides?: Partial<TElement>): TElement {
 function createGroup(overrides?: Partial<TGroup>): TGroup {
   return {
     id: "group-1",
-    name: "Group 1",
-    color: null,
     parentGroupId: null,
+    zIndex: "a0",
     locked: false,
     createdAt: 1,
     ...overrides,
@@ -72,7 +72,7 @@ describe("SceneHydratorPlugin", () => {
 
     const harness = await createCanvasTestHarness({
       docHandle,
-      plugins: [new Shape2dPlugin(), new GroupPlugin(), new SceneHydratorPlugin()],
+      plugins: [new RenderOrderPlugin(), new Shape2dPlugin(), new GroupPlugin(), new SceneHydratorPlugin()],
     });
 
     const hydratedRootGroup = harness.staticForegroundLayer.findOne<Konva.Group>("#group-root");

@@ -38,6 +38,11 @@ describe("RecorderPlugin", () => {
       },
     });
 
+    if (!context) {
+      throw new Error("Expected recorder test context");
+    }
+    const pluginContext: IPluginContext = context;
+
     const recorder = Array.from(document.querySelectorAll("div")).find((node) => node.textContent?.includes("Recorder"));
     expect(recorder).toBeTruthy();
     const readPanelText = () => recorder?.textContent?.replace(/\s+/g, "") ?? "";
@@ -67,21 +72,21 @@ describe("RecorderPlugin", () => {
       return createStagePointerEvent(harness.stage, { type, x, y });
     };
 
-    context?.hooks.pointerMove.call({
+    pluginContext.hooks.pointerMove.call({
       evt: registerPointer("pointermove"),
       target: { id: () => null },
     } as any);
     expect(readPanelText()).toContain("Steps0CRDTOps0");
 
-    context?.hooks.pointerDown.call({
+    pluginContext.hooks.pointerDown.call({
       evt: registerPointer("pointerdown", 210, 155),
       target: { id: () => null },
     } as any);
-    context?.hooks.pointerMove.call({
+    pluginContext.hooks.pointerMove.call({
       evt: registerPointer("pointermove", 220, 160),
       target: { id: () => null },
     } as any);
-    context?.hooks.pointerUp.call({
+    pluginContext.hooks.pointerUp.call({
       evt: registerPointer("pointerup", 220, 160),
       target: { id: () => null },
     } as any);
@@ -91,7 +96,7 @@ describe("RecorderPlugin", () => {
     reducedToggle!.click();
     expect(reducedToggle?.checked).toBe(false);
 
-    context?.hooks.pointerMove.call({
+    pluginContext.hooks.pointerMove.call({
       evt: registerPointer("pointermove", 230, 165),
       target: { id: () => null },
     } as any);
@@ -117,7 +122,7 @@ describe("RecorderPlugin", () => {
     expect(readPanelText()).toContain("Steps7CRDTOps0");
 
     harness.stage.container().dispatchEvent(new KeyboardEvent("keydown", { key: "a" }));
-    context?.crdt.deleteById({ groupIds: ["missing-group"] });
+    pluginContext.crdt.deleteById({ groupIds: ["missing-group"] });
 
     expect(readPanelText()).toContain("Steps8CRDTOps1");
     expect(exportButton?.disabled).toBe(false);
@@ -126,7 +131,7 @@ describe("RecorderPlugin", () => {
     expect(readPanelText()).toContain("RecorderIDLE");
 
     harness.stage.container().dispatchEvent(new KeyboardEvent("keydown", { key: "b" }));
-    context?.crdt.deleteById({ groupIds: ["missing-group-2"] });
+    pluginContext.crdt.deleteById({ groupIds: ["missing-group-2"] });
     expect(readPanelText()).toContain("Steps8CRDTOps1");
 
     exportButton?.click();

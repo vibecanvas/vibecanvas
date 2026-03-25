@@ -8,6 +8,15 @@ import type { AsyncParallelHook, SyncExitHook, SyncHook } from '../tapable';
 import type { Crdt } from "../services/canvas/Crdt";
 import type { TElement, TGroup } from "@vibecanvas/shell/automerge/index";
 
+export type TRenderOrderSnapshot = {
+  parentId: string;
+  items: Array<{
+    id: string;
+    zIndex: string;
+    kind: "element" | "group";
+  }>;
+};
+
 export type TPointerEvent = Konva.KonvaEventObject<PointerEvent>;
 export type TMouseEvent = Konva.KonvaEventObject<MouseEvent>;
 export type TWheelEvent = Konva.KonvaEventObject<WheelEvent>;
@@ -59,6 +68,25 @@ export interface IPluginContext {
     createGroupFromTGroup?: (element: TGroup) => Konva.Group | null;
     toElement?: (node: Konva.Shape) => TElement | null;
     toGroup?: (node: Konva.Group) => TGroup | null;
+    getReorderBundle?: (node: Konva.Group | Konva.Shape) => Array<Konva.Group | Konva.Shape>;
+    renderOrder?: {
+      getNodeZIndex: (node: Konva.Group | Konva.Shape) => string;
+      setNodeZIndex: (node: Konva.Group | Konva.Shape, zIndex: string) => void;
+      getOrderBundle: (node: Konva.Group | Konva.Shape) => Array<Konva.Group | Konva.Shape>;
+      getOrderedSiblings: (parent: Konva.Layer | Konva.Group) => Array<Konva.Group | Konva.Shape>;
+      sortChildren: (parent: Konva.Layer | Konva.Group) => void;
+      assignOrderOnInsert: (args: {
+        parent: Konva.Layer | Konva.Group;
+        nodes: Array<Konva.Group | Konva.Shape>;
+        position?: "front" | "back" | { beforeId?: string; afterId?: string };
+      }) => Array<TElement | TGroup>;
+      moveSelectionUp: (nodes: Array<Konva.Group | Konva.Shape>) => void;
+      moveSelectionDown: (nodes: Array<Konva.Group | Konva.Shape>) => void;
+      bringSelectionToFront: (nodes: Array<Konva.Group | Konva.Shape>) => void;
+      sendSelectionToBack: (nodes: Array<Konva.Group | Konva.Shape>) => void;
+      snapshotParentOrder: (parent: Konva.Layer | Konva.Group) => TRenderOrderSnapshot;
+      restoreParentOrder: (snapshot: TRenderOrderSnapshot) => void;
+    };
   }
 
 }

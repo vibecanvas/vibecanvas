@@ -9,7 +9,7 @@ import { TransformPlugin } from "../../../src/plugins/Transform.plugin";
 import { CanvasMode } from "../../../src/services/canvas/enum";
 import { createPenDataFromStrokePoints, type TStrokePoint } from "../../../src/plugins/pen.math";
 import { createCanvasTestHarness, createMockDocHandle, flushCanvasEffects } from "../../test-setup";
-import type { TElement } from "@vibecanvas/shell/automerge/index";
+import type { TElement, TPenData } from "@vibecanvas/shell/automerge/index";
 
 function createPenElement(args?: {
   id?: string;
@@ -85,7 +85,7 @@ function getPersistedPenElement(docHandle: ReturnType<typeof createMockDocHandle
     throw new Error(`Expected persisted pen element '${id}'`);
   }
 
-  return element;
+  return element as TElement & { data: TPenData };
 }
 
 function dragNode(node: Konva.Path, args: { dx: number; dy: number; altKey?: boolean }) {

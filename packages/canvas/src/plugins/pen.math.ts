@@ -94,21 +94,23 @@ function serializeStrokePoints(points: TStrokePoint[]): TSerializedPenStroke | n
 
 function getStrokePointsFromPenData(element: Pick<TElement, "x" | "y" | "data">): TStrokePoint[] {
   if (element.data.type !== "pen") return [];
+  const data = element.data;
 
-  return element.data.points.map((point, index) => ({
+  return data.points.map((point, index) => ({
     x: element.x + point[0],
     y: element.y + point[1],
-    pressure: element.data.pressures[index] ?? 0.5,
+    pressure: data.pressures[index] ?? 0.5,
   }));
 }
 
 function getLocalStrokePointsFromPenData(element: Pick<TElement, "data">): TStrokePoint[] {
   if (element.data.type !== "pen") return [];
+  const data = element.data;
 
-  return element.data.points.map((point, index) => ({
+  return data.points.map((point, index) => ({
     x: point[0],
     y: point[1],
-    pressure: element.data.pressures[index] ?? 0.5,
+    pressure: data.pressures[index] ?? 0.5,
   }));
 }
 
