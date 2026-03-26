@@ -130,7 +130,8 @@ export class TextPlugin implements IPlugin {
       wrap: isAttached ? 'word' : 'none',
       draggable: false,
       listening: !isAttached,
-      fill: '#000000',
+      fill: element.style.strokeColor ?? '#000000',
+      opacity: element.style.opacity ?? 1,
     });
 
     node.name(isAttached ? TextPlugin.ATTACHED_TEXT_NAME : TextPlugin.FREE_TEXT_NAME);
@@ -213,6 +214,10 @@ export class TextPlugin implements IPlugin {
       opacity: node.opacity(),
     };
 
+    if (typeof node.fill() === 'string') {
+      style.strokeColor = node.fill() as string;
+    }
+
     const data: TTextData = {
       type: 'text',
       w: node.width() * (absScale.x / layerScaleX),
@@ -267,6 +272,8 @@ export class TextPlugin implements IPlugin {
     node.align(data.textAlign);
     node.verticalAlign(data.verticalAlign);
     node.lineHeight(data.lineHeight);
+    node.opacity(element.style.opacity ?? 1);
+    node.fill(element.style.strokeColor ?? '#000000');
     setNodeZIndex(node, element.zIndex);
     node.scaleX(1);
     node.scaleY(1);

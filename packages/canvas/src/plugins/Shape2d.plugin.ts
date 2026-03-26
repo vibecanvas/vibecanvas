@@ -617,6 +617,9 @@ export class Shape2dPlugin implements IPlugin {
       width: data.w,
       height: data.h,
       fill: element.style.backgroundColor,
+      stroke: element.style.strokeColor,
+      strokeWidth: element.style.strokeWidth,
+      opacity: element.style.opacity,
       draggable: false,
     });
 
