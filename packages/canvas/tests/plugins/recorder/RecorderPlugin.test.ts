@@ -10,7 +10,7 @@ describe("RecorderPlugin", () => {
     vi.restoreAllMocks();
   });
 
-  test("mounts recorder UI, defaults to reduced events, and captures filtered events plus CRDT ops", async () => {
+  test("mounts minimized trigger, expands on demand, and captures filtered events plus CRDT ops", async () => {
     let context: IPluginContext | null = null;
     let savedText = "";
     let dragNode: Konva.Rect | null = null;
@@ -43,21 +43,33 @@ describe("RecorderPlugin", () => {
     }
     const pluginContext: IPluginContext = context;
 
-    const recorder = Array.from(document.querySelectorAll("div")).find((node) => node.textContent?.includes("Recorder"));
-    expect(recorder).toBeTruthy();
-    const readPanelText = () => recorder?.textContent?.replace(/\s+/g, "") ?? "";
+    const recorderTrigger = document.querySelector('button[aria-label="Toggle recorder panel"]') as HTMLButtonElement | null;
+    expect(recorderTrigger).toBeTruthy();
+    expect(recorderTrigger?.textContent?.replace(/\s+/g, "")).toContain("REC");
 
+    const getPanel = () =>
+      Array.from(document.querySelectorAll("div")).find(
+        (node) => node.textContent?.includes("Recorder") && node.textContent?.includes("Reduced events"),
+      ) as HTMLDivElement | undefined;
+
+    expect(getPanel()).toBeUndefined();
+
+    recorderTrigger?.click();
+    await Promise.resolve();
+
+    expect(getPanel()).toBeTruthy();
+
+    const readPanelText = () => getPanel()?.textContent?.replace(/\s+/g, "") ?? "";
     const getButton = (label: string) =>
-      Array.from(recorder!.querySelectorAll("button")).find((button) => button.textContent === label) as HTMLButtonElement | undefined;
+      Array.from(getPanel()!.querySelectorAll("button")).find((button) => button.textContent === label) as HTMLButtonElement | undefined;
+    const getReducedToggle = () => getPanel()?.querySelector('input[type="checkbox"]') as HTMLInputElement | null;
 
     const startButton = getButton("Start");
-    const stopButton = getButton("Stop");
     const clearButton = getButton("Clear");
     const exportButton = getButton("Export");
-    const reducedToggle = recorder?.querySelector('input[type="checkbox"]') as HTMLInputElement | null;
+    const reducedToggle = getReducedToggle();
 
     expect(startButton).toBeTruthy();
-    expect(stopButton).toBeTruthy();
     expect(clearButton).toBeTruthy();
     expect(exportButton).toBeTruthy();
     expect(reducedToggle).toBeTruthy();
@@ -65,7 +77,17 @@ describe("RecorderPlugin", () => {
     expect(readPanelText()).toContain("RecorderIDLE");
     expect(exportButton?.disabled).toBe(true);
 
-    startButton?.click();
+    recorderTrigger?.click();
+    await Promise.resolve();
+    expect(getPanel()).toBeUndefined();
+
+    recorderTrigger?.click();
+    await Promise.resolve();
+
+    expect(getPanel()).toBeTruthy();
+
+    getButton("Start")?.click();
+    await Promise.resolve();
     expect(readPanelText()).toContain("RecorderREC");
 
     const registerPointer = (type: string, x = 200, y = 150) => {
@@ -93,8 +115,8 @@ describe("RecorderPlugin", () => {
 
     expect(readPanelText()).toContain("Steps3CRDTOps0");
 
-    reducedToggle!.click();
-    expect(reducedToggle?.checked).toBe(false);
+    getReducedToggle()!.click();
+    expect(getReducedToggle()?.checked).toBe(false);
 
     pluginContext.hooks.pointerMove.call({
       evt: registerPointer("pointermove", 230, 165),
@@ -125,16 +147,19 @@ describe("RecorderPlugin", () => {
     pluginContext.crdt.deleteById({ groupIds: ["missing-group"] });
 
     expect(readPanelText()).toContain("Steps8CRDTOps1");
-    expect(exportButton?.disabled).toBe(false);
+    expect(getButton("Export")?.disabled).toBe(false);
 
+    const stopButton = getButton("Stop");
+    expect(stopButton).toBeTruthy();
     stopButton?.click();
+    await Promise.resolve();
     expect(readPanelText()).toContain("RecorderIDLE");
 
     harness.stage.container().dispatchEvent(new KeyboardEvent("keydown", { key: "b" }));
     pluginContext.crdt.deleteById({ groupIds: ["missing-group-2"] });
     expect(readPanelText()).toContain("Steps8CRDTOps1");
 
-    exportButton?.click();
+    getButton("Export")?.click();
     await Promise.resolve();
     await Promise.resolve();
 
@@ -143,10 +168,11 @@ describe("RecorderPlugin", () => {
     expect(savedText.length).toBeGreaterThan(0);
     expect(savedText).toContain('"reducedEvents": false');
 
-    clearButton?.click();
+    getButton("Clear")?.click();
+    await Promise.resolve();
     expect(readPanelText()).toContain("RecorderIDLE");
     expect(readPanelText()).toContain("Steps0CRDTOps0");
-    expect(exportButton?.disabled).toBe(true);
+    expect(getButton("Export")?.disabled).toBe(true);
 
     harness.destroy();
   });

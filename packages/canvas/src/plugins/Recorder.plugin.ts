@@ -1,5 +1,8 @@
 import Konva from "konva";
+import { createComponent, createSignal, type Accessor, type Setter } from "solid-js";
+import { render } from "solid-js/web";
 import type { TCanvasDoc } from "@vibecanvas/shell/automerge/index";
+import { CanvasRecorder } from "../components/CanvasRecorder";
 import type { IPlugin, IPluginContext, TMouseEvent, TPointerEvent, TWheelEvent } from "./interface";
 
 const REDUCED_EVENTS = true;
@@ -67,19 +70,6 @@ type TRecording = {
   reducedEvents: boolean;
   steps: TStep[];
   crdtOps: TCrdtOp[];
-};
-
-type TRecorderDom = {
-  mount: HTMLDivElement;
-  indicator: HTMLDivElement;
-  status: HTMLDivElement;
-  steps: HTMLSpanElement;
-  ops: HTMLSpanElement;
-  startButton: HTMLButtonElement;
-  stopButton: HTMLButtonElement;
-  clearButton: HTMLButtonElement;
-  exportButton: HTMLButtonElement;
-  reducedToggle: HTMLInputElement;
 };
 
 function cloneValue<T>(value: T): T {
@@ -168,86 +158,50 @@ async function saveJsonFile(fileName: string, content: string) {
   }
 }
 
-function createButton(label: string) {
-  const button = document.createElement("button");
-  button.type = "button";
-  button.textContent = label;
-  button.className = "border border-border bg-card px-2 py-1 text-[11px] font-mono text-foreground transition-colors hover:bg-stone-200 dark:hover:bg-stone-800";
-  return button;
-}
+function mountSolidComponent(
+  context: IPluginContext,
+  open: Accessor<boolean>,
+  setOpen: (open: boolean) => void,
+  recording: Accessor<boolean>,
+  stepCount: Accessor<number>,
+  opCount: Accessor<number>,
+  reducedEvents: Accessor<boolean>,
+  setReducedEvents: (value: boolean) => void,
+  canExport: Accessor<boolean>,
+  actions: {
+    start: () => void;
+    stop: () => void;
+    clear: () => void;
+    export: () => void;
+  },
+) {
+  const mountElement = document.createElement("div");
+  mountElement.className = "absolute inset-0 pointer-events-none";
+  context.stage.container().appendChild(mountElement);
 
-function createRecorderDom(): TRecorderDom {
-  const mount = document.createElement("div");
-  mount.className = "absolute bottom-3 right-16 pointer-events-none z-50";
+  const disposeRender = render(
+    () =>
+      createComponent(CanvasRecorder, {
+        open,
+        onOpenChange: setOpen,
+        recording,
+        stepCount,
+        opCount,
+        reducedEvents,
+        onReducedEventsChange: setReducedEvents,
+        canExport,
+        onStart: actions.start,
+        onStop: actions.stop,
+        onClear: actions.clear,
+        onExport: actions.export,
+      }),
+    mountElement,
+  );
 
-  const panel = document.createElement("div");
-  panel.className = "pointer-events-auto min-w-[220px] border border-border bg-card/95 p-3 text-foreground shadow-md backdrop-blur";
-
-  const header = document.createElement("div");
-  header.className = "flex items-center justify-between gap-3 border-b border-border pb-2";
-
-  const titleWrap = document.createElement("div");
-  const title = document.createElement("div");
-  title.className = "font-display text-sm leading-none";
-  title.textContent = "Recorder";
-  const status = document.createElement("div");
-  status.className = "mt-1 text-[10px] uppercase tracking-[0.2em] text-muted-foreground";
-  titleWrap.append(title, status);
-
-  const indicator = document.createElement("div");
-  indicator.className = "flex h-3 w-3 items-center justify-center border border-border bg-stone-300";
-
-  header.append(titleWrap, indicator);
-
-  const metrics = document.createElement("div");
-  metrics.className = "mt-2 grid grid-cols-2 gap-x-3 gap-y-1 text-[11px] text-muted-foreground";
-  const stepsLabel = document.createElement("span");
-  stepsLabel.textContent = "Steps";
-  const steps = document.createElement("span");
-  steps.className = "text-right font-mono text-foreground";
-  const opsLabel = document.createElement("span");
-  opsLabel.textContent = "CRDT Ops";
-  const ops = document.createElement("span");
-  ops.className = "text-right font-mono text-foreground";
-  metrics.append(stepsLabel, steps, opsLabel, ops);
-
-  const actions = document.createElement("div");
-  actions.className = "mt-3 flex flex-wrap gap-2";
-  const startButton = createButton("Start");
-  const stopButton = createButton("Stop");
-  stopButton.className = "border border-border bg-red-500 px-2 py-1 text-[11px] font-mono text-white transition-colors hover:bg-red-600";
-  const clearButton = createButton("Clear");
-  const exportButton = createButton("Export");
-  actions.append(startButton, stopButton, clearButton, exportButton);
-
-  const options = document.createElement("label");
-  options.className = "mt-3 flex items-center justify-between gap-3 border-t border-border pt-3 text-[11px] text-muted-foreground";
-  const optionsText = document.createElement("span");
-  optionsText.textContent = "Reduced events";
-  const reducedToggle = document.createElement("input");
-  reducedToggle.type = "checkbox";
-  reducedToggle.className = "h-3.5 w-3.5 accent-foreground";
-  options.append(optionsText, reducedToggle);
-
-  panel.append(header, metrics, actions, options);
-  mount.append(panel);
-
-  return {
-    mount,
-    indicator,
-    status,
-    steps,
-    ops,
-    startButton,
-    stopButton,
-    clearButton,
-    exportButton,
-    reducedToggle,
-  };
+  return { mountElement, disposeRender };
 }
 
 export class RecorderPlugin implements IPlugin {
-  #dom: TRecorderDom | null = null;
   #recording = false;
   #reducedEvents = REDUCED_EVENTS;
   #pointerPressed = false;
@@ -261,36 +215,69 @@ export class RecorderPlugin implements IPlugin {
   #restoreCrdtPatch: (() => void) | null = null;
   #restoreCrdtDelete: (() => void) | null = null;
   #restoreNodeFire: (() => void) | null = null;
+  #open: Accessor<boolean>;
+  #setOpen: Setter<boolean>;
+  #recordingSignal: Accessor<boolean>;
+  #setRecordingSignal: Setter<boolean>;
+  #stepCount: Accessor<number>;
+  #setStepCount: Setter<number>;
+  #opCount: Accessor<number>;
+  #setOpCount: Setter<number>;
+  #reducedEventsSignal: Accessor<boolean>;
+  #setReducedEventsSignal: Setter<boolean>;
+  #canExport: Accessor<boolean>;
+  #setCanExport: Setter<boolean>;
+  #mountElement: HTMLDivElement | null = null;
+  #disposeRender: (() => void) | null = null;
 
-  apply(context: IPluginContext): void {
-    this.mount(context);
-    this.captureHooks(context);
-    this.captureCrdt(context);
+  constructor() {
+    const [open, setOpen] = createSignal(false);
+    const [recordingSignal, setRecordingSignal] = createSignal(false);
+    const [stepCount, setStepCount] = createSignal(0);
+    const [opCount, setOpCount] = createSignal(0);
+    const [reducedEventsSignal, setReducedEventsSignal] = createSignal(REDUCED_EVENTS);
+    const [canExport, setCanExport] = createSignal(false);
+
+    this.#open = open;
+    this.#setOpen = setOpen;
+    this.#recordingSignal = recordingSignal;
+    this.#setRecordingSignal = setRecordingSignal;
+    this.#stepCount = stepCount;
+    this.#setStepCount = setStepCount;
+    this.#opCount = opCount;
+    this.#setOpCount = setOpCount;
+    this.#reducedEventsSignal = reducedEventsSignal;
+    this.#setReducedEventsSignal = setReducedEventsSignal;
+    this.#canExport = canExport;
+    this.#setCanExport = setCanExport;
   }
 
-  private mount(context: IPluginContext) {
+  apply(context: IPluginContext): void {
     context.hooks.init.tap(() => {
-      const dom = createRecorderDom();
-      context.stage.container().appendChild(dom.mount);
+      const { mountElement, disposeRender } = mountSolidComponent(
+        context,
+        this.#open,
+        this.#setOpen,
+        this.#recordingSignal,
+        this.#stepCount,
+        this.#opCount,
+        this.#reducedEventsSignal,
+        (value) => {
+          this.#reducedEvents = value;
+          this.#recordingData.reducedEvents = value;
+          this.#setReducedEventsSignal(value);
+        },
+        this.#canExport,
+        {
+          start: () => this.startRecording(context),
+          stop: () => this.stopRecording(),
+          clear: () => this.clearRecording(),
+          export: () => void this.exportRecording(),
+        },
+      );
 
-      dom.startButton.addEventListener("click", () => {
-        this.startRecording(context);
-      });
-      dom.stopButton.addEventListener("click", () => {
-        this.stopRecording();
-      });
-      dom.clearButton.addEventListener("click", () => {
-        this.clearRecording();
-      });
-      dom.exportButton.addEventListener("click", () => {
-        this.exportRecording();
-      });
-      dom.reducedToggle.addEventListener("change", () => {
-        this.#reducedEvents = dom.reducedToggle.checked;
-        this.#recordingData.reducedEvents = this.#reducedEvents;
-      });
-
-      this.#dom = dom;
+      this.#mountElement = mountElement;
+      this.#disposeRender = disposeRender;
       this.syncUi();
     });
 
@@ -301,9 +288,14 @@ export class RecorderPlugin implements IPlugin {
       this.#restoreCrdtPatch = null;
       this.#restoreCrdtDelete = null;
       this.#restoreNodeFire = null;
-      this.#dom?.mount.remove();
-      this.#dom = null;
+      this.#disposeRender?.();
+      this.#mountElement?.remove();
+      this.#disposeRender = null;
+      this.#mountElement = null;
     });
+
+    this.captureHooks(context);
+    this.captureCrdt(context);
   }
 
   private captureHooks(context: IPluginContext) {
@@ -513,17 +505,10 @@ export class RecorderPlugin implements IPlugin {
   }
 
   private syncUi() {
-    if (!this.#dom) return;
-
-    this.#dom.status.textContent = this.#recording ? "REC" : "IDLE";
-    this.#dom.steps.textContent = String(this.#recordingData.steps.length);
-    this.#dom.ops.textContent = String(this.#recordingData.crdtOps.length);
-    this.#dom.reducedToggle.checked = this.#reducedEvents;
-    this.#dom.indicator.className = this.#recording
-      ? "flex h-3 w-3 items-center justify-center border border-border bg-red-500"
-      : "flex h-3 w-3 items-center justify-center border border-border bg-stone-300";
-    this.#dom.startButton.style.display = this.#recording ? "none" : "inline-flex";
-    this.#dom.stopButton.style.display = this.#recording ? "inline-flex" : "none";
-    this.#dom.exportButton.disabled = this.#recordingData.steps.length === 0 && this.#recordingData.crdtOps.length === 0;
+    this.#setRecordingSignal(this.#recording);
+    this.#setStepCount(this.#recordingData.steps.length);
+    this.#setOpCount(this.#recordingData.crdtOps.length);
+    this.#setReducedEventsSignal(this.#reducedEvents);
+    this.#setCanExport(this.#recordingData.steps.length > 0 || this.#recordingData.crdtOps.length > 0);
   }
 }
