@@ -1,19 +1,21 @@
-import type { TElement, TElementStyle } from "@vibecanvas/shell/automerge/index";
+import type { TArrowData, TElement, TElementStyle, TLineData } from "@vibecanvas/shell/automerge/index";
 import Konva from "konva";
 import { createComponent, createMemo, createSignal } from "solid-js";
 import { render } from "solid-js/web";
 import { SelectionStyleMenu, type TSelectionStyleMenuSections, type TSelectionStyleMenuValues } from "../components/SelectionStyleMenu";
-import type { TFontFamily } from "../components/SelectionStyleMenu/types";
+import type { TCapStyle, TFontFamily, TLineType } from "../components/SelectionStyleMenu/types";
 import type { IPlugin, IPluginContext } from "./interface";
+import { Shape1dPlugin } from "./Shape1d.plugin";
 import { TextPlugin } from "./Text.plugin";
 import { TransformPlugin } from "./Transform.plugin";
 
 const SHAPE_TYPES = new Set(["rect", "ellipse", "diamond"]);
 const PEN_TYPES = new Set(["pen"]);
 const TEXT_TYPES = new Set(["text"]);
-const UNSUPPORTED_TYPES = new Set(["chat", "filetree", "terminal", "file", "image", "line", "arrow"]);
+const LINE_TYPES = new Set(["line", "arrow"]);
+const UNSUPPORTED_TYPES = new Set(["chat", "filetree", "terminal", "file", "image"]);
 
-type TStylableProperty = "fill" | "stroke" | "strokeWidth" | "opacity" | "fontFamily";
+type TStylableProperty = "fill" | "stroke" | "strokeWidth" | "opacity" | "fontFamily" | "lineType" | "startCap" | "endCap";
 
 type TResolvedSelection = {
   elements: TElement[];
@@ -23,10 +25,13 @@ function hasPropertySupport(element: TElement, property: TStylableProperty) {
   const type = element.data.type;
 
   if (property === "fill") return SHAPE_TYPES.has(type);
-  if (property === "stroke") return SHAPE_TYPES.has(type) || PEN_TYPES.has(type) || TEXT_TYPES.has(type);
-  if (property === "strokeWidth") return SHAPE_TYPES.has(type) || PEN_TYPES.has(type);
+  if (property === "stroke") return SHAPE_TYPES.has(type) || PEN_TYPES.has(type) || TEXT_TYPES.has(type) || LINE_TYPES.has(type);
+  if (property === "strokeWidth") return SHAPE_TYPES.has(type) || PEN_TYPES.has(type) || LINE_TYPES.has(type);
   if (property === "opacity") return !UNSUPPORTED_TYPES.has(type);
   if (property === "fontFamily") return TEXT_TYPES.has(type);
+  if (property === "lineType") return LINE_TYPES.has(type);
+  if (property === "startCap") return type === "arrow";
+  if (property === "endCap") return type === "arrow";
 
   return false;
 }
@@ -40,6 +45,14 @@ function cloneElementWithStyle(element: TElement, style: Partial<TElementStyle>)
       ...style,
     },
   };
+}
+
+function getStrokeColorKey(element: TElement): "strokeColor" | "backgroundColor" {
+  if ((element.data.type === "pen" || LINE_TYPES.has(element.data.type)) && typeof element.style.strokeColor !== "string" && typeof element.style.backgroundColor === "string") {
+    return "backgroundColor";
+  }
+
+  return "strokeColor";
 }
 
 export class SelectionStyleMenuPlugin implements IPlugin {
@@ -60,11 +73,11 @@ export class SelectionStyleMenuPlugin implements IPlugin {
           return this.getResolvedSelection(context);
         });
         const sections = createMemo(() => this.getVisibleSections(resolved().elements));
-        const visible = createMemo(() => {
-          if (context.state.editingTextId !== null) return false;
-          const next = sections();
-          return next.showFillPicker || next.showStrokeColorPicker || next.showStrokeWidthPicker || next.showTextPickers || next.showOpacityPicker;
-        });
+          const visible = createMemo(() => {
+            if (context.state.editingTextId !== null) return false;
+            const next = sections();
+            return next.showFillPicker || next.showStrokeColorPicker || next.showStrokeWidthPicker || next.showTextPickers || next.showOpacityPicker || next.showLineTypePicker || next.showStartCapPicker || next.showEndCapPicker;
+          });
         const values = createMemo(() => this.getCurrentValues(resolved().elements));
 
         return createComponent(SelectionStyleMenu, {
@@ -77,6 +90,9 @@ export class SelectionStyleMenuPlugin implements IPlugin {
           onStrokeWidthChange: (width) => this.applyStyleChange(context, resolved(), "strokeWidth", width),
           onOpacityChange: (opacity) => this.applyStyleChange(context, resolved(), "opacity", opacity),
           onFontFamilyChange: (fontFamily) => this.applyStyleChange(context, resolved(), "fontFamily", fontFamily),
+          onLineTypeChange: (lineType) => this.applyStyleChange(context, resolved(), "lineType", lineType),
+          onStartCapChange: (capStyle) => this.applyStyleChange(context, resolved(), "startCap", capStyle),
+          onEndCapChange: (capStyle) => this.applyStyleChange(context, resolved(), "endCap", capStyle),
         });
       }, mountElement);
     });
@@ -140,6 +156,9 @@ export class SelectionStyleMenuPlugin implements IPlugin {
           showStrokeWidthPicker: false,
           showTextPickers: false,
           showOpacityPicker: false,
+          showLineTypePicker: false,
+          showStartCapPicker: false,
+          showEndCapPicker: false,
         };
       }
 
@@ -149,6 +168,9 @@ export class SelectionStyleMenuPlugin implements IPlugin {
         showStrokeWidthPicker: elements.some((element) => hasPropertySupport(element, "strokeWidth")),
         showTextPickers: elements.some((element) => hasPropertySupport(element, "fontFamily")),
         showOpacityPicker: elements.some((element) => hasPropertySupport(element, "opacity")),
+        showLineTypePicker: elements.some((element) => hasPropertySupport(element, "lineType")),
+        showStartCapPicker: elements.some((element) => hasPropertySupport(element, "startCap")),
+        showEndCapPicker: elements.some((element) => hasPropertySupport(element, "endCap")),
       };
   }
 
@@ -158,6 +180,8 @@ export class SelectionStyleMenuPlugin implements IPlugin {
     const width = elements.find((element) => hasPropertySupport(element, "strokeWidth"));
     const opacity = elements.find((element) => hasPropertySupport(element, "opacity"));
     const text = elements.find((element) => hasPropertySupport(element, "fontFamily"));
+    const line = elements.find((element) => hasPropertySupport(element, "lineType"));
+    const arrow = elements.find((element) => element.data.type === "arrow");
 
     return {
       fillColor: fill?.style.backgroundColor,
@@ -165,6 +189,9 @@ export class SelectionStyleMenuPlugin implements IPlugin {
       strokeWidth: width?.style.strokeWidth,
       opacity: opacity?.style.opacity,
       fontFamily: text?.data.type === "text" ? text.data.fontFamily as TFontFamily : undefined,
+      lineType: line?.data.type === "line" || line?.data.type === "arrow" ? line.data.lineType as TLineType : undefined,
+      startCap: arrow?.data.type === "arrow" ? arrow.data.startCap as TCapStyle : undefined,
+      endCap: arrow?.data.type === "arrow" ? arrow.data.endCap as TCapStyle : undefined,
     };
   }
 
@@ -184,10 +211,8 @@ export class SelectionStyleMenuPlugin implements IPlugin {
       }
 
       if (property === "stroke" && typeof value === "string") {
-        if (element.data.type === "pen") {
-          const colorKey = typeof element.style.strokeColor === "string" && typeof element.style.backgroundColor !== "string"
-            ? "strokeColor"
-            : "backgroundColor";
+        if (element.data.type === "pen" || LINE_TYPES.has(element.data.type)) {
+          const colorKey = getStrokeColorKey(element);
           return [cloneElementWithStyle(element, { [colorKey]: value })];
         }
 
@@ -224,6 +249,39 @@ export class SelectionStyleMenuPlugin implements IPlugin {
         }];
       }
 
+      if (property === "lineType" && typeof value === "string" && LINE_TYPES.has(element.data.type)) {
+        return [{
+          ...structuredClone(element),
+          updatedAt: Date.now(),
+          data: {
+            ...structuredClone(element.data),
+            lineType: value as TLineType,
+          } as TLineData | TArrowData,
+        }];
+      }
+
+      if (property === "startCap" && typeof value === "string" && element.data.type === "arrow") {
+        return [{
+          ...structuredClone(element),
+          updatedAt: Date.now(),
+          data: {
+            ...structuredClone(element.data),
+            startCap: value as TCapStyle,
+          },
+        }];
+      }
+
+      if (property === "endCap" && typeof value === "string" && element.data.type === "arrow") {
+        return [{
+          ...structuredClone(element),
+          updatedAt: Date.now(),
+          data: {
+            ...structuredClone(element.data),
+            endCap: value as TCapStyle,
+          },
+        }];
+      }
+
       return [];
     });
 
@@ -234,6 +292,10 @@ export class SelectionStyleMenuPlugin implements IPlugin {
     const beforeById = new Map(beforeElements.map((element) => [element.id, element]));
     supplementalBeforeElements.forEach((element, id) => beforeById.set(id, element));
     dedupedAfterElements.forEach((element) => context.capabilities.updateShapeFromTElement?.(element));
+    if (context.state.editingShape1dId !== null) {
+      const editingNode = Shape1dPlugin.findShape1dNodeById(context, context.state.editingShape1dId);
+      editingNode?.getLayer()?.batchDraw();
+    }
     context.crdt.patch({ elements: dedupedAfterElements, groups: [] });
     this.#version[1]((value) => value + 1);
 

@@ -1,5 +1,7 @@
 import { describe, expect, test, beforeEach } from "vitest";
 import { SelectionStyleMenuPlugin } from "../../../src/plugins/SelectionStyleMenu.plugin";
+import { SelectPlugin } from "../../../src/plugins/Select.plugin";
+import { Shape1dPlugin } from "../../../src/plugins/Shape1d.plugin";
 import { Shape2dPlugin } from "../../../src/plugins/Shape2d.plugin";
 import { TextPlugin } from "../../../src/plugins/Text.plugin";
 import { createCanvasTestHarness, flushCanvasEffects } from "../../test-setup";
@@ -230,4 +232,158 @@ describe("SelectionStyleMenuPlugin", () => {
     expect(text?.fill()).toBe("#2f9e44");
     harness.destroy();
   });
+
+  test("shows line controls for a selected arrow", async () => {
+    const harness = await createCanvasTestHarness({
+      plugins: [new SelectionStyleMenuPlugin(), new Shape1dPlugin(), new Shape2dPlugin(), new TextPlugin()],
+      initializeScene(context) {
+        const arrow = Shape1dPlugin.createShapeFromElement({
+          id: "arrow-1",
+          x: 80,
+          y: 60,
+          rotation: 0,
+          bindings: [],
+          locked: false,
+          parentGroupId: null,
+          zIndex: "a0",
+          createdAt: 1,
+          updatedAt: 1,
+          style: {
+            strokeColor: "#111111",
+            opacity: 0.9,
+            strokeWidth: 4,
+          },
+          data: {
+            type: "arrow",
+            lineType: "curved",
+            points: [[0, 0], [40, 30], [120, 20]],
+            startBinding: null,
+            endBinding: null,
+            startCap: "dot",
+            endCap: "arrow",
+          },
+        });
+        Shape1dPlugin.setupShapeListeners(context, arrow);
+        arrow.draggable(true);
+        context.staticForegroundLayer.add(arrow);
+        context.setState("selection", [arrow]);
+      },
+    });
+
+    await flushCanvasEffects();
+    const text = harness.stage.container().textContent ?? "";
+    expect(text).toContain("COLOR");
+    expect(text).toContain("WIDTH");
+    expect(text).toContain("CURVE");
+    expect(text).toContain("START");
+    expect(text).toContain("END");
+    expect(text).toContain("OPACITY");
+    expect(text).not.toContain("FILL");
+    harness.destroy();
+  });
+
+  test("clicking curved in style menu updates selected arrow lineType", async () => {
+    const harness = await createCanvasTestHarness({
+      plugins: [new SelectionStyleMenuPlugin(), new Shape1dPlugin(), new Shape2dPlugin(), new TextPlugin()],
+      initializeScene(context) {
+        const arrow = Shape1dPlugin.createShapeFromElement({
+          id: "arrow-curve",
+          x: 80,
+          y: 60,
+          rotation: 0,
+          bindings: [],
+          locked: false,
+          parentGroupId: null,
+          zIndex: "a0",
+          createdAt: 1,
+          updatedAt: 1,
+          style: {
+            strokeColor: "#111111",
+            opacity: 0.9,
+            strokeWidth: 4,
+          },
+          data: {
+            type: "arrow",
+            lineType: "straight",
+            points: [[0, 0], [120, 20]],
+            startBinding: null,
+            endBinding: null,
+            startCap: "none",
+            endCap: "arrow",
+          },
+        });
+        Shape1dPlugin.setupShapeListeners(context, arrow);
+        arrow.draggable(true);
+        context.staticForegroundLayer.add(arrow);
+        context.setState("selection", [arrow]);
+      },
+    });
+
+    await flushCanvasEffects();
+    const curvedButton = harness.stage.container().querySelector('button[title="Curved"]');
+    expect(curvedButton).toBeTruthy();
+    curvedButton?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    await flushCanvasEffects();
+
+    const arrow = harness.staticForegroundLayer.findOne("#arrow-curve");
+    const roundTrip = arrow ? Shape1dPlugin.toTElement(arrow as any) : null;
+    expect(roundTrip?.data.type).toBe("arrow");
+    if (roundTrip?.data.type === "arrow") {
+      expect(roundTrip.data.lineType).toBe("curved");
+    }
+
+    harness.destroy();
+  });
+
+  test("shape1d style menu stays visible while editing points", async () => {
+    const harness = await createCanvasTestHarness({
+      plugins: [new SelectPlugin(), new SelectionStyleMenuPlugin(), new Shape1dPlugin(), new Shape2dPlugin(), new TextPlugin()],
+      initializeScene(context) {
+        const line = Shape1dPlugin.createShapeFromElement({
+          id: "line-edit",
+          x: 80,
+          y: 60,
+          rotation: 0,
+          bindings: [],
+          locked: false,
+          parentGroupId: null,
+          zIndex: "a0",
+          createdAt: 1,
+          updatedAt: 1,
+          style: {
+            strokeColor: "#111111",
+            opacity: 0.9,
+            strokeWidth: 4,
+          },
+          data: {
+            type: "line",
+            lineType: "straight",
+            points: [[0, 0], [120, 20]],
+            startBinding: null,
+            endBinding: null,
+          },
+        });
+        Shape1dPlugin.setupShapeListeners(context, line);
+        line.draggable(true);
+        context.staticForegroundLayer.add(line);
+        context.setState("selection", [line]);
+      },
+    });
+
+    await flushCanvasEffects();
+    const line = harness.staticForegroundLayer.findOne("#line-edit");
+    line?.fire("pointerdblclick", {
+      target: line,
+      currentTarget: line,
+      evt: new PointerEvent("pointerdblclick", { bubbles: true }),
+    });
+    await flushCanvasEffects();
+
+    const text = harness.stage.container().textContent ?? "";
+    expect(text).toContain("CURVE");
+    expect(text).toContain("COLOR");
+
+    harness.destroy();
+  });
+
 });

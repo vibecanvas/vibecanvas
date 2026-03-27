@@ -1,9 +1,11 @@
 import { Show, createMemo } from "solid-js";
+import { CapPicker } from "./CapPicker";
 import { ColorPicker } from "./ColorPicker";
 import { FontFamilyPicker } from "./FontFamilyPicker";
+import { LineTypePicker } from "./LineTypePicker";
 import { OpacitySlider } from "./OpacitySlider";
 import { StrokeWidthPicker } from "./StrokeWidthPicker";
-import type { TFontFamily } from "./types";
+import type { TCapStyle, TFontFamily, TLineType } from "./types";
 
 export type TSelectionStyleMenuSections = {
   showFillPicker: boolean;
@@ -11,6 +13,9 @@ export type TSelectionStyleMenuSections = {
   showStrokeWidthPicker: boolean;
   showTextPickers: boolean;
   showOpacityPicker: boolean;
+  showLineTypePicker: boolean;
+  showStartCapPicker: boolean;
+  showEndCapPicker: boolean;
 };
 
 export type TSelectionStyleMenuValues = {
@@ -19,6 +24,9 @@ export type TSelectionStyleMenuValues = {
   strokeWidth?: number;
   opacity?: number;
   fontFamily?: TFontFamily;
+  lineType?: TLineType;
+  startCap?: TCapStyle;
+  endCap?: TCapStyle;
 };
 
 export function SelectionStyleMenu(props: {
@@ -31,6 +39,9 @@ export function SelectionStyleMenu(props: {
   onStrokeWidthChange: (width: number) => void;
   onOpacityChange: (opacity: number) => void;
   onFontFamilyChange: (fontFamily: TFontFamily) => void;
+  onLineTypeChange: (lineType: TLineType) => void;
+  onStartCapChange: (capStyle: TCapStyle) => void;
+  onEndCapChange: (capStyle: TCapStyle) => void;
 }) {
   const shouldShow = createMemo(() => props.visible());
 
@@ -79,6 +90,38 @@ export function SelectionStyleMenu(props: {
               <FontFamilyPicker
                 value={props.values().fontFamily}
                 onChange={props.onFontFamilyChange}
+              />
+            </div>
+          </Show>
+
+          <Show when={props.sections().showLineTypePicker}>
+            <div class="flex flex-col gap-1">
+              <span class="text-[10px] text-muted-foreground font-mono">CURVE</span>
+              <LineTypePicker
+                value={props.values().lineType}
+                onChange={props.onLineTypeChange}
+              />
+            </div>
+          </Show>
+
+          <Show when={props.sections().showStartCapPicker}>
+            <div class="flex flex-col gap-1">
+              <span class="text-[10px] text-muted-foreground font-mono">START</span>
+              <CapPicker
+                label="START"
+                value={props.values().startCap}
+                onChange={props.onStartCapChange}
+              />
+            </div>
+          </Show>
+
+          <Show when={props.sections().showEndCapPicker}>
+            <div class="flex flex-col gap-1">
+              <span class="text-[10px] text-muted-foreground font-mono">END</span>
+              <CapPicker
+                label="END"
+                value={props.values().endCap}
+                onChange={props.onEndCapChange}
               />
             </div>
           </Show>

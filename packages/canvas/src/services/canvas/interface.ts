@@ -22,4 +22,5 @@ export interface IState {
   theme: Theme;
   selection: (Group | Shape<ShapeConfig>)[];
   editingTextId: string | null;
+  editingShape1dId: string | null;
 }

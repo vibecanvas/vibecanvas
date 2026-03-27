@@ -3,6 +3,7 @@ import { createEffect } from "solid-js";
 import type { IPlugin, IPluginContext } from "./interface";
 import { TElement } from "@vibecanvas/shell/automerge/index";
 import { PenPlugin } from "./Pen.plugin";
+import { Shape1dPlugin } from "./Shape1d.plugin";
 
 /**
  * Handles rotation and resizing
@@ -155,7 +156,8 @@ export class TransformPlugin implements IPlugin {
   private createReaction(context: IPluginContext) {
     createEffect(() => {
       const editingTextId = context.state.editingTextId
-      if (editingTextId !== null) {
+      const editingShape1dId = context.state.editingShape1dId
+      if (editingTextId !== null || editingShape1dId !== null) {
         this.#transformer.setNodes([])
         this.#transformer.update()
         return
@@ -178,11 +180,13 @@ export class TransformPlugin implements IPlugin {
         filteredSelection.every(n => n instanceof Konva.Text)
       const hasPenOnly = filteredSelection.length > 0 &&
         filteredSelection.every(n => PenPlugin.isPenNode(n))
+      const hasShape1dOnly = filteredSelection.length > 0 &&
+        filteredSelection.every(n => Shape1dPlugin.isShape1dNode(n))
       // Multi-select must use corner-only anchors with keepRatio to prevent skewing.
       // Single-shape selections keep free resize (all 8 anchors, no keepRatio),
-      // except for groups, text-only selections, and pen paths which always lock ratio.
+      // except for groups, text-only selections, and point-based 1d paths which always lock ratio.
       const isMultiSelect = filteredSelection.length > 1
-      const useCornerAnchors = isSingleGroupSelection || hasTextOnly || hasPenOnly || isMultiSelect
+      const useCornerAnchors = isSingleGroupSelection || hasTextOnly || hasPenOnly || hasShape1dOnly || isMultiSelect
       this.#transformer.keepRatio(useCornerAnchors)
       this.#transformer.enabledAnchors(
         useCornerAnchors

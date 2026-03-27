@@ -196,9 +196,10 @@ export class Shape2dPlugin implements IPlugin {
         return [node, attachedText]
       }
 
+    const previousUpdate = context.capabilities.updateShapeFromTElement
     context.capabilities.updateShapeFromTElement = (element) => {
       if (!Shape2dPlugin.supportedTypes.has(element.data.type)) {
-        return currentCreateShapeFromTElement?.(element) || null
+        return previousUpdate?.(element) || null
       } else {
         const shape = context.staticForegroundLayer.findOne((node: Konva.Node) => node.id() === element.id) as Konva.Shape
         if (shape) {

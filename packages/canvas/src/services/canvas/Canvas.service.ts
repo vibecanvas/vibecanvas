@@ -8,7 +8,7 @@ import type { TCustomEvent } from "../../custom-events";
 import {
   CameraControlPlugin, ContextMenuPlugin, EventListenerPlugin, ExampleScenePlugin,
   GridPlugin, GroupPlugin, HelpPlugin, HistoryControlPlugin, ImagePlugin, PenPlugin, RecorderPlugin, RenderOrderPlugin, SceneHydratorPlugin,
-  SelectPlugin, SelectionStyleMenuPlugin, Shape2dPlugin, TextPlugin, ToolbarPlugin, TransformPlugin, VisualDebugPlugin
+  SelectPlugin, SelectionStyleMenuPlugin, Shape1dPlugin, Shape2dPlugin, TextPlugin, ToolbarPlugin, TransformPlugin, VisualDebugPlugin
 } from "../../plugins";
 import type { IPlugin, IPluginContext, TMouseEvent, TPointerEvent, TWheelEvent } from "../../plugins/interface";
 import { AsyncParallelHook, SyncExitHook, SyncHook } from "../../tapable";
@@ -35,6 +35,7 @@ export function defaultPlugins(
     new RenderOrderPlugin(),
     new SelectPlugin(),
     new TransformPlugin(),
+    new Shape1dPlugin(),
     new Shape2dPlugin(),
     new PenPlugin(),
     new TextPlugin(),
@@ -85,6 +86,7 @@ export class CanvasService {
       theme: Theme.LIGHT,
       selection: [] as (Group | Shape<ShapeConfig>)[],
       editingTextId: null as string | null,
+      editingShape1dId: null as string | null,
     });
     this.#state = state;
     this.#setState = setState;

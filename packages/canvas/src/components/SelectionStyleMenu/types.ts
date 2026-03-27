@@ -50,4 +50,18 @@ export const FONT_FAMILIES = [
   { name: "Serif", value: "Georgia, serif" },
 ] as const;
 
+export const LINE_TYPES = [
+  { name: "Straight", value: "straight" },
+  { name: "Curved", value: "curved" },
+] as const;
+
+export const CAP_STYLES = [
+  { name: "None", value: "none" },
+  { name: "Arrow", value: "arrow" },
+  { name: "Dot", value: "dot" },
+  { name: "Diamond", value: "diamond" },
+] as const;
+
 export type TFontFamily = typeof FONT_FAMILIES[number]["value"];
+export type TLineType = typeof LINE_TYPES[number]["value"];
+export type TCapStyle = typeof CAP_STYLES[number]["value"];

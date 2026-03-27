@@ -5,6 +5,7 @@ import { CanvasMode } from "../services/canvas/enum";
 import type { IPlugin, IPluginContext } from "./interface";
 import { startSelectionCloneDrag } from "./clone-drag";
 import { PenPlugin } from "./Pen.plugin";
+import { Shape1dPlugin } from "./Shape1d.plugin";
 import { Shape2dPlugin } from "./Shape2d.plugin";
 import { TextPlugin } from "./Text.plugin";
 import { TElement, TGroup } from "@vibecanvas/shell/automerge/index";
@@ -413,6 +414,8 @@ export class GroupPlugin implements IPlugin {
 
         if (node instanceof Konva.Text) {
           TextPlugin.setupShapeListeners(context, node)
+        } else if (Shape1dPlugin.isShape1dNode(node)) {
+          Shape1dPlugin.setupShapeListeners(context, node)
         } else if (node instanceof Konva.Path) {
           PenPlugin.setupShapeListeners(context, node)
         } else {
