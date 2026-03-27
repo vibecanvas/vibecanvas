@@ -378,15 +378,64 @@ export class GroupPlugin implements IPlugin {
     })
   }
 
+  private static rebuildShape1dCloneChildren(sourceGroup: Konva.Group, cloneGroup: Konva.Group) {
+    const sourceChildren = sourceGroup.getChildren()
+    const cloneChildren = cloneGroup.getChildren().slice()
+
+    sourceChildren.forEach((sourceNode, index) => {
+      const cloneNode = cloneChildren[index]
+      if (!cloneNode) return
+
+      if (sourceNode instanceof Konva.Group && cloneNode instanceof Konva.Group) {
+        GroupPlugin.rebuildShape1dCloneChildren(sourceNode, cloneNode)
+        return
+      }
+
+      if (!Shape1dPlugin.isShape1dNode(sourceNode)) return
+      if (!(cloneNode instanceof Konva.Shape)) return
+      if (Shape1dPlugin.hasRenderableRuntime(cloneNode)) return
+
+      const replacement = Shape1dPlugin.createShapeFromElement(Shape1dPlugin.toTElement(sourceNode))
+      const parent = cloneNode.getParent()
+      if (!(parent instanceof Konva.Group)) return
+
+      // Preserve the clone node's local/group-relative transform from the JSON clone
+      const originalAttrs = cloneNode.getAttrs()
+      const cloneLocalX = cloneNode.x()
+      const cloneLocalY = cloneNode.y()
+      const cloneRotation = cloneNode.rotation()
+      const cloneScaleX = cloneNode.scaleX()
+      const cloneScaleY = cloneNode.scaleY()
+      const cloneIndex = cloneChildren.indexOf(cloneNode)
+
+      cloneNode.destroy()
+      parent.add(replacement)
+      
+      // Set local/group-relative position first
+      replacement.position({ x: cloneLocalX, y: cloneLocalY })
+      replacement.rotation(cloneRotation)
+      replacement.scale({ x: cloneScaleX, y: cloneScaleY })
+      
+      // Set remaining attributes except position/rotation/scale which we already set
+      const { x, y, rotation, scaleX, scaleY, ...remainingAttrs } = originalAttrs
+      replacement.setAttrs({
+        ...remainingAttrs,
+        id: replacement.id(),
+      })
+      replacement.zIndex(cloneIndex)
+    })
+  }
+
   static createPreviewClone(group: Konva.Group) {
     const clone = Konva.Node.create(group.toJSON()) as Konva.Group
+    GroupPlugin.rebuildShape1dCloneChildren(group, clone)
     GroupPlugin.refreshCloneSubtree(clone)
     return clone
   }
 
-  static finalizePreviewClone(context: IPluginContext, clone: Konva.Group) {
+static finalizePreviewClone(context: IPluginContext, clone: Konva.Group, plugin?: GroupPlugin) {
     if (clone.isDragging()) {
-      clone.stopDrag()
+      clone.stopDrag();
     }
 
     clone.moveTo(context.staticForegroundLayer)
@@ -400,7 +449,7 @@ export class GroupPlugin implements IPlugin {
     const elements: TElement[] = []
 
     const registerSubtree = (group: Konva.Group) => {
-      GroupPlugin.setupGroupListenersStatic(context, group)
+      GroupPlugin.setupGroupListenersStatic(context, group, plugin)
       groups.push((context.capabilities.toGroup?.(group) ?? GroupPlugin.toTGroup(group)) as TGroup)
       group.setDraggable(false)
 
@@ -433,17 +482,17 @@ export class GroupPlugin implements IPlugin {
     return clone
   }
 
-  static startSingleCloneDrag(context: IPluginContext, group: Konva.Group) {
+  static startSingleCloneDrag(context: IPluginContext, group: Konva.Group, plugin?: GroupPlugin) {
     const clone = GroupPlugin.createPreviewClone(group)
 
     context.dynamicLayer.add(clone)
-    GroupPlugin.setupGroupListenersStatic(context, clone)
+    GroupPlugin.setupGroupListenersStatic(context, clone, plugin)
     context.setState('selection', [clone])
 
     clone.startDrag()
     const finalizeCloneDrag = () => {
       clone.off('dragend', finalizeCloneDrag)
-      const finalizedClone = GroupPlugin.finalizePreviewClone(context, clone)
+      const finalizedClone = GroupPlugin.finalizePreviewClone(context, clone, plugin)
       context.setState('selection', finalizedClone ? [finalizedClone] : [])
     }
     clone.on('dragend', finalizeCloneDrag)
@@ -530,7 +579,7 @@ export class GroupPlugin implements IPlugin {
   }
 
   private createCloneDrag(context: IPluginContext, group: Konva.Group) {
-    const clone = GroupPlugin.startSingleCloneDrag(context, group)
+    const clone = GroupPlugin.startSingleCloneDrag(context, group, this)
     this.selectGroup(context, clone)
     return clone
   }

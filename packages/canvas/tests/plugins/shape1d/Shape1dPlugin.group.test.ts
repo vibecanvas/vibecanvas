@@ -53,7 +53,7 @@ function createLineOrArrowElement(args: {
   };
 }
 
-function altDragGroup(group: Konva.Group, args: { deltaX: number; deltaY?: number }) {
+function startAltDragGroup(group: Konva.Group) {
   const beforeNodeIds = new Set(
     group.getStage()?.getLayers().flatMap((layer) => layer.getChildren()).map((child) => child._id) ?? [],
   );
@@ -69,6 +69,11 @@ function altDragGroup(group: Konva.Group, args: { deltaX: number; deltaY?: numbe
     .find((child) => !beforeNodeIds.has(child._id) && child instanceof Konva.Group) as Konva.Group | undefined;
 
   if (!previewClone) throw new Error("Expected preview clone after alt-drag start");
+
+  return previewClone;
+}
+
+function finishAltDragGroup(previewClone: Konva.Group, args: { deltaX: number; deltaY?: number }) {
 
   const beforePos = previewClone.absolutePosition();
   previewClone.setAbsolutePosition({
@@ -146,7 +151,10 @@ describe("Shape1dPlugin group clone regression", () => {
     expect(group).toBeInstanceOf(Konva.Group);
 
     context.setState("selection", [group]);
-    altDragGroup(group, { deltaX: 180, deltaY: 40 });
+    const previewClone = startAltDragGroup(group);
+    expect(previewClone.find((node: Konva.Node) => Shape1dPlugin.hasRenderableRuntime(node))).toHaveLength(2);
+
+    finishAltDragGroup(previewClone, { deltaX: 180, deltaY: 40 });
     await flushCanvasEffects();
 
     const groups = harness.staticForegroundLayer.find((node: Konva.Node) => node instanceof Konva.Group) as Konva.Group[];
@@ -156,6 +164,7 @@ describe("Shape1dPlugin group clone regression", () => {
     expect(clonedGroup).toBeTruthy();
     expect(clonedGroup?.find((node: Konva.Node) => node instanceof Konva.Rect)).toHaveLength(1);
     expect(clonedGroup?.find((node: Konva.Node) => Shape1dPlugin.isShape1dNode(node))).toHaveLength(2);
+    expect(clonedGroup?.find((node: Konva.Node) => Shape1dPlugin.hasRenderableRuntime(node))).toHaveLength(2);
 
     const clonedLineAndArrow = Object.values(docHandle.doc().elements).filter((element) => element.parentGroupId === clonedGroup?.id());
     expect(clonedLineAndArrow).toHaveLength(3);
@@ -226,8 +235,12 @@ describe("Shape1dPlugin group clone regression", () => {
     const group = harness.staticForegroundLayer.findOne("#55d37c5b-11c8-4e25-868d-3b41d52e00b7") as Konva.Group;
     expect(group).toBeTruthy();
     expect(group.find((node: Konva.Node) => Shape1dPlugin.isShape1dNode(node))).toHaveLength(1);
+    expect(group.find((node: Konva.Node) => Shape1dPlugin.hasRenderableRuntime(node))).toHaveLength(1);
 
-    altDragGroup(group, { deltaX: 0, deltaY: 224 });
+    const previewClone = startAltDragGroup(group);
+    expect(previewClone.find((node: Konva.Node) => Shape1dPlugin.hasRenderableRuntime(node))).toHaveLength(1);
+
+    finishAltDragGroup(previewClone, { deltaX: 0, deltaY: 224 });
     await flushCanvasEffects();
 
     const groups = harness.staticForegroundLayer.find((node: Konva.Node) => node instanceof Konva.Group) as Konva.Group[];
@@ -237,10 +250,89 @@ describe("Shape1dPlugin group clone regression", () => {
     expect(clonedGroup).toBeTruthy();
     expect(clonedGroup?.find((node: Konva.Node) => node instanceof Konva.Rect)).toHaveLength(1);
     expect(clonedGroup?.find((node: Konva.Node) => Shape1dPlugin.isShape1dNode(node))).toHaveLength(1);
+    expect(clonedGroup?.find((node: Konva.Node) => Shape1dPlugin.hasRenderableRuntime(node))).toHaveLength(1);
 
     const clonedChildren = Object.values(docHandle.doc().elements).filter((element) => element.parentGroupId === clonedGroup?.id());
     expect(clonedChildren).toHaveLength(2);
     expect(clonedChildren.filter((element) => element.data.type === "arrow")).toHaveLength(1);
+
+    harness.destroy();
+  });
+
+  test("preview clone preserves on-screen size and position under camera zoom", async () => {
+    const docHandle = createMockDocHandle({
+      id: "1228b868-af76-422c-9776-250728aeddb8",
+      elements: {
+        "0e6294a8-6fc1-4274-897f-b875874f1862": {
+          bindings: [],
+          createdAt: 1774599159507,
+          data: { h: 125.90135322535252, type: "rect", w: 115.40727245640466 },
+          id: "0e6294a8-6fc1-4274-897f-b875874f1862",
+          locked: false,
+          parentGroupId: "56965f62-ed71-414e-a16f-068c9638ec7b",
+          rotation: 0,
+          style: { backgroundColor: "red", opacity: 1, strokeWidth: 2 },
+          updatedAt: 1774599159507,
+          x: 282.6482238763534,
+          y: 39.41426227063414,
+          zIndex: "z00000000",
+        },
+        "553bf344-a0e1-46ca-a01f-bc6422cb697e": {
+          bindings: [],
+          createdAt: 1774599159507,
+          data: {
+            endBinding: null,
+            endCap: "arrow",
+            lineType: "straight",
+            points: [[0, 0], [103.5968289243342, -1.2887467610988779]],
+            startBinding: null,
+            startCap: "none",
+            type: "arrow",
+          },
+          id: "553bf344-a0e1-46ca-a01f-bc6422cb697e",
+          locked: false,
+          parentGroupId: "56965f62-ed71-414e-a16f-068c9638ec7b",
+          rotation: 0,
+          style: { opacity: 0.92, strokeColor: "#0f172a", strokeWidth: 4 },
+          updatedAt: 1774599159507,
+          x: 568.3265594759437,
+          y: 144.84295266253037,
+          zIndex: "z00000001",
+        },
+      },
+      groups: {
+        "56965f62-ed71-414e-a16f-068c9638ec7b": {
+          createdAt: 1774571973868,
+          id: "56965f62-ed71-414e-a16f-068c9638ec7b",
+          locked: false,
+          parentGroupId: null,
+          zIndex: "z00000000",
+        },
+      },
+    }) as DocHandle<TCanvasDoc>;
+
+    const harness = await createCanvasTestHarness({
+      docHandle,
+      plugins: [new RenderOrderPlugin(), new SelectPlugin(), new Shape1dPlugin(), new Shape2dPlugin(), new GroupPlugin(), new SceneHydratorPlugin()],
+      initializeScene(context) {
+        context.camera.pan(-180, -90);
+        context.camera.zoomAtScreenPoint(1.6, { x: 360, y: 220 });
+      },
+    });
+
+    await flushCanvasEffects();
+
+    const group = harness.staticForegroundLayer.findOne("#56965f62-ed71-414e-a16f-068c9638ec7b") as Konva.Group;
+    expect(group).toBeTruthy();
+
+    const originalRect = group.getClientRect({ relativeTo: harness.stage });
+    const previewClone = startAltDragGroup(group);
+    const previewRect = previewClone.getClientRect({ relativeTo: harness.stage });
+
+    expect(previewRect.x).toBeCloseTo(originalRect.x, 4);
+    expect(previewRect.y).toBeCloseTo(originalRect.y, 4);
+    expect(previewRect.width).toBeCloseTo(originalRect.width, 4);
+    expect(previewRect.height).toBeCloseTo(originalRect.height, 4);
 
     harness.destroy();
   });

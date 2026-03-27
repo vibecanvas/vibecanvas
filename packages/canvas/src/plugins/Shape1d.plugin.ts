@@ -876,6 +876,12 @@ export class Shape1dPlugin implements IPlugin {
     return !!data && Shape1dPlugin.isSupportedElementType(data.type);
   }
 
+  static hasRenderableRuntime(node: Konva.Node | null | undefined): node is TShape1dNode {
+    return Shape1dPlugin.isShape1dNode(node)
+      && Object.hasOwn(node, "getSelfRect")
+      && typeof node.sceneFunc?.() === "function";
+  }
+
   static createShapeFromElement(element: TElement) {
     if (!Shape1dPlugin.isSupportedElementType(element.data.type)) {
       throw new Error("Unsupported element type for Shape1dPlugin");
@@ -977,7 +983,6 @@ export class Shape1dPlugin implements IPlugin {
       data: structuredClone(element.data),
       style: structuredClone(element.style),
     });
-
     clone.setDraggable(true);
     return clone;
   }
@@ -997,12 +1002,12 @@ export class Shape1dPlugin implements IPlugin {
     return previewClone;
   }
 
-  static finalizePreviewClone(context: IPluginContext, previewClone: TShape1dNode) {
+static finalizePreviewClone(context: IPluginContext, previewClone: TShape1dNode) {
     if (previewClone.isDragging()) {
       previewClone.stopDrag();
     }
 
-    previewClone.moveTo(context.staticForegroundLayer);
+    previewClone.moveTo(context.staticForegroundLayer)
     Shape1dPlugin.setupShapeListeners(context, previewClone);
     previewClone.setDraggable(true);
     context.capabilities.renderOrder?.assignOrderOnInsert({

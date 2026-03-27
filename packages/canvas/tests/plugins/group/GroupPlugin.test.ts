@@ -624,6 +624,48 @@ describe("GroupPlugin – clone drag", () => {
     harness.destroy();
   });
 
+  test("dragging a cloned group updates its boundary box during dragmove", async () => {
+    const { harness, pluginContext, g1 } = await createCloneHarness();
+
+    pluginContext.setState("selection", [g1]);
+    await flushCanvasEffects();
+
+    altDragGroup(g1, { deltaX: 80, deltaY: 10 });
+    await flushCanvasEffects();
+
+    const firstClone = (harness.staticForegroundLayer.find((node: any) => node instanceof Konva.Group) as Konva.Group[])
+      .find((group) => group.id() !== g1.id())!;
+
+    pluginContext.setState("selection", [firstClone]);
+    await flushCanvasEffects();
+
+    const boundary = harness.dynamicLayer.findOne((node: Konva.Node) => {
+      return node instanceof Konva.Rect && node.name() === `group-boundary:${firstClone.id()}`;
+    }) as Konva.Rect | null;
+
+    expect(boundary).toBeTruthy();
+    const before = boundary!.position();
+
+    firstClone.fire("dragstart", {
+      target: firstClone,
+      currentTarget: firstClone,
+      evt: new MouseEvent("dragstart", { bubbles: true }),
+    });
+
+    firstClone.setAbsolutePosition({ x: firstClone.absolutePosition().x + 60, y: firstClone.absolutePosition().y + 15 });
+    firstClone.fire("dragmove", {
+      target: firstClone,
+      currentTarget: firstClone,
+      evt: new MouseEvent("dragmove", { bubbles: true }),
+    });
+
+    const after = boundary!.position();
+    expect(after.x).not.toBeCloseTo(before.x, 8);
+    expect(after.y).not.toBeCloseTo(before.y, 8);
+
+    harness.destroy();
+  });
+
   test("alt-dragging one node in a mixed top-level multi-selection should clone all selected roots", async () => {
     const { harness, pluginContext, g1, s4 } = await createMixedMultiSelectCloneHarness();
 
