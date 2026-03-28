@@ -419,6 +419,7 @@ Owns current 2D shape support.
 
 - responds to `TOOL_SELECT`
 - supports draw-preview creation flow for rectangles, diamonds, and ellipses
+- supports `Shift`-constrained draw-create for ratio-preserving 2D shapes (square rects/diamonds and circular ellipses)
 - registers capability functions for shape creation, serialization, and update
 - wires shape click, drag, double-click, clone-drag, and CRDT patch behavior
 - keeps attached-text shortcuts and syncing rect-only; diamond and ellipse do not currently participate in the attached-text workflow
@@ -836,6 +837,7 @@ Verifies:
 - ellipse serialization preserves top-left-bounded CRDT coordinates and radii
 - diamond and ellipse cloning round-trip through `toTElement()` / `createShapeFromNode()` with fresh ids
 - draw-create flows for diamond and ellipse persist the expected CRDT payloads
+- shift-draw flows preserve 1:1 ratios for rectangle, diamond, and ellipse creation
 
 ### Scenario fixtures
 

@@ -116,10 +116,18 @@ export class Shape2dPlugin implements IPlugin {
       const pointer = context.dynamicLayer.getRelativePointerPosition();
       if (!pointer) return;
 
-      const left = Math.min(this.#previewOrigin.x, pointer.x)
-      const top = Math.min(this.#previewOrigin.y, pointer.y)
-      const width = Math.abs(pointer.x - this.#previewOrigin.x)
-      const height = Math.abs(pointer.y - this.#previewOrigin.y)
+      const deltaX = pointer.x - this.#previewOrigin.x
+      const deltaY = pointer.y - this.#previewOrigin.y
+      const preserveRatio = e.evt.shiftKey
+      const size = preserveRatio ? Math.max(Math.abs(deltaX), Math.abs(deltaY)) : 0
+      const width = preserveRatio ? size : Math.abs(deltaX)
+      const height = preserveRatio ? size : Math.abs(deltaY)
+      const left = preserveRatio
+        ? this.#previewOrigin.x + (deltaX < 0 ? -width : 0)
+        : Math.min(this.#previewOrigin.x, pointer.x)
+      const top = preserveRatio
+        ? this.#previewOrigin.y + (deltaY < 0 ? -height : 0)
+        : Math.min(this.#previewOrigin.y, pointer.y)
 
       if (this.#activeTool === 'rectangle' && this.#previewDrawing instanceof Konva.Rect) {
         this.#previewDrawing.setAttrs({

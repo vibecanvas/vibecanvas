@@ -14,12 +14,12 @@ function createStageHost() {
   return { stage, layer };
 }
 
-function createPointerEvent(type: string) {
-  return { evt: new PointerEvent(type) } as Konva.KonvaEventObject<PointerEvent>;
+function createPointerEvent(type: string, args?: { shiftKey?: boolean }) {
+  return { evt: new PointerEvent(type, { shiftKey: args?.shiftKey }) } as Konva.KonvaEventObject<PointerEvent>;
 }
 
-function createMouseMoveEvent() {
-  return { evt: new MouseEvent("pointermove") } as Konva.KonvaEventObject<MouseEvent>;
+function createMouseMoveEvent(args?: { shiftKey?: boolean }) {
+  return { evt: new MouseEvent("pointermove", { shiftKey: args?.shiftKey }) } as Konva.KonvaEventObject<MouseEvent>;
 }
 
 function withDynamicPointer(context: IPluginContext, point: { x: number; y: number }, callback: () => void) {
@@ -184,6 +184,70 @@ describe("Shape2dPlugin draw-create", () => {
     harness.destroy();
   });
 
+  test("shift-drawing a rectangle preserves a square ratio", async () => {
+    let context!: IPluginContext;
+    const docHandle = createMockDocHandle();
+
+    const harness = await createCanvasTestHarness({
+      docHandle,
+      plugins: [new Shape2dPlugin()],
+      initializeScene(ctx) {
+        context = ctx;
+      },
+    });
+
+    context.hooks.customEvent.call(CustomEvents.TOOL_SELECT, "rectangle");
+    context.setState("mode", CanvasMode.DRAW_CREATE);
+
+    withDynamicPointer(context, { x: 100, y: 100 }, () => {
+      context.hooks.pointerDown.call(createPointerEvent("pointerdown"));
+    });
+    withDynamicPointer(context, { x: 220, y: 160 }, () => {
+      context.hooks.pointerMove.call(createMouseMoveEvent({ shiftKey: true }));
+    });
+    context.hooks.pointerUp.call(createPointerEvent("pointerup"));
+    await flushCanvasEffects();
+
+    const [element] = Object.values(docHandle.doc().elements);
+    expect(element?.data.type).toBe("rect");
+    expect((element?.data as any).w).toBeCloseTo(120, 8);
+    expect((element?.data as any).h).toBeCloseTo(120, 8);
+
+    harness.destroy();
+  });
+
+  test("shift-drawing a diamond preserves equal width and height", async () => {
+    let context!: IPluginContext;
+    const docHandle = createMockDocHandle();
+
+    const harness = await createCanvasTestHarness({
+      docHandle,
+      plugins: [new Shape2dPlugin()],
+      initializeScene(ctx) {
+        context = ctx;
+      },
+    });
+
+    context.hooks.customEvent.call(CustomEvents.TOOL_SELECT, "diamond");
+    context.setState("mode", CanvasMode.DRAW_CREATE);
+
+    withDynamicPointer(context, { x: 160, y: 120 }, () => {
+      context.hooks.pointerDown.call(createPointerEvent("pointerdown"));
+    });
+    withDynamicPointer(context, { x: 250, y: 180 }, () => {
+      context.hooks.pointerMove.call(createMouseMoveEvent({ shiftKey: true }));
+    });
+    context.hooks.pointerUp.call(createPointerEvent("pointerup"));
+    await flushCanvasEffects();
+
+    const [element] = Object.values(docHandle.doc().elements);
+    expect(element?.data.type).toBe("diamond");
+    expect((element?.data as any).w).toBeCloseTo(90, 8);
+    expect((element?.data as any).h).toBeCloseTo(90, 8);
+
+    harness.destroy();
+  });
+
   test("draws and persists an ellipse", async () => {
     let context!: IPluginContext;
     const docHandle = createMockDocHandle();
@@ -217,6 +281,38 @@ describe("Shape2dPlugin draw-create", () => {
     expect((element?.data as any).ry).toBeCloseTo(40, 8);
     expect(element?.x).toBeCloseTo(300, 8);
     expect(element?.y).toBeCloseTo(200, 8);
+
+    harness.destroy();
+  });
+
+  test("shift-drawing an ellipse preserves a circle ratio", async () => {
+    let context!: IPluginContext;
+    const docHandle = createMockDocHandle();
+
+    const harness = await createCanvasTestHarness({
+      docHandle,
+      plugins: [new Shape2dPlugin()],
+      initializeScene(ctx) {
+        context = ctx;
+      },
+    });
+
+    context.hooks.customEvent.call(CustomEvents.TOOL_SELECT, "ellipse");
+    context.setState("mode", CanvasMode.DRAW_CREATE);
+
+    withDynamicPointer(context, { x: 300, y: 220 }, () => {
+      context.hooks.pointerDown.call(createPointerEvent("pointerdown"));
+    });
+    withDynamicPointer(context, { x: 420, y: 280 }, () => {
+      context.hooks.pointerMove.call(createMouseMoveEvent({ shiftKey: true }));
+    });
+    context.hooks.pointerUp.call(createPointerEvent("pointerup"));
+    await flushCanvasEffects();
+
+    const [element] = Object.values(docHandle.doc().elements);
+    expect(element?.data.type).toBe("ellipse");
+    expect((element?.data as any).rx).toBeCloseTo(60, 8);
+    expect((element?.data as any).ry).toBeCloseTo(60, 8);
 
     harness.destroy();
   });
