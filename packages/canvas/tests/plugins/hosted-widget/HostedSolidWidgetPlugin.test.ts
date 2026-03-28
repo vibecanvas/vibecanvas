@@ -402,4 +402,162 @@ describe("HostedSolidWidgetPlugin", () => {
 
     harness.destroy();
   });
+
+  test("hosted widget drag matches pointer world-space movement across zoom levels", async () => {
+    let context!: IPluginContext;
+
+    async function runDragAtZoom(zoom: number) {
+      const docHandle = createMockDocHandle({
+        elements: {
+          terminal1: {
+            id: "terminal1",
+            x: 100,
+            y: 120,
+            rotation: 0,
+            zIndex: "z00000001",
+            parentGroupId: null,
+            bindings: [],
+            locked: false,
+            createdAt: 1,
+            updatedAt: 1,
+            style: {},
+            data: { type: "terminal", w: 320, h: 220, isCollapsed: false, workingDirectory: "." },
+          },
+        },
+      });
+
+      const harness = await createCanvasTestHarness({
+        docHandle,
+        plugins: [new RenderOrderPlugin(), new HostedSolidWidgetPlugin(), new SceneHydratorPlugin()],
+        initializeScene: (ctx) => {
+          context = ctx;
+        },
+      });
+
+      await flushCanvasEffects();
+      context.camera.zoomAtScreenPoint(zoom, { x: 0, y: 0 });
+      context.hooks.cameraChange.call();
+      await flushCanvasEffects();
+
+      const header = harness.stage.container().querySelector("[data-hosted-widget-header='true']") as HTMLDivElement;
+      const initial = structuredClone(docHandle.doc().elements.terminal1!);
+      const headerRect = header.getBoundingClientRect();
+      const startPointer = {
+        x: Math.round(headerRect.left + Math.min(24, headerRect.width / 2)),
+        y: Math.round(headerRect.top + Math.min(16, headerRect.height / 2)),
+      };
+      const endPointer = { x: startPointer.x + 60, y: startPointer.y + 40 };
+      const expectedDelta = {
+        x: (endPointer.x - startPointer.x) / zoom,
+        y: (endPointer.y - startPointer.y) / zoom,
+      };
+
+      header.dispatchEvent(new MouseEvent("pointerdown", {
+        bubbles: true,
+        button: 0,
+        clientX: startPointer.x,
+        clientY: startPointer.y,
+      }));
+      window.dispatchEvent(new MouseEvent("pointermove", {
+        bubbles: true,
+        clientX: endPointer.x,
+        clientY: endPointer.y,
+      }));
+      window.dispatchEvent(new MouseEvent("pointerup", {
+        bubbles: true,
+        clientX: endPointer.x,
+        clientY: endPointer.y,
+      }));
+
+      await flushCanvasEffects();
+
+      const updated = structuredClone(docHandle.doc().elements.terminal1!);
+      harness.destroy();
+
+      return {
+        actualDx: Math.round((updated.x - initial.x) * 1000) / 1000,
+        actualDy: Math.round((updated.y - initial.y) * 1000) / 1000,
+        expectedDx: Math.round(expectedDelta.x * 1000) / 1000,
+        expectedDy: Math.round(expectedDelta.y * 1000) / 1000,
+      };
+    }
+
+    const zoomedIn = await runDragAtZoom(2);
+    const zoomedOut = await runDragAtZoom(0.5);
+
+    expect(zoomedIn.actualDx).toBe(zoomedIn.expectedDx);
+    expect(zoomedIn.actualDy).toBe(zoomedIn.expectedDy);
+    expect(zoomedOut.actualDx).toBe(zoomedOut.expectedDx);
+    expect(zoomedOut.actualDy).toBe(zoomedOut.expectedDy);
+  });
+
+  test("streams throttled CRDT updates during hosted drag before drag end", async () => {
+    vi.useFakeTimers();
+
+    try {
+      const docHandle = createMockDocHandle({
+        elements: {
+          terminal1: {
+            id: "terminal1",
+            x: 100,
+            y: 120,
+            rotation: 0,
+            zIndex: "z00000001",
+            parentGroupId: null,
+            bindings: [],
+            locked: false,
+            createdAt: 1,
+            updatedAt: 1,
+            style: {},
+            data: { type: "terminal", w: 320, h: 220, isCollapsed: false, workingDirectory: "." },
+          },
+        },
+      });
+
+      const harness = await createCanvasTestHarness({
+        docHandle,
+        plugins: [new RenderOrderPlugin(), new HostedSolidWidgetPlugin(), new SceneHydratorPlugin()],
+      });
+
+      await flushCanvasEffects();
+
+      const header = harness.stage.container().querySelector("[data-hosted-widget-header='true']") as HTMLDivElement;
+      const headerRect = header.getBoundingClientRect();
+      const startPointer = {
+        x: Math.round(headerRect.left + Math.min(24, headerRect.width / 2)),
+        y: Math.round(headerRect.top + Math.min(16, headerRect.height / 2)),
+      };
+
+      header.dispatchEvent(new MouseEvent("pointerdown", {
+        bubbles: true,
+        button: 0,
+        clientX: startPointer.x,
+        clientY: startPointer.y,
+      }));
+      window.dispatchEvent(new MouseEvent("pointermove", {
+        bubbles: true,
+        clientX: startPointer.x + 80,
+        clientY: startPointer.y + 60,
+      }));
+
+      expect(docHandle.doc().elements.terminal1?.x).toBe(100);
+      expect(docHandle.doc().elements.terminal1?.y).toBe(120);
+
+      await vi.advanceTimersByTimeAsync(120);
+
+      expect(docHandle.doc().elements.terminal1?.x).not.toBe(100);
+      expect(docHandle.doc().elements.terminal1?.y).not.toBe(120);
+
+      window.dispatchEvent(new MouseEvent("pointerup", {
+        bubbles: true,
+        clientX: startPointer.x + 80,
+        clientY: startPointer.y + 60,
+      }));
+      await flushCanvasEffects();
+
+      harness.destroy();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
 });

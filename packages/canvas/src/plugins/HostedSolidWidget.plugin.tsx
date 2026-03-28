@@ -1,3 +1,4 @@
+import { throttle } from "@solid-primitives/scheduled";
 import type { JSX } from "solid-js";
 import { createComponent, createSignal, Show } from "solid-js";
 import { render } from "solid-js/web";
@@ -195,6 +196,15 @@ function getScreenBounds(node: Konva.Rect): TBounds {
     rotation,
     zoom,
   };
+}
+
+function getPointerWorldPoint(context: IPluginContext, point: { x: number; y: number }) {
+  const containerRect = context.stage.container().getBoundingClientRect();
+  const inverted = context.staticForegroundLayer.getAbsoluteTransform().copy().invert();
+  return inverted.point({
+    x: point.x - containerRect.left,
+    y: point.y - containerRect.top,
+  });
 }
 
 function getOrderKey(node: Konva.Node) {
@@ -680,29 +690,45 @@ export class HostedSolidWidgetPlugin implements IPlugin {
         : [node],
     );
 
-    const startPointer = { x: event.clientX, y: event.clientY };
-    const startPositions = new Map(activeSelection.map((candidate) => [candidate.id(), { ...candidate.absolutePosition() }]));
+    const startPointerWorld = getPointerWorldPoint(context, { x: event.clientX, y: event.clientY });
+    const pointerOffsets = new Map(activeSelection.map((candidate) => {
+      const position = getWorldPosition(candidate);
+      return [candidate.id(), {
+        x: position.x - startPointerWorld.x,
+        y: position.y - startPointerWorld.y,
+      }];
+    }));
     const beforeElements = collectSelectionShapes(context, activeSelection)
       .map((shape) => context.capabilities.toElement?.(shape))
       .filter((element): element is TElement => Boolean(element))
       .map((element) => structuredClone(element));
+    const throttledPatch = throttle((elements: TElement[]) => {
+      context.crdt.patch({ elements, groups: [] });
+    }, 100);
 
     const onPointerMove = (moveEvent: PointerEvent | MouseEvent) => {
-      const layerScale = context.staticForegroundLayer.getAbsoluteScale();
-      const dx = (moveEvent.clientX - startPointer.x) / (layerScale.x || 1);
-      const dy = (moveEvent.clientY - startPointer.y) / (layerScale.y || 1);
+      const pointerWorld = getPointerWorldPoint(context, { x: moveEvent.clientX, y: moveEvent.clientY });
 
       activeSelection.forEach((candidate) => {
-        const startPosition = startPositions.get(candidate.id());
-        if (!startPosition) return;
-        candidate.absolutePosition({
-          x: startPosition.x + dx,
-          y: startPosition.y + dy,
+        const offset = pointerOffsets.get(candidate.id());
+        if (!offset) return;
+        setWorldPosition(candidate, {
+          x: pointerWorld.x + offset.x,
+          y: pointerWorld.y + offset.y,
         });
         if (candidate instanceof Konva.Rect && HostedSolidWidgetPlugin.isHostedNode(candidate)) {
           this.syncMountedNode(candidate);
         }
       });
+
+      const liveElements = collectSelectionShapes(context, activeSelection)
+        .map((shape) => context.capabilities.toElement?.(shape))
+        .filter((element): element is TElement => Boolean(element))
+        .map((element) => structuredClone(element));
+      if (liveElements.length > 0) {
+        throttledPatch(liveElements);
+      }
+
       context.stage.batchDraw();
     };
 
