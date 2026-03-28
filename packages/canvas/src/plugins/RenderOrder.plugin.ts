@@ -46,6 +46,7 @@ export class RenderOrderPlugin implements IPlugin {
       sortChildren: (parent) => {
         const sorted = context.capabilities.renderOrder!.getOrderedSiblings(parent);
         sorted.forEach((node, index) => node.zIndex(index));
+        context.capabilities.hostedWidgets?.syncDomOrder();
       },
       assignOrderOnInsert: ({ parent, nodes, position = "front" }) => {
         const orderedNodes = sortNodesForBundle(nodes.filter((node) => node.getParent() === parent), parent);
@@ -215,6 +216,8 @@ export class RenderOrderPlugin implements IPlugin {
     if (elementPatches.length > 0 || groupPatches.length > 0) {
       context.crdt.patch({ elements: elementPatches, groups: groupPatches });
     }
+
+    context.capabilities.hostedWidgets?.syncDomOrder();
 
     return [...elementPatches, ...groupPatches];
   }

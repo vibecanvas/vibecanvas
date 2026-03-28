@@ -4,7 +4,7 @@ import type * as schema from "@vibecanvas/shell/database/schema";
 import { createEffect, createResource, Match, Switch } from "solid-js";
 import { findDocument } from "../services/automerge";
 import { CanvasService, defaultPlugins } from "../services/canvas/Canvas.service";
-import type { TCloneImage, TDeleteImage, TUploadImage } from "../services/canvas/interface";
+import type { TCloneImage, TDeleteImage, THostedWidgetRenderers, TUploadImage } from "../services/canvas/interface";
 
 export type TBackendCanvas = typeof schema.canvas.$inferSelect;
 
@@ -14,6 +14,9 @@ type CanvasPageProps = {
     uploadImage: TUploadImage;
     cloneImage: TCloneImage;
     deleteImage: TDeleteImage;
+  };
+  widgets?: {
+    renderers?: THostedWidgetRenderers;
   };
   store: {
     sidebarVisible: () => boolean;
@@ -58,6 +61,7 @@ export function Canvas(props: CanvasPageProps) {
         uploadImage: props.image?.uploadImage,
         cloneImage: props.image?.cloneImage,
         deleteImage: props.image?.deleteImage,
+        widgetRenderers: props.widgets?.renderers,
         notification: props.notification,
       },
     );

@@ -7,7 +7,7 @@ import { createStore, SetStoreFunction } from 'solid-js/store';
 import type { TCustomEvent } from "../../custom-events";
 import {
   CameraControlPlugin, ContextMenuPlugin, EventListenerPlugin, ExampleScenePlugin,
-  GridPlugin, GroupPlugin, HelpPlugin, HistoryControlPlugin, ImagePlugin, PenPlugin, RecorderPlugin, RenderOrderPlugin, SceneHydratorPlugin,
+  GridPlugin, GroupPlugin, HelpPlugin, HistoryControlPlugin, HostedSolidWidgetPlugin, ImagePlugin, PenPlugin, RecorderPlugin, RenderOrderPlugin, SceneHydratorPlugin,
   SelectPlugin, SelectionStyleMenuPlugin, Shape1dPlugin, Shape2dPlugin, TextPlugin, ToolbarPlugin, TransformPlugin, VisualDebugPlugin
 } from "../../plugins";
 import type { IPlugin, IPluginContext, TMouseEvent, TPointerEvent, TWheelEvent } from "../../plugins/interface";
@@ -40,6 +40,7 @@ export function defaultPlugins(
     new PenPlugin(),
     new TextPlugin(),
     new ImagePlugin(),
+    new HostedSolidWidgetPlugin(),
     groupPlugin,
     new ContextMenuPlugin(),
     // new ExampleScenePlugin(groupPlugin)
@@ -55,6 +56,7 @@ export class CanvasService {
   #staticForegroundLayer: Konva.Layer;
   #dynamicLayer: Konva.Layer;
   #camera: Camera;
+  #worldWidgetsRoot: HTMLDivElement;
   #instancePromise: Promise<this>;
   #pluginContext: IPluginContext;
   #resizeObserver: ResizeObserver;
@@ -67,7 +69,7 @@ export class CanvasService {
     container: HTMLDivElement,
     docHandle: DocHandle<TCanvasDoc>,
     plugins: IPlugin[],
-    appCapabilities: Pick<IPluginContext["capabilities"], "uploadImage" | "cloneImage" | "deleteImage" | "notification"> = {},
+    appCapabilities: Pick<IPluginContext["capabilities"], "uploadImage" | "cloneImage" | "deleteImage" | "notification" | "widgetRenderers"> = {},
   ) {
     this.#history = new History();
     this.#crdt = new Crdt(docHandle);
@@ -76,6 +78,13 @@ export class CanvasService {
       width: container.clientWidth,
       height: container.clientHeight,
     });
+    this.#worldWidgetsRoot = document.createElement("div");
+    this.#worldWidgetsRoot.className = "vc-world-widgets-root";
+    this.#worldWidgetsRoot.style.position = "absolute";
+    this.#worldWidgetsRoot.style.inset = "0";
+    this.#worldWidgetsRoot.style.pointerEvents = "none";
+    this.#worldWidgetsRoot.style.overflow = "hidden";
+    container.appendChild(this.#worldWidgetsRoot);
     // @ts-ignore
     window.stage = this.#stage
     // @ts-ignore
@@ -122,6 +131,7 @@ export class CanvasService {
       staticForegroundLayer: this.#staticForegroundLayer,
       dynamicLayer: this.#dynamicLayer,
       stage: this.#stage,
+      worldWidgetsRoot: this.#worldWidgetsRoot,
       camera: this.#camera,
       state: this.#state,
       setState: this.#setState,
@@ -131,6 +141,7 @@ export class CanvasService {
         uploadImage: appCapabilities.uploadImage,
         cloneImage: appCapabilities.cloneImage,
         deleteImage: appCapabilities.deleteImage,
+        widgetRenderers: appCapabilities.widgetRenderers,
         notification: appCapabilities.notification,
       }
     }
@@ -165,9 +176,10 @@ export class CanvasService {
   }
 
   destroy() {
+    this.#pluginContext.hooks.destroy.call();
     this.#stage.destroy();
     this.#resizeObserver.disconnect();
-    this.#pluginContext.hooks.destroy.call();
+    this.#worldWidgetsRoot.remove();
   }
 
 } 

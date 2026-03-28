@@ -1,0 +1,772 @@
+import type { JSX } from "solid-js";
+import { createComponent, createSignal, Show } from "solid-js";
+import { render } from "solid-js/web";
+import type { TChatData, TElement, TFiletreeData, TTerminalData } from "@vibecanvas/shell/automerge/index";
+import Konva from "konva";
+import FrameIcon from "lucide-solid/icons/frame";
+import XIcon from "lucide-solid/icons/x";
+import type { TTool } from "../components/FloatingCanvasToolbar/toolbar.types";
+import { CustomEvents } from "../custom-events";
+import { CanvasMode } from "../services/canvas/enum";
+import type {
+  THostedWidgetElementMap,
+  THostedWidgetRenderers,
+  THostedWidgetType,
+} from "../services/canvas/interface";
+import type { IPlugin, IPluginContext } from "./interface";
+import { getWorldPosition, setWorldPosition } from "./node-space";
+import { getNodeZIndex, setNodeZIndex } from "./render-order.shared";
+import { TransformPlugin } from "./Transform.plugin";
+
+const HOSTED_TYPES = new Set<THostedWidgetType>(["chat", "filetree", "terminal"]);
+const TOOL_TO_WIDGET_TYPE: Partial<Record<TTool, THostedWidgetType>> = {
+  chat: "chat",
+  filesystem: "filetree",
+  terminal: "terminal",
+};
+const HOSTED_NODE_ATTR = "vcHostedWidget";
+const HOSTED_TYPE_ATTR = "vcHostedWidgetType";
+const HOSTED_ELEMENT_ATTR = "vcHostedElementSnapshot";
+const HOSTED_TRANSFORMER_VISIBLE_ATTR = "vcHostedTransformerVisible";
+const HOSTED_WIDGET_CLASS = "vc-hosted-widget";
+const CONTENT_INSET = 14;
+
+type THostedWidgetElement = THostedWidgetElementMap[THostedWidgetType];
+
+type TBounds = {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  rotation: number;
+  zoom: number;
+};
+
+type TMountRecord = {
+  node: Konva.Rect;
+  mountElement: HTMLDivElement;
+  dispose: () => void;
+  setElement: (element: THostedWidgetElement) => void;
+  beforeRemove: () => void | Promise<void>;
+  setBeforeRemove: (handler: (() => void | Promise<void>) | null) => void;
+};
+
+function isHostedType(type: string): type is THostedWidgetType {
+  return HOSTED_TYPES.has(type as THostedWidgetType);
+}
+
+function getWidgetTypeFromTool(tool: TTool) {
+  return TOOL_TO_WIDGET_TYPE[tool] ?? null;
+}
+
+function getWidgetHeaderLabel(element: THostedWidgetElement) {
+  if (element.data.type === "terminal") return "untitled";
+  if (element.data.type === "chat") return "chat";
+  if (element.data.type === "filetree") return "files";
+  return "widget";
+}
+
+function getDefaultWidgetElement(type: THostedWidgetType, x: number, y: number): THostedWidgetElement {
+  const now = Date.now();
+
+  if (type === "chat") {
+    return {
+      id: crypto.randomUUID(),
+      x,
+      y,
+      rotation: 0,
+      zIndex: "",
+      parentGroupId: null,
+      bindings: [],
+      locked: false,
+      createdAt: now,
+      updatedAt: now,
+      style: {
+        backgroundColor: "#f8fafc",
+        borderColor: "#cbd5e1",
+        headerColor: "#e2e8f0",
+        opacity: 1,
+      },
+      data: {
+        type: "chat",
+        w: 420,
+        h: 320,
+        isCollapsed: false,
+      } satisfies TChatData,
+    };
+  }
+
+  if (type === "filetree") {
+    return {
+      id: crypto.randomUUID(),
+      x,
+      y,
+      rotation: 0,
+      zIndex: "",
+      parentGroupId: null,
+      bindings: [],
+      locked: false,
+      createdAt: now,
+      updatedAt: now,
+      style: {
+        backgroundColor: "#f8fafc",
+        borderColor: "#cbd5e1",
+        headerColor: "#dcfce7",
+        opacity: 1,
+      },
+      data: {
+        type: "filetree",
+        w: 420,
+        h: 340,
+        isCollapsed: false,
+        globPattern: null,
+      } satisfies TFiletreeData,
+    };
+  }
+
+  return {
+    id: crypto.randomUUID(),
+    x,
+    y,
+    rotation: 0,
+    zIndex: "",
+    parentGroupId: null,
+    bindings: [],
+    locked: false,
+    createdAt: now,
+    updatedAt: now,
+    style: {
+      backgroundColor: "#111827",
+      borderColor: "#0f172a",
+      headerColor: "#1f2937",
+      opacity: 1,
+    },
+    data: {
+      type: "terminal",
+      w: 460,
+      h: 300,
+      isCollapsed: false,
+      workingDirectory: ".",
+    } satisfies TTerminalData,
+  };
+}
+
+function collectSelectionShapes(context: IPluginContext, roots: Array<Konva.Group | Konva.Shape>) {
+  const shapes: Konva.Shape[] = [];
+  const seen = new Set<string>();
+
+  const visit = (node: Konva.Group | Konva.Shape) => {
+    if (seen.has(node.id())) return;
+    seen.add(node.id());
+
+    if (node instanceof Konva.Group) {
+      node.getChildren().forEach((child) => {
+        if (child instanceof Konva.Group || child instanceof Konva.Shape) {
+          visit(child);
+        }
+      });
+      return;
+    }
+
+    shapes.push(node);
+  };
+
+  roots.forEach(visit);
+  return shapes;
+}
+
+function getScreenBounds(node: Konva.Rect): TBounds {
+  const width = node.width();
+  const height = node.height();
+  const absoluteTransform = node.getAbsoluteTransform().copy();
+  const topLeft = absoluteTransform.point({ x: 0, y: 0 });
+  const topRight = absoluteTransform.point({ x: width, y: 0 });
+  const bottomLeft = absoluteTransform.point({ x: 0, y: height });
+  const widthScreen = Math.hypot(topRight.x - topLeft.x, topRight.y - topLeft.y);
+  const heightScreen = Math.hypot(bottomLeft.x - topLeft.x, bottomLeft.y - topLeft.y);
+  const rotation = Math.atan2(topRight.y - topLeft.y, topRight.x - topLeft.x) * 180 / Math.PI;
+  const zoom = node.getLayer()?.scaleX() ?? 1;
+
+  return {
+    x: topLeft.x,
+    y: topLeft.y,
+    width: widthScreen / (zoom || 1),
+    height: heightScreen / (zoom || 1),
+    rotation,
+    zoom,
+  };
+}
+
+function getOrderKey(node: Konva.Node) {
+  const parts: string[] = [];
+  let current: Konva.Node | null = node;
+
+  while (current) {
+    if (current instanceof Konva.Group || current instanceof Konva.Shape) {
+      parts.push(`${getNodeZIndex(current)}:${current.id()}`);
+    }
+    current = current.getParent();
+  }
+
+  return parts.reverse().join("/");
+}
+
+function HostedWidgetShell(props: {
+  element: () => THostedWidgetElement;
+  onHeaderPointerDown: (event: PointerEvent | MouseEvent) => void;
+  onHeaderDoubleClick: (event: MouseEvent) => void;
+  onSelectPointerDown: (event: PointerEvent | MouseEvent) => void;
+  onRemove: () => void;
+  children?: JSX.Element;
+}) {
+  const titleColor = () => props.element().data.type === "terminal" ? "#f8fafc" : "#0f172a";
+  const headerBackground = () => props.element().data.type === "terminal"
+    ? "#0b1220"
+    : (props.element().style.headerColor ?? "#e5e7eb");
+  const secondaryTextColor = () => props.element().data.type === "terminal" ? "#94a3b8" : "#475569";
+
+  return (
+    <div
+      data-hosted-widget-root="true"
+      style={{
+        position: "absolute",
+        inset: `${CONTENT_INSET}px`,
+        display: "flex",
+        "flex-direction": "column",
+        "pointer-events": "auto",
+        border: `1px solid ${props.element().style.borderColor ?? "#cbd5e1"}`,
+        background: props.element().style.backgroundColor ?? "#ffffff",
+        "box-shadow": "0 8px 24px rgba(15,23,42,0.16)",
+        overflow: "hidden",
+        "font-family": "'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace",
+      }}
+      onPointerDown={(event) => props.onSelectPointerDown(event)}
+    >
+      <div
+        data-hosted-widget-header="true"
+        style={{
+          display: "flex",
+          "align-items": "center",
+          "justify-content": "space-between",
+          gap: "8px",
+          padding: "8px 10px",
+          background: headerBackground(),
+          "border-bottom": `1px solid ${props.element().style.borderColor ?? "#cbd5e1"}`,
+          cursor: "grab",
+          "user-select": "none",
+        }}
+        onPointerDown={(event) => props.onHeaderPointerDown(event)}
+        onDblClick={(event) => props.onHeaderDoubleClick(event)}
+      >
+        <div style={{ display: "flex", "align-items": "baseline", gap: "8px", overflow: "hidden", "min-width": "0" }}>
+          <div style={{ "font-size": "12px", color: titleColor(), "white-space": "nowrap", overflow: "hidden", "text-overflow": "ellipsis" }}>
+            {getWidgetHeaderLabel(props.element())}
+          </div>
+          <Show when={props.element().data.type === "terminal"}>
+            <div style={{ "font-size": "10px", color: secondaryTextColor(), "text-transform": "uppercase", "letter-spacing": "0.08em" }}>
+              interactive terminal
+            </div>
+          </Show>
+        </div>
+        <div style={{ display: "flex", "align-items": "center", gap: "6px" }}>
+          <button
+            type="button"
+            aria-label="Show resize handles"
+            title="Resize"
+            style={{
+              display: "inline-flex",
+              "align-items": "center",
+              "justify-content": "center",
+              width: "24px",
+              height: "24px",
+              border: `1px solid ${props.element().data.type === "terminal" ? "#334155" : (props.element().style.borderColor ?? "#cbd5e1")}`,
+              background: props.element().data.type === "terminal" ? "#111827" : "#ffffff",
+              color: titleColor(),
+              cursor: "pointer",
+              "pointer-events": "auto",
+            }}
+            onPointerDown={(event) => event.stopPropagation()}
+            onClick={(event) => {
+              event.stopPropagation();
+              props.onHeaderDoubleClick(event);
+            }}
+          >
+            <FrameIcon size={13} />
+          </button>
+          <button
+            type="button"
+            aria-label="Close widget"
+            title="Close"
+            style={{
+              display: "inline-flex",
+              "align-items": "center",
+              "justify-content": "center",
+              width: "24px",
+              height: "24px",
+              border: `1px solid ${props.element().data.type === "terminal" ? "#334155" : (props.element().style.borderColor ?? "#cbd5e1")}`,
+              background: props.element().data.type === "terminal" ? "#111827" : "#ffffff",
+              color: titleColor(),
+              cursor: "pointer",
+              "pointer-events": "auto",
+            }}
+            onPointerDown={(event) => event.stopPropagation()}
+            onClick={(event) => {
+              event.stopPropagation();
+              props.onRemove();
+            }}
+          >
+            <XIcon size={14} />
+          </button>
+        </div>
+      </div>
+      <div style={{ flex: 1, display: "flex", overflow: "hidden" }}>
+        <Show when={props.children} fallback={<DefaultWidgetBody element={props.element} />}>
+          {props.children}
+        </Show>
+      </div>
+    </div>
+  );
+}
+
+function DefaultWidgetBody(props: { element: () => THostedWidgetElement }) {
+  const element = () => props.element();
+
+  return (
+    <div style={{ flex: 1, display: "flex", "flex-direction": "column", padding: "14px", gap: "10px", color: "#0f172a" }}>
+      <div style={{ "font-size": "12px", color: "#475569" }}>
+        Hosted Solid widget placeholder for `{element().data.type}`.
+      </div>
+      <Show when={element().data.type === "chat"}>
+        <div style={{ display: "grid", gap: "8px" }}>
+          <div style={{ padding: "10px", border: "1px solid #cbd5e1", background: "#ffffff" }}>User: sketch a layout</div>
+          <div style={{ padding: "10px", border: "1px solid #cbd5e1", background: "#eff6ff" }}>Agent: hosted chat mounts here</div>
+        </div>
+      </Show>
+      <Show when={element().data.type === "filetree"}>
+        <div style={{ display: "grid", gap: "6px", "font-size": "12px" }}>
+          <div>src/</div>
+          <div style={{ "padding-left": "14px" }}>components/</div>
+          <div style={{ "padding-left": "28px" }}>canvas.tsx</div>
+          <div style={{ "padding-left": "14px" }}>plugins/</div>
+          <div style={{ "padding-left": "28px" }}>HostedSolidWidget.plugin.tsx</div>
+        </div>
+      </Show>
+      <Show when={element().data.type === "terminal"}>
+        <div style={{ flex: 1, padding: "12px", background: "#020617", color: "#d1fae5", "font-size": "12px", overflow: "hidden" }}>
+          <div>$ vibecanvas dev</div>
+          <div>ready to host terminal UI here</div>
+          <Show when={element().data.type === "terminal"}>
+            <div style={{ color: "#67e8f9", "margin-top": "8px" }}>
+              cwd: {(element().data as TTerminalData).workingDirectory}
+            </div>
+          </Show>
+        </div>
+      </Show>
+    </div>
+  );
+}
+
+export class HostedSolidWidgetPlugin implements IPlugin {
+  #activeTool: TTool = "select";
+  #mounts = new Map<string, TMountRecord>();
+  #cleanupDrag: (() => void) | null = null;
+
+  apply(context: IPluginContext): void {
+    this.setupCapabilities(context);
+    this.setupToolState(context);
+    this.setupClickCreate(context);
+
+    context.capabilities.hostedWidgets = {
+      isHostedNode: (node) => HostedSolidWidgetPlugin.isHostedNode(node),
+      syncNode: (node) => {
+        if (!(node instanceof Konva.Rect)) return;
+        this.syncMountedNode(node);
+      },
+      removeNode: (id) => {
+        this.unmountWidget(id);
+      },
+      syncDomOrder: () => {
+        this.syncDomOrder();
+      },
+    };
+
+    context.hooks.cameraChange.tap(() => {
+      this.#mounts.forEach(({ node }) => this.syncMountedNode(node));
+    });
+
+    context.hooks.destroy.tap(() => {
+      this.#cleanupDrag?.();
+      this.#cleanupDrag = null;
+      [...this.#mounts.keys()].forEach((id) => this.unmountWidget(id));
+    });
+  }
+
+  static isHostedNode(node: Konva.Node | null | undefined): node is Konva.Rect {
+    return node instanceof Konva.Rect && node.getAttr(HOSTED_NODE_ATTR) === true;
+  }
+
+  private setupToolState(context: IPluginContext) {
+    context.hooks.customEvent.tap((event, payload) => {
+      if (event !== CustomEvents.TOOL_SELECT) return false;
+      this.#activeTool = payload as TTool;
+      return false;
+    });
+  }
+
+  private setupClickCreate(context: IPluginContext) {
+    context.hooks.pointerUp.tap(() => {
+      if (context.state.mode !== CanvasMode.CLICK_CREATE) return;
+      const widgetType = getWidgetTypeFromTool(this.#activeTool);
+      if (!widgetType) return;
+
+      const pointer = context.staticForegroundLayer.getRelativePointerPosition();
+      if (!pointer) return;
+
+      const element = getDefaultWidgetElement(widgetType, pointer.x, pointer.y);
+      const node = this.createHostedNode(context, element);
+      context.staticForegroundLayer.add(node);
+      context.capabilities.renderOrder?.assignOrderOnInsert({
+        parent: context.staticForegroundLayer,
+        nodes: [node],
+        position: "front",
+      });
+      context.crdt.patch({ elements: [this.toElement(node)], groups: [] });
+      context.setState("selection", [node]);
+      context.setState("mode", CanvasMode.SELECT);
+      context.hooks.customEvent.call(CustomEvents.TOOL_SELECT, "select");
+    });
+  }
+
+  private setupCapabilities(context: IPluginContext) {
+    const previousCreate = context.capabilities.createShapeFromTElement;
+    context.capabilities.createShapeFromTElement = (element) => {
+      if (!isHostedType(element.data.type)) return previousCreate?.(element) ?? null;
+      const node = this.createHostedNode(context, element as THostedWidgetElement);
+      return node;
+    };
+
+    const previousUpdate = context.capabilities.updateShapeFromTElement;
+    context.capabilities.updateShapeFromTElement = (element) => {
+      if (!isHostedType(element.data.type)) return previousUpdate?.(element) ?? null;
+      const node = context.staticForegroundLayer.findOne((candidate: Konva.Node) => candidate.id() === element.id);
+      if (!(node instanceof Konva.Rect) || !HostedSolidWidgetPlugin.isHostedNode(node)) return null;
+      this.updateHostedNode(node, element as THostedWidgetElement);
+      return node;
+    };
+
+    const previousToElement = context.capabilities.toElement;
+    context.capabilities.toElement = (node) => {
+      if (HostedSolidWidgetPlugin.isHostedNode(node)) {
+        return this.toElement(node);
+      }
+      return previousToElement?.(node) ?? null;
+    };
+  }
+
+  private createHostedNode(context: IPluginContext, element: THostedWidgetElement) {
+    const node = new Konva.Rect({
+      id: element.id,
+      x: element.x,
+      y: element.y,
+      width: element.data.w,
+      height: element.data.h,
+      rotation: element.rotation,
+      fill: "#000000",
+      opacity: 0.001,
+      listening: true,
+      draggable: true,
+      strokeEnabled: false,
+    });
+
+    node.name(HOSTED_WIDGET_CLASS);
+    node.setAttr(HOSTED_NODE_ATTR, true);
+    node.setAttr(HOSTED_TYPE_ATTR, element.data.type);
+    node.setAttr(HOSTED_ELEMENT_ATTR, structuredClone(element));
+    node.setAttr(HOSTED_TRANSFORMER_VISIBLE_ATTR, false);
+    setNodeZIndex(node, element.zIndex);
+
+    this.setupNodeListeners(context, node);
+    this.mountWidget(context, node, element);
+    queueMicrotask(() => {
+      if (!this.#mounts.has(node.id())) return;
+      this.syncMountedNode(node);
+      this.syncDomOrder();
+    });
+
+    return node;
+  }
+
+  private updateHostedNode(node: Konva.Rect, element: THostedWidgetElement) {
+    node.width(element.data.w);
+    node.height(element.data.h);
+    node.rotation(element.rotation);
+    node.scale({ x: 1, y: 1 });
+    node.skew({ x: 0, y: 0 });
+    setWorldPosition(node, { x: element.x, y: element.y });
+    setNodeZIndex(node, element.zIndex);
+    node.setAttr(HOSTED_ELEMENT_ATTR, structuredClone(element));
+    this.mountWidgetFromUpdate(node, element);
+    this.syncMountedNode(node);
+    this.syncDomOrder();
+  }
+
+  private setupNodeListeners(context: IPluginContext, node: Konva.Rect) {
+    node.on("destroy", () => {
+      this.unmountWidget(node.id());
+    });
+
+    node.on("dragmove transform", () => {
+      this.syncMountedNode(node);
+    });
+
+    node.on("pointerclick", (event) => {
+      if (context.state.mode !== CanvasMode.SELECT) return;
+      context.hooks.customEvent.call(CustomEvents.ELEMENT_POINTERCLICK, event);
+    });
+
+    node.on("pointerdown", (event) => {
+      if (context.state.mode !== CanvasMode.SELECT) return;
+      const earlyExit = context.hooks.customEvent.call(CustomEvents.ELEMENT_POINTERDOWN, event);
+      if (earlyExit) event.cancelBubble = true;
+    });
+
+    node.on("pointerdblclick", (event) => {
+      if (context.state.mode !== CanvasMode.SELECT) return;
+      const earlyExit = context.hooks.customEvent.call(CustomEvents.ELEMENT_POINTERDBLCLICK, event);
+      if (earlyExit) event.cancelBubble = true;
+    });
+  }
+
+  private mountWidget(context: IPluginContext, node: Konva.Rect, element: THostedWidgetElement) {
+    if (this.#mounts.has(node.id())) {
+      this.mountWidgetFromUpdate(node, element);
+      return;
+    }
+
+    const mountElement = document.createElement("div");
+    mountElement.dataset.hostedWidgetId = node.id();
+    mountElement.style.position = "absolute";
+    mountElement.style.left = "0";
+    mountElement.style.top = "0";
+    mountElement.style.pointerEvents = "auto";
+    context.worldWidgetsRoot.appendChild(mountElement);
+
+    const [currentElement, setCurrentElement] = createSignal(element);
+    const [beforeRemove, setBeforeRemove] = createSignal<(() => void | Promise<void>) | null>(null);
+    const renderers = context.capabilities.widgetRenderers;
+    const renderer = renderers?.[element.data.type] as THostedWidgetRenderers[THostedWidgetType] | undefined;
+    const dispose = render(() => (
+      <HostedWidgetShell
+        element={currentElement}
+        onSelectPointerDown={(event) => {
+          this.selectHostedNode(context, node, event);
+        }}
+        onHeaderPointerDown={(event) => {
+          this.beginDomDrag(context, node, event);
+        }}
+        onHeaderDoubleClick={(event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          this.showTransformerForNode(context, node);
+        }}
+        onRemove={() => {
+          void this.removeHostedNode(context, node);
+        }}
+      >
+        {renderer ? createComponent(renderer as never, {
+          element: currentElement,
+          registerBeforeRemove: (handler: (() => void | Promise<void>) | null) => setBeforeRemove(() => handler),
+        } as never) : undefined}
+      </HostedWidgetShell>
+    ), mountElement);
+
+    this.#mounts.set(node.id(), {
+      node,
+      mountElement,
+      dispose,
+      setElement: (nextElement) => setCurrentElement(() => nextElement),
+      beforeRemove: () => beforeRemove()?.(),
+      setBeforeRemove: (handler) => setBeforeRemove(() => handler),
+    });
+
+    this.syncMountedNode(node);
+    this.syncDomOrder();
+  }
+
+  private mountWidgetFromUpdate(node: Konva.Rect, element: THostedWidgetElement) {
+    const mounted = this.#mounts.get(node.id());
+    if (!mounted) return;
+    mounted.setElement(element);
+  }
+
+  private unmountWidget(id: string) {
+    const mounted = this.#mounts.get(id);
+    if (!mounted) return;
+    mounted.dispose();
+    mounted.mountElement.remove();
+    this.#mounts.delete(id);
+  }
+
+  private syncMountedNode(node: Konva.Rect) {
+    const mounted = this.#mounts.get(node.id());
+    if (!mounted) return;
+
+    const bounds = getScreenBounds(node);
+    mounted.mountElement.style.transform = `translate(${bounds.x}px, ${bounds.y}px) rotate(${bounds.rotation}deg) scale(${bounds.zoom})`;
+    mounted.mountElement.style.transformOrigin = "top left";
+    mounted.mountElement.style.width = `${Math.max(bounds.width, CONTENT_INSET * 2 + 24)}px`;
+    mounted.mountElement.style.height = `${Math.max(bounds.height, CONTENT_INSET * 2 + 24)}px`;
+  }
+
+  private syncDomOrder() {
+    const ordered = [...this.#mounts.values()].sort((a, b) => {
+      return getOrderKey(a.node).localeCompare(getOrderKey(b.node));
+    });
+
+    ordered.forEach((entry) => {
+      entry.mountElement.parentElement?.appendChild(entry.mountElement);
+    });
+  }
+
+  private selectHostedNode(context: IPluginContext, node: Konva.Rect, event: PointerEvent | MouseEvent) {
+    if (context.state.mode !== CanvasMode.SELECT) return;
+    if (event.button !== 0) return;
+
+    node.setAttr(HOSTED_TRANSFORMER_VISIBLE_ATTR, false);
+
+    if (event.shiftKey) {
+      const exists = context.state.selection.some((candidate) => candidate.id() === node.id());
+      if (exists) {
+        context.setState("selection", context.state.selection.filter((candidate) => candidate.id() !== node.id()));
+      } else {
+        context.setState("selection", [...context.state.selection, node]);
+      }
+      return;
+    }
+
+    if (context.state.selection.length === 1 && context.state.selection[0]?.id() === node.id()) return;
+    context.setState("selection", [node]);
+  }
+
+  private showTransformerForNode(context: IPluginContext, node: Konva.Rect) {
+    node.setAttr(HOSTED_TRANSFORMER_VISIBLE_ATTR, true);
+    if (!(context.state.selection.length === 1 && context.state.selection[0]?.id() === node.id())) {
+      context.setState("selection", [node]);
+    } else {
+      context.setState("selection", [...context.state.selection]);
+    }
+  }
+
+  private async removeHostedNode(context: IPluginContext, node: Konva.Rect) {
+    const mounted = this.#mounts.get(node.id());
+    await mounted?.beforeRemove?.();
+    context.setState("selection", context.state.selection.filter((candidate) => candidate.id() !== node.id()));
+    context.crdt.deleteById({ elementIds: [node.id()], groupIds: [] });
+    this.unmountWidget(node.id());
+    node.destroy();
+  }
+
+  private beginDomDrag(context: IPluginContext, node: Konva.Rect, event: PointerEvent | MouseEvent) {
+    if (event.button !== 0) return;
+    event.preventDefault();
+    event.stopPropagation();
+
+    this.selectHostedNode(context, node, event);
+    this.#cleanupDrag?.();
+
+    const activeSelection = TransformPlugin.filterSelection(
+      context.state.selection.some((candidate) => candidate.id() === node.id())
+        ? context.state.selection
+        : [node],
+    );
+
+    const startPointer = { x: event.clientX, y: event.clientY };
+    const startPositions = new Map(activeSelection.map((candidate) => [candidate.id(), { ...candidate.absolutePosition() }]));
+    const beforeElements = collectSelectionShapes(context, activeSelection)
+      .map((shape) => context.capabilities.toElement?.(shape))
+      .filter((element): element is TElement => Boolean(element))
+      .map((element) => structuredClone(element));
+
+    const onPointerMove = (moveEvent: PointerEvent | MouseEvent) => {
+      const layerScale = context.staticForegroundLayer.getAbsoluteScale();
+      const dx = (moveEvent.clientX - startPointer.x) / (layerScale.x || 1);
+      const dy = (moveEvent.clientY - startPointer.y) / (layerScale.y || 1);
+
+      activeSelection.forEach((candidate) => {
+        const startPosition = startPositions.get(candidate.id());
+        if (!startPosition) return;
+        candidate.absolutePosition({
+          x: startPosition.x + dx,
+          y: startPosition.y + dy,
+        });
+        if (candidate instanceof Konva.Rect && HostedSolidWidgetPlugin.isHostedNode(candidate)) {
+          this.syncMountedNode(candidate);
+        }
+      });
+      context.stage.batchDraw();
+    };
+
+    const onPointerUp = () => {
+      window.removeEventListener("pointermove", onPointerMove as EventListener);
+      window.removeEventListener("pointerup", onPointerUp);
+      this.#cleanupDrag = null;
+
+      const afterElements = collectSelectionShapes(context, activeSelection)
+        .map((shape) => context.capabilities.toElement?.(shape))
+        .filter((element): element is TElement => Boolean(element))
+        .map((element) => structuredClone(element));
+
+      if (afterElements.length === 0) return;
+      context.crdt.patch({ elements: afterElements, groups: [] });
+      context.history.record({
+        label: "drag-hosted-widget",
+        undo: () => {
+          beforeElements.forEach((element) => context.capabilities.updateShapeFromTElement?.(element));
+          context.crdt.patch({ elements: beforeElements, groups: [] });
+        },
+        redo: () => {
+          afterElements.forEach((element) => context.capabilities.updateShapeFromTElement?.(element));
+          context.crdt.patch({ elements: afterElements, groups: [] });
+        },
+      });
+    };
+
+    window.addEventListener("pointermove", onPointerMove as EventListener);
+    window.addEventListener("pointerup", onPointerUp, { once: true });
+    this.#cleanupDrag = () => {
+      window.removeEventListener("pointermove", onPointerMove as EventListener);
+      window.removeEventListener("pointerup", onPointerUp);
+    };
+  }
+
+  private toElement(node: Konva.Rect): THostedWidgetElement {
+    const snapshot = structuredClone(node.getAttr(HOSTED_ELEMENT_ATTR) as THostedWidgetElement | undefined);
+    const widgetType = node.getAttr(HOSTED_TYPE_ATTR);
+    const type = isHostedType(widgetType) ? widgetType : null;
+    if (!snapshot || !type) {
+      throw new Error("Missing hosted widget snapshot");
+    }
+
+    const worldPosition = getWorldPosition(node);
+    const absoluteScale = node.getAbsoluteScale();
+    const layer = node.getLayer();
+    const layerScaleX = layer?.scaleX() ?? 1;
+    const layerScaleY = layer?.scaleY() ?? 1;
+    const parent = node.getParent();
+
+    return {
+      ...snapshot,
+      x: worldPosition.x,
+      y: worldPosition.y,
+      rotation: node.getAbsoluteRotation(),
+      parentGroupId: parent instanceof Konva.Group ? parent.id() : null,
+      zIndex: getNodeZIndex(node),
+      updatedAt: Date.now(),
+      data: {
+        ...snapshot.data,
+        w: node.width() * (absoluteScale.x / layerScaleX),
+        h: node.height() * (absoluteScale.y / layerScaleY),
+      },
+    } as THostedWidgetElement;
+  }
+}

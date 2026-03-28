@@ -164,6 +164,19 @@ export class TransformPlugin implements IPlugin {
       }
 
       const filteredSelection = TransformPlugin.filterSelection(context.state.selection)
+      const singleHostedSelection = filteredSelection.length === 1
+        && filteredSelection[0] instanceof Konva.Rect
+        && filteredSelection[0].getAttr("vcHostedWidget") === true
+      const hostedTransformerVisible = singleHostedSelection
+        ? filteredSelection[0]!.getAttr("vcHostedTransformerVisible") === true
+        : true
+
+      if (singleHostedSelection && !hostedTransformerVisible) {
+        this.#transformer.setNodes([])
+        this.#transformer.update()
+        return
+      }
+
       const isSingleGroupSelection = filteredSelection.length === 1 && filteredSelection[0] instanceof Konva.Group
 
       if (context.state.selection.length === 1 && context.state.selection[0] instanceof Konva.Group) {

@@ -1,5 +1,9 @@
 import type { IPlugin, IPluginContext, TMouseEvent, TPointerEvent, TWheelEvent } from "./interface";
 
+function isInsideHostedWidget(target: EventTarget | null) {
+  return target instanceof HTMLElement && target.closest('[data-hosted-widget-root="true"]') !== null;
+}
+
 export class EventListenerPlugin implements IPlugin {
   apply(context: IPluginContext): void {
     const { hooks, stage } = context;
@@ -33,10 +37,12 @@ export class EventListenerPlugin implements IPlugin {
     };
 
     const onkeydown = (event: KeyboardEvent) => {
+      if (isInsideHostedWidget(event.target)) return;
       hooks.keydown.call(event);
     };
 
     const onkeyup = (event: KeyboardEvent) => {
+      if (isInsideHostedWidget(event.target)) return;
       hooks.keyup.call(event);
     };
 

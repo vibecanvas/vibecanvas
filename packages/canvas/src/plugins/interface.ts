@@ -3,7 +3,7 @@ import type { SetStoreFunction } from 'solid-js/store';
 import type { TCustomEvent } from '../custom-events';
 import type { Camera } from '../services/canvas/Camera';
 import type { History } from "../services/canvas/History";
-import type { IState, TCloneImage, TDeleteImage, TUploadImage } from '../services/canvas/interface';
+import type { IState, TCloneImage, TDeleteImage, THostedWidgetRenderers, TUploadImage } from '../services/canvas/interface';
 import type { AsyncParallelHook, SyncExitHook, SyncHook } from '../tapable';
 import type { Crdt } from "../services/canvas/Crdt";
 import type { TElement, TGroup } from "@vibecanvas/shell/automerge/index";
@@ -57,6 +57,7 @@ export interface IPluginContext {
   staticForegroundLayer: Konva.Layer;
   dynamicLayer: Konva.Layer;
   stage: Konva.Stage;
+  worldWidgetsRoot: HTMLDivElement;
   camera: Camera;
   state: IState;
   setState: SetStoreFunction<IState>;
@@ -70,14 +71,21 @@ export interface IPluginContext {
     toGroup?: (node: Konva.Group) => TGroup | null;
     getReorderBundle?: (node: Konva.Group | Konva.Shape) => Array<Konva.Group | Konva.Shape>;
     uploadImage?: TUploadImage;
-    cloneImage?: TCloneImage;
-    deleteImage?: TDeleteImage;
-    notification?: {
-      showSuccess(title: string, description?: string): void;
-      showError(title: string, description?: string): void;
-      showInfo(title: string, description?: string): void;
-    };
-    renderOrder?: {
+     cloneImage?: TCloneImage;
+     deleteImage?: TDeleteImage;
+     widgetRenderers?: THostedWidgetRenderers;
+     notification?: {
+       showSuccess(title: string, description?: string): void;
+       showError(title: string, description?: string): void;
+       showInfo(title: string, description?: string): void;
+     };
+     hostedWidgets?: {
+       isHostedNode: (node: Konva.Node | null | undefined) => boolean;
+       syncNode: (node: Konva.Shape) => void;
+       removeNode: (id: string) => void;
+       syncDomOrder: () => void;
+     };
+     renderOrder?: {
       getNodeZIndex: (node: Konva.Group | Konva.Shape) => string;
       setNodeZIndex: (node: Konva.Group | Konva.Shape, zIndex: string) => void;
       getOrderBundle: (node: Konva.Group | Konva.Shape) => Array<Konva.Group | Konva.Shape>;

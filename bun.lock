@@ -34,6 +34,7 @@
         "@vibecanvas/core-contract": "workspace:*",
         "@vibecanvas/server": "workspace:*",
         "@vibecanvas/shell": "workspace:*",
+        "ghostty-web": "^0.4.0",
         "konva": "^9.3.22",
         "lucide-solid": "catalog:",
         "partysocket": "^1.1.16",
