@@ -1,17 +1,17 @@
 import { throttle } from "@solid-primitives/scheduled";
 import type { JSX } from "solid-js";
-import { createComponent, createSignal, Show } from "solid-js";
+import { createSignal, Show } from "solid-js";
 import { render } from "solid-js/web";
 import type { TChatData, TElement, TFiletreeData, TTerminalData } from "@vibecanvas/shell/automerge/index";
 import Konva from "konva";
 import FrameIcon from "lucide-solid/icons/frame";
 import XIcon from "lucide-solid/icons/x";
+import { TerminalHostedWidget } from "../components/terminal";
 import type { TTool } from "../components/FloatingCanvasToolbar/toolbar.types";
 import { CustomEvents } from "../custom-events";
 import { CanvasMode } from "../services/canvas/enum";
 import type {
   THostedWidgetElementMap,
-  THostedWidgetRenderers,
   THostedWidgetType,
 } from "../services/canvas/interface";
 import type { IPlugin, IPluginContext } from "./interface";
@@ -563,8 +563,6 @@ export class HostedSolidWidgetPlugin implements IPlugin {
 
     const [currentElement, setCurrentElement] = createSignal(element);
     const [beforeRemove, setBeforeRemove] = createSignal<(() => void | Promise<void>) | null>(null);
-    const renderers = context.capabilities.widgetRenderers;
-    const renderer = renderers?.[element.data.type] as THostedWidgetRenderers[THostedWidgetType] | undefined;
     const dispose = render(() => (
       <HostedWidgetShell
         element={currentElement}
@@ -583,10 +581,13 @@ export class HostedSolidWidgetPlugin implements IPlugin {
           void this.removeHostedNode(context, node);
         }}
       >
-        {renderer ? createComponent(renderer as never, {
-          element: currentElement,
-          registerBeforeRemove: (handler: (() => void | Promise<void>) | null) => setBeforeRemove(() => handler),
-        } as never) : undefined}
+        <Show when={currentElement().data.type === "terminal"}>
+          <TerminalHostedWidget
+            element={currentElement as () => THostedWidgetElementMap["terminal"]}
+            safeClient={context.capabilities.terminal?.safeClient}
+            registerBeforeRemove={(handler) => setBeforeRemove(() => handler)}
+          />
+        </Show>
       </HostedWidgetShell>
     ), mountElement);
 

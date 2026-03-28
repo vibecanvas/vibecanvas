@@ -69,7 +69,7 @@ export class CanvasService {
     container: HTMLDivElement,
     docHandle: DocHandle<TCanvasDoc>,
     plugins: IPlugin[],
-    appCapabilities: Pick<IPluginContext["capabilities"], "uploadImage" | "cloneImage" | "deleteImage" | "notification" | "widgetRenderers"> = {},
+    appCapabilities: Pick<IPluginContext["capabilities"], "uploadImage" | "cloneImage" | "deleteImage" | "notification" | "terminal"> = {},
   ) {
     this.#history = new History();
     this.#crdt = new Crdt(docHandle);
@@ -141,7 +141,7 @@ export class CanvasService {
         uploadImage: appCapabilities.uploadImage,
         cloneImage: appCapabilities.cloneImage,
         deleteImage: appCapabilities.deleteImage,
-        widgetRenderers: appCapabilities.widgetRenderers,
+        terminal: appCapabilities.terminal,
         notification: appCapabilities.notification,
       }
     }

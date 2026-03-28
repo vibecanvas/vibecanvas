@@ -1,5 +1,4 @@
 import { showErrorToast, showSuccessToast, showToast } from "@/components/ui/Toast";
-import { TerminalHostedWidget } from "@/feature/terminal/components/terminal-hosted-widget";
 import { orpcWebsocketService } from "@/services/orpc-websocket";
 import { setStore, store } from "@/store";
 import type { TBackendCanvas } from "@/types/backend.types";
@@ -53,13 +52,9 @@ const CanvasPage: Component<CanvasPageProps> = (props) => {
           return result;
         },
       }}
+      terminal={{ safeClient: orpcWebsocketService.safeClient }}
       notification={{ showError: showErrorToast, showSuccess: showSuccessToast, showInfo: showToast }}
       store={{ sidebarVisible: () => store.sidebarVisible, onToggleSidebar: () => setStore('sidebarVisible', v => !v) }}
-      widgets={{
-        renderers: {
-          terminal: TerminalHostedWidget,
-        },
-      }}
     />
   );
 };

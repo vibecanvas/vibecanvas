@@ -36,7 +36,6 @@
     "@vibecanvas/server": "workspace:*",
     "@vibecanvas/canvas": "workspace:*",
     "@vibecanvas/shell": "workspace:*",
-    "ghostty-web": "^0.4.0",
     "konva": "^9.3.22",
     "partysocket": "^1.1.16",
     "perfect-freehand": "^1.2.2",

@@ -34,6 +34,7 @@
     "@orpc/contract": "catalog:",
     "@solid-primitives/scheduled": "^1.5.3",
     "@vibecanvas/shell": "workspace:*",
+    "ghostty-web": "^0.4.0",
     "konva": "^9.3.22",
     "lucide-solid": "catalog:",
     "microdiff": "^1.5.0",

@@ -67,7 +67,7 @@ export async function createCanvasTestHarness(args: {
   docHandle?: DocHandle<TCanvasDoc>;
   width?: number;
   height?: number;
-  appCapabilities?: Pick<IPluginContext["capabilities"], "uploadImage" | "cloneImage" | "deleteImage" | "notification" | "widgetRenderers">;
+  appCapabilities?: Pick<IPluginContext["capabilities"], "uploadImage" | "cloneImage" | "deleteImage" | "notification" | "terminal">;
 }) : Promise<TCanvasTestHarness> {
   ensureResizeObserver();
 
