@@ -232,6 +232,21 @@ function createFiletreeSafeClientMock(overrides?: {
           target_path: "/tmp/demo/src/index.ts",
           moved: true,
         }]),
+        inspect: vi.fn().mockResolvedValue([null, {
+          name: "index.ts",
+          path: "/tmp/demo/src/index.ts",
+          mime: "text/plain",
+          kind: "text",
+          size: 12,
+          lastModified: 1,
+          permissions: "rw-r--r--",
+        }]),
+        read: vi.fn().mockResolvedValue([null, {
+          kind: "text",
+          content: "console.log('hello')\n",
+          truncated: false,
+        }]),
+        write: vi.fn().mockResolvedValue([null, { success: true }]),
         watch: vi.fn().mockResolvedValue([null, (async function* () {})()]),
         keepaliveWatch: vi.fn().mockResolvedValue([null, true]),
         unwatch: vi.fn().mockResolvedValue([null, { ok: true }]),
@@ -877,6 +892,141 @@ describe("HostedSolidWidgetPlugin", () => {
     harness.destroy();
   });
 
+  test("hydrates hosted file elements into file widgets", async () => {
+    const safeClient = createFiletreeSafeClientMock();
+    const docHandle = createMockDocHandle({
+      elements: {
+        file1: {
+          id: "file1",
+          x: 80,
+          y: 120,
+          rotation: 0,
+          zIndex: "z00000001",
+          parentGroupId: null,
+          bindings: [],
+          locked: false,
+          createdAt: 1,
+          updatedAt: 1,
+          style: {},
+          data: { type: "file", w: 560, h: 500, path: "/tmp/demo/src/index.ts", renderer: "code", isCollapsed: false },
+        },
+      },
+    });
+
+    const harness = await createCanvasTestHarness({
+      docHandle,
+      plugins: [new RenderOrderPlugin(), new HostedSolidWidgetPlugin(), new SceneHydratorPlugin()],
+      appCapabilities: {
+        file: { safeClient },
+      },
+    });
+
+    await flushCanvasEffects();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    await flushCanvasEffects();
+
+    expect(harness.staticForegroundLayer.findOne("#file1")).toBeInstanceOf(Konva.Rect);
+    expect(harness.stage.container().querySelector('[data-hosted-widget-id="file1"]')).not.toBeNull();
+    expect(harness.stage.container().querySelector('[data-file-widget-root="true"]')).not.toBeNull();
+    expect(harness.stage.container().textContent).toContain("index.ts");
+
+    harness.destroy();
+  });
+
+  test("image file widget auto-sizes once after first image render", async () => {
+    const safeClient = createFiletreeSafeClientMock();
+    safeClient.api.filesystem.read = vi.fn().mockResolvedValue([null, {
+      kind: "binary",
+      content: "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+a4XcAAAAASUVORK5CYII=",
+      size: 68,
+      mime: "image/png",
+      encoding: "base64",
+    }]);
+
+    const docHandle = createMockDocHandle({
+      elements: {
+        file1: {
+          id: "file1",
+          x: 80,
+          y: 120,
+          rotation: 0,
+          zIndex: "z00000001",
+          parentGroupId: null,
+          bindings: [],
+          locked: false,
+          createdAt: 1,
+          updatedAt: 1,
+          style: {},
+          data: { type: "file", w: 560, h: 500, path: "/tmp/demo/image.png", renderer: "image", isCollapsed: false },
+        },
+      },
+    });
+
+    const harness = await createCanvasTestHarness({
+      docHandle,
+      plugins: [new RenderOrderPlugin(), new HostedSolidWidgetPlugin(), new SceneHydratorPlugin()],
+      appCapabilities: {
+        file: { safeClient },
+      },
+    });
+
+    await flushCanvasEffects();
+
+    const image = harness.stage.container().querySelector("img") as HTMLImageElement;
+    Object.defineProperty(image, "naturalWidth", { value: 320, configurable: true });
+    Object.defineProperty(image, "naturalHeight", { value: 180, configurable: true });
+    image.dispatchEvent(new Event("load"));
+    await flushCanvasEffects();
+
+    const node = harness.staticForegroundLayer.findOne("#file1") as Konva.Rect;
+    expect(node.width()).toBe(344);
+    expect(node.height()).toBe(236);
+
+    harness.destroy();
+  });
+
+  test("dropping a filetree file node on canvas creates a hosted file widget", async () => {
+    const safeClient = createFiletreeSafeClientMock();
+    const docHandle = createMockDocHandle();
+
+    const harness = await createCanvasTestHarness({
+      docHandle,
+      plugins: [new RenderOrderPlugin(), new HostedSolidWidgetPlugin()],
+      appCapabilities: {
+        filetree: {
+          canvasId: "canvas-1",
+          safeClient,
+        },
+        file: { safeClient },
+      },
+    });
+
+    await flushCanvasEffects();
+
+    const dropEvent = new Event("drop", { bubbles: true, cancelable: true }) as DragEvent;
+    Object.defineProperties(dropEvent, {
+      clientX: { value: 200 },
+      clientY: { value: 160 },
+      dataTransfer: {
+        value: {
+          types: ["application/x-vibecanvas-filetree-node"],
+          getData: (type: string) => type === "application/x-vibecanvas-filetree-node"
+            ? JSON.stringify({ path: "/tmp/demo/src/index.ts", name: "index.ts", is_dir: false })
+            : "",
+        },
+      },
+    });
+
+    harness.stage.container().dispatchEvent(dropEvent);
+    await flushCanvasEffects();
+
+    const elements = Object.values(docHandle.doc().elements);
+    expect(elements.some((element) => element.data.type === "file" && "path" in element.data && element.data.path === "/tmp/demo/src/index.ts")).toBe(true);
+    expect(harness.stage.container().querySelector('[data-file-widget-root="true"]')).not.toBeNull();
+
+    harness.destroy();
+  });
+
   test("terminal hosted layout constrains flex children so terminal content can shrink to widget bounds", async () => {
     const safeClient = createTerminalSafeClientMock();
     const docHandle = createMockDocHandle({
@@ -975,8 +1125,8 @@ describe("HostedSolidWidgetPlugin", () => {
 
     const mount = harness.stage.container().querySelector('[data-hosted-widget-id="terminal1"]') as HTMLDivElement;
     expect(mount.style.transform.includes("matrix(")).toBe(false);
-    expect(mount.style.width).toBe("508px");
-    expect(mount.style.height).toBe("303px");
+    expect(mount.style.width).toBe("480px");
+    expect(mount.style.height).toBe("275px");
 
     harness.destroy();
   });

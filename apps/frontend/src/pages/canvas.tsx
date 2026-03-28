@@ -53,6 +53,7 @@ const CanvasPage: Component<CanvasPageProps> = (props) => {
         },
       }}
       filetree={{ canvasId: props.canvas.id, safeClient: orpcWebsocketService.safeClient }}
+      file={{ safeClient: orpcWebsocketService.safeClient }}
       terminal={{ safeClient: orpcWebsocketService.safeClient }}
       notification={{ showError: showErrorToast, showSuccess: showSuccessToast, showInfo: showToast }}
       store={{ sidebarVisible: () => store.sidebarVisible, onToggleSidebar: () => setStore('sidebarVisible', v => !v) }}

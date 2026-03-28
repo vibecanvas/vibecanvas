@@ -1,4 +1,4 @@
-import type { TChatData, TElement, TFiletreeData, TTerminalData } from "@vibecanvas/shell/automerge/index";
+import type { TChatData, TElement, TFileData, TFiletreeData, TTerminalData } from "@vibecanvas/shell/automerge/index";
 import type * as schema from "@vibecanvas/shell/database/schema";
 import { Group } from "konva/lib/Group";
 import { Shape, ShapeConfig } from "konva/lib/Shape";
@@ -19,12 +19,13 @@ export type TDeleteImage = (args: {
   url: string;
 }) => Promise<{ ok: true }>;
 
-export type THostedWidgetType = "chat" | "filetree" | "terminal";
+export type THostedWidgetType = "chat" | "filetree" | "terminal" | "file";
 
 export type THostedWidgetElementMap = {
   chat: TElement & { data: TChatData };
   filetree: TElement & { data: TFiletreeData };
   terminal: TElement & { data: TTerminalData };
+  file: TElement & { data: TFileData };
 };
 
 export type TBackendFiletree = typeof schema.filetrees.$inferSelect;
@@ -74,6 +75,41 @@ export type TFiletreeWatchEvent = {
   fileName: string;
 };
 
+export type TFileInspectResponse = {
+  name: string;
+  path: string;
+  mime: string | null;
+  kind: "pdf" | "text" | "image" | "binary" | "video";
+  size: number;
+  lastModified: number;
+  permissions: string;
+};
+
+export type TFileReadResponse =
+  | {
+      kind: "text";
+      content: string;
+      truncated: boolean;
+    }
+  | {
+      kind: "binary";
+      content: string | null;
+      size: number;
+      mime?: string;
+      encoding?: "base64" | "hex";
+    }
+  | {
+      kind: "none";
+      size: number;
+    }
+  | TFiletreeErrorResponse;
+
+export type TFileWriteResponse =
+  | {
+      success: true;
+    }
+  | TFiletreeErrorResponse;
+
 type TFiletreeSafeResult<T> = Promise<[unknown, T | null | undefined]>;
 
 export type TFiletreeSafeClient = {
@@ -95,12 +131,17 @@ export type TFiletreeSafeClient = {
       list(args: { query: { path: string; omitFiles?: boolean } }): TFiletreeSafeResult<TFiletreeListResponse | TFiletreeErrorResponse>;
       files(args: { query: { path: string; glob_pattern?: string; max_depth?: number } }): TFiletreeSafeResult<TFiletreeFilesResponse | TFiletreeErrorResponse>;
       move(args: { body: { source_path: string; destination_dir_path: string } }): TFiletreeSafeResult<TFiletreeMoveResponse | TFiletreeErrorResponse>;
+      inspect(args: { query: { path: string } }): TFiletreeSafeResult<TFileInspectResponse | TFiletreeErrorResponse>;
+      read(args: { query: { path: string; maxBytes?: number; content?: "text" | "base64" | "binary" | "none" } }): TFiletreeSafeResult<TFileReadResponse>;
+      write(args: { query: { path: string; content: string } }): TFiletreeSafeResult<TFileWriteResponse>;
       watch(args: { path: string; watchId: string }, options?: { signal?: AbortSignal }): Promise<[unknown, AsyncIterable<TFiletreeWatchEvent> | null | undefined]>;
       keepaliveWatch(args: { watchId: string }): TFiletreeSafeResult<boolean>;
       unwatch(args: { watchId: string }): TFiletreeSafeResult<unknown>;
     };
   };
 };
+
+export type TFileSafeClient = TFiletreeSafeClient;
 
 export type TPty = {
   id: string;
@@ -151,6 +192,10 @@ export type TTerminalCapability = {
 export type TFiletreeCapability = {
   canvasId: string;
   safeClient: TFiletreeSafeClient;
+};
+
+export type TFileCapability = {
+  safeClient: TFileSafeClient;
 };
 
 export interface IState {

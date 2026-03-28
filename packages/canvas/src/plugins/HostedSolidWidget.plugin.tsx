@@ -2,11 +2,13 @@ import { throttle } from "@solid-primitives/scheduled";
 import type { JSX } from "solid-js";
 import { createSignal, Show } from "solid-js";
 import { render } from "solid-js/web";
-import type { TChatData, TElement, TFiletreeData, TTerminalData } from "@vibecanvas/shell/automerge/index";
+import type { TChatData, TElement, TFileData, TFiletreeData, TTerminalData } from "@vibecanvas/shell/automerge/index";
 import Konva from "konva";
 import FrameIcon from "lucide-solid/icons/frame";
 import RefreshCw from "lucide-solid/icons/refresh-cw";
 import XIcon from "lucide-solid/icons/x";
+import { FileHostedWidget } from "../components/file";
+import { getFileName, getFileRenderer } from "../components/file/utils";
 import { FiletreeHostedWidget } from "../components/filetree";
 import { TerminalHostedWidget } from "../components/terminal";
 import type { TTool } from "../components/FloatingCanvasToolbar/toolbar.types";
@@ -21,7 +23,7 @@ import { getWorldPosition, setWorldPosition } from "./node-space";
 import { getNodeZIndex, setNodeZIndex } from "./render-order.shared";
 import { TransformPlugin } from "./Transform.plugin";
 
-const HOSTED_TYPES = new Set<THostedWidgetType>(["chat", "filetree", "terminal"]);
+const HOSTED_TYPES = new Set<THostedWidgetType>(["chat", "filetree", "terminal", "file"]);
 const TOOL_TO_WIDGET_TYPE: Partial<Record<TTool, THostedWidgetType>> = {
   chat: "chat",
   filesystem: "filetree",
@@ -32,8 +34,14 @@ const HOSTED_TYPE_ATTR = "vcHostedWidgetType";
 const HOSTED_ELEMENT_ATTR = "vcHostedElementSnapshot";
 const HOSTED_TRANSFORMER_VISIBLE_ATTR = "vcHostedTransformerVisible";
 const HOSTED_WIDGET_CLASS = "vc-hosted-widget";
-const CONTENT_INSET = 14;
 const LAST_FILETREE_PATH_KEY = "vibecanvas-filetree-last-path";
+const FILETREE_CHAT_DND_MIME = "application/x-vibecanvas-filetree-node";
+
+type TDroppedNode = {
+  path: string;
+  name: string;
+  is_dir: boolean;
+};
 
 type THostedWidgetElement = THostedWidgetElementMap[THostedWidgetType];
 
@@ -53,6 +61,7 @@ type TMountRecord = {
   setElement: (element: THostedWidgetElement) => void;
   beforeRemove: () => void | Promise<void>;
   setBeforeRemove: (handler: (() => void | Promise<void>) | null) => void;
+  setAutoSize: (handler: ((size: { width: number; height: number }) => void) | null) => void;
 };
 
 function isHostedType(type: string): type is THostedWidgetType {
@@ -63,10 +72,65 @@ function getWidgetTypeFromTool(tool: TTool) {
   return TOOL_TO_WIDGET_TYPE[tool] ?? null;
 }
 
+function screenToWorld(context: IPluginContext, point: { x: number; y: number }) {
+  const containerRect = context.stage.container().getBoundingClientRect();
+  const inverted = context.staticForegroundLayer.getAbsoluteTransform().copy().invert();
+  return inverted.point({
+    x: point.x - containerRect.left,
+    y: point.y - containerRect.top,
+  });
+}
+
+function parseDroppedNode(event: DragEvent): TDroppedNode | null {
+  const raw = event.dataTransfer?.getData(FILETREE_CHAT_DND_MIME);
+  if (!raw) return null;
+
+  try {
+    const parsed = JSON.parse(raw) as Partial<TDroppedNode>;
+    if (typeof parsed.path !== "string") return null;
+    if (typeof parsed.name !== "string") return null;
+    if (typeof parsed.is_dir !== "boolean") return null;
+    return parsed as TDroppedNode;
+  } catch {
+    return null;
+  }
+}
+
+function createFileElementFromDrop(args: { id?: string; x: number; y: number; path: string }) {
+  const now = Date.now();
+  return {
+    id: args.id ?? crypto.randomUUID(),
+    x: args.x - 280,
+    y: args.y - 250,
+    rotation: 0,
+    zIndex: "",
+    parentGroupId: null,
+    bindings: [],
+    locked: false,
+    createdAt: now,
+    updatedAt: now,
+    style: {
+      backgroundColor: "#f8fafc",
+      borderColor: "#cbd5e1",
+      headerColor: "#e2e8f0",
+      opacity: 1,
+    },
+    data: {
+      type: "file",
+      w: 560,
+      h: 500,
+      path: args.path,
+      renderer: getFileRenderer(args.path),
+      isCollapsed: false,
+    } satisfies TFileData,
+  } as THostedWidgetElementMap["file"];
+}
+
 function getWidgetHeaderLabel(element: THostedWidgetElement) {
   if (element.data.type === "terminal") return "untitled";
   if (element.data.type === "chat") return "chat";
   if (element.data.type === "filetree") return "files";
+  if (element.data.type === "file") return getFileName(element.data.path);
   return "widget";
 }
 
@@ -126,6 +190,10 @@ function getDefaultWidgetElement(type: THostedWidgetType, x: number, y: number, 
         globPattern: null,
       } satisfies TFiletreeData,
     };
+  }
+
+  if (type === "file") {
+    return createFileElementFromDrop({ id, x, y, path: "untitled.txt" });
   }
 
   return {
@@ -201,28 +269,6 @@ function getScreenBounds(node: Konva.Rect): TBounds {
   };
 }
 
-function getMountedScreenBounds(node: Konva.Rect, inset: number): TBounds {
-  const width = node.width() + inset * 2;
-  const height = node.height() + inset * 2;
-  const absoluteTransform = node.getAbsoluteTransform().copy();
-  const topLeft = absoluteTransform.point({ x: -inset, y: -inset });
-  const topRight = absoluteTransform.point({ x: node.width() + inset, y: -inset });
-  const bottomLeft = absoluteTransform.point({ x: -inset, y: node.height() + inset });
-  const widthScreen = Math.hypot(topRight.x - topLeft.x, topRight.y - topLeft.y);
-  const heightScreen = Math.hypot(bottomLeft.x - topLeft.x, bottomLeft.y - topLeft.y);
-  const rotation = Math.atan2(topRight.y - topLeft.y, topRight.x - topLeft.x) * 180 / Math.PI;
-  const zoom = node.getLayer()?.scaleX() ?? 1;
-
-  return {
-    x: topLeft.x,
-    y: topLeft.y,
-    width: widthScreen / (zoom || 1),
-    height: heightScreen / (zoom || 1),
-    rotation,
-    zoom,
-  };
-}
-
 function getPointerWorldPoint(context: IPluginContext, point: { x: number; y: number }) {
   const containerRect = context.stage.container().getBoundingClientRect();
   const inverted = context.staticForegroundLayer.getAbsoluteTransform().copy().invert();
@@ -266,10 +312,11 @@ function HostedWidgetShell(props: {
       data-hosted-widget-root="true"
       style={{
         position: "absolute",
-        inset: `${CONTENT_INSET}px`,
+        inset: "0",
         display: "flex",
         "flex-direction": "column",
         "pointer-events": "auto",
+        "box-sizing": "border-box",
         border: `1px solid ${props.element().style.borderColor ?? "#cbd5e1"}`,
         background: props.element().style.backgroundColor ?? "#ffffff",
         "box-shadow": "0 8px 24px rgba(15,23,42,0.16)",
@@ -435,6 +482,7 @@ export class HostedSolidWidgetPlugin implements IPlugin {
     this.setupCapabilities(context);
     this.setupToolState(context);
     this.setupClickCreate(context);
+    this.setupFiletreeNodeDrop(context);
 
     context.capabilities.hostedWidgets = {
       isHostedNode: (node) => HostedSolidWidgetPlugin.isHostedNode(node),
@@ -486,14 +534,14 @@ export class HostedSolidWidgetPlugin implements IPlugin {
     return node;
   }
 
-  private async createFiletreeWidget(context: IPluginContext, pointer: { x: number; y: number }) {
+  private async createFiletreeWidget(context: IPluginContext, pointer: { x: number; y: number }, initialPath?: string) {
     const filetreeCapability = context.capabilities.filetree;
     if (!filetreeCapability) {
       context.capabilities.notification?.showError("Filetree transport is not configured");
       return;
     }
 
-    const lastFiletreePath = localStorage.getItem(LAST_FILETREE_PATH_KEY) ?? undefined;
+    const lastFiletreePath = initialPath ?? localStorage.getItem(LAST_FILETREE_PATH_KEY) ?? undefined;
     const [error, filetree] = await filetreeCapability.safeClient.api.filetree.create({
       canvas_id: filetreeCapability.canvasId,
       x: pointer.x,
@@ -536,6 +584,50 @@ export class HostedSolidWidgetPlugin implements IPlugin {
 
       const element = getDefaultWidgetElement(widgetType, pointer.x, pointer.y);
       this.insertHostedElement(context, element);
+    });
+  }
+
+  private setupFiletreeNodeDrop(context: IPluginContext) {
+    const container = context.stage.container();
+
+    const onDragOver = (event: DragEvent) => {
+      if (!event.dataTransfer?.types.includes(FILETREE_CHAT_DND_MIME)) return;
+      event.preventDefault();
+      if (event.dataTransfer) {
+        event.dataTransfer.dropEffect = "copy";
+      }
+    };
+
+    const onDrop = (event: DragEvent) => {
+      const node = parseDroppedNode(event);
+      if (!node) return;
+
+      event.preventDefault();
+      const point = screenToWorld(context, { x: event.clientX, y: event.clientY });
+
+      if (node.is_dir) {
+        void this.createFiletreeWidget(context, point, node.path);
+        return;
+      }
+
+      if (!context.capabilities.file) {
+        context.capabilities.notification?.showError("File transport is not configured");
+        return;
+      }
+
+      const element = createFileElementFromDrop({
+        x: point.x,
+        y: point.y,
+        path: node.path,
+      });
+      this.insertHostedElement(context, element);
+    };
+
+    container.addEventListener("dragover", onDragOver);
+    container.addEventListener("drop", onDrop);
+    context.hooks.destroy.tap(() => {
+      container.removeEventListener("dragover", onDragOver);
+      container.removeEventListener("drop", onDrop);
     });
   }
 
@@ -655,6 +747,7 @@ export class HostedSolidWidgetPlugin implements IPlugin {
 
     const [currentElement, setCurrentElement] = createSignal(element);
     const [beforeRemove, setBeforeRemove] = createSignal<(() => void | Promise<void>) | null>(null);
+    const [autoSize, setAutoSize] = createSignal<((size: { width: number; height: number }) => void) | null>(null);
     const dispose = render(() => (
       <HostedWidgetShell
         element={currentElement}
@@ -684,6 +777,13 @@ export class HostedSolidWidgetPlugin implements IPlugin {
             registerBeforeRemove={(handler) => setBeforeRemove(() => handler)}
           />
         </Show>
+        <Show when={currentElement().data.type === "file"}>
+          <FileHostedWidget
+            element={currentElement as () => THostedWidgetElementMap["file"]}
+            safeClient={context.capabilities.file?.safeClient}
+            requestInitialSize={(size) => autoSize()?.(size)}
+          />
+        </Show>
         <Show when={currentElement().data.type === "terminal"}>
           <TerminalHostedWidget
             element={currentElement as () => THostedWidgetElementMap["terminal"]}
@@ -701,7 +801,25 @@ export class HostedSolidWidgetPlugin implements IPlugin {
       setElement: (nextElement) => setCurrentElement(() => nextElement),
       beforeRemove: () => beforeRemove()?.(),
       setBeforeRemove: (handler) => setBeforeRemove(() => handler),
+      setAutoSize: (handler) => setAutoSize(() => handler),
     });
+
+    if (element.data.type === "file") {
+      this.#mounts.get(node.id())?.setAutoSize((size) => {
+        const snapshot = structuredClone(node.getAttr(HOSTED_ELEMENT_ATTR) as THostedWidgetElement | undefined);
+        if (!snapshot || snapshot.data.type !== "file") return;
+        if (snapshot.data.w !== 560 || snapshot.data.h !== 500) return;
+
+        node.width(size.width);
+        node.height(size.height);
+        const nextElement = this.toElement(node);
+        node.setAttr(HOSTED_ELEMENT_ATTR, structuredClone(nextElement));
+        this.mountWidgetFromUpdate(node, nextElement);
+        this.syncMountedNode(node);
+        context.crdt.patch({ elements: [nextElement], groups: [] });
+        context.stage.batchDraw();
+      });
+    }
 
     this.syncMountedNode(node);
     this.syncDomOrder();
@@ -725,11 +843,11 @@ export class HostedSolidWidgetPlugin implements IPlugin {
     const mounted = this.#mounts.get(node.id());
     if (!mounted) return;
 
-    const bounds = getMountedScreenBounds(node, CONTENT_INSET);
+    const bounds = getScreenBounds(node);
     mounted.mountElement.style.transform = `translate(${bounds.x}px, ${bounds.y}px) rotate(${bounds.rotation}deg) scale(${bounds.zoom})`;
     mounted.mountElement.style.transformOrigin = "top left";
-    mounted.mountElement.style.width = `${Math.max(bounds.width, node.width() + CONTENT_INSET * 2)}px`;
-    mounted.mountElement.style.height = `${Math.max(bounds.height, node.height() + CONTENT_INSET * 2)}px`;
+    mounted.mountElement.style.width = `${Math.max(bounds.width, node.width())}px`;
+    mounted.mountElement.style.height = `${Math.max(bounds.height, node.height())}px`;
   }
 
   private syncDomOrder() {
