@@ -55,6 +55,8 @@ The current package provides:
 - editable 2D rectangles, diamonds, and ellipses
 - grouping and ungrouping with CRDT updates
 - text creation, inline editing, and text-aware transforms
+- hosted Solid widgets for terminal and filetree content
+- package-owned Ghostty terminal runtime and PTY reconnect helpers
 - scene hydration from `TCanvasDoc`
 - CRDT patch and delete helpers with deep partial updates
 - package-level tests under `packages/canvas/tests`
@@ -173,6 +175,7 @@ Consumer renders <Canvas />
 - loads the Automerge document with `findDocument()`
 - destroys and recreates `CanvasService` when the active handle changes
 - passes `defaultPlugins({ onToggleSidebar })`
+- passes host transport capabilities like terminal/filetree safe clients into `CanvasService`
 - surfaces loading and error states to the DOM
 
 Unlike the earlier version of the package, the resolved `DocHandle` is now directly passed into `CanvasService` and used by the runtime.
@@ -190,6 +193,7 @@ Unlike the earlier version of the package, the resolved `DocHandle` is now direc
 - `history`
 - `crdt`
 - hook instances for lifecycle, pointer, keyboard, camera, and custom events
+- capability slots for package-owned hosted widgets, including terminal and filetree transport adapters
 
 It also exposes plugin `capabilities`, which are how plugins layer shape/group support onto the runtime without hardcoding everything in the service.
 
@@ -286,12 +290,14 @@ The runtime uses lightweight tapable-style hooks from `packages/canvas/src/tapab
 11. `Shape2dPlugin`
 12. `TextPlugin`
 13. `GroupPlugin`
-14. `SceneHydratorPlugin`
+14. `HostedSolidWidgetPlugin`
+15. `SceneHydratorPlugin`
 
 Important notes:
 
 - `ExampleScenePlugin` still exists, but it is not part of the default runtime anymore.
 - `SceneHydratorPlugin` is the current startup path for real document content.
+- `HostedSolidWidgetPlugin` is the package-owned path for `terminal` and `filetree` document elements.
 
 ### Plugin responsibilities
 
@@ -451,6 +457,54 @@ Owns grouping behavior and group-specific visual affordances.
 - manages which nodes are draggable based on current focused selection depth
 - supports clone-drag for groups and mixed grouped content
 - keeps cloned group boundary boxes updating during live drag, including cloned groups created in the current session
+
+#### `HostedSolidWidgetPlugin`
+
+Owns hosted DOM widgets whose visible UI should live in Solid/DOM while their geometry still participates in the Konva scene.
+
+- hydrates `terminal` and `filetree` elements into invisible `Konva.Rect` hosts in `staticForegroundLayer`
+- mounts one DOM node per hosted element into `worldWidgetsRoot`
+- projects hosted DOM mounts from world space into screen space on create, update, drag, transform, and camera changes
+- keeps hosted widgets selectable and transformable through the invisible Konva host rect rather than through ad hoc DOM geometry state
+- keeps visible shell alignment correct by accounting for the hosted shell inset at the plugin projection layer instead of pushing that responsibility into the widget body
+- preserves existing selection/transform semantics for hosted elements while allowing terminal/filetree internals to evolve independently
+- supports DOM-header drag, resize-handle reveal, close, and terminal reload actions
+
+Hosted widget runtime note:
+
+- the plugin-level projection is the shared fix point for reload-position bugs. If a hosted widget appears shifted after reload/zoom, debug `syncMountedNode(...)` before changing widget-local layout.
+
+#### Hosted terminal runtime
+
+The terminal is now fully package-owned under `packages/canvas/src/components/terminal/`.
+
+- `TerminalHostedWidget.tsx` adapts a hosted `terminal` element into the shared terminal UI
+- `TerminalWidget.tsx` owns the terminal shell UI and optional standalone chrome
+- `GhosttyTerminalMount.tsx` owns Ghostty init/open/dispose via Solid mount cleanup
+- `createTerminalContextLogic.ts` owns PTY lifecycle, reconnect, persisted cursor/size state, and websocket handling
+- `services/terminal/opencode-pty.ts` owns websocket URL construction, cursor extraction helpers, and localStorage session state helpers
+
+Terminal reconnect behavior:
+
+- when a terminal widget mounts, the package first checks persisted session state for `terminalKey`
+- if a saved PTY still exists, the package reconnects to that PTY using the saved `cursor` instead of restarting from zero
+- reconnecting from the saved cursor avoids replaying the entire PTY history and is the current fix for the “terminal UI frozen after canvas reload” class of bug
+- if no saved PTY exists, the package creates a new PTY and persists its session metadata locally
+
+Terminal reload behavior:
+
+- the hosted terminal header exposes a reload button owned by `HostedSolidWidgetPlugin`
+- reload remounts the frontend terminal subtree and reconnects to the existing PTY session without deleting the backend PTY
+- standalone `TerminalWidget` also exposes a reload control through the same terminal context logic
+
+#### Hosted filetree runtime
+
+The filetree is also package-owned under `packages/canvas/src/components/filetree/`.
+
+- `FiletreeHostedWidget.tsx` adapts a hosted `filetree` element into the shared filetree UI
+- `FiletreeWidget.tsx` owns the filetree controls, nested tree rendering, and drag/drop affordances
+- `createFiletreeContextLogic.ts` owns backend row loading, directory traversal, lazy folder expansion, and watch/unwatch lifecycle
+- like terminal, visible filetree positioning after reload is a plugin projection concern first and a widget layout concern second
 
 #### `SceneHydratorPlugin`
 
@@ -650,6 +704,8 @@ The package writes back to CRDT for:
 - transform updates for shapes
 - group creation
 - ungroup
+- hosted widget drag updates
+- hosted widget resize/transform updates via their invisible host rects
 - scene-hydrator orphan cleanup
 
 ### Current document limits
@@ -913,6 +969,7 @@ Current incomplete or rough areas:
 - scene hydration is startup-only, not a full reactive reconcile loop
 - selection still stores live Konva nodes instead of durable ids
 - toolbar exposes many tools that have no real runtime implementation yet
+- hosted widgets still rely on startup hydration plus targeted sync/update paths; there is not yet a generalized reactive reconcile layer for remote widget-local state changes
 - attached-text support is still rectangle-only within `Shape2dPlugin`
 - `ToolbarPlugin` still hardcodes `sidebarVisible: () => true`
 - runtime state still contains `theme`, but theme-specific behavior is minimal
@@ -961,6 +1018,7 @@ Current incomplete or rough areas:
 - `packages/canvas/src/plugins/Shape2d.plugin.ts`
 - `packages/canvas/src/plugins/Text.plugin.ts`
 - `packages/canvas/src/plugins/Group.plugin.ts`
+- `packages/canvas/src/plugins/HostedSolidWidget.plugin.tsx`
 - `packages/canvas/src/plugins/SceneHydrator.plugin.ts`
 
 ### Reference / non-default plugin
@@ -975,6 +1033,17 @@ Current incomplete or rough areas:
 - `packages/canvas/src/components/CanvasHelp/index.tsx`
 - `packages/canvas/src/components/CanvasHelp/help.data.ts`
 - `packages/canvas/src/components/CanvasRecorder/index.tsx` (planned)
+- `packages/canvas/src/components/terminal/TerminalHostedWidget.tsx`
+- `packages/canvas/src/components/terminal/TerminalWidget.tsx`
+- `packages/canvas/src/components/terminal/GhosttyTerminalMount.tsx`
+- `packages/canvas/src/components/filetree/FiletreeHostedWidget.tsx`
+- `packages/canvas/src/components/filetree/FiletreeWidget.tsx`
+
+### Hosted widget services
+
+- `packages/canvas/src/components/terminal/createTerminalContextLogic.ts`
+- `packages/canvas/src/components/filetree/createFiletreeContextLogic.ts`
+- `packages/canvas/src/services/terminal/opencode-pty.ts`
 
 ### Hook implementation
 
@@ -998,6 +1067,7 @@ Current incomplete or rough areas:
 - `packages/canvas/tests/plugins/TextPlugin.test.ts`
 - `packages/canvas/tests/plugins/SelectionPlugin.test.ts`
 - `packages/canvas/tests/plugins/TransformPlugin.test.ts`
+- `packages/canvas/tests/plugins/hosted-widget/HostedSolidWidgetPlugin.test.ts`
 - `packages/canvas/tests/scenarios/01-select-outer-group-from-child.ts`
 - `packages/canvas/tests/scenarios/02-nested-groups-leaf-shapes.ts`
 - `packages/canvas/tests/scenarios/03-top-level-mixed-selection.ts`
@@ -1026,6 +1096,7 @@ flowchart TD
   J --> K[EventListenerPlugin publishes hooks]
   J --> K2[RecorderPlugin mounts bottom-right recorder UI]
   J --> L[Shape1d, Shape2d, Text, and Group plugins register capabilities]
+  J --> L2[HostedSolidWidgetPlugin registers terminal and filetree widget runtime]
   J --> M[SceneHydratorPlugin initAsync load]
 
   M --> N[Read doc.groups]
@@ -1033,6 +1104,9 @@ flowchart TD
   N --> P[Mount groups top-down into staticForegroundLayer]
   O --> Q[Mount elements under resolved parents]
   M --> R[Delete unresolved orphan ids from CRDT]
+
+  Q --> R2[Hosted terminal and filetree elements hydrate invisible Konva rect hosts]
+  R2 --> R3[HostedSolidWidgetPlugin mounts DOM widgets into worldWidgetsRoot]
 
   K --> S[Toolbar and Help keyboard handling]
   K --> T[Selection pointer handling]
@@ -1052,6 +1126,7 @@ flowchart TD
   T --> AC[state.selection path of Konva nodes]
   AC --> AD[TransformPlugin filters active node]
   AC --> AE[GroupPlugin shows ancestor boundaries]
+  AC --> AE2[HostedSolidWidgetPlugin keeps hosted DOM aligned to selected Konva host rects]
 
   AA --> AF[preview shape in dynamicLayer]
   AF --> AG[commit shape into staticForegroundLayer]
@@ -1076,4 +1151,12 @@ flowchart TD
   AK --> AL[crdt.patch groups and elements]
   AK --> AM[history.record group undo redo]
   AL --> AH2
+
+  R3 --> AN1[terminal widget mounts Ghostty frontend]
+  AN1 --> AN2[createTerminalContextLogic restores PTY session from local state]
+  AN2 --> AN3[connect websocket using saved cursor when possible]
+  AN3 --> AN4[reload button remounts frontend and reconnects PTY]
+
+  R3 --> AO1[filetree widget loads backend row and filesystem tree]
+  AO1 --> AO2[filetree watch stream refreshes visible tree data]
 ```
