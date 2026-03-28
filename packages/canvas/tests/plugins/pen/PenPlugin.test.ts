@@ -3,6 +3,7 @@ import { describe, expect, test, vi } from "vitest";
 import { CustomEvents } from "../../../src/custom-events";
 import { PenPlugin } from "../../../src/plugins/Pen.plugin";
 import { SceneHydratorPlugin } from "../../../src/plugins/SceneHydrator.plugin";
+import { SelectionStyleMenuPlugin } from "../../../src/plugins/SelectionStyleMenu.plugin";
 import { Shape2dPlugin } from "../../../src/plugins/Shape2d.plugin";
 import type { IPluginContext } from "../../../src/plugins/interface";
 import { TransformPlugin } from "../../../src/plugins/Transform.plugin";
@@ -67,6 +68,32 @@ function withDynamicPointer(context: IPluginContext, point: { x: number; y: numb
   context.dynamicLayer.getRelativePointerPosition = () => point;
   callback();
   context.dynamicLayer.getRelativePointerPosition = original;
+}
+
+function drawPenStroke(
+  context: IPluginContext,
+  args: {
+    start: { x: number; y: number };
+    moves: Array<{ x: number; y: number; pressure?: number }>;
+    endPressure?: number;
+  },
+) {
+  context.setState("mode", CanvasMode.DRAW_CREATE);
+  context.hooks.customEvent.call(CustomEvents.TOOL_SELECT, "pen");
+
+  withDynamicPointer(context, args.start, () => {
+    context.hooks.pointerDown.call(createPointerEvent("pointerdown", 0.4));
+  });
+
+  args.moves.forEach((point, index) => {
+    withDynamicPointer(context, { x: point.x, y: point.y }, () => {
+      context.hooks.pointerMove.call(
+        createPointerEvent("pointermove", point.pressure ?? 0.5 + index * 0.05) as Konva.KonvaEventObject<MouseEvent>,
+      );
+    });
+  });
+
+  context.hooks.pointerUp.call(createPointerEvent("pointerup", args.endPressure ?? 0.5));
 }
 
 function mountPenNode(context: IPluginContext, element: TElement) {
@@ -225,8 +252,68 @@ describe("PenPlugin", () => {
     const createdNode = penNodes[0];
     expect(createdNode?.getLayer()).toBe(harness.staticForegroundLayer);
     expect(createdNode?.visible()).toBe(true);
+    expect(createdNode?.id()).toBeTruthy();
     expect(createdNode?.id()).toBe(previewPath?.id());
+    expect(docElements[0]?.id).toBe(createdNode?.id());
     expect(harness.dynamicLayer.find((node: Konva.Node) => node instanceof Konva.Path)).toHaveLength(0);
+
+    harness.destroy();
+  });
+
+  test("drawing two pens preserves distinct ids and width changes only the selected pen", async () => {
+    let context!: IPluginContext;
+    const docHandle = createMockDocHandle();
+
+    const harness = await createCanvasTestHarness({
+      docHandle,
+      plugins: [new SelectionStyleMenuPlugin(), new PenPlugin()],
+      initializeScene(ctx) {
+        context = ctx;
+      },
+    });
+
+    drawPenStroke(context, {
+      start: { x: 120, y: 80 },
+      moves: [
+        { x: 160, y: 110, pressure: 0.55 },
+        { x: 210, y: 140, pressure: 0.6 },
+      ],
+    });
+    await flushCanvasEffects();
+
+    drawPenStroke(context, {
+      start: { x: 320, y: 220 },
+      moves: [
+        { x: 360, y: 245, pressure: 0.45 },
+        { x: 410, y: 270, pressure: 0.5 },
+      ],
+    });
+    await flushCanvasEffects();
+
+    const penNodes = harness.staticForegroundLayer.find((node: Konva.Node) => node instanceof Konva.Path) as Konva.Path[];
+    expect(penNodes).toHaveLength(2);
+
+    const persistedPens = Object.values(docHandle.doc().elements).filter((element) => element.data.type === "pen");
+    expect(persistedPens).toHaveLength(2);
+    expect(new Set(persistedPens.map((element) => element.id)).size).toBe(2);
+    expect(persistedPens.every((element) => element.id.length > 0)).toBe(true);
+
+    const [firstPen, secondPen] = penNodes;
+    context.setState("selection", [secondPen!]);
+    await flushCanvasEffects();
+
+    const mediumButton = harness.stage.container().querySelector<HTMLButtonElement>('button[title="Medium"]');
+    expect(mediumButton).toBeTruthy();
+    mediumButton?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    await flushCanvasEffects();
+
+    expect(PenPlugin.toTElement(firstPen!).style.strokeWidth).toBe(7);
+    expect(PenPlugin.toTElement(secondPen!).style.strokeWidth).toBe(2);
+
+    const persistedFirstPen = getPersistedPenElement(docHandle, firstPen!.id());
+    const persistedSecondPen = getPersistedPenElement(docHandle, secondPen!.id());
+    expect(persistedFirstPen.style.strokeWidth).toBe(7);
+    expect(persistedSecondPen.style.strokeWidth).toBe(2);
 
     harness.destroy();
   });

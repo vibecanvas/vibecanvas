@@ -323,6 +323,7 @@ export class PenPlugin implements IPlugin {
   static updatePathFromElement(node: Konva.Path, element: TElement) {
     if (element.data.type !== "pen") return;
 
+    node.id(element.id);
     setWorldPosition(node, { x: element.x, y: element.y });
     node.rotation(element.rotation);
     node.data(getStrokePathFromPenData(element, {
