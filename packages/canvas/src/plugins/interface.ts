@@ -3,7 +3,7 @@ import type { SetStoreFunction } from 'solid-js/store';
 import type { TCustomEvent } from '../custom-events';
 import type { Camera } from '../services/canvas/Camera';
 import type { History } from "../services/canvas/History";
-import type { IState, TCloneImage, TDeleteImage, TTerminalCapability, TUploadImage } from '../services/canvas/interface';
+import type { IState, TCloneImage, TDeleteImage, TFiletreeCapability, TTerminalCapability, TUploadImage } from '../services/canvas/interface';
 import type { AsyncParallelHook, SyncExitHook, SyncHook } from '../tapable';
 import type { Crdt } from "../services/canvas/Crdt";
 import type { TElement, TGroup } from "@vibecanvas/shell/automerge/index";
@@ -73,8 +73,9 @@ export interface IPluginContext {
      uploadImage?: TUploadImage;
       cloneImage?: TCloneImage;
       deleteImage?: TDeleteImage;
-      terminal?: TTerminalCapability;
-      notification?: {
+       terminal?: TTerminalCapability;
+       filetree?: TFiletreeCapability;
+       notification?: {
         showSuccess(title: string, description?: string): void;
         showError(title: string, description?: string): void;
        showInfo(title: string, description?: string): void;

@@ -6,6 +6,9 @@ import { TOOL_SHORTCUTS, TTool } from "../components/FloatingCanvasToolbar/toolb
 import { CustomEvents } from "../custom-events";
 import { CanvasMode } from "../services/canvas/enum";
 
+const DRAW_CREATE_TOOLS: TTool[] = ["rectangle", "diamond", "ellipse", "line", "arrow", "pen"];
+const CLICK_CREATE_TOOLS: TTool[] = ["text", "image", "chat", "filesystem", "terminal"];
+
 function getShortcutTool(event: KeyboardEvent): TTool | null {
   if (event.metaKey || event.ctrlKey || event.altKey) return null;
 
@@ -92,10 +95,12 @@ export class ToolbarPlugin implements IPlugin {
         context.setState('mode', CanvasMode.SELECT)
       } else if (value === 'hand') {
         context.setState('mode', CanvasMode.HAND)
-      } else if (["rectangle", "diamond", "ellipse", "line", "arrow", "pen"].includes(value)) {
+      } else if (DRAW_CREATE_TOOLS.includes(value)) {
         context.setState('mode', CanvasMode.DRAW_CREATE)
-      } else {
+      } else if (CLICK_CREATE_TOOLS.includes(value)) {
         context.setState('mode', CanvasMode.CLICK_CREATE)
+      } else {
+        context.setState('mode', CanvasMode.SELECT)
       }
       context.hooks.customEvent.call(CustomEvents.TOOL_SELECT, value);
     })

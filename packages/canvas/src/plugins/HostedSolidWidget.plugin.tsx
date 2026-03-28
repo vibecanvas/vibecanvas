@@ -6,6 +6,7 @@ import type { TChatData, TElement, TFiletreeData, TTerminalData } from "@vibecan
 import Konva from "konva";
 import FrameIcon from "lucide-solid/icons/frame";
 import XIcon from "lucide-solid/icons/x";
+import { FiletreeHostedWidget } from "../components/filetree";
 import { TerminalHostedWidget } from "../components/terminal";
 import type { TTool } from "../components/FloatingCanvasToolbar/toolbar.types";
 import { CustomEvents } from "../custom-events";
@@ -31,6 +32,7 @@ const HOSTED_ELEMENT_ATTR = "vcHostedElementSnapshot";
 const HOSTED_TRANSFORMER_VISIBLE_ATTR = "vcHostedTransformerVisible";
 const HOSTED_WIDGET_CLASS = "vc-hosted-widget";
 const CONTENT_INSET = 14;
+const LAST_FILETREE_PATH_KEY = "vibecanvas-filetree-last-path";
 
 type THostedWidgetElement = THostedWidgetElementMap[THostedWidgetType];
 
@@ -67,12 +69,12 @@ function getWidgetHeaderLabel(element: THostedWidgetElement) {
   return "widget";
 }
 
-function getDefaultWidgetElement(type: THostedWidgetType, x: number, y: number): THostedWidgetElement {
+function getDefaultWidgetElement(type: THostedWidgetType, x: number, y: number, id = crypto.randomUUID()): THostedWidgetElement {
   const now = Date.now();
 
   if (type === "chat") {
     return {
-      id: crypto.randomUUID(),
+      id,
       x,
       y,
       rotation: 0,
@@ -99,7 +101,7 @@ function getDefaultWidgetElement(type: THostedWidgetType, x: number, y: number):
 
   if (type === "filetree") {
     return {
-      id: crypto.randomUUID(),
+      id,
       x,
       y,
       rotation: 0,
@@ -117,8 +119,8 @@ function getDefaultWidgetElement(type: THostedWidgetType, x: number, y: number):
       },
       data: {
         type: "filetree",
-        w: 420,
-        h: 340,
+        w: 360,
+        h: 460,
         isCollapsed: false,
         globPattern: null,
       } satisfies TFiletreeData,
@@ -126,7 +128,7 @@ function getDefaultWidgetElement(type: THostedWidgetType, x: number, y: number):
   }
 
   return {
-    id: crypto.randomUUID(),
+    id,
     x,
     y,
     rotation: 0,
@@ -423,6 +425,50 @@ export class HostedSolidWidgetPlugin implements IPlugin {
     });
   }
 
+  private insertHostedElement(context: IPluginContext, element: THostedWidgetElement) {
+    const node = this.createHostedNode(context, element);
+    context.staticForegroundLayer.add(node);
+    context.capabilities.renderOrder?.assignOrderOnInsert({
+      parent: context.staticForegroundLayer,
+      nodes: [node],
+      position: "front",
+    });
+    context.crdt.patch({ elements: [this.toElement(node)], groups: [] });
+    context.setState("selection", [node]);
+    return node;
+  }
+
+  private async createFiletreeWidget(context: IPluginContext, pointer: { x: number; y: number }) {
+    const filetreeCapability = context.capabilities.filetree;
+    if (!filetreeCapability) {
+      context.capabilities.notification?.showError("Filetree transport is not configured");
+      return;
+    }
+
+    const lastFiletreePath = localStorage.getItem(LAST_FILETREE_PATH_KEY) ?? undefined;
+    const [error, filetree] = await filetreeCapability.safeClient.api.filetree.create({
+      canvas_id: filetreeCapability.canvasId,
+      x: pointer.x,
+      y: pointer.y,
+      ...(lastFiletreePath ? { path: lastFiletreePath } : {}),
+    });
+
+    if (error || !filetree) {
+      const message = error && "message" in (error as object)
+        ? (error as { message?: string }).message ?? "Failed to create file tree"
+        : "Failed to create file tree";
+      context.capabilities.notification?.showError("Failed to create file tree", message);
+      return;
+    }
+
+    if (filetree.path) {
+      localStorage.setItem(LAST_FILETREE_PATH_KEY, filetree.path);
+    }
+
+    const element = getDefaultWidgetElement("filetree", pointer.x, pointer.y, filetree.id);
+    this.insertHostedElement(context, element);
+  }
+
   private setupClickCreate(context: IPluginContext) {
     context.hooks.pointerUp.tap(() => {
       if (context.state.mode !== CanvasMode.CLICK_CREATE) return;
@@ -432,18 +478,16 @@ export class HostedSolidWidgetPlugin implements IPlugin {
       const pointer = context.staticForegroundLayer.getRelativePointerPosition();
       if (!pointer) return;
 
-      const element = getDefaultWidgetElement(widgetType, pointer.x, pointer.y);
-      const node = this.createHostedNode(context, element);
-      context.staticForegroundLayer.add(node);
-      context.capabilities.renderOrder?.assignOrderOnInsert({
-        parent: context.staticForegroundLayer,
-        nodes: [node],
-        position: "front",
-      });
-      context.crdt.patch({ elements: [this.toElement(node)], groups: [] });
-      context.setState("selection", [node]);
       context.setState("mode", CanvasMode.SELECT);
       context.hooks.customEvent.call(CustomEvents.TOOL_SELECT, "select");
+
+      if (widgetType === "filetree") {
+        void this.createFiletreeWidget(context, pointer);
+        return;
+      }
+
+      const element = getDefaultWidgetElement(widgetType, pointer.x, pointer.y);
+      this.insertHostedElement(context, element);
     });
   }
 
@@ -581,6 +625,14 @@ export class HostedSolidWidgetPlugin implements IPlugin {
           void this.removeHostedNode(context, node);
         }}
       >
+        <Show when={currentElement().data.type === "filetree"}>
+          <FiletreeHostedWidget
+            element={currentElement as () => THostedWidgetElementMap["filetree"]}
+            canvasId={context.capabilities.filetree?.canvasId}
+            safeClient={context.capabilities.filetree?.safeClient}
+            registerBeforeRemove={(handler) => setBeforeRemove(() => handler)}
+          />
+        </Show>
         <Show when={currentElement().data.type === "terminal"}>
           <TerminalHostedWidget
             element={currentElement as () => THostedWidgetElementMap["terminal"]}
