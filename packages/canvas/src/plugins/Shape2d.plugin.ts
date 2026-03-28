@@ -1,4 +1,4 @@
-import { TElement, TElementData, TElementStyle, TRectData, TTextData } from "@vibecanvas/shell/automerge/index";
+import { TElement, TElementData, TElementStyle, TDiamondData, TEllipseData, TRectData, TTextData } from "@vibecanvas/shell/automerge/index";
 import Konva from "konva";
 import type { TTool } from "../components/FloatingCanvasToolbar/toolbar.types";
 import { CustomEvents } from "../custom-events";
@@ -14,6 +14,7 @@ import { getNodeZIndex, setNodeZIndex } from "./render-order.shared";
 
 export class Shape2dPlugin implements IPlugin {
   #previewDrawing: Konva.Shape | null = null;
+  #previewOrigin: { x: number; y: number } | null = null;
   #activeTool: TTool = 'select';
   static supportedTypes: Set<TElementData['type']> = new Set(['rect', 'diamond', 'ellipse']);
 
@@ -85,41 +86,62 @@ export class Shape2dPlugin implements IPlugin {
       const pointer = context.dynamicLayer.getRelativePointerPosition();
       if (!pointer) return;
 
-      if (this.#activeTool === 'rectangle') {
-        this.#previewDrawing = Shape2dPlugin.createRectFromElement({
-          id: crypto.randomUUID(),
-          rotation: 0,
-          x: pointer.x,
-          y: pointer.y,
-          bindings: [],
-          createdAt: Date.now(),
-          locked: false,
-          parentGroupId: null,
-          updatedAt: Date.now(),
-          zIndex: '',
-          data: {
-            type: 'rect',
-            w: 0,
-            h: 0,
-          },
-          style: {
-            backgroundColor: 'red'
-          }
-        });
-      }
+      this.#previewOrigin = { x: pointer.x, y: pointer.y }
+
+      const element: TElement = {
+        id: crypto.randomUUID(),
+        rotation: 0,
+        x: pointer.x,
+        y: pointer.y,
+        bindings: [],
+        createdAt: Date.now(),
+        locked: false,
+        parentGroupId: null,
+        updatedAt: Date.now(),
+        zIndex: '',
+        data: Shape2dPlugin.createZeroSizeShapeData(this.#activeTool),
+        style: {
+          backgroundColor: 'red'
+        }
+      };
+
+      this.#previewDrawing = Shape2dPlugin.createShapeFromElement(element);
       if (this.#previewDrawing) context.dynamicLayer.add(this.#previewDrawing);
     })
 
     context.hooks.pointerMove.tap((e) => {
       if (context.state.mode !== CanvasMode.DRAW_CREATE) return;
       if (!this.#previewDrawing) return;
+      if (!this.#previewOrigin) return;
       const pointer = context.dynamicLayer.getRelativePointerPosition();
       if (!pointer) return;
 
-      this.#previewDrawing?.setAttrs({
-        width: pointer.x - this.#previewDrawing.x(),
-        height: pointer.y - this.#previewDrawing.y(),
-      });
+      const left = Math.min(this.#previewOrigin.x, pointer.x)
+      const top = Math.min(this.#previewOrigin.y, pointer.y)
+      const width = Math.abs(pointer.x - this.#previewOrigin.x)
+      const height = Math.abs(pointer.y - this.#previewOrigin.y)
+
+      if (this.#activeTool === 'rectangle' && this.#previewDrawing instanceof Konva.Rect) {
+        this.#previewDrawing.setAttrs({
+          x: left,
+          y: top,
+          width: width,
+          height: height,
+        });
+      } else if (this.#activeTool === 'diamond' && Shape2dPlugin.isDiamondNode(this.#previewDrawing)) {
+        Shape2dPlugin.applyDiamondSize(this.#previewDrawing, width, height)
+        this.#previewDrawing.setAttrs({
+          x: left,
+          y: top,
+        });
+      } else if (this.#activeTool === 'ellipse' && this.#previewDrawing instanceof Konva.Ellipse) {
+        this.#previewDrawing.setAttrs({
+          x: left + width / 2,
+          y: top + height / 2,
+          radiusX: width / 2,
+          radiusY: height / 2,
+        });
+      }
     })
 
     context.hooks.pointerUp.tap(() => {
@@ -149,12 +171,14 @@ export class Shape2dPlugin implements IPlugin {
     context.hooks.destroy.tap(() => {
       this.#previewDrawing?.destroy();
       this.#previewDrawing = null;
+      this.#previewOrigin = null;
     })
   }
 
   private cancelPreview(context: IPluginContext) {
     this.#previewDrawing?.destroy();
     this.#previewDrawing = null;
+    this.#previewOrigin = null;
     context.setState('mode', CanvasMode.SELECT)
     context.hooks.customEvent.call(CustomEvents.TOOL_SELECT, 'select')
   }
@@ -165,7 +189,7 @@ export class Shape2dPlugin implements IPlugin {
       if (!Shape2dPlugin.supportedTypes.has(element.data.type)) {
         return currentCreateShapeFromTElement?.(element) || null
       } else {
-        const shape = Shape2dPlugin.createRectFromElement(element)
+        const shape = Shape2dPlugin.createShapeFromElement(element)
         if (shape) {
           Shape2dPlugin.setupShapeListeners(context, shape)
           shape.setDraggable(true)
@@ -176,7 +200,7 @@ export class Shape2dPlugin implements IPlugin {
 
       const currentToElement = context.capabilities.toElement
       context.capabilities.toElement = (node) => {
-        if (node instanceof Konva.Rect) {
+        if (node instanceof Konva.Rect || node instanceof Konva.Ellipse || Shape2dPlugin.isDiamondNode(node)) {
           return Shape2dPlugin.toTElement(node)
         }
         return currentToElement?.(node) || null
@@ -184,6 +208,7 @@ export class Shape2dPlugin implements IPlugin {
 
       const previousGetBundle = context.capabilities.getReorderBundle
       context.capabilities.getReorderBundle = (node) => {
+        // Attached text is rect-only; don't bundle other shapes with text
         if (!(node instanceof Konva.Rect)) {
           return previousGetBundle?.(node) ?? [node]
         }
@@ -286,29 +311,51 @@ export class Shape2dPlugin implements IPlugin {
   }
 
   private static updateShapeFromTElement(context: IPluginContext, shape: Konva.Shape, element: TElement) {
-    // TODO: add for other shapes
-    if (shape instanceof Konva.Rect && element.data.type === 'rect') {
+    if (shape instanceof Konva.Ellipse && element.data.type === 'ellipse') {
+      const nextPosition = {
+        x: element.x + element.data.rx,
+        y: element.y + element.data.ry,
+      }
+      const worldPosition = getWorldPosition(shape)
+      if (worldPosition.x !== nextPosition.x || worldPosition.y !== nextPosition.y) {
+        setWorldPosition(shape, nextPosition)
+      }
+    } else {
       const worldPosition = getWorldPosition(shape)
       if (worldPosition.x !== element.x || worldPosition.y !== element.y) {
         setWorldPosition(shape, { x: element.x, y: element.y })
       }
-      if (shape.rotation() !== element.rotation) shape.rotation(element.rotation)
-      if (shape.width() !== element.data.w) shape.width(element.data.w)
-      if (shape.height() !== element.data.h) shape.height(element.data.h)
-      if (shape.scaleX() !== 1) shape.scaleX(1)
-      if (shape.scaleY() !== 1) shape.scaleY(1)
-      if (element.style.backgroundColor !== shape.fill()) shape.fill(element.style.backgroundColor)
-      if (element.style.strokeColor !== shape.stroke()) shape.stroke(element.style.strokeColor)
-      if (element.style.strokeWidth !== shape.strokeWidth()) shape.strokeWidth(element.style.strokeWidth)
-      if (element.style.opacity !== shape.opacity()) shape.opacity(element.style.opacity)
-      setNodeZIndex(shape, element.zIndex)
-      Shape2dPlugin.syncAttachedTextToRect(context, shape)
     }
 
+    if (shape.rotation() !== element.rotation) shape.rotation(element.rotation)
+    if (shape.scaleX() !== 1) shape.scaleX(1)
+    if (shape.scaleY() !== 1) shape.scaleY(1)
+    if (element.style.backgroundColor !== shape.fill()) shape.fill(element.style.backgroundColor)
+    if (element.style.strokeColor !== shape.stroke()) shape.stroke(element.style.strokeColor)
+    if (element.style.strokeWidth !== shape.strokeWidth()) shape.strokeWidth(element.style.strokeWidth)
+    if (element.style.opacity !== shape.opacity()) shape.opacity(element.style.opacity)
+    setNodeZIndex(shape, element.zIndex)
+
+    if (element.data.type === 'rect' && shape instanceof Konva.Rect) {
+      if (shape.width() !== element.data.w) shape.width(element.data.w)
+      if (shape.height() !== element.data.h) shape.height(element.data.h)
+    } else if (element.data.type === 'diamond' && Shape2dPlugin.isDiamondNode(shape)) {
+      Shape2dPlugin.applyDiamondSize(shape, element.data.w, element.data.h)
+    } else if (element.data.type === 'ellipse' && shape instanceof Konva.Ellipse) {
+      if (shape.radiusX() !== element.data.rx) shape.radiusX(element.data.rx)
+      if (shape.radiusY() !== element.data.ry) shape.radiusY(element.data.ry)
+    }
+
+    if (element.data.type === 'rect' && shape instanceof Konva.Rect) {
+      Shape2dPlugin.syncAttachedTextToRect(context, shape)
+    }
   }
 
   static toTElement(shape: Konva.Shape): TElement {
     let data!: TElementData
+    let x!: number
+    let y!: number
+
     if (shape instanceof Konva.Rect) {
       const absoluteScale = shape.getAbsoluteScale()
       const layer = shape.getLayer()
@@ -319,8 +366,37 @@ export class Shape2dPlugin implements IPlugin {
         w: shape.width() * (absoluteScale.x / layerScaleX),
         h: shape.height() * (absoluteScale.y / layerScaleY),
       }
-    } else
+      const position = getWorldPosition(shape)
+      x = position.x
+      y = position.y
+    } else if (shape instanceof Konva.Ellipse) {
+      const absoluteScale = shape.getAbsoluteScale()
+      const layer = shape.getLayer()
+      const layerScaleX = layer?.scaleX() ?? 1
+      const layerScaleY = layer?.scaleY() ?? 1
+      const rx = shape.radiusX() * (absoluteScale.x / layerScaleX)
+      const ry = shape.radiusY() * (absoluteScale.y / layerScaleY)
+      data = {
+        type: 'ellipse',
+        rx,
+        ry,
+      }
+      const position = getWorldPosition(shape)
+      x = position.x - rx
+      y = position.y - ry
+    } else if (Shape2dPlugin.isDiamondNode(shape)) {
+      const { w, h } = Shape2dPlugin.getDiamondDimensions(shape)
+      data = {
+        type: 'diamond',
+        w,
+        h,
+      }
+      const position = getWorldPosition(shape)
+      x = position.x
+      y = position.y
+    } else {
       throw new Error('Unsupported shape type')
+    }
 
     let style: TElementStyle = {
       opacity: shape.opacity(),
@@ -331,7 +407,6 @@ export class Shape2dPlugin implements IPlugin {
     if (typeof shape.stroke() === 'string') style.strokeColor = shape.stroke() as string
     const parent = shape.getParent()
     const parentGroupId = parent instanceof Konva.Group ? parent.id() : null
-    const { x, y } = getWorldPosition(shape)
 
     return {
       id: shape.id(),
@@ -420,6 +495,7 @@ export class Shape2dPlugin implements IPlugin {
 
     shape.on('dragmove', e => {
       throttledPatch(Shape2dPlugin.toTElement(shape))
+      // Attached text is rect-only - don't sync for diamond/ellipse
       if (shape instanceof Konva.Rect) {
         Shape2dPlugin.syncAttachedTextToRect(context, shape)
       }
@@ -608,6 +684,28 @@ export class Shape2dPlugin implements IPlugin {
     return newShape
   }
 
+  static createZeroSizeShapeData(tool: TTool): TElementData {
+    if (tool === 'rectangle') {
+      return { type: 'rect', w: 0, h: 0 }
+    } else if (tool === 'diamond') {
+      return { type: 'diamond', w: 0, h: 0 }
+    } else if (tool === 'ellipse') {
+      return { type: 'ellipse', rx: 0, ry: 0 }
+    }
+    throw new Error(`Unknown shape tool: ${tool}`)
+  }
+
+  static createShapeFromElement(element: TElement): Konva.Shape | null {
+    if (element.data.type === 'rect') {
+      return Shape2dPlugin.createRectFromElement(element)
+    } else if (element.data.type === 'diamond') {
+      return Shape2dPlugin.createDiamondFromElement(element)
+    } else if (element.data.type === 'ellipse') {
+      return Shape2dPlugin.createEllipseFromElement(element)
+    }
+    return null
+  }
+
   static createRectFromElement(element: TElement) {
     const data = element.data as TRectData
     const shape = new Konva.Rect({
@@ -629,28 +727,60 @@ export class Shape2dPlugin implements IPlugin {
     return shape
   }
 
-  static createShapeFromNode(shape: Konva.Shape) {
-    if (!(shape instanceof Konva.Rect)) return null
+  static createDiamondFromElement(element: TElement) {
+    const data = element.data as TDiamondData
+    const shape = new Konva.Line({
+      id: element.id,
+      rotation: element.rotation,
+      x: element.x,
+      y: element.y,
+      closed: true,
+      points: Shape2dPlugin.getDiamondPoints(data.w, data.h),
+      fill: element.style.backgroundColor,
+      stroke: element.style.strokeColor,
+      strokeWidth: element.style.strokeWidth,
+      opacity: element.style.opacity,
+      draggable: false,
+    });
+    shape.setAttr('vcShape2dType', 'diamond')
 
-    return Shape2dPlugin.createRectFromElement({
-      id: shape.id() || crypto.randomUUID(),
-      rotation: shape.rotation(),
-      x: shape.x(),
-      y: shape.y(),
-      bindings: [],
+    setNodeZIndex(shape, element.zIndex)
+
+    return shape
+  }
+
+  static createEllipseFromElement(element: TElement) {
+    const data = element.data as TEllipseData
+    const shape = new Konva.Ellipse({
+      id: element.id,
+      rotation: element.rotation,
+      x: element.x + data.rx,
+      y: element.y + data.ry,
+      radiusX: data.rx,
+      radiusY: data.ry,
+      fill: element.style.backgroundColor,
+      stroke: element.style.strokeColor,
+      strokeWidth: element.style.strokeWidth,
+      opacity: element.style.opacity,
+      draggable: false,
+    });
+
+    setNodeZIndex(shape, element.zIndex)
+
+    return shape
+  }
+
+  static createShapeFromNode(shape: Konva.Shape) {
+    if (!(shape instanceof Konva.Rect) && !(shape instanceof Konva.Ellipse) && !Shape2dPlugin.isDiamondNode(shape)) {
+      return null
+    }
+
+    const element = Shape2dPlugin.toTElement(shape)
+    return Shape2dPlugin.createShapeFromElement({
+      ...element,
+      id: crypto.randomUUID(),
       createdAt: Date.now(),
-      locked: false,
-      parentGroupId: null,
       updatedAt: Date.now(),
-      zIndex: '',
-      data: {
-        type: 'rect',
-        w: shape.width() * shape.scaleX(),
-        h: shape.height() * shape.scaleY(),
-      },
-      style: {
-        backgroundColor: shape.fill() as string || 'red',
-      },
     })
   }
 
@@ -661,6 +791,40 @@ export class Shape2dPlugin implements IPlugin {
     newShape.id(crypto.randomUUID())
     newShape.setDraggable(true)
     return newShape
+  }
+
+  static isDiamondNode(node: Konva.Node): node is Konva.Line {
+    return node instanceof Konva.Line && node.closed() === true && node.getAttr('vcShape2dType') === 'diamond'
+  }
+
+  static getDiamondPoints(w: number, h: number) {
+    return [
+      w / 2, 0,
+      w, h / 2,
+      w / 2, h,
+      0, h / 2,
+    ]
+  }
+
+  static getDiamondDimensions(shape: Konva.Line) {
+    const points = shape.points()
+    const xs = points.filter((_, index) => index % 2 === 0)
+    const ys = points.filter((_, index) => index % 2 === 1)
+    const baseWidth = Math.max(...xs, 0) - Math.min(...xs, 0)
+    const baseHeight = Math.max(...ys, 0) - Math.min(...ys, 0)
+    const absoluteScale = shape.getAbsoluteScale()
+    const layer = shape.getLayer()
+    const layerScaleX = layer?.scaleX() ?? 1
+    const layerScaleY = layer?.scaleY() ?? 1
+
+    return {
+      w: baseWidth * (absoluteScale.x / layerScaleX),
+      h: baseHeight * (absoluteScale.y / layerScaleY),
+    }
+  }
+
+  static applyDiamondSize(shape: Konva.Line, w: number, h: number) {
+    shape.points(Shape2dPlugin.getDiamondPoints(w, h))
   }
 
 }

@@ -51,6 +51,8 @@ The current package provides:
 - Solid toolbar and help overlays mounted by plugins
 - marquee selection and depth-aware nested selection
 - shared transformer UI
+- editable 1D line/arrow shapes with curve point editing
+- editable 2D rectangles, diamonds, and ellipses
 - grouping and ungrouping with CRDT updates
 - text creation, inline editing, and text-aware transforms
 - scene hydration from `TCanvasDoc`
@@ -184,7 +186,7 @@ Unlike the earlier version of the package, the resolved `DocHandle` is now direc
 - `staticForegroundLayer`
 - `dynamicLayer`
 - `camera`
-- Solid store state with `mode`, `theme`, `selection`, and `editingTextId`
+- Solid store state with `mode`, `theme`, `selection`, `editingTextId`, and `editingShape1dId`
 - `history`
 - `crdt`
 - hook instances for lifecycle, pointer, keyboard, camera, and custom events
@@ -280,10 +282,11 @@ The runtime uses lightweight tapable-style hooks from `packages/canvas/src/tapab
 7. `RecorderPlugin`
 8. `SelectPlugin`
 9. `TransformPlugin`
-10. `Shape2dPlugin`
-11. `TextPlugin`
-12. `GroupPlugin`
-13. `SceneHydratorPlugin`
+10. `Shape1dPlugin`
+11. `Shape2dPlugin`
+12. `TextPlugin`
+13. `GroupPlugin`
+14. `SceneHydratorPlugin`
 
 Important notes:
 
@@ -389,19 +392,40 @@ Owns the shared `Konva.Transformer`.
 - filters selection for nested group focus
 - persists shape transforms back through `crdt.patch()` on transform end
 - records transform undo/redo history
+- hides while text editing or 1D point-edit mode is active
+
+#### `Shape1dPlugin`
+
+Owns line and arrow support.
+
+- responds to `TOOL_SELECT` for `line` and `arrow`
+- supports draw-preview creation flow for both tools
+- registers capability functions for 1D shape creation, serialization, and updates
+- uses line as the shared base geometry/runtime path, with arrow caps layered on top
+- supports straight and curved lines via persisted `points[]`
+- supports point-edit mode on selected 1D shapes, including draggable existing points and insert-point handles
+- supports nested-group-safe point editing by converting between local, absolute, and dynamic-layer coordinates
+- writes create, drag, point-edit, insert-point, transform, and clone changes through `crdt.patch()`
+- records undo/redo history for create, drag, point-edit, insert-point, transform, and clone workflows
+- integrates with the selection style menu for stroke, width, opacity, curve type, and arrow caps
+
+Important runtime note:
+
+- grouped clone previews rebuild shape1d children through the plugin runtime instead of keeping raw `Konva.Node.create(...)` clones, so cloned 1D children render immediately and preserve correct screen-space geometry under camera zoom
 
 #### `Shape2dPlugin`
 
 Owns current 2D shape support.
 
 - responds to `TOOL_SELECT`
-- supports draw-preview creation flow for rectangles
+- supports draw-preview creation flow for rectangles, diamonds, and ellipses
 - registers capability functions for shape creation, serialization, and update
 - wires shape click, drag, double-click, clone-drag, and CRDT patch behavior
+- keeps attached-text shortcuts and syncing rect-only; diamond and ellipse do not currently participate in the attached-text workflow
 
-Important limitation:
+Implementation note:
 
-- `supportedTypes` includes `rect`, `diamond`, and `ellipse`, but only rectangle creation/update serialization is meaningfully implemented right now.
+- `diamond` is currently represented with a closed `Konva.Line` carrying four points in top-left-bounded local space, while `ellipse` uses `Konva.Ellipse` with CRDT top-left bounds converted to Konva center/radius coordinates during runtime serialization and hydration
 
 #### `TextPlugin`
 
@@ -425,6 +449,7 @@ Owns grouping behavior and group-specific visual affordances.
 - records undo/redo history for group and ungroup actions
 - manages which nodes are draggable based on current focused selection depth
 - supports clone-drag for groups and mixed grouped content
+- keeps cloned group boundary boxes updating during live drag, including cloned groups created in the current session
 
 #### `SceneHydratorPlugin`
 
@@ -496,6 +521,8 @@ That means:
 3. `Shift+click` -> toggle the focused node at the current depth
 4. drag empty space -> marquee-select top-level nodes only
 
+Additionally, selected 1D shapes can enter point-edit mode on double-click once they are the active focused node.
+
 This gives the package an intentional depth-navigation model for nested groups instead of simple flat hit selection.
 
 ### Transform behavior
@@ -506,11 +533,13 @@ This gives the package an intentional depth-navigation model for nested groups i
 - multi-selection -> dashed transformer border
 - single selected shape -> standard transformer border
 - text edit mode -> transformer is hidden while the textarea overlay is active
+- 1D point-edit mode -> transformer is hidden while point handles are active
 
 Selection-aware anchor behavior:
 
 - single selected group -> corner-only anchors with keep-ratio
 - text-only selection -> corner-only anchors with keep-ratio
+- 1D-only selection -> corner-only anchors with keep-ratio
 - multi-selection -> corner-only anchors with keep-ratio
 - single non-text shape -> full anchors without keep-ratio
 
@@ -565,6 +594,10 @@ They update on:
 
 The clone path refreshes ids through the subtree so duplicated groups and child elements can be serialized as distinct document entities.
 
+Important runtime detail:
+
+- grouped clone previews must preserve local/group-relative transforms for point-based content. Shape1d children are rebuilt through `Shape1dPlugin.createShapeFromElement(...)` while keeping the JSON clone's local transform, which avoids camera-zoom distortion during preview drag.
+
 ## CRDT and Scene Hydration
 
 Automerge bootstrap still lives in `packages/canvas/src/services/automerge.ts`, but the runtime now uses document data more directly than before.
@@ -605,9 +638,12 @@ This means startup now trusts `TCanvasDoc` as the scene source for supported gro
 
 The package writes back to CRDT for:
 
-- created rectangles
+- created lines and arrows
+- created rectangles, diamonds, and ellipses
 - created text nodes
 - drag updates for shapes
+- point-edit updates for 1D shapes
+- insert-point updates for 1D shapes
 - text drag updates
 - text edit commits
 - transform updates for shapes
@@ -650,7 +686,7 @@ Toolbar tools include:
 
 Important limitation:
 
- - the toolbar exposes more tools than the runtime currently implements. Rectangle, text, selection, grouping, transforms, and history are the most complete workflows today.
+ - the toolbar still exposes more tools than the runtime currently implements. Rectangles, diamonds, ellipses, text, selection, grouping, transforms, and history are among the more complete workflows today.
 
 ### Help
 
@@ -745,6 +781,26 @@ Verifies:
 - CRDT `parentGroupId` updates are correct
 - group and ungroup actions support undo/redo
 - clone-dragging groups creates distinct duplicated group nodes
+- cloned group boundaries update during live drag
+
+#### `plugins/shape1d/Shape1dPlugin.test.ts`
+
+Verifies:
+
+- draw-create for lines and arrows
+- clone-drag for 1D shapes
+- point-edit mode for existing points
+- insert-point handle behavior
+- nested-group-safe point editing
+- transform and history behavior for point-based shapes
+
+#### `plugins/shape1d/Shape1dPlugin.group.test.ts`
+
+Verifies:
+
+- grouped clone-drag preserves renderable 1D children
+- hydrated grouped clone-drag preserves renderable 1D children
+- grouped clone previews keep correct screen-space size/position under camera zoom
 
 #### `plugins/TextPlugin.test.ts`
 
@@ -771,6 +827,15 @@ Verifies:
 - undo after resize restores absolute position and size
 - multi-select anchor behavior for rect/text combinations
 - text-aware transform behavior while editing
+
+#### `plugins/shape2d/Shape2dPlugin.static.test.ts`
+
+Verifies:
+
+- diamond serialization preserves top-left-bounded CRDT coordinates and dimensions
+- ellipse serialization preserves top-left-bounded CRDT coordinates and radii
+- diamond and ellipse cloning round-trip through `toTElement()` / `createShapeFromNode()` with fresh ids
+- draw-create flows for diamond and ellipse persist the expected CRDT payloads
 
 ### Scenario fixtures
 
@@ -846,8 +911,7 @@ Current incomplete or rough areas:
 - scene hydration is startup-only, not a full reactive reconcile loop
 - selection still stores live Konva nodes instead of durable ids
 - toolbar exposes many tools that have no real runtime implementation yet
-- shape creation support is still rectangle-first for non-text 2D shapes
-- `Shape2dPlugin.supportedTypes` is broader than the actual implemented factories
+- attached-text support is still rectangle-only within `Shape2dPlugin`
 - `ToolbarPlugin` still hardcodes `sidebarVisible: () => true`
 - runtime state still contains `theme`, but theme-specific behavior is minimal
 - document ordering, richer widgets, and deeper content types from `TCanvasDoc` are not fully hydrated yet
@@ -891,6 +955,7 @@ Current incomplete or rough areas:
 - `packages/canvas/src/plugins/Recorder.plugin.ts`
 - `packages/canvas/src/plugins/Select.plugin.ts`
 - `packages/canvas/src/plugins/Transform.plugin.ts`
+- `packages/canvas/src/plugins/Shape1d.plugin.ts`
 - `packages/canvas/src/plugins/Shape2d.plugin.ts`
 - `packages/canvas/src/plugins/Text.plugin.ts`
 - `packages/canvas/src/plugins/Group.plugin.ts`
@@ -925,6 +990,9 @@ Current incomplete or rough areas:
 - `packages/canvas/tests/services/canvas/Crdt.test.ts`
 - `packages/canvas/tests/plugins/SceneHydratorPlugin.test.ts`
 - `packages/canvas/tests/plugins/GroupPlugin.test.ts`
+- `packages/canvas/tests/plugins/shape1d/Shape1dPlugin.test.ts`
+- `packages/canvas/tests/plugins/shape1d/Shape1dPlugin.group.test.ts`
+- `packages/canvas/tests/plugins/shape2d/Shape2dPlugin.static.test.ts`
 - `packages/canvas/tests/plugins/TextPlugin.test.ts`
 - `packages/canvas/tests/plugins/SelectionPlugin.test.ts`
 - `packages/canvas/tests/plugins/TransformPlugin.test.ts`
@@ -955,7 +1023,7 @@ flowchart TD
 
   J --> K[EventListenerPlugin publishes hooks]
   J --> K2[RecorderPlugin mounts bottom-right recorder UI]
-  J --> L[Shape2d, Text, and Group plugins register capabilities]
+  J --> L[Shape1d, Shape2d, Text, and Group plugins register capabilities]
   J --> M[SceneHydratorPlugin initAsync load]
 
   M --> N[Read doc.groups]
@@ -987,6 +1055,11 @@ flowchart TD
   AF --> AG[commit shape into staticForegroundLayer]
   AG --> AH[crdt.patch element]
   AH --> AH2[Recorder stores normalized CRDT op]
+
+  AC --> AS1[double-click selected line or arrow]
+  AS1 --> AS2[Shape1d point-edit handles in dynamicLayer]
+  AS2 --> AS3[drag existing point or insert new point]
+  AS3 --> AH
 
   AC2 --> AT[create text node in staticForegroundLayer]
   AT --> AU[enter textarea edit mode]
