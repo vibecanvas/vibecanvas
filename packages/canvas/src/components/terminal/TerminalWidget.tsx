@@ -34,7 +34,7 @@ export function TerminalWidget(props: TTerminalWidgetProps) {
     : "flex h-full w-full flex-col bg-[#111214] font-mono text-sm";
 
   return (
-    <div class={rootClass}>
+    <div data-terminal-widget-root="true" class={rootClass} style={{ "min-width": "0", "min-height": "0" }}>
       {props.showChrome !== false && terminalLogic ? (
         <div class="flex items-center justify-between border-b border-border bg-muted px-2 py-1 text-xs">
           <div class="truncate">{terminalLogic.terminalTitle()}</div>
@@ -54,7 +54,7 @@ export function TerminalWidget(props: TTerminalWidgetProps) {
 
       {terminalLogic ? (
         <GhosttyTerminalMount
-          class="h-full w-full flex-1 overflow-hidden bg-[#111214]"
+          class="h-full w-full min-w-0 flex-1 overflow-hidden bg-[#111214]"
           onReady={terminalLogic.handleTerminalReady}
           onData={terminalLogic.handleTerminalData}
           onResize={terminalLogic.handleTerminalResize}

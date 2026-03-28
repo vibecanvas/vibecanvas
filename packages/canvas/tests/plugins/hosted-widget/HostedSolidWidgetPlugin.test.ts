@@ -429,6 +429,69 @@ describe("HostedSolidWidgetPlugin", () => {
     harness.destroy();
   });
 
+  test("terminal overlay visible shell stays anchored to the persisted x position across reloads with different zoom/camera states", async () => {
+    async function measureVisibleTerminalLeft(args: { zoom: number; panX: number; panY: number }) {
+      let context!: IPluginContext;
+      const docHandle = createMockDocHandle({
+        elements: {
+          terminal1: {
+            id: "terminal1",
+            x: 160,
+            y: 120,
+            rotation: 0,
+            zIndex: "z00000001",
+            parentGroupId: null,
+            bindings: [],
+            locked: false,
+            createdAt: 1,
+            updatedAt: 1,
+            style: {},
+            data: { type: "terminal", w: 320, h: 220, isCollapsed: false, workingDirectory: "." },
+          },
+        },
+      });
+
+      const harness = await createCanvasTestHarness({
+        docHandle,
+        plugins: [new RenderOrderPlugin(), new HostedSolidWidgetPlugin(), new SceneHydratorPlugin()],
+        initializeScene: (ctx) => {
+          context = ctx;
+        },
+      });
+
+      await flushCanvasEffects();
+
+      if (args.panX !== 0 || args.panY !== 0) {
+        context.camera.pan(-args.panX, -args.panY);
+      }
+      if (args.zoom !== 1) {
+        context.camera.zoomAtScreenPoint(args.zoom, { x: 240, y: 180 });
+      }
+      context.hooks.cameraChange.call();
+      await flushCanvasEffects();
+
+      const node = harness.staticForegroundLayer.findOne("#terminal1") as Konva.Rect;
+      const mount = harness.stage.container().querySelector("[data-hosted-widget-id='terminal1']") as HTMLDivElement;
+      const transformMatch = mount.style.transform.match(/translate\(([-\d.]+)px, ([-\d.]+)px\) rotate\(([-\d.]+)deg\) scale\(([-\d.]+)\)/);
+      if (!transformMatch) {
+        throw new Error(`Unexpected hosted widget transform: ${mount.style.transform}`);
+      }
+
+      const projectedLeft = Number(transformMatch[1]);
+      const expectedLeft = node.getAbsoluteTransform().point({ x: 0, y: 0 }).x;
+
+      harness.destroy();
+
+      return { projectedLeft, expectedLeft };
+    }
+
+    const baseline = await measureVisibleTerminalLeft({ zoom: 1, panX: 0, panY: 0 });
+    const reloadedAtDifferentCamera = await measureVisibleTerminalLeft({ zoom: 1.75, panX: 130, panY: 40 });
+
+    expect(baseline.projectedLeft).toBeCloseTo(baseline.expectedLeft, 3);
+    expect(reloadedAtDifferentCamera.projectedLeft).toBeCloseTo(reloadedAtDifferentCamera.expectedLeft, 3);
+  });
+
   test("close button removes hosted terminal and runs terminal cleanup callback", async () => {
     const safeClient = createTerminalSafeClientMock();
     const docHandle = createMockDocHandle({
@@ -470,6 +533,53 @@ describe("HostedSolidWidgetPlugin", () => {
     expect(safeClient.api.opencode.pty.remove).toHaveBeenCalledTimes(1);
     expect(docHandle.doc().elements.terminal1).toBeUndefined();
     expect(harness.stage.container().querySelector('[data-hosted-widget-id="terminal1"]')).toBeNull();
+
+    harness.destroy();
+  });
+
+  test("terminal hosted layout constrains flex children so terminal content can shrink to widget bounds", async () => {
+    const safeClient = createTerminalSafeClientMock();
+    const docHandle = createMockDocHandle({
+      elements: {
+        terminal1: {
+          id: "terminal1",
+          x: 30,
+          y: 40,
+          rotation: 0,
+          zIndex: "z00000001",
+          parentGroupId: null,
+          bindings: [],
+          locked: false,
+          createdAt: 1,
+          updatedAt: 1,
+          style: {},
+          data: { type: "terminal", w: 320, h: 220, isCollapsed: false, workingDirectory: "." },
+        },
+      },
+    });
+
+    const harness = await createCanvasTestHarness({
+      docHandle,
+      plugins: [new RenderOrderPlugin(), new HostedSolidWidgetPlugin(), new SceneHydratorPlugin()],
+      appCapabilities: {
+        terminal: { safeClient },
+      },
+    });
+
+    await flushCanvasEffects();
+
+    const hostedWrapper = harness.stage.container().querySelector('[data-terminal-hosted-wrapper="true"]') as HTMLDivElement;
+    const widgetRoot = harness.stage.container().querySelector('[data-terminal-widget-root="true"]') as HTMLDivElement;
+    const ghosttyHost = harness.stage.container().querySelector('[data-ghostty-terminal-host="true"]') as HTMLDivElement;
+    const ghosttyRoot = harness.stage.container().querySelector('[data-ghostty-terminal-root="true"]') as HTMLDivElement;
+
+    expect(hostedWrapper.className).toContain("min-w-0");
+    expect(widgetRoot.style.minWidth).toBe("0");
+    expect(widgetRoot.style.minHeight).toBe("0");
+    expect(ghosttyHost.style.minWidth).toBe("0");
+    expect(ghosttyHost.style.minHeight).toBe("0");
+    expect(ghosttyRoot.style.minWidth).toBe("0");
+    expect(ghosttyRoot.style.minHeight).toBe("0");
 
     harness.destroy();
   });

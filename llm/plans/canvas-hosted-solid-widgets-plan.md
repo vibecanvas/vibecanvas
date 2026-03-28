@@ -956,6 +956,23 @@ When code lands, this section should be updated with:
     - reverted all `apps/spa` edits because that app is legacy and out of scope for this change
     - final ownership for this task is only `packages/canvas` + `apps/frontend`
     - any standalone/legacy SPA terminal surfaces continue using their original codepaths and were intentionally left untouched
+31. New root-cause finding for the reported terminal zoom drift:
+    - the generic hosted-widget projection/selection path was not the real issue
+    - the terminal-specific inner Ghostty canvas keeps an intrinsic width (`cols * charWidth`, e.g. `80 * 8 = 640px`)
+    - the hosted terminal subtree lives inside a flex row chain and was missing `min-width: 0` / `min-height: 0` on terminal-specific wrappers
+    - because of that, terminal content refused to shrink to the hosted widget bounds, overflowed horizontally, and then got clipped, which visually looked like left/right drift during zoom
+32. Safe fix boundary after user feedback:
+    - do not modify `HostedWidgetShell` inset/outer geometry because that can affect hosted selection/transform behavior
+    - only modify terminal-specific inner layout wrappers
+33. Terminal-specific layout fix landed in:
+    - `packages/canvas/src/components/terminal/TerminalHostedWidget.tsx`
+    - `packages/canvas/src/components/terminal/TerminalWidget.tsx`
+    - `packages/canvas/src/components/terminal/GhosttyTerminalMount.tsx`
+    - changes are limited to shrink constraints (`min-width: 0`, `min-height: 0`) and test-only data attributes
+34. Regression-oriented tests added:
+    - `terminal overlay visible shell stays anchored to the persisted x position across reloads with different zoom/camera states`
+    - `terminal hosted layout constrains flex children so terminal content can shrink to widget bounds`
+    - these verify both the outer projection and the terminal-specific shrink constraints while leaving hosted selection behavior untouched
 
 ### Verification completed
 
@@ -964,6 +981,7 @@ Commands run:
 ```bash
 bun install
 bun --filter @vibecanvas/canvas test tests/services/terminal/opencode-pty.test.ts tests/plugins/hosted-widget/HostedSolidWidgetPlugin.test.ts
+bun --filter @vibecanvas/canvas test tests/plugins/hosted-widget/HostedSolidWidgetPlugin.test.ts
 bun --filter @vibecanvas/canvas test
 bun --filter @vibecanvas/frontend build
 ```
@@ -971,7 +989,8 @@ bun --filter @vibecanvas/frontend build
 Results:
 
 - targeted terminal tests pass: `2` files, `16` tests
-- full canvas suite passes: `26` files, `160` tests
+- hosted-widget regression suite passes: `12` tests
+- full canvas suite passes: `26` files, `162` tests
 - frontend production build passes after removing host-owned Ghostty widget rendering
 - all `apps/spa` changes were reverted afterward to keep the final scope limited to `packages/canvas` and `apps/frontend`
 

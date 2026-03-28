@@ -85,8 +85,18 @@ export function GhosttyTerminalMount(props: TGhosttyTerminalMountProps) {
   });
 
   return (
-    <div ref={hostRef} class={props.class ?? "h-full w-full flex-1 overflow-hidden bg-[#111214]"}>
-      <div ref={rootRef} class="h-full w-full" />
+    <div
+      ref={hostRef}
+      data-ghostty-terminal-host="true"
+      class={props.class ?? "h-full w-full flex-1 overflow-hidden bg-[#111214]"}
+      style={{ "min-width": "0", "min-height": "0" }}
+    >
+      <div
+        ref={rootRef}
+        data-ghostty-terminal-root="true"
+        class="h-full w-full"
+        style={{ "min-width": "0", "min-height": "0" }}
+      />
     </div>
   );
 }
