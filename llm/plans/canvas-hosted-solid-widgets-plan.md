@@ -973,6 +973,21 @@ When code lands, this section should be updated with:
     - `terminal overlay visible shell stays anchored to the persisted x position across reloads with different zoom/camera states`
     - `terminal hosted layout constrains flex children so terminal content can shrink to widget bounds`
     - these verify both the outer projection and the terminal-specific shrink constraints while leaving hosted selection behavior untouched
+35. Additional plugin-level hosted-widget fix landed:
+    - `syncMountedNode(...)` now compensates for `HostedWidgetShell`'s `CONTENT_INSET` when computing the DOM mount transform/size
+    - this keeps the *visible* hosted shell aligned with the underlying Konva host rect across reloads and zoom levels while preserving the existing hosted selection/transform behavior
+    - the fix applies to both terminal and filetree hosted widgets because it lives in `HostedSolidWidget.plugin.tsx`
+36. Terminal reconnect/freeze follow-up:
+    - restored terminal sessions previously reconnected with `cursor=0`, which could replay too much history and freeze the frontend after a reload
+    - `createTerminalContextLogic.ts` now reconnects restored sessions using the persisted cursor from localStorage instead of hard-resetting to zero
+37. Terminal reload action added:
+    - hosted terminal header now exposes a reload button in `HostedSolidWidget.plugin.tsx`
+    - clicking reload remounts only the hosted terminal frontend subtree and reconnects to the existing PTY session using the persisted cursor/state
+    - standalone `TerminalWidget` also exposes a reload control through `restartFrontend()` and keyed remounting of `GhosttyTerminalMount`
+38. NPM check:
+    - attempted `MiniMax_web_search` for `@opencode-ai/sdk` latest version, but that search endpoint failed for the current token plan
+    - fetched npm registry directly instead and confirmed latest published version is `1.3.3`
+    - current workspace catalog still pins `@opencode-ai/sdk` to `1.2.10`, so an update is available if we want to take it separately
 
 ### Verification completed
 
@@ -990,7 +1005,8 @@ Results:
 
 - targeted terminal tests pass: `2` files, `16` tests
 - hosted-widget regression suite passes: `12` tests
-- full canvas suite passes: `26` files, `162` tests
+- hosted-widget regression suite now covers reload positioning + reconnect/reload behavior: `16` tests
+- full canvas suite passes: `26` files, `166` tests
 - frontend production build passes after removing host-owned Ghostty widget rendering
 - all `apps/spa` changes were reverted afterward to keep the final scope limited to `packages/canvas` and `apps/frontend`
 

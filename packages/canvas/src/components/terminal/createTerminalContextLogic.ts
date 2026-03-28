@@ -102,6 +102,13 @@ export function createTerminalContextLogic(args: TCreateTerminalContextArgs) {
     connection = null;
   };
 
+  const restartFrontend = async () => {
+    persistState();
+    closeConnection();
+    setErrorMessage(null);
+    setStatus("idle");
+  };
+
   const pushSizeToBackend = (rows: number, cols: number) => {
     if (sizePushTimer) clearTimeout(sizePushTimer);
     sizePushTimer = setTimeout(async () => {
@@ -234,7 +241,7 @@ export function createTerminalContextLogic(args: TCreateTerminalContextArgs) {
           }
         }
 
-        connect(existing.id, 0);
+        connect(existing.id, restored.cursor);
         return;
       }
 
@@ -321,6 +328,7 @@ export function createTerminalContextLogic(args: TCreateTerminalContextArgs) {
     errorMessage,
     terminalTitle,
     removeTerminal,
+    restartFrontend,
     handleTerminalReady,
     handleTerminalData,
     handleTerminalResize,

@@ -5,6 +5,7 @@ import { render } from "solid-js/web";
 import type { TChatData, TElement, TFiletreeData, TTerminalData } from "@vibecanvas/shell/automerge/index";
 import Konva from "konva";
 import FrameIcon from "lucide-solid/icons/frame";
+import RefreshCw from "lucide-solid/icons/refresh-cw";
 import XIcon from "lucide-solid/icons/x";
 import { FiletreeHostedWidget } from "../components/filetree";
 import { TerminalHostedWidget } from "../components/terminal";
@@ -200,6 +201,28 @@ function getScreenBounds(node: Konva.Rect): TBounds {
   };
 }
 
+function getMountedScreenBounds(node: Konva.Rect, inset: number): TBounds {
+  const width = node.width() + inset * 2;
+  const height = node.height() + inset * 2;
+  const absoluteTransform = node.getAbsoluteTransform().copy();
+  const topLeft = absoluteTransform.point({ x: -inset, y: -inset });
+  const topRight = absoluteTransform.point({ x: node.width() + inset, y: -inset });
+  const bottomLeft = absoluteTransform.point({ x: -inset, y: node.height() + inset });
+  const widthScreen = Math.hypot(topRight.x - topLeft.x, topRight.y - topLeft.y);
+  const heightScreen = Math.hypot(bottomLeft.x - topLeft.x, bottomLeft.y - topLeft.y);
+  const rotation = Math.atan2(topRight.y - topLeft.y, topRight.x - topLeft.x) * 180 / Math.PI;
+  const zoom = node.getLayer()?.scaleX() ?? 1;
+
+  return {
+    x: topLeft.x,
+    y: topLeft.y,
+    width: widthScreen / (zoom || 1),
+    height: heightScreen / (zoom || 1),
+    rotation,
+    zoom,
+  };
+}
+
 function getPointerWorldPoint(context: IPluginContext, point: { x: number; y: number }) {
   const containerRect = context.stage.container().getBoundingClientRect();
   const inverted = context.staticForegroundLayer.getAbsoluteTransform().copy().invert();
@@ -229,6 +252,7 @@ function HostedWidgetShell(props: {
   onHeaderDoubleClick: (event: MouseEvent) => void;
   onSelectPointerDown: (event: PointerEvent | MouseEvent) => void;
   onRemove: () => void;
+  onReload?: () => void;
   children?: JSX.Element;
 }) {
   const titleColor = () => props.element().data.type === "terminal" ? "#f8fafc" : "#0f172a";
@@ -304,6 +328,30 @@ function HostedWidgetShell(props: {
             }}
           >
             <FrameIcon size={13} />
+          </button>
+          <button
+            type="button"
+            aria-label="Reload widget"
+            title="Reload"
+            style={{
+              display: props.element().data.type === "terminal" && props.onReload ? "inline-flex" : "none",
+              "align-items": "center",
+              "justify-content": "center",
+              width: "24px",
+              height: "24px",
+              border: `1px solid ${props.element().data.type === "terminal" ? "#334155" : (props.element().style.borderColor ?? "#cbd5e1")}`,
+              background: props.element().data.type === "terminal" ? "#111827" : "#ffffff",
+              color: titleColor(),
+              cursor: "pointer",
+              "pointer-events": "auto",
+            }}
+            onPointerDown={(event) => event.stopPropagation()}
+            onClick={(event) => {
+              event.stopPropagation();
+              props.onReload?.();
+            }}
+          >
+            <RefreshCw size={13} />
           </button>
           <button
             type="button"
@@ -624,6 +672,9 @@ export class HostedSolidWidgetPlugin implements IPlugin {
         onRemove={() => {
           void this.removeHostedNode(context, node);
         }}
+        onReload={() => {
+          void this.reloadHostedNode(context, node);
+        }}
       >
         <Show when={currentElement().data.type === "filetree"}>
           <FiletreeHostedWidget
@@ -674,11 +725,11 @@ export class HostedSolidWidgetPlugin implements IPlugin {
     const mounted = this.#mounts.get(node.id());
     if (!mounted) return;
 
-    const bounds = getScreenBounds(node);
+    const bounds = getMountedScreenBounds(node, CONTENT_INSET);
     mounted.mountElement.style.transform = `translate(${bounds.x}px, ${bounds.y}px) rotate(${bounds.rotation}deg) scale(${bounds.zoom})`;
     mounted.mountElement.style.transformOrigin = "top left";
-    mounted.mountElement.style.width = `${Math.max(bounds.width, CONTENT_INSET * 2 + 24)}px`;
-    mounted.mountElement.style.height = `${Math.max(bounds.height, CONTENT_INSET * 2 + 24)}px`;
+    mounted.mountElement.style.width = `${Math.max(bounds.width, node.width() + CONTENT_INSET * 2)}px`;
+    mounted.mountElement.style.height = `${Math.max(bounds.height, node.height() + CONTENT_INSET * 2)}px`;
   }
 
   private syncDomOrder() {
@@ -727,6 +778,16 @@ export class HostedSolidWidgetPlugin implements IPlugin {
     context.crdt.deleteById({ elementIds: [node.id()], groupIds: [] });
     this.unmountWidget(node.id());
     node.destroy();
+  }
+
+  private async reloadHostedNode(context: IPluginContext, node: Konva.Rect) {
+    const snapshot = structuredClone(node.getAttr(HOSTED_ELEMENT_ATTR) as THostedWidgetElement | undefined);
+    if (!snapshot) return;
+
+    this.unmountWidget(node.id());
+    this.mountWidget(context, node, snapshot);
+    this.syncMountedNode(node);
+    this.syncDomOrder();
   }
 
   private beginDomDrag(context: IPluginContext, node: Konva.Rect, event: PointerEvent | MouseEvent) {

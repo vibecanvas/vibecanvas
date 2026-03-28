@@ -57,6 +57,7 @@ vi.mock("ghostty-web", () => {
 });
 
 class MockWebSocket {
+  static instances: MockWebSocket[] = [];
   static OPEN = 1;
   static CLOSED = 3;
   readyState = MockWebSocket.OPEN;
@@ -69,6 +70,7 @@ class MockWebSocket {
 
   constructor(url: string) {
     this.url = url;
+    MockWebSocket.instances.push(this);
     queueMicrotask(() => {
       this.onopen?.();
     });
@@ -241,6 +243,11 @@ function createFiletreeSafeClientMock(overrides?: {
 }
 
 describe("HostedSolidWidgetPlugin", () => {
+  test.beforeEach(() => {
+    MockWebSocket.instances = [];
+    localStorage.clear();
+  });
+
   test("hydrates hosted widgets into Konva rects and one shared DOM root", async () => {
     const docHandle = createMockDocHandle({
       elements: {
@@ -529,12 +536,12 @@ describe("HostedSolidWidgetPlugin", () => {
   });
 
   test("terminal overlay visible shell stays anchored to the persisted x position across reloads with different zoom/camera states", async () => {
-    async function measureVisibleTerminalLeft(args: { zoom: number; panX: number; panY: number }) {
+    async function measureVisibleWidgetLeft(args: { zoom: number; panX: number; panY: number; type: "terminal" | "filetree" }) {
       let context!: IPluginContext;
       const docHandle = createMockDocHandle({
         elements: {
-          terminal1: {
-            id: "terminal1",
+          widget1: {
+            id: "widget1",
             x: 160,
             y: 120,
             rotation: 0,
@@ -545,7 +552,9 @@ describe("HostedSolidWidgetPlugin", () => {
             createdAt: 1,
             updatedAt: 1,
             style: {},
-            data: { type: "terminal", w: 320, h: 220, isCollapsed: false, workingDirectory: "." },
+            data: args.type === "terminal"
+              ? { type: "terminal", w: 320, h: 220, isCollapsed: false, workingDirectory: "." }
+              : { type: "filetree", w: 320, h: 220, isCollapsed: false, globPattern: null },
           },
         },
       });
@@ -569,14 +578,15 @@ describe("HostedSolidWidgetPlugin", () => {
       context.hooks.cameraChange.call();
       await flushCanvasEffects();
 
-      const node = harness.staticForegroundLayer.findOne("#terminal1") as Konva.Rect;
-      const mount = harness.stage.container().querySelector("[data-hosted-widget-id='terminal1']") as HTMLDivElement;
+      const node = harness.staticForegroundLayer.findOne("#widget1") as Konva.Rect;
+      const mount = harness.stage.container().querySelector("[data-hosted-widget-id='widget1']") as HTMLDivElement;
+      const shell = mount.querySelector("[data-hosted-widget-root='true']") as HTMLDivElement;
       const transformMatch = mount.style.transform.match(/translate\(([-\d.]+)px, ([-\d.]+)px\) rotate\(([-\d.]+)deg\) scale\(([-\d.]+)\)/);
       if (!transformMatch) {
         throw new Error(`Unexpected hosted widget transform: ${mount.style.transform}`);
       }
 
-      const projectedLeft = Number(transformMatch[1]);
+      const projectedLeft = Number(transformMatch[1]) + Number.parseFloat(shell.style.inset || "0") * Number(transformMatch[4]);
       const expectedLeft = node.getAbsoluteTransform().point({ x: 0, y: 0 }).x;
 
       harness.destroy();
@@ -584,11 +594,15 @@ describe("HostedSolidWidgetPlugin", () => {
       return { projectedLeft, expectedLeft };
     }
 
-    const baseline = await measureVisibleTerminalLeft({ zoom: 1, panX: 0, panY: 0 });
-    const reloadedAtDifferentCamera = await measureVisibleTerminalLeft({ zoom: 1.75, panX: 130, panY: 40 });
+    const baseline = await measureVisibleWidgetLeft({ type: "terminal", zoom: 1, panX: 0, panY: 0 });
+    const reloadedAtDifferentCamera = await measureVisibleWidgetLeft({ type: "terminal", zoom: 1.75, panX: 130, panY: 40 });
+    const filetreeBaseline = await measureVisibleWidgetLeft({ type: "filetree", zoom: 1, panX: 0, panY: 0 });
+    const filetreeReloaded = await measureVisibleWidgetLeft({ type: "filetree", zoom: 1.75, panX: 130, panY: 40 });
 
     expect(baseline.projectedLeft).toBeCloseTo(baseline.expectedLeft, 3);
     expect(reloadedAtDifferentCamera.projectedLeft).toBeCloseTo(reloadedAtDifferentCamera.expectedLeft, 3);
+    expect(filetreeBaseline.projectedLeft).toBeCloseTo(filetreeBaseline.expectedLeft, 3);
+    expect(filetreeReloaded.projectedLeft).toBeCloseTo(filetreeReloaded.expectedLeft, 3);
   });
 
   test("close button removes hosted terminal and runs terminal cleanup callback", async () => {
@@ -632,6 +646,134 @@ describe("HostedSolidWidgetPlugin", () => {
     expect(safeClient.api.opencode.pty.remove).toHaveBeenCalledTimes(1);
     expect(docHandle.doc().elements.terminal1).toBeUndefined();
     expect(harness.stage.container().querySelector('[data-hosted-widget-id="terminal1"]')).toBeNull();
+
+    harness.destroy();
+  });
+
+  test("reloading hosted terminal restarts frontend and reconnects to existing PTY session", async () => {
+    const safeClient = createTerminalSafeClientMock();
+    safeClient.api.opencode.pty.get = vi.fn().mockResolvedValue([null, {
+      id: "pty-reload",
+      title: "Terminal",
+      command: "zsh",
+      args: [],
+      cwd: ".",
+      status: "running",
+      pid: 1,
+    }]);
+    localStorage.setItem("vibecanvas-terminal-session:terminal1", JSON.stringify({
+      terminalKey: "terminal1",
+      workingDirectory: ".",
+      ptyID: "pty-reload",
+      cursor: 22,
+      rows: 24,
+      cols: 80,
+      title: "Terminal",
+      scrollY: 0,
+    }));
+    const docHandle = createMockDocHandle({
+      elements: {
+        terminal1: {
+          id: "terminal1",
+          x: 30,
+          y: 40,
+          rotation: 0,
+          zIndex: "z00000001",
+          parentGroupId: null,
+          bindings: [],
+          locked: false,
+          createdAt: 1,
+          updatedAt: 1,
+          style: {},
+          data: { type: "terminal", w: 320, h: 220, isCollapsed: false, workingDirectory: "." },
+        },
+      },
+    });
+
+    const harness = await createCanvasTestHarness({
+      docHandle,
+      plugins: [new RenderOrderPlugin(), new HostedSolidWidgetPlugin(), new SceneHydratorPlugin()],
+      appCapabilities: {
+        terminal: { safeClient },
+      },
+    });
+
+    await flushCanvasEffects();
+    const initialConnectionCount = MockWebSocket.instances.length;
+    const initialGetCount = vi.mocked(safeClient.api.opencode.pty.get).mock.calls.length;
+    expect(initialConnectionCount).toBeGreaterThan(0);
+
+    const reloadButton = harness.stage.container().querySelector('[aria-label="Reload widget"]') as HTMLButtonElement;
+    reloadButton.click();
+    await flushCanvasEffects();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    await flushCanvasEffects();
+
+    expect(MockWebSocket.instances.length).toBeGreaterThan(initialConnectionCount);
+    expect(vi.mocked(safeClient.api.opencode.pty.get).mock.calls.length).toBeGreaterThan(initialGetCount);
+    expect(safeClient.api.opencode.pty.create).not.toHaveBeenCalled();
+
+    harness.destroy();
+  });
+
+  test("restored terminal session reconnects using the saved cursor instead of restarting from zero", async () => {
+    const safeClient = createTerminalSafeClientMock();
+    safeClient.api.opencode.pty.get = vi.fn().mockResolvedValue([null, {
+      id: "pty-restored",
+      title: "Terminal",
+      command: "zsh",
+      args: [],
+      cwd: ".",
+      status: "running",
+      pid: 1,
+    }]);
+
+    localStorage.setItem("vibecanvas-terminal-session:terminal1", JSON.stringify({
+      terminalKey: "terminal1",
+      workingDirectory: ".",
+      ptyID: "pty-restored",
+      cursor: 321,
+      rows: 24,
+      cols: 80,
+      title: "Terminal",
+      scrollY: 0,
+    }));
+
+    const docHandle = createMockDocHandle({
+      elements: {
+        terminal1: {
+          id: "terminal1",
+          x: 30,
+          y: 40,
+          rotation: 0,
+          zIndex: "z00000001",
+          parentGroupId: null,
+          bindings: [],
+          locked: false,
+          createdAt: 1,
+          updatedAt: 1,
+          style: {},
+          data: { type: "terminal", w: 320, h: 220, isCollapsed: false, workingDirectory: "." },
+        },
+      },
+    });
+
+    const harness = await createCanvasTestHarness({
+      docHandle,
+      plugins: [new RenderOrderPlugin(), new HostedSolidWidgetPlugin(), new SceneHydratorPlugin()],
+      appCapabilities: {
+        terminal: { safeClient },
+      },
+    });
+
+    await flushCanvasEffects();
+
+    expect(safeClient.api.opencode.pty.get).toHaveBeenCalledWith({
+      workingDirectory: ".",
+      path: { ptyID: "pty-restored" },
+    });
+    expect(MockWebSocket.instances[0]?.url).toContain("cursor=321");
+    expect(safeClient.api.opencode.pty.create).not.toHaveBeenCalled();
 
     harness.destroy();
   });
@@ -833,8 +975,8 @@ describe("HostedSolidWidgetPlugin", () => {
 
     const mount = harness.stage.container().querySelector('[data-hosted-widget-id="terminal1"]') as HTMLDivElement;
     expect(mount.style.transform.includes("matrix(")).toBe(false);
-    expect(mount.style.width).toBe("480px");
-    expect(mount.style.height).toBe("275px");
+    expect(mount.style.width).toBe("508px");
+    expect(mount.style.height).toBe("303px");
 
     harness.destroy();
   });
