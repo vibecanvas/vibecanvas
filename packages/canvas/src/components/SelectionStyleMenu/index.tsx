@@ -47,7 +47,7 @@ export function SelectionStyleMenu(props: {
 
   return (
     <Show when={shouldShow()}>
-      <div class="absolute left-3 top-1/2 -translate-y-1/2 z-40 pointer-events-none">
+      <div class="absolute left-3 top-3 z-40 pointer-events-none">
         <div class="pointer-events-auto bg-card border border-border shadow-md p-2 flex flex-col gap-3">
           <Show when={props.sections().showFillPicker}>
             <div class="flex flex-col gap-1">
