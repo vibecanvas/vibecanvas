@@ -105,7 +105,12 @@ export function FiletreeWidget(props: TFiletreeWidgetProps) {
   };
 
   return (
-    <div class="flex h-full min-h-0 flex-1 flex-col bg-card text-card-foreground">
+    <div
+      data-filetree-widget-root="true"
+      data-hosted-widget-focus-root="true"
+      tabIndex={-1}
+      class="flex h-full min-h-0 flex-1 flex-col bg-card text-card-foreground"
+    >
       <div class="flex flex-col gap-2 border-b border-border p-2">
         <div class="flex flex-wrap items-center gap-1">
           <button

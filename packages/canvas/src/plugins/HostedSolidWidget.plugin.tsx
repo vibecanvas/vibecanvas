@@ -1,6 +1,6 @@
 import { throttle } from "@solid-primitives/scheduled";
 import type { JSX } from "solid-js";
-import { createEffect, createSignal, Show } from "solid-js";
+import { createEffect, createSignal, onCleanup, Show } from "solid-js";
 import { render } from "solid-js/web";
 import type { TChatData, TElement, TFileData, TFiletreeData, TTerminalData } from "@vibecanvas/shell/automerge/index";
 import Konva from "konva";
@@ -21,6 +21,7 @@ import type {
 } from "../services/canvas/interface";
 import type { IPlugin, IPluginContext } from "./interface";
 import { getWorldPosition, setWorldPosition } from "./node-space";
+import { scheduleHostedWidgetFocus } from "./hosted-widget-focus.shared";
 import { getNodeZIndex, setNodeZIndex } from "./render-order.shared";
 import { TransformPlugin } from "./Transform.plugin";
 
@@ -788,6 +789,10 @@ export class HostedSolidWidgetPlugin implements IPlugin {
         const interactive = context.state.focusedId === node.id() && context.state.mode === CanvasMode.SELECT;
         mountElement.style.pointerEvents = interactive ? "auto" : "none";
         mountElement.dataset.hostedWidgetInteractive = interactive ? "true" : "false";
+
+        if (!interactive) return;
+        const cleanupFocus = scheduleHostedWidgetFocus(mountElement);
+        onCleanup(cleanupFocus);
       });
 
       return (

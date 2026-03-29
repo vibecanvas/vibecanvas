@@ -607,6 +607,170 @@ describe("HostedSolidWidgetPlugin", () => {
     harness.destroy();
   });
 
+  test("first focus transition on terminal hands real DOM focus to the ghostty textarea", async () => {
+    vi.useFakeTimers();
+
+    try {
+      let context!: IPluginContext;
+      const safeClient = createTerminalSafeClientMock();
+      const docHandle = createMockDocHandle({
+        elements: {
+          terminal1: {
+            id: "terminal1",
+            x: 30,
+            y: 40,
+            rotation: 0,
+            zIndex: "z00000001",
+            parentGroupId: null,
+            bindings: [],
+            locked: false,
+            createdAt: 1,
+            updatedAt: 1,
+            style: {},
+            data: { type: "terminal", w: 320, h: 220, isCollapsed: false, workingDirectory: "." },
+          },
+        },
+      });
+
+      const harness = await createCanvasTestHarness({
+        docHandle,
+        plugins: [new RenderOrderPlugin(), new HostedSolidWidgetPlugin(), new SceneHydratorPlugin()],
+        appCapabilities: {
+          terminal: { safeClient },
+        },
+        initializeScene: (ctx) => {
+          context = ctx;
+        },
+      });
+
+      await flushCanvasEffects();
+      context.setState("focusedId", "terminal1");
+      await flushCanvasEffects();
+
+      const textarea = harness.stage.container().querySelector('[data-ghostty-terminal-textarea="true"]') as HTMLTextAreaElement | null;
+      expect(textarea).not.toBeNull();
+      expect(document.activeElement).toBe(textarea);
+
+      harness.destroy();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  test("first focus transition on filetree focuses the filetree root container", async () => {
+    vi.useFakeTimers();
+
+    try {
+      let context!: IPluginContext;
+      const filetreeClient = createFiletreeSafeClientMock({
+        fileTrees: [{
+          id: "tree1",
+          canvas_id: "canvas-1",
+          path: "/tmp/demo",
+          title: "Workspace",
+          locked: false,
+          glob_pattern: null,
+          created_at: new Date(1),
+          updated_at: new Date(1),
+        }],
+      });
+      const docHandle = createMockDocHandle({
+        elements: {
+          tree1: {
+            id: "tree1",
+            x: 30,
+            y: 40,
+            rotation: 0,
+            zIndex: "z00000001",
+            parentGroupId: null,
+            bindings: [],
+            locked: false,
+            createdAt: 1,
+            updatedAt: 1,
+            style: {},
+            data: { type: "filetree", w: 360, h: 460, isCollapsed: false, globPattern: null },
+          },
+        },
+      });
+
+      const harness = await createCanvasTestHarness({
+        docHandle,
+        plugins: [new RenderOrderPlugin(), new HostedSolidWidgetPlugin(), new SceneHydratorPlugin()],
+        appCapabilities: {
+          filetree: {
+            canvasId: "canvas-1",
+            safeClient: filetreeClient,
+          },
+        },
+        initializeScene: (ctx) => {
+          context = ctx;
+        },
+      });
+
+      await flushCanvasEffects();
+      context.setState("focusedId", "tree1");
+      await flushCanvasEffects();
+
+      const root = harness.stage.container().querySelector('[data-filetree-widget-root="true"]') as HTMLDivElement | null;
+      expect(root).not.toBeNull();
+      expect(document.activeElement).toBe(root);
+
+      harness.destroy();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  test("first focus transition on file widget focuses the file root container", async () => {
+    vi.useFakeTimers();
+
+    try {
+      let context!: IPluginContext;
+      const safeClient = createFiletreeSafeClientMock();
+      const docHandle = createMockDocHandle({
+        elements: {
+          file1: {
+            id: "file1",
+            x: 80,
+            y: 120,
+            rotation: 0,
+            zIndex: "z00000001",
+            parentGroupId: null,
+            bindings: [],
+            locked: false,
+            createdAt: 1,
+            updatedAt: 1,
+            style: {},
+            data: { type: "file", w: 560, h: 500, path: "/tmp/demo/src/index.ts", renderer: "code", isCollapsed: false },
+          },
+        },
+      });
+
+      const harness = await createCanvasTestHarness({
+        docHandle,
+        plugins: [new RenderOrderPlugin(), new HostedSolidWidgetPlugin(), new SceneHydratorPlugin()],
+        appCapabilities: {
+          file: { safeClient },
+        },
+        initializeScene: (ctx) => {
+          context = ctx;
+        },
+      });
+
+      await flushCanvasEffects();
+      context.setState("focusedId", "file1");
+      await flushCanvasEffects();
+
+      const root = harness.stage.container().querySelector('[data-file-widget-root="true"]') as HTMLDivElement | null;
+      expect(root).not.toBeNull();
+      expect(document.activeElement).toBe(root);
+
+      harness.destroy();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   test("terminal overlay visible shell stays anchored to the persisted x position across reloads with different zoom/camera states", async () => {
     async function measureVisibleWidgetLeft(args: { zoom: number; panX: number; panY: number; type: "terminal" | "filetree" }) {
       let context!: IPluginContext;

@@ -206,4 +206,41 @@ describe("IframeBrowserWidgetPlugin", () => {
 
     harness.destroy();
   });
+
+  test("first focus transition on iframe browser focuses the browser root container", async () => {
+    vi.useFakeTimers();
+
+    try {
+      let context!: IPluginContext;
+      const docHandle = createMockDocHandle({
+        elements: {
+          browser1: createBrowserElement(),
+        },
+      });
+
+      const harness = await createCanvasTestHarness({
+        docHandle,
+        plugins: [new RenderOrderPlugin(), new IframeBrowserWidgetPlugin(), new SceneHydratorPlugin()],
+        initializeScene: (ctx) => {
+          context = ctx;
+        },
+      });
+
+      await flushCanvasEffects();
+      context.setState("focusedId", "browser1");
+      await flushCanvasEffects();
+
+      const mount = harness.stage.container().querySelector(
+        '[data-iframe-browser-widget-id="browser1"]',
+      ) as HTMLDivElement | null;
+      const root = mount?.querySelector('[data-hosted-widget-focus-root="true"]') as HTMLDivElement | null;
+
+      expect(root).not.toBeNull();
+      expect(document.activeElement).toBe(root);
+
+      harness.destroy();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
 });

@@ -1,6 +1,6 @@
 import { throttle } from "@solid-primitives/scheduled";
 import type { JSX } from "solid-js";
-import { For, createEffect, createSignal } from "solid-js";
+import { For, createEffect, createSignal, onCleanup } from "solid-js";
 import { render } from "solid-js/web";
 import type { TElement } from "@vibecanvas/shell/automerge/index";
 import type { TIframeBrowserData, TIframeBrowserTab } from "@vibecanvas/shell/automerge/index";
@@ -16,6 +16,7 @@ import { CustomEvents } from "../custom-events";
 import { CanvasMode } from "../services/canvas/enum";
 import type { IPlugin, IPluginContext } from "./interface";
 import { getWorldPosition, setWorldPosition } from "./node-space";
+import { scheduleHostedWidgetFocus } from "./hosted-widget-focus.shared";
 import { getNodeZIndex, setNodeZIndex } from "./render-order.shared";
 import { TransformPlugin } from "./Transform.plugin";
 
@@ -278,8 +279,10 @@ function BrowserChrome(props: {
   return (
     <div
       data-hosted-widget-root="true"
+      data-hosted-widget-focus-root="true"
       data-hosted-widget-focused={props.isFocused() ? "true" : "false"}
       data-hosted-widget-interactive={props.isInteractive() ? "true" : "false"}
+      tabIndex={-1}
       style={{
         position: "absolute",
         inset: `${CONTENT_INSET}px`,
@@ -796,6 +799,10 @@ export class IframeBrowserWidgetPlugin implements IPlugin {
         const interactive = context.state.focusedId === node.id() && context.state.mode === CanvasMode.SELECT;
         mountElement.style.pointerEvents = interactive ? "auto" : "none";
         mountElement.dataset.hostedWidgetInteractive = interactive ? "true" : "false";
+
+        if (!interactive) return;
+        const cleanupFocus = scheduleHostedWidgetFocus(mountElement);
+        onCleanup(cleanupFocus);
       });
 
       return (
