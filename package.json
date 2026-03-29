@@ -26,7 +26,7 @@
     "solid-js": "^1.9.11"
   },
   "scripts": {
-    "test": "bun test",
+    "test": "bun --filter @vibecanvas/core test && bun --filter @vibecanvas/server test && bun --filter @vibecanvas/canvas test",
     "test:binary": "bun run scripts/test-binary.ts",
     "build": "bun run scripts/build.ts",
     "build:single": "bun run scripts/build.ts --single",
