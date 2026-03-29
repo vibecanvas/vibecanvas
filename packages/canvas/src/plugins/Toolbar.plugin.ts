@@ -135,6 +135,10 @@ export class ToolbarPlugin implements IPlugin {
 
   private setupKeyShortcuts(context: IPluginContext) {
     context.hooks.keydown.tap(event => {
+      if (event.key === "Escape") {
+        context.setState("focusedId", null);
+      }
+
       if (event.key === " ") {
         if (context.state.selection.length > 0) {
           return false;

@@ -1,7 +1,9 @@
 import { afterEach, describe, expect, test, vi } from "vitest";
+import type { IPluginContext } from "../../../src/plugins/interface";
 import { IframeBrowserWidgetPlugin } from "../../../src/plugins/IframeBrowserWidget.plugin";
 import { RenderOrderPlugin } from "../../../src/plugins/RenderOrder.plugin";
 import { SceneHydratorPlugin } from "../../../src/plugins/SceneHydrator.plugin";
+import { CanvasMode } from "../../../src/services/canvas/enum";
 import {
   createCanvasTestHarness,
   createMockDocHandle,
@@ -157,5 +159,51 @@ describe("IframeBrowserWidgetPlugin", () => {
     harness.destroy();
 
     expect(document.querySelectorAll("[data-iframe-browser-widget-id]")).toHaveLength(0);
+  });
+
+  test("only enables iframe browser DOM pointer events while focused in select mode", async () => {
+    let context!: IPluginContext;
+    const docHandle = createMockDocHandle({
+      elements: {
+        browser1: createBrowserElement(),
+      },
+    });
+
+    const harness = await createCanvasTestHarness({
+      docHandle,
+      plugins: [new RenderOrderPlugin(), new IframeBrowserWidgetPlugin(), new SceneHydratorPlugin()],
+      initializeScene: (ctx) => {
+        context = ctx;
+      },
+    });
+
+    await flushCanvasEffects();
+
+    const mount = harness.stage.container().querySelector(
+      '[data-iframe-browser-widget-id="browser1"]',
+    ) as HTMLDivElement;
+    const root = mount.querySelector('[data-hosted-widget-root="true"]') as HTMLDivElement;
+    expect(root.dataset.hostedWidgetFocused).toBe("false");
+    expect(root.dataset.hostedWidgetInteractive).toBe("false");
+    expect(mount.dataset.hostedWidgetInteractive).toBe("false");
+    expect(mount.style.pointerEvents).toBe("none");
+
+    context.setState("focusedId", "browser1");
+    await flushCanvasEffects();
+
+    expect(root.dataset.hostedWidgetFocused).toBe("true");
+    expect(root.dataset.hostedWidgetInteractive).toBe("true");
+    expect(mount.dataset.hostedWidgetInteractive).toBe("true");
+    expect(mount.style.pointerEvents).toBe("auto");
+
+    context.setState("mode", CanvasMode.HAND);
+    await flushCanvasEffects();
+
+    expect(root.dataset.hostedWidgetFocused).toBe("true");
+    expect(root.dataset.hostedWidgetInteractive).toBe("false");
+    expect(mount.dataset.hostedWidgetInteractive).toBe("false");
+    expect(mount.style.pointerEvents).toBe("none");
+
+    harness.destroy();
   });
 });

@@ -207,6 +207,7 @@ export interface IState {
   mode: CanvasMode;
   theme: Theme;
   selection: (Group | Shape<ShapeConfig>)[];
+  focusedId: string | null;
   editingTextId: string | null;
   editingShape1dId: string | null;
 }

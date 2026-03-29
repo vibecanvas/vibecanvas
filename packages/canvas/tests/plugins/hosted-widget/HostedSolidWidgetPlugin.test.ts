@@ -550,6 +550,63 @@ describe("HostedSolidWidgetPlugin", () => {
     harness.destroy();
   });
 
+  test("only enables hosted DOM pointer events while the widget is focused in select mode", async () => {
+    let context!: IPluginContext;
+    const docHandle = createMockDocHandle({
+      elements: {
+        terminal1: {
+          id: "terminal1",
+          x: 30,
+          y: 40,
+          rotation: 0,
+          zIndex: "z00000001",
+          parentGroupId: null,
+          bindings: [],
+          locked: false,
+          createdAt: 1,
+          updatedAt: 1,
+          style: {},
+          data: { type: "terminal", w: 320, h: 220, isCollapsed: false, workingDirectory: "." },
+        },
+      },
+    });
+
+    const harness = await createCanvasTestHarness({
+      docHandle,
+      plugins: [new RenderOrderPlugin(), new HostedSolidWidgetPlugin(), new SceneHydratorPlugin()],
+      initializeScene: (ctx) => {
+        context = ctx;
+      },
+    });
+
+    await flushCanvasEffects();
+
+    const mount = harness.stage.container().querySelector('[data-hosted-widget-id="terminal1"]') as HTMLDivElement;
+    const root = harness.stage.container().querySelector('[data-hosted-widget-root="true"]') as HTMLDivElement;
+    expect(root.dataset.hostedWidgetFocused).toBe("false");
+    expect(root.dataset.hostedWidgetInteractive).toBe("false");
+    expect(mount.dataset.hostedWidgetInteractive).toBe("false");
+    expect(mount.style.pointerEvents).toBe("none");
+
+    context.setState("focusedId", "terminal1");
+    await flushCanvasEffects();
+
+    expect(root.dataset.hostedWidgetFocused).toBe("true");
+    expect(root.dataset.hostedWidgetInteractive).toBe("true");
+    expect(mount.dataset.hostedWidgetInteractive).toBe("true");
+    expect(mount.style.pointerEvents).toBe("auto");
+
+    context.setState("mode", CanvasMode.HAND);
+    await flushCanvasEffects();
+
+    expect(root.dataset.hostedWidgetFocused).toBe("true");
+    expect(root.dataset.hostedWidgetInteractive).toBe("false");
+    expect(mount.dataset.hostedWidgetInteractive).toBe("false");
+    expect(mount.style.pointerEvents).toBe("none");
+
+    harness.destroy();
+  });
+
   test("terminal overlay visible shell stays anchored to the persisted x position across reloads with different zoom/camera states", async () => {
     async function measureVisibleWidgetLeft(args: { zoom: number; panX: number; panY: number; type: "terminal" | "filetree" }) {
       let context!: IPluginContext;

@@ -1,6 +1,6 @@
 import { throttle } from "@solid-primitives/scheduled";
 import type { JSX } from "solid-js";
-import { createSignal, Show } from "solid-js";
+import { createEffect, createSignal, Show } from "solid-js";
 import { render } from "solid-js/web";
 import type { TChatData, TElement, TFileData, TFiletreeData, TTerminalData } from "@vibecanvas/shell/automerge/index";
 import Konva from "konva";
@@ -304,6 +304,8 @@ function getOrderKey(node: Konva.Node) {
 function HostedWidgetShell(props: {
   element: () => THostedWidgetElement;
   windowChrome: () => THostedWidgetChrome | null;
+   isFocused: () => boolean;
+   isInteractive: () => boolean;
   onHeaderPointerDown: (event: PointerEvent | MouseEvent) => void;
   onHeaderDoubleClick: (event: MouseEvent) => void;
   onSelectPointerDown: (event: PointerEvent | MouseEvent) => void;
@@ -322,20 +324,29 @@ function HostedWidgetShell(props: {
     ? "#0b1220"
     : (props.element().style.headerColor ?? "#e5e7eb");
   const secondaryTextColor = () => props.element().data.type === "terminal" ? "#94a3b8" : "#475569";
+  const focusBorderColor = () => props.element().data.type === "terminal" ? "#67e8f9" : "#2563eb";
+  const borderColor = () => props.isFocused()
+    ? focusBorderColor()
+    : (props.element().style.borderColor ?? "#cbd5e1");
+  const boxShadow = () => props.isFocused()
+    ? `0 0 0 1px ${focusBorderColor()}, 0 12px 30px rgba(15,23,42,0.22)`
+    : "0 8px 24px rgba(15,23,42,0.16)";
 
   return (
     <div
       data-hosted-widget-root="true"
+      data-hosted-widget-focused={props.isFocused() ? "true" : "false"}
+      data-hosted-widget-interactive={props.isInteractive() ? "true" : "false"}
       style={{
         position: "absolute",
         inset: "0",
         display: "flex",
         "flex-direction": "column",
-        "pointer-events": "auto",
+        "pointer-events": props.isInteractive() ? "auto" : "none",
         "box-sizing": "border-box",
-        border: `1px solid ${props.element().style.borderColor ?? "#cbd5e1"}`,
+        border: `1px solid ${borderColor()}`,
         background: props.element().style.backgroundColor ?? "#ffffff",
-        "box-shadow": "0 8px 24px rgba(15,23,42,0.16)",
+        "box-shadow": boxShadow(),
         overflow: "hidden",
         "font-family": "'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace",
       }}
@@ -350,7 +361,7 @@ function HostedWidgetShell(props: {
           gap: "8px",
           padding: "8px 10px",
           background: headerBackground(),
-          "border-bottom": `1px solid ${props.element().style.borderColor ?? "#cbd5e1"}`,
+          "border-bottom": `1px solid ${borderColor()}`,
           cursor: "grab",
           "user-select": "none",
         }}
@@ -384,7 +395,7 @@ function HostedWidgetShell(props: {
               "justify-content": "center",
               width: "24px",
               height: "24px",
-              border: `1px solid ${props.element().data.type === "terminal" ? "#334155" : (props.element().style.borderColor ?? "#cbd5e1")}`,
+              border: `1px solid ${props.element().data.type === "terminal" ? "#334155" : borderColor()}`,
               background: props.element().data.type === "terminal" ? "#111827" : "#ffffff",
               color: titleColor(),
               cursor: "pointer",
@@ -408,7 +419,7 @@ function HostedWidgetShell(props: {
               "justify-content": "center",
               width: "24px",
               height: "24px",
-              border: `1px solid ${props.element().data.type === "terminal" ? "#334155" : (props.element().style.borderColor ?? "#cbd5e1")}`,
+              border: `1px solid ${props.element().data.type === "terminal" ? "#334155" : borderColor()}`,
               background: props.element().data.type === "terminal" ? "#111827" : "#ffffff",
               color: titleColor(),
               cursor: "pointer",
@@ -432,7 +443,7 @@ function HostedWidgetShell(props: {
               "justify-content": "center",
               width: "24px",
               height: "24px",
-              border: `1px solid ${props.element().data.type === "terminal" ? "#334155" : (props.element().style.borderColor ?? "#cbd5e1")}`,
+              border: `1px solid ${props.element().data.type === "terminal" ? "#334155" : borderColor()}`,
               background: props.element().data.type === "terminal" ? "#111827" : "#ffffff",
               color: titleColor(),
               cursor: "pointer",
@@ -553,6 +564,7 @@ export class HostedSolidWidgetPlugin implements IPlugin {
     });
     context.crdt.patch({ elements: [this.toElement(node)], groups: [] });
     context.setState("selection", [node]);
+    context.setState("focusedId", node.id());
     return node;
   }
 
@@ -764,62 +776,72 @@ export class HostedSolidWidgetPlugin implements IPlugin {
     mountElement.style.position = "absolute";
     mountElement.style.left = "0";
     mountElement.style.top = "0";
-    mountElement.style.pointerEvents = "auto";
+    mountElement.style.pointerEvents = "none";
     context.worldWidgetsRoot.appendChild(mountElement);
 
     const [currentElement, setCurrentElement] = createSignal(element);
     const [windowChrome, setWindowChrome] = createSignal<THostedWidgetChrome | null>(null);
     const [beforeRemove, setBeforeRemove] = createSignal<(() => void | Promise<void>) | null>(null);
     const [autoSize, setAutoSize] = createSignal<((size: { width: number; height: number }) => void) | null>(null);
-    const dispose = render(() => (
-      <HostedWidgetShell
-        element={currentElement}
-        windowChrome={windowChrome}
-        onSelectPointerDown={(event) => {
-          this.selectHostedNode(context, node, event);
-        }}
-        onHeaderPointerDown={(event) => {
-          this.beginDomDrag(context, node, event);
-        }}
-        onHeaderDoubleClick={(event) => {
-          event.preventDefault();
-          event.stopPropagation();
-          this.showTransformerForNode(context, node);
-        }}
-        onRemove={() => {
-          void this.removeHostedNode(context, node);
-        }}
-        onReload={() => {
-          void this.reloadHostedNode(context, node);
-        }}
-      >
-        <Show when={currentElement().data.type === "filetree"}>
-          <FiletreeHostedWidget
-            element={currentElement as () => THostedWidgetElementMap["filetree"]}
-            canvasId={context.capabilities.filetree?.canvasId}
-            safeClient={context.capabilities.filetree?.safeClient}
-            setWindowChrome={(chrome) => setWindowChrome(() => chrome)}
-            registerBeforeRemove={(handler) => setBeforeRemove(() => handler)}
-          />
-        </Show>
-        <Show when={currentElement().data.type === "file"}>
-          <FileHostedWidget
-            element={currentElement as () => THostedWidgetElementMap["file"]}
-            safeClient={context.capabilities.file?.safeClient}
-            setWindowChrome={(chrome) => setWindowChrome(() => chrome)}
-            requestInitialSize={(size) => autoSize()?.(size)}
-          />
-        </Show>
-        <Show when={currentElement().data.type === "terminal"}>
-          <TerminalHostedWidget
-            element={currentElement as () => THostedWidgetElementMap["terminal"]}
-            safeClient={context.capabilities.terminal?.safeClient}
-            setWindowChrome={(chrome) => setWindowChrome(() => chrome)}
-            registerBeforeRemove={(handler) => setBeforeRemove(() => handler)}
-          />
-        </Show>
-      </HostedWidgetShell>
-    ), mountElement);
+    const dispose = render(() => {
+      createEffect(() => {
+        const interactive = context.state.focusedId === node.id() && context.state.mode === CanvasMode.SELECT;
+        mountElement.style.pointerEvents = interactive ? "auto" : "none";
+        mountElement.dataset.hostedWidgetInteractive = interactive ? "true" : "false";
+      });
+
+      return (
+        <HostedWidgetShell
+          element={currentElement}
+          windowChrome={windowChrome}
+          isFocused={() => context.state.focusedId === node.id()}
+          isInteractive={() => context.state.focusedId === node.id() && context.state.mode === CanvasMode.SELECT}
+          onSelectPointerDown={(event) => {
+            this.selectHostedNode(context, node, event);
+          }}
+          onHeaderPointerDown={(event) => {
+            this.beginDomDrag(context, node, event);
+          }}
+          onHeaderDoubleClick={(event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            this.showTransformerForNode(context, node);
+          }}
+          onRemove={() => {
+            void this.removeHostedNode(context, node);
+          }}
+          onReload={() => {
+            void this.reloadHostedNode(context, node);
+          }}
+        >
+          <Show when={currentElement().data.type === "filetree"}>
+            <FiletreeHostedWidget
+              element={currentElement as () => THostedWidgetElementMap["filetree"]}
+              canvasId={context.capabilities.filetree?.canvasId}
+              safeClient={context.capabilities.filetree?.safeClient}
+              setWindowChrome={(chrome) => setWindowChrome(() => chrome)}
+              registerBeforeRemove={(handler) => setBeforeRemove(() => handler)}
+            />
+          </Show>
+          <Show when={currentElement().data.type === "file"}>
+            <FileHostedWidget
+              element={currentElement as () => THostedWidgetElementMap["file"]}
+              safeClient={context.capabilities.file?.safeClient}
+              setWindowChrome={(chrome) => setWindowChrome(() => chrome)}
+              requestInitialSize={(size) => autoSize()?.(size)}
+            />
+          </Show>
+          <Show when={currentElement().data.type === "terminal"}>
+            <TerminalHostedWidget
+              element={currentElement as () => THostedWidgetElementMap["terminal"]}
+              safeClient={context.capabilities.terminal?.safeClient}
+              setWindowChrome={(chrome) => setWindowChrome(() => chrome)}
+              registerBeforeRemove={(handler) => setBeforeRemove(() => handler)}
+            />
+          </Show>
+        </HostedWidgetShell>
+      );
+    }, mountElement);
 
     this.#mounts.set(node.id(), {
       node,
@@ -898,18 +920,24 @@ export class HostedSolidWidgetPlugin implements IPlugin {
       const exists = context.state.selection.some((candidate) => candidate.id() === node.id());
       if (exists) {
         context.setState("selection", context.state.selection.filter((candidate) => candidate.id() !== node.id()));
+        if (context.state.focusedId === node.id()) {
+          context.setState("focusedId", null);
+        }
       } else {
         context.setState("selection", [...context.state.selection, node]);
+        context.setState("focusedId", node.id());
       }
       return;
     }
 
+    context.setState("focusedId", node.id());
     if (context.state.selection.length === 1 && context.state.selection[0]?.id() === node.id()) return;
     context.setState("selection", [node]);
   }
 
   private showTransformerForNode(context: IPluginContext, node: Konva.Rect) {
     node.setAttr(HOSTED_TRANSFORMER_VISIBLE_ATTR, true);
+    context.setState("focusedId", node.id());
     if (!(context.state.selection.length === 1 && context.state.selection[0]?.id() === node.id())) {
       context.setState("selection", [node]);
     } else {
@@ -921,6 +949,9 @@ export class HostedSolidWidgetPlugin implements IPlugin {
     const mounted = this.#mounts.get(node.id());
     await mounted?.beforeRemove?.();
     context.setState("selection", context.state.selection.filter((candidate) => candidate.id() !== node.id()));
+    if (context.state.focusedId === node.id()) {
+      context.setState("focusedId", null);
+    }
     context.crdt.deleteById({ elementIds: [node.id()], groupIds: [] });
     this.unmountWidget(node.id());
     node.destroy();

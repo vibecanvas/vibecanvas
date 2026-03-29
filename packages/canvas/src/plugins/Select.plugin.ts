@@ -75,6 +75,10 @@ function isEditableTarget(target: EventTarget | null) {
   return false;
 }
 
+function setFocusedNodeId(context: IPluginContext, node: Konva.Group | Konva.Shape | null) {
+  context.setState("focusedId", node?.id() ?? null);
+}
+
 function isNodeDescendantOf(node: Konva.Node, ancestor: Konva.Node) {
   let current = node.getParent();
 
@@ -245,6 +249,7 @@ function restoreDeleteSnapshot(context: IPluginContext, snapshot: TDeleteSnapsho
     .filter((node): node is Konva.Group | Konva.Shape => node instanceof Konva.Group || node instanceof Konva.Shape);
 
   context.setState("selection", restoredRoots);
+  context.setState("focusedId", restoredRoots[restoredRoots.length - 1]?.id() ?? null);
 }
 
 function executeDeleteSelection(
@@ -268,6 +273,12 @@ function executeDeleteSelection(
     groupIds: snapshot.groupIds,
   });
   context.setState("selection", []);
+  if (
+    context.state.focusedId !== null
+    && (snapshot.elementIds.includes(context.state.focusedId) || snapshot.groupIds.includes(context.state.focusedId))
+  ) {
+    context.setState("focusedId", null);
+  }
 
   if (args?.recordHistory !== false) {
     context.history.record({
@@ -360,8 +371,12 @@ export class SelectPlugin implements IPlugin {
       if (focusedLevelNode) {
         if (context.state.selection.includes(focusedLevelNode)) {
           context.setState('selection', context.state.selection.filter(node => node !== focusedLevelNode))
+          if (context.state.focusedId === focusedLevelNode.id()) {
+            context.setState("focusedId", null);
+          }
         } else {
           context.setState('selection', [...context.state.selection, focusedLevelNode])
+          setFocusedNodeId(context, focusedLevelNode);
         }
       }
       return true
@@ -377,6 +392,7 @@ export class SelectPlugin implements IPlugin {
       context.state.selection.length > 1 &&
       !context.state.selection.some(n => n.parent instanceof Konva.Group);
     if (isFlatMultiSelect && topLevelNode && context.state.selection.includes(topLevelNode)) {
+      setFocusedNodeId(context, topLevelNode);
       return true;
     }
 
@@ -385,6 +401,8 @@ export class SelectPlugin implements IPlugin {
     if (!hasSameSelectionOrder(context.state.selection, nextSelection)) {
       context.setState('selection', nextSelection)
     }
+
+    setFocusedNodeId(context, nextSelection[nextSelection.length - 1] ?? null);
 
     // Case 3: clicking the already focused item leaves selection unchanged.
     return true
@@ -412,6 +430,7 @@ export class SelectPlugin implements IPlugin {
     this.#selectionRectangle.moveToTop();
 
     context.setState('selection', []);
+    context.setState("focusedId", null);
   }
 
   private handlePointerMove(context: IPluginContext, payload: KonvaEventObject<MouseEvent, Node>) {

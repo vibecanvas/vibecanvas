@@ -95,6 +95,7 @@ export class CanvasService {
       mode: CanvasMode.SELECT,
       theme: Theme.LIGHT,
       selection: [] as (Group | Shape<ShapeConfig>)[],
+      focusedId: null as string | null,
       editingTextId: null as string | null,
       editingShape1dId: null as string | null,
     });

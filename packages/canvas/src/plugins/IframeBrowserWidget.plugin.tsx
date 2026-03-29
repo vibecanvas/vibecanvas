@@ -151,6 +151,8 @@ function getDefaultBrowserElement(x: number, y: number): TBrowserElement {
 
 function BrowserChrome(props: {
   element: () => TBrowserElement;
+  isFocused: () => boolean;
+  isInteractive: () => boolean;
   onHeaderPointerDown: (event: PointerEvent | MouseEvent) => void;
   onHeaderDoubleClick: (event: MouseEvent) => void;
   onSelectPointerDown: (event: PointerEvent | MouseEvent) => void;
@@ -266,20 +268,27 @@ function BrowserChrome(props: {
   };
 
   const borderColor = () => props.element().style.borderColor ?? "#d1d5db";
+  const focusBorderColor = () => "#2563eb";
+  const resolvedBorderColor = () => props.isFocused() ? focusBorderColor() : borderColor();
   const headerBg = () => props.element().style.headerColor ?? "#f3f4f6";
+  const boxShadow = () => props.isFocused()
+    ? `0 0 0 1px ${focusBorderColor()}, 0 12px 30px rgba(15,23,42,0.18)`
+    : "0 8px 24px rgba(15,23,42,0.12)";
 
   return (
     <div
       data-hosted-widget-root="true"
+      data-hosted-widget-focused={props.isFocused() ? "true" : "false"}
+      data-hosted-widget-interactive={props.isInteractive() ? "true" : "false"}
       style={{
         position: "absolute",
         inset: `${CONTENT_INSET}px`,
         display: "flex",
         "flex-direction": "column",
-        "pointer-events": "auto",
-        border: `1px solid ${borderColor()}`,
+        "pointer-events": props.isInteractive() ? "auto" : "none",
+        border: `1px solid ${resolvedBorderColor()}`,
         background: props.element().style.backgroundColor ?? "#ffffff",
-        "box-shadow": "0 8px 24px rgba(15,23,42,0.12)",
+        "box-shadow": boxShadow(),
         overflow: "hidden",
         "font-family": "ui-sans-serif, system-ui, -apple-system, sans-serif",
       }}
@@ -296,7 +305,7 @@ function BrowserChrome(props: {
           padding: "0 6px",
           height: `${HEADER_HEIGHT}px`,
           background: headerBg(),
-          "border-bottom": `1px solid ${borderColor()}`,
+          "border-bottom": `1px solid ${resolvedBorderColor()}`,
           cursor: "grab",
           "user-select": "none",
           "flex-shrink": "0",
@@ -315,13 +324,13 @@ function BrowserChrome(props: {
                     display: "flex",
                     "align-items": "center",
                     gap: "4px",
-                    padding: "2px 8px 2px 10px",
-                    height: "26px",
-                    background: isActive() ? (props.element().style.backgroundColor ?? "#ffffff") : "transparent",
-                    border: isActive() ? `1px solid ${borderColor()}` : "1px solid transparent",
-                    "border-bottom": isActive() ? `1px solid ${props.element().style.backgroundColor ?? "#ffffff"}` : "1px solid transparent",
-                    "border-radius": "6px 6px 0 0",
-                    "max-width": "160px",
+                     padding: "2px 8px 2px 10px",
+                     height: "26px",
+                     background: isActive() ? (props.element().style.backgroundColor ?? "#ffffff") : "transparent",
+                     border: isActive() ? `1px solid ${resolvedBorderColor()}` : "1px solid transparent",
+                     "border-bottom": isActive() ? `1px solid ${props.element().style.backgroundColor ?? "#ffffff"}` : "1px solid transparent",
+                     "border-radius": "6px 6px 0 0",
+                     "max-width": "160px",
                     cursor: "pointer",
                     "flex-shrink": "0",
                   }}
@@ -402,7 +411,7 @@ function BrowserChrome(props: {
               "justify-content": "center",
               width: "22px",
               height: "22px",
-              border: `1px solid ${borderColor()}`,
+              border: `1px solid ${resolvedBorderColor()}`,
               background: "#ffffff",
               color: "#374151",
               cursor: "pointer",
@@ -426,7 +435,7 @@ function BrowserChrome(props: {
               "justify-content": "center",
               width: "22px",
               height: "22px",
-              border: `1px solid ${borderColor()}`,
+              border: `1px solid ${resolvedBorderColor()}`,
               background: "#ffffff",
               color: "#374151",
               cursor: "pointer",
@@ -452,7 +461,7 @@ function BrowserChrome(props: {
           padding: "0 8px",
           height: `${ADDRESS_BAR_HEIGHT}px`,
           background: "#f9fafb",
-          "border-bottom": `1px solid ${borderColor()}`,
+          "border-bottom": `1px solid ${resolvedBorderColor()}`,
           "flex-shrink": "0",
         }}
         onPointerDown={(event) => event.stopPropagation()}
@@ -490,12 +499,12 @@ function BrowserChrome(props: {
           placeholder="Enter URL"
           style={{
             flex: "1",
-            height: "22px",
-            padding: "0 8px",
-            border: `1px solid ${borderColor()}`,
-            "border-radius": "11px",
-            "font-size": "11px",
-            color: "#374151",
+             height: "22px",
+             padding: "0 8px",
+             border: `1px solid ${resolvedBorderColor()}`,
+             "border-radius": "11px",
+             "font-size": "11px",
+             color: "#374151",
             background: "#ffffff",
             outline: "none",
             "font-family": "ui-monospace, SFMono-Regular, Menlo, monospace",
@@ -597,6 +606,7 @@ export class IframeBrowserWidgetPlugin implements IPlugin {
       });
       context.crdt.patch({ elements: [this.#toElement(node)], groups: [] });
       context.setState("selection", [node]);
+      context.setState("focusedId", node.id());
       context.setState("mode", CanvasMode.SELECT);
       context.hooks.customEvent.call(CustomEvents.TOOL_SELECT, "select");
     });
@@ -713,7 +723,7 @@ export class IframeBrowserWidgetPlugin implements IPlugin {
     mountElement.style.position = "absolute";
     mountElement.style.left = "0";
     mountElement.style.top = "0";
-    mountElement.style.pointerEvents = "auto";
+    mountElement.style.pointerEvents = "none";
     context.worldWidgetsRoot.appendChild(mountElement);
 
     const [currentElement, setCurrentElement] = createSignal<TBrowserElement>(element);
@@ -781,10 +791,18 @@ export class IframeBrowserWidgetPlugin implements IPlugin {
       setCurrentElement(() => ({ ...current, data: { ...current.data, tabs: nextTabs } }));
     };
 
-    const dispose = render(
-      () => (
+    const dispose = render(() => {
+      createEffect(() => {
+        const interactive = context.state.focusedId === node.id() && context.state.mode === CanvasMode.SELECT;
+        mountElement.style.pointerEvents = interactive ? "auto" : "none";
+        mountElement.dataset.hostedWidgetInteractive = interactive ? "true" : "false";
+      });
+
+      return (
         <BrowserChrome
           element={currentElement}
+          isFocused={() => context.state.focusedId === node.id()}
+          isInteractive={() => context.state.focusedId === node.id() && context.state.mode === CanvasMode.SELECT}
           onSelectPointerDown={(event) => this.#selectBrowserNode(context, node, event)}
           onHeaderPointerDown={(event) => this.#beginDomDrag(context, node, event)}
           onHeaderDoubleClick={(event) => {
@@ -799,9 +817,8 @@ export class IframeBrowserWidgetPlugin implements IPlugin {
           onNavigate={handleNavigate}
           onTitleUpdate={handleTitleUpdate}
         />
-      ),
-      mountElement,
-    );
+      );
+    }, mountElement);
 
     this.#mounts.set(node.id(), {
       node,
@@ -857,18 +874,24 @@ export class IframeBrowserWidgetPlugin implements IPlugin {
       const exists = context.state.selection.some((c) => c.id() === node.id());
       if (exists) {
         context.setState("selection", context.state.selection.filter((c) => c.id() !== node.id()));
+        if (context.state.focusedId === node.id()) {
+          context.setState("focusedId", null);
+        }
       } else {
         context.setState("selection", [...context.state.selection, node]);
+        context.setState("focusedId", node.id());
       }
       return;
     }
 
+    context.setState("focusedId", node.id());
     if (context.state.selection.length === 1 && context.state.selection[0]?.id() === node.id()) return;
     context.setState("selection", [node]);
   }
 
   #showTransformerForNode(context: IPluginContext, node: Konva.Rect) {
     node.setAttr(BROWSER_TRANSFORMER_ATTR, true);
+    context.setState("focusedId", node.id());
     if (!(context.state.selection.length === 1 && context.state.selection[0]?.id() === node.id())) {
       context.setState("selection", [node]);
     } else {
@@ -878,6 +901,9 @@ export class IframeBrowserWidgetPlugin implements IPlugin {
 
   #removeBrowserNode(context: IPluginContext, node: Konva.Rect) {
     context.setState("selection", context.state.selection.filter((c) => c.id() !== node.id()));
+    if (context.state.focusedId === node.id()) {
+      context.setState("focusedId", null);
+    }
     context.crdt.deleteById({ elementIds: [node.id()], groupIds: [] });
     this.#unmountWidget(node.id());
     node.destroy();

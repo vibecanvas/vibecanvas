@@ -11,15 +11,20 @@ import { initializeScene01SelectOuterGroupFromChild } from "../../scenarios/01-s
 import { initializeScene02NestedGroupsLeafShapes } from "../../scenarios/02-nested-groups-leaf-shapes";
 import { initializeScene05GroupWithTextAndRect } from "../../scenarios/05-group-with-text-and-rect";
 import { initializeScene03TopLevelMixedSelection } from "../../scenarios/03-top-level-mixed-selection";
-import { createCanvasTestHarness, createMockDocHandle, flushCanvasEffects } from "../../test-setup";
+import { createCanvasTestHarness, createMockDocHandle, createStagePointerEvent, flushCanvasEffects } from "../../test-setup";
 
 class SelectionProbePlugin implements IPlugin {
   observedSelectionIds: string[] = [];
+  observedFocusedId: string | null = null;
 
   apply(context: IPluginContext): void {
     context.hooks.init.tap(() => {
       createEffect(() => {
         this.observedSelectionIds = context.state.selection.map((node) => node.id());
+      });
+
+      createEffect(() => {
+        this.observedFocusedId = context.state.focusedId;
       });
     });
   }
@@ -104,6 +109,7 @@ async function createNestedSelectionSceneHarness() {
 }
 
 async function createTopLevelSelectionSceneHarness() {
+  let context!: IPluginContext;
   const groupPlugin = new GroupPlugin();
   const selectionProbePlugin = new SelectionProbePlugin();
   const plugins: IPlugin[] = [
@@ -115,9 +121,10 @@ async function createTopLevelSelectionSceneHarness() {
 
   const harness = await createCanvasTestHarness({
     plugins,
-    initializeScene: (context) => {
+    initializeScene: (ctx) => {
+      context = ctx;
       initializeScene03TopLevelMixedSelection({
-        context,
+        context: ctx,
         groupPlugin,
       });
     },
@@ -135,6 +142,7 @@ async function createTopLevelSelectionSceneHarness() {
 
   return {
     harness,
+    context,
     selectionProbePlugin,
     g1,
     g2,
@@ -750,6 +758,30 @@ describe("SelectPlugin", () => {
     expect(harness.staticForegroundLayer.findOne("#3")).toBeFalsy();
     expect(harness.staticForegroundLayer.findOne("#" + g1.id())).toBeFalsy();
     expect(getDocIds(docHandle)).toEqual({ groupIds: [], elementIds: [] });
+
+    harness.destroy();
+  });
+
+  test("scene3: pointerdown focuses the clicked node and empty canvas clears focus", async () => {
+    const { harness, context, selectionProbePlugin, g1 } = await createTopLevelSelectionSceneHarness();
+
+    g1.fire(
+      "pointerdown",
+      {
+        evt: new MouseEvent("pointerdown", { bubbles: true, button: 0 }),
+      },
+      true,
+    );
+    await flushCanvasEffects();
+
+    expect(selectionProbePlugin.observedFocusedId).toBe(g1.id());
+
+    const stageEvent = createStagePointerEvent(harness.stage, { x: 10, y: 10, type: "pointerdown" });
+    harness.stage.setPointersPositions(stageEvent);
+    context.hooks.pointerDown.call({ evt: stageEvent, target: harness.stage } as any);
+    await flushCanvasEffects();
+
+    expect(selectionProbePlugin.observedFocusedId).toBeNull();
 
     harness.destroy();
   });
