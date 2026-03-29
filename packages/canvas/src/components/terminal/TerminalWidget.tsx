@@ -1,6 +1,6 @@
 import RefreshCw from "lucide-solid/icons/refresh-cw";
-import { onCleanup, Show, createSignal } from "solid-js";
-import type { TTerminalSafeClient } from "../../services/canvas/interface";
+import { createEffect, onCleanup, Show, createSignal } from "solid-js";
+import type { THostedWidgetChrome, TTerminalSafeClient } from "../../services/canvas/interface";
 import { GhosttyTerminalMount } from "./GhosttyTerminalMount";
 import { createTerminalContextLogic } from "./createTerminalContextLogic";
 
@@ -10,6 +10,7 @@ type TTerminalWidgetProps = {
   title?: string;
   showChrome?: boolean;
   safeClient?: TTerminalSafeClient;
+  setWindowChrome?: (chrome: THostedWidgetChrome | null) => void;
   registerBeforeRemove?: (handler: (() => void | Promise<void>) | null) => void;
   registerReload?: (handler: (() => void | Promise<void>) | null) => void;
 };
@@ -28,11 +29,25 @@ export function TerminalWidget(props: TTerminalWidgetProps) {
   if (terminalLogic) {
     props.registerBeforeRemove?.(() => terminalLogic.removeTerminal());
     props.registerReload?.(() => terminalLogic.restartFrontend().then(() => setMountRevision((value) => value + 1)));
-    onCleanup(() => {
-      props.registerBeforeRemove?.(null);
-      props.registerReload?.(null);
-    });
   }
+
+  onCleanup(() => {
+    props.setWindowChrome?.(null);
+    props.registerBeforeRemove?.(null);
+    props.registerReload?.(null);
+  });
+
+  createEffect(() => {
+    if (!terminalLogic) {
+      props.setWindowChrome?.({ title: props.title ?? "terminal" });
+      return;
+    }
+
+    props.setWindowChrome?.({
+      title: terminalLogic.terminalTitle(),
+      subtitle: terminalLogic.status(),
+    });
+  });
 
   const rootClass = props.showChrome !== false
     ? "flex h-full w-full flex-col border border-border bg-background font-mono text-sm"

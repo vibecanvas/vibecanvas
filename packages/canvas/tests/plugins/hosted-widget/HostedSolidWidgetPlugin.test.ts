@@ -892,6 +892,60 @@ describe("HostedSolidWidgetPlugin", () => {
     harness.destroy();
   });
 
+  test("lets the filetree widget drive the hosted shell title", async () => {
+    const filetreeClient = createFiletreeSafeClientMock({
+      fileTrees: [{
+        id: "tree1",
+        canvas_id: "canvas-1",
+        path: "/tmp/demo",
+        title: "Workspace",
+        locked: false,
+        glob_pattern: null,
+        created_at: new Date(1),
+        updated_at: new Date(1),
+      }],
+    });
+    const docHandle = createMockDocHandle({
+      elements: {
+        tree1: {
+          id: "tree1",
+          x: 30,
+          y: 40,
+          rotation: 0,
+          zIndex: "z00000001",
+          parentGroupId: null,
+          bindings: [],
+          locked: false,
+          createdAt: 1,
+          updatedAt: 1,
+          style: {},
+          data: { type: "filetree", w: 360, h: 460, isCollapsed: false, globPattern: null },
+        },
+      },
+    });
+
+    const harness = await createCanvasTestHarness({
+      docHandle,
+      plugins: [new RenderOrderPlugin(), new HostedSolidWidgetPlugin(), new SceneHydratorPlugin()],
+      appCapabilities: {
+        filetree: {
+          canvasId: "canvas-1",
+          safeClient: filetreeClient,
+        },
+      },
+    });
+
+    await flushCanvasEffects();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    await flushCanvasEffects();
+
+    const title = harness.stage.container().querySelector('[data-hosted-widget-title="true"]') as HTMLDivElement | null;
+    expect(title?.textContent).toBe("~");
+    expect(harness.stage.container().textContent).not.toContain("filesystem");
+
+    harness.destroy();
+  });
+
   test("hydrates hosted file elements into file widgets", async () => {
     const safeClient = createFiletreeSafeClientMock();
     const docHandle = createMockDocHandle({
@@ -928,7 +982,8 @@ describe("HostedSolidWidgetPlugin", () => {
     expect(harness.staticForegroundLayer.findOne("#file1")).toBeInstanceOf(Konva.Rect);
     expect(harness.stage.container().querySelector('[data-hosted-widget-id="file1"]')).not.toBeNull();
     expect(harness.stage.container().querySelector('[data-file-widget-root="true"]')).not.toBeNull();
-    expect(harness.stage.container().textContent).toContain("index.ts");
+    expect((harness.stage.container().querySelector('[data-hosted-widget-title="true"]') as HTMLDivElement | null)?.textContent).toBe("index.ts");
+    expect((harness.stage.container().querySelector('[data-hosted-widget-subtitle="true"]') as HTMLDivElement | null)?.textContent).toContain("code");
 
     harness.destroy();
   });

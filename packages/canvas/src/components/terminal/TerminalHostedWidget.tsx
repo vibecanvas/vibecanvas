@@ -1,10 +1,11 @@
 import type { Accessor } from "solid-js";
-import type { THostedWidgetElementMap, TTerminalSafeClient } from "../../services/canvas/interface";
+import type { THostedWidgetChrome, THostedWidgetElementMap, TTerminalSafeClient } from "../../services/canvas/interface";
 import { TerminalWidget } from "./TerminalWidget";
 
 type TTerminalHostedWidgetProps = {
   element: Accessor<THostedWidgetElementMap["terminal"]>;
   safeClient?: TTerminalSafeClient;
+  setWindowChrome?: (chrome: THostedWidgetChrome | null) => void;
   registerBeforeRemove?: (handler: (() => void | Promise<void>) | null) => void;
 };
 
@@ -17,6 +18,7 @@ export function TerminalHostedWidget(props: TTerminalHostedWidgetProps) {
         title="untitled"
         showChrome={false}
         safeClient={props.safeClient}
+        setWindowChrome={props.setWindowChrome}
         registerBeforeRemove={props.registerBeforeRemove}
       />
     </div>

@@ -1,3 +1,4 @@
+import { createEffect, createMemo, onCleanup } from "solid-js";
 import ArrowUp from "lucide-solid/icons/arrow-up";
 import ChevronDown from "lucide-solid/icons/chevron-down";
 import ChevronRight from "lucide-solid/icons/chevron-right";
@@ -8,7 +9,7 @@ import FolderSearch from "lucide-solid/icons/folder-search";
 import House from "lucide-solid/icons/house";
 import RefreshCw from "lucide-solid/icons/refresh-cw";
 import { For, Show } from "solid-js";
-import type { TFiletreeNode, TFiletreeSafeClient } from "../../services/canvas/interface";
+import type { TFiletreeNode, TFiletreeSafeClient, THostedWidgetChrome } from "../../services/canvas/interface";
 import { PathPickerDialog } from "./PathPickerDialog";
 import { createFiletreeContextLogic } from "./createFiletreeContextLogic";
 import { toTildePath } from "./path-display";
@@ -17,6 +18,7 @@ type TFiletreeWidgetProps = {
   canvasId: string;
   filetreeId: string;
   safeClient: TFiletreeSafeClient;
+  setWindowChrome?: (chrome: THostedWidgetChrome | null) => void;
 };
 
 export function FiletreeWidget(props: TFiletreeWidgetProps) {
@@ -24,6 +26,22 @@ export function FiletreeWidget(props: TFiletreeWidgetProps) {
     canvasId: props.canvasId,
     filetreeId: props.filetreeId,
     safeClient: props.safeClient,
+  });
+  const windowTitle = createMemo(() => {
+    const path = filetreeLogic.currentPath();
+    if (path) {
+      return toTildePath(path, filetreeLogic.homePath());
+    }
+
+    return filetreeLogic.filetree()?.title || "files";
+  });
+
+  createEffect(() => {
+    props.setWindowChrome?.({ title: windowTitle() });
+  });
+
+  onCleanup(() => {
+    props.setWindowChrome?.(null);
   });
 
   const renderTree = (node: TFiletreeNode, depth: number, parentPath: string) => {
@@ -88,13 +106,6 @@ export function FiletreeWidget(props: TFiletreeWidgetProps) {
 
   return (
     <div class="flex h-full min-h-0 flex-1 flex-col bg-card text-card-foreground">
-      <div class="border-b border-border px-3 py-2">
-        <div class="truncate text-xs uppercase tracking-[0.18em] text-muted-foreground">filesystem</div>
-        <div class="mt-1 truncate text-xs text-foreground">
-          {toTildePath(filetreeLogic.currentPath() || "", filetreeLogic.homePath())}
-        </div>
-      </div>
-
       <div class="flex flex-col gap-2 border-b border-border p-2">
         <div class="flex flex-wrap items-center gap-1">
           <button

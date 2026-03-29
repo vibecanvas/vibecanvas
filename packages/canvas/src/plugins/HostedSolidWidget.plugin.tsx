@@ -15,6 +15,7 @@ import type { TTool } from "../components/FloatingCanvasToolbar/toolbar.types";
 import { CustomEvents } from "../custom-events";
 import { CanvasMode } from "../services/canvas/enum";
 import type {
+  THostedWidgetChrome,
   THostedWidgetElementMap,
   THostedWidgetType,
 } from "../services/canvas/interface";
@@ -59,6 +60,7 @@ type TMountRecord = {
   mountElement: HTMLDivElement;
   dispose: () => void;
   setElement: (element: THostedWidgetElement) => void;
+  setWindowChrome: (chrome: THostedWidgetChrome | null) => void;
   beforeRemove: () => void | Promise<void>;
   setBeforeRemove: (handler: (() => void | Promise<void>) | null) => void;
   setAutoSize: (handler: ((size: { width: number; height: number }) => void) | null) => void;
@@ -132,6 +134,13 @@ function getWidgetHeaderLabel(element: THostedWidgetElement) {
   if (element.data.type === "filetree") return "files";
   if (element.data.type === "file") return getFileName(element.data.path);
   return "widget";
+}
+
+function getDefaultWidgetChrome(element: THostedWidgetElement): THostedWidgetChrome {
+  return {
+    title: getWidgetHeaderLabel(element),
+    subtitle: element.data.type === "terminal" ? "interactive terminal" : null,
+  };
 }
 
 function getDefaultWidgetElement(type: THostedWidgetType, x: number, y: number, id = crypto.randomUUID()): THostedWidgetElement {
@@ -294,6 +303,7 @@ function getOrderKey(node: Konva.Node) {
 
 function HostedWidgetShell(props: {
   element: () => THostedWidgetElement;
+  windowChrome: () => THostedWidgetChrome | null;
   onHeaderPointerDown: (event: PointerEvent | MouseEvent) => void;
   onHeaderDoubleClick: (event: MouseEvent) => void;
   onSelectPointerDown: (event: PointerEvent | MouseEvent) => void;
@@ -301,6 +311,12 @@ function HostedWidgetShell(props: {
   onReload?: () => void;
   children?: JSX.Element;
 }) {
+  const resolvedWindowChrome = () => ({
+    ...getDefaultWidgetChrome(props.element()),
+    ...(props.windowChrome() ?? {}),
+  });
+  const title = () => resolvedWindowChrome().title ?? getWidgetHeaderLabel(props.element());
+  const subtitle = () => resolvedWindowChrome().subtitle ?? null;
   const titleColor = () => props.element().data.type === "terminal" ? "#f8fafc" : "#0f172a";
   const headerBackground = () => props.element().data.type === "terminal"
     ? "#0b1220"
@@ -342,12 +358,18 @@ function HostedWidgetShell(props: {
         onDblClick={(event) => props.onHeaderDoubleClick(event)}
       >
         <div style={{ display: "flex", "align-items": "baseline", gap: "8px", overflow: "hidden", "min-width": "0" }}>
-          <div style={{ "font-size": "12px", color: titleColor(), "white-space": "nowrap", overflow: "hidden", "text-overflow": "ellipsis" }}>
-            {getWidgetHeaderLabel(props.element())}
+          <div
+            data-hosted-widget-title="true"
+            style={{ "font-size": "12px", color: titleColor(), "white-space": "nowrap", overflow: "hidden", "text-overflow": "ellipsis" }}
+          >
+            {title()}
           </div>
-          <Show when={props.element().data.type === "terminal"}>
-            <div style={{ "font-size": "10px", color: secondaryTextColor(), "text-transform": "uppercase", "letter-spacing": "0.08em" }}>
-              interactive terminal
+          <Show when={subtitle()}>
+            <div
+              data-hosted-widget-subtitle="true"
+              style={{ "font-size": "10px", color: secondaryTextColor(), "text-transform": "uppercase", "letter-spacing": "0.08em" }}
+            >
+              {subtitle()}
             </div>
           </Show>
         </div>
@@ -746,11 +768,13 @@ export class HostedSolidWidgetPlugin implements IPlugin {
     context.worldWidgetsRoot.appendChild(mountElement);
 
     const [currentElement, setCurrentElement] = createSignal(element);
+    const [windowChrome, setWindowChrome] = createSignal<THostedWidgetChrome | null>(null);
     const [beforeRemove, setBeforeRemove] = createSignal<(() => void | Promise<void>) | null>(null);
     const [autoSize, setAutoSize] = createSignal<((size: { width: number; height: number }) => void) | null>(null);
     const dispose = render(() => (
       <HostedWidgetShell
         element={currentElement}
+        windowChrome={windowChrome}
         onSelectPointerDown={(event) => {
           this.selectHostedNode(context, node, event);
         }}
@@ -774,6 +798,7 @@ export class HostedSolidWidgetPlugin implements IPlugin {
             element={currentElement as () => THostedWidgetElementMap["filetree"]}
             canvasId={context.capabilities.filetree?.canvasId}
             safeClient={context.capabilities.filetree?.safeClient}
+            setWindowChrome={(chrome) => setWindowChrome(() => chrome)}
             registerBeforeRemove={(handler) => setBeforeRemove(() => handler)}
           />
         </Show>
@@ -781,6 +806,7 @@ export class HostedSolidWidgetPlugin implements IPlugin {
           <FileHostedWidget
             element={currentElement as () => THostedWidgetElementMap["file"]}
             safeClient={context.capabilities.file?.safeClient}
+            setWindowChrome={(chrome) => setWindowChrome(() => chrome)}
             requestInitialSize={(size) => autoSize()?.(size)}
           />
         </Show>
@@ -788,6 +814,7 @@ export class HostedSolidWidgetPlugin implements IPlugin {
           <TerminalHostedWidget
             element={currentElement as () => THostedWidgetElementMap["terminal"]}
             safeClient={context.capabilities.terminal?.safeClient}
+            setWindowChrome={(chrome) => setWindowChrome(() => chrome)}
             registerBeforeRemove={(handler) => setBeforeRemove(() => handler)}
           />
         </Show>
@@ -799,6 +826,7 @@ export class HostedSolidWidgetPlugin implements IPlugin {
       mountElement,
       dispose,
       setElement: (nextElement) => setCurrentElement(() => nextElement),
+      setWindowChrome: (nextWindowChrome) => setWindowChrome(() => nextWindowChrome),
       beforeRemove: () => beforeRemove()?.(),
       setBeforeRemove: (handler) => setBeforeRemove(() => handler),
       setAutoSize: (handler) => setAutoSize(() => handler),

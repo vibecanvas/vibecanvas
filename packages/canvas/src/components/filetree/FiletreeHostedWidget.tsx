@@ -1,12 +1,13 @@
 import type { Accessor } from "solid-js";
 import { onCleanup } from "solid-js";
-import type { THostedWidgetElementMap, TFiletreeSafeClient } from "../../services/canvas/interface";
+import type { THostedWidgetChrome, THostedWidgetElementMap, TFiletreeSafeClient } from "../../services/canvas/interface";
 import { FiletreeWidget } from "./FiletreeWidget";
 
 type TFiletreeHostedWidgetProps = {
   element: Accessor<THostedWidgetElementMap["filetree"]>;
   canvasId?: string;
   safeClient?: TFiletreeSafeClient;
+  setWindowChrome?: (chrome: THostedWidgetChrome | null) => void;
   registerBeforeRemove?: (handler: (() => void | Promise<void>) | null) => void;
 };
 
@@ -35,6 +36,7 @@ export function FiletreeHostedWidget(props: TFiletreeHostedWidgetProps) {
         canvasId={props.canvasId}
         filetreeId={props.element().id}
         safeClient={props.safeClient}
+        setWindowChrome={props.setWindowChrome}
       />
     </div>
   );

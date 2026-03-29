@@ -1,5 +1,5 @@
-import { createMemo, createResource, createSignal, Match, onCleanup, onMount, Show, Suspense, Switch, lazy } from "solid-js";
-import type { TFileSafeClient, THostedWidgetElementMap } from "../../services/canvas/interface";
+import { createEffect, createMemo, createResource, createSignal, Match, onCleanup, onMount, Show, Suspense, Switch, lazy } from "solid-js";
+import type { TFileSafeClient, THostedWidgetChrome, THostedWidgetElementMap } from "../../services/canvas/interface";
 import { getFileName, toDataUrlFromBinaryContent } from "./utils";
 import { useFileContent } from "./useFileContent";
 import { CodeEditor } from "./viewers/CodeEditor";
@@ -13,6 +13,7 @@ const WATCH_KEEPALIVE_INTERVAL_MS = 10_000;
 type TFileWidgetProps = {
   element: () => THostedWidgetElementMap["file"];
   safeClient: TFileSafeClient;
+  setWindowChrome?: (chrome: THostedWidgetChrome | null) => void;
   requestInitialSize?: (size: { width: number; height: number }) => void;
 };
 
@@ -47,6 +48,12 @@ export function FileWidget(props: TFileWidgetProps) {
     const element = props.element();
     return element.data.w === 560 && element.data.h === 500;
   });
+  const windowSubtitle = createMemo(() => [
+    renderer(),
+    dirty() ? "dirty" : null,
+    saving() ? "saving" : null,
+    hasConflict() ? "conflict" : null,
+  ].filter((value): value is string => Boolean(value)).join(" · "));
 
   const clearKeepaliveInterval = () => {
     if (!keepaliveInterval) return;
@@ -124,6 +131,14 @@ export function FileWidget(props: TFileWidgetProps) {
 
   onCleanup(() => {
     stopWatching();
+    props.setWindowChrome?.(null);
+  });
+
+  createEffect(() => {
+    props.setWindowChrome?.({
+      title: filename(),
+      subtitle: windowSubtitle(),
+    });
   });
 
   const saveContent = async (nextContent: string) => {
@@ -175,20 +190,6 @@ export function FileWidget(props: TFileWidgetProps) {
 
   return (
     <div data-file-widget-root="true" class="flex min-h-0 flex-1 flex-col bg-card text-card-foregroun h-full">
-      <div class="flex items-center gap-2 border-b border-border bg-muted px-3 py-2 font-mono text-xs">
-        <span class="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">{renderer()}</span>
-        <Show when={dirty()}>
-          <span class="text-[10px] font-semibold uppercase tracking-wide text-amber-600">dirty</span>
-        </Show>
-        <Show when={saving()}>
-          <span class="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">saving</span>
-        </Show>
-        <Show when={hasConflict()}>
-          <span class="text-[10px] font-semibold uppercase tracking-wide text-destructive">conflict</span>
-        </Show>
-        <span class="truncate">{filename()}</span>
-      </div>
-
       <Switch fallback={
         <PlaceholderViewer
           path={path()}

@@ -28,6 +28,11 @@ export type THostedWidgetElementMap = {
   file: TElement & { data: TFileData };
 };
 
+export type THostedWidgetChrome = {
+  title?: string | null;
+  subtitle?: string | null;
+};
+
 export type TBackendFiletree = typeof schema.filetrees.$inferSelect;
 
 export type TFiletreeRow = TBackendFiletree;

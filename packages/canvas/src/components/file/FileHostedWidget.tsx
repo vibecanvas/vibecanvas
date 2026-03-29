@@ -1,10 +1,11 @@
 import type { Accessor } from "solid-js";
-import type { THostedWidgetElementMap, TFileSafeClient } from "../../services/canvas/interface";
+import type { THostedWidgetChrome, THostedWidgetElementMap, TFileSafeClient } from "../../services/canvas/interface";
 import { FileWidget } from "./FileWidget";
 
 type TFileHostedWidgetProps = {
   element: Accessor<THostedWidgetElementMap["file"]>;
   safeClient?: TFileSafeClient;
+  setWindowChrome?: (chrome: THostedWidgetChrome | null) => void;
   requestInitialSize?: (size: { width: number; height: number }) => void;
 };
 
@@ -19,7 +20,12 @@ export function FileHostedWidget(props: TFileHostedWidgetProps) {
 
   return (
     <div class="h-full w-full min-h-0 min-w-0 flex-1">
-      <FileWidget element={props.element} safeClient={props.safeClient} requestInitialSize={props.requestInitialSize} />
+      <FileWidget
+        element={props.element}
+        safeClient={props.safeClient}
+        setWindowChrome={props.setWindowChrome}
+        requestInitialSize={props.requestInitialSize}
+      />
     </div>
   );
 }
