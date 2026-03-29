@@ -38,6 +38,8 @@ export type {
   TFiletreeData,
   TTerminalData,
   TFileData,
+  TIframeBrowserTab,
+  TIframeBrowserData,
   TWidgetType,
   // Geometry
   TPoint2D,

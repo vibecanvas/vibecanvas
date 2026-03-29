@@ -17,6 +17,7 @@ import Image from "lucide-solid/icons/image";
 import MessageCircle from "lucide-solid/icons/message-circle";
 import FolderTree from "lucide-solid/icons/folder-tree";
 import SquareTerminal from "lucide-solid/icons/square-terminal";
+import Globe from "lucide-solid/icons/globe";
 import Grid2x2 from "lucide-solid/icons/grid-2x2";
 import PanelLeft from "lucide-solid/icons/panel-left";
 import { Tooltip } from "@kobalte/core/tooltip";
@@ -48,6 +49,7 @@ const TOOL_ICONS: Record<TTool, () => JSX.Element> = {
   chat: () => <MessageCircle size={14} />,
   filesystem: () => <FolderTree size={14} />,
   terminal: () => <SquareTerminal size={14} />,
+  browser: () => <Globe size={14} />,
 };
 
 // Detect Mac for keyboard shortcut display

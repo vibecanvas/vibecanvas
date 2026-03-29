@@ -16,7 +16,8 @@ export type TTool =
   | "image"
   | "chat"
   | "filesystem"
-  | "terminal";
+  | "terminal"
+  | "browser";
 
 export interface IToolDefinition {
   tool: TTool;
@@ -48,6 +49,7 @@ export const TOOL_SHORTCUTS: Record<string, TTool> = {
   "c": "chat",
   "f": "filesystem",
   "j": "terminal",
+  "w": "browser",
   "Escape": "select",
 } as const;
 
@@ -66,4 +68,5 @@ export const TOOLS: IToolDefinition[] = [
   { tool: "chat", letterShortcut: "c" },
   { tool: "filesystem", letterShortcut: "f" },
   { tool: "terminal", letterShortcut: "j" },
+  { tool: "browser", letterShortcut: "w" },
 ];

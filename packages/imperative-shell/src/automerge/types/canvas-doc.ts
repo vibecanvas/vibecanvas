@@ -181,6 +181,21 @@ export type TFileData = {
   renderer: 'pdf' | 'image' | 'text' | 'code' | 'markdown' | 'audio' | 'video' | 'unknown'
 }
 
+export type TIframeBrowserTab = {
+  id: string
+  url: string
+  title: string
+}
+
+export type TIframeBrowserData = {
+  type: 'iframe-browser'
+  w: number
+  h: number
+  isCollapsed: boolean
+  tabs: TIframeBrowserTab[]
+  activeTabId: string
+}
+
 // ============================================================================
 // UNIFIED ELEMENT
 // ============================================================================
@@ -198,6 +213,7 @@ export type TElementData =
   | TFiletreeData
   | TTerminalData
   | TFileData
+  | TIframeBrowserData
 
 export type TElementStyle = {
   backgroundColor?: string
@@ -253,7 +269,7 @@ export type TElementType = TElementData['type']
 export type TDrawingType = 'rect' | 'ellipse' | 'diamond' | 'arrow' | 'line' | 'pen' | 'text' | 'image'
 
 /** Widget types */
-export type TWidgetType = 'chat' | 'filetree' | 'terminal' | 'file'
+export type TWidgetType = 'chat' | 'filetree' | 'terminal' | 'file' | 'iframe-browser'
 
 /** Type guard for drawings */
 export function isDrawing(element: TElement): boolean {
@@ -263,7 +279,7 @@ export function isDrawing(element: TElement): boolean {
 
 /** Type guard for widgets */
 export function isWidget(element: TElement): boolean {
-  const widgetTypes: TWidgetType[] = ['chat', 'filetree', 'terminal', 'file']
+  const widgetTypes: TWidgetType[] = ['chat', 'filetree', 'terminal', 'file', 'iframe-browser']
   return widgetTypes.includes(element.data.type as TWidgetType)
 }
 
