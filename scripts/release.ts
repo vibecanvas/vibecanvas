@@ -13,10 +13,11 @@
 
 import path from "path"
 import { cpSync, existsSync, mkdirSync, readdirSync, rmSync } from "fs"
+import type { TReleaseChannel } from "./release-channel"
 
 type TReleaseManifest = {
   version: string
-  channel: "stable" | "beta" | "nightly"
+  channel: TReleaseChannel
   targets: Record<
     string,
     {

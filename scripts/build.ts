@@ -11,12 +11,18 @@
  *   bun scripts/build.ts              # Build all platforms
  *   bun scripts/build.ts --single     # Build current platform only
  *   bun scripts/build.ts --channel beta
+ *
+ * If --channel is omitted, the channel is inferred from apps/vibecanvas/package.json:
+ * - *-beta* -> beta
+ * - *-nightly* -> nightly
+ * - everything else -> stable
  */
 
 import path from "path"
 import { chmodSync, existsSync, rmSync } from "fs"
 import { Glob } from "bun"
 import { createHash } from "crypto"
+import { inferReleaseChannelFromVersion, readWrapperVersion, type TReleaseChannel } from "./release-channel"
 
 // ============================================================
 // Configuration
@@ -48,12 +54,10 @@ const targets = [
 ] as const
 
 type Target = (typeof targets)[number]
-type Channel = "stable" | "beta" | "nightly"
-
 type ReleaseManifestTarget = {
   packageName: string
   version: string
-  channel: Channel
+  channel: TReleaseChannel
   os: string
   arch: string
   abi: string | null
@@ -91,7 +95,7 @@ function buildBunTarget(target: Target): string {
     .join("-")
 }
 
-function parseChannelArg(argv: string[]): Channel {
+function parseChannelArg(argv: string[], fallback: TReleaseChannel): TReleaseChannel {
   const inlineArg = argv.find((arg) => arg.startsWith("--channel="))
   if (inlineArg) {
     const value = inlineArg.slice("--channel=".length)
@@ -114,7 +118,7 @@ function parseChannelArg(argv: string[]): Channel {
     process.exit(1)
   }
 
-  return "stable"
+  return fallback
 }
 
 async function writeChecksumFile(binaryPath: string): Promise<{ checksumPath: string; checksumSha256: string }> {
@@ -273,18 +277,18 @@ async function main() {
 
   // Read release metadata from wrapper package.json
   const wrapperSourcePkg = await Bun.file(path.join(wrapperDir, "package.json")).json() as {
-    version?: string
     description?: string
     license?: string
   }
-  const version = wrapperSourcePkg.version ?? "0.0.1"
+  const version = await readWrapperVersion(rootDir)
   const description = wrapperSourcePkg.description ?? "Vibecanvas binary package"
   const license = wrapperSourcePkg.license ?? "ISC"
 
   // Parse flags
   const singleFlag = process.argv.includes("--single")
   const skipWrapperFlag = process.argv.includes("--skip-wrapper")
-  const channel = parseChannelArg(process.argv)
+  const inferredChannel = inferReleaseChannelFromVersion(version)
+  const channel = parseChannelArg(process.argv, inferredChannel)
 
   // Filter targets
   const filteredTargets = singleFlag
