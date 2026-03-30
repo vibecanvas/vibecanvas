@@ -2,10 +2,20 @@ import { afterEach, describe, expect, test, vi } from "vitest";
 import { render } from "solid-js/web";
 
 type TMockGhosttyTerminal = {
+  cols: number;
+  rows: number;
   element: HTMLDivElement | null;
   textarea: HTMLTextAreaElement | null;
   paste: ReturnType<typeof vi.fn>;
   input: ReturnType<typeof vi.fn>;
+  attachCustomWheelEventHandler: ReturnType<typeof vi.fn>;
+  customWheelEventHandler?: ((event: WheelEvent) => boolean) | undefined;
+  wasmTerm: {
+    isAlternateScreen: ReturnType<typeof vi.fn>;
+    hasMouseTracking: ReturnType<typeof vi.fn>;
+    getMode: ReturnType<typeof vi.fn>;
+    getDimensions: ReturnType<typeof vi.fn>;
+  };
 };
 
 const ghosttyInstances: TMockGhosttyTerminal[] = [];
@@ -18,6 +28,16 @@ vi.mock("ghostty-web", () => {
     textarea: HTMLTextAreaElement | null = null;
     paste = vi.fn();
     input = vi.fn();
+    customWheelEventHandler: ((event: WheelEvent) => boolean) | undefined;
+    attachCustomWheelEventHandler = vi.fn((handler?: (event: WheelEvent) => boolean) => {
+      this.customWheelEventHandler = handler;
+    });
+    wasmTerm = {
+      isAlternateScreen: vi.fn(() => false),
+      hasMouseTracking: vi.fn(() => false),
+      getMode: vi.fn(() => false),
+      getDimensions: vi.fn(() => ({ cols: this.cols, rows: this.rows })),
+    };
     #onData: ((data: string) => void) | null = null;
     #onResize: ((next: { cols: number; rows: number }) => void) | null = null;
 
@@ -111,6 +131,22 @@ function dispatchPaste(target: EventTarget, init?: TClipboardEventInit) {
   return event;
 }
 
+function setRect(target: Element, rect: { left: number; top: number; width: number; height: number }) {
+  Object.defineProperty(target, "getBoundingClientRect", {
+    configurable: true,
+    value: () => ({
+      ...rect,
+      right: rect.left + rect.width,
+      bottom: rect.top + rect.height,
+      x: rect.left,
+      y: rect.top,
+      toJSON() {
+        return this;
+      },
+    }),
+  });
+}
+
 afterEach(() => {
   ghosttyInstances.length = 0;
   document.body.innerHTML = "";
@@ -196,6 +232,60 @@ describe("GhosttyTerminalMount", () => {
 
     expect(event.defaultPrevented).toBe(false);
     expect(mounted.term.paste).not.toHaveBeenCalled();
+    expect(mounted.term.input).not.toHaveBeenCalled();
+
+    mounted.dispose();
+  });
+
+  test("forwards wheel as sgr mouse input when mouse tracking is active", async () => {
+    const mounted = await mountTerminal();
+
+    mounted.term.wasmTerm.hasMouseTracking.mockReturnValue(true);
+    mounted.term.wasmTerm.isAlternateScreen.mockReturnValue(true);
+    mounted.term.wasmTerm.getMode.mockImplementation((mode: number) => mode === 1006);
+    setRect(mounted.term.element!, { left: 10, top: 20, width: 800, height: 480 });
+
+    const handler = mounted.term.customWheelEventHandler;
+    if (!handler) {
+      throw new Error("Expected custom wheel handler to be attached");
+    }
+
+    const didHandle = handler(new WheelEvent("wheel", {
+      clientX: 210,
+      clientY: 140,
+      deltaMode: WheelEvent.DOM_DELTA_PIXEL,
+      deltaY: 100,
+    }));
+
+    expect(didHandle).toBe(true);
+    expect(mounted.term.input).toHaveBeenCalledWith(
+      "\x1b[<65;21;7M\x1b[<65;21;7M\x1b[<65;21;7M",
+      true,
+    );
+
+    mounted.dispose();
+  });
+
+  test("preserves default wheel behavior when mouse tracking is inactive", async () => {
+    const mounted = await mountTerminal();
+
+    mounted.term.wasmTerm.hasMouseTracking.mockReturnValue(false);
+    mounted.term.wasmTerm.isAlternateScreen.mockReturnValue(true);
+    setRect(mounted.term.element!, { left: 10, top: 20, width: 800, height: 480 });
+
+    const handler = mounted.term.customWheelEventHandler;
+    if (!handler) {
+      throw new Error("Expected custom wheel handler to be attached");
+    }
+
+    const didHandle = handler(new WheelEvent("wheel", {
+      clientX: 210,
+      clientY: 140,
+      deltaMode: WheelEvent.DOM_DELTA_PIXEL,
+      deltaY: -50,
+    }));
+
+    expect(didHandle).toBe(false);
     expect(mounted.term.input).not.toHaveBeenCalled();
 
     mounted.dispose();

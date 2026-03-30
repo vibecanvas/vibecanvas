@@ -21,6 +21,42 @@ let ghosttyInitPromise: Promise<void> | null = null;
 
 const TERMINAL_DEBUG_STORAGE_KEY = "vibecanvas:terminal:debug";
 const TERMINAL_PASTE_DEBUG_PREFIX = "[terminal:paste]";
+const TERMINAL_WHEEL_DEBUG_PREFIX = "[terminal:wheel]";
+const TERMINAL_WHEEL_PIXEL_STEP = 33;
+const TERMINAL_WHEEL_MAX_STEPS = 5;
+const TERMINAL_MOUSE_WHEEL_UP_BUTTON = 64;
+const TERMINAL_MOUSE_WHEEL_DOWN_BUTTON = 65;
+const TERMINAL_MOUSE_SGR_MODE = 1006;
+
+type TGhosttyWasmTerminalLike = {
+  isAlternateScreen?: () => boolean;
+  hasMouseTracking?: () => boolean;
+  getMode?: (mode: number, isAnsi?: boolean) => boolean;
+  getDimensions?: () => { cols: number; rows: number };
+};
+
+type TGhosttyRendererLike = {
+  getMetrics?: () => { width: number; height: number };
+};
+
+type TGhosttyTerminalInternal = TGhosttyTerminalInstance & {
+  attachCustomWheelEventHandler?: (handler?: (event: WheelEvent) => boolean) => void;
+  canvas?: HTMLCanvasElement | null;
+  renderer?: TGhosttyRendererLike;
+  wasmTerm?: TGhosttyWasmTerminalLike;
+};
+
+type TTerminalBounds = {
+  left: number;
+  top: number;
+  width: number;
+  height: number;
+};
+
+type TTerminalCellCoordinates = {
+  col: number;
+  row: number;
+};
 
 type TClipboardLike = {
   getData?: (type: string) => string;
@@ -38,7 +74,7 @@ type TClipboardSummary = {
   hasAnyPayload: boolean;
 };
 
-function isTerminalPasteDebugEnabled() {
+function isTerminalDebugEnabled() {
   try {
     return localStorage.getItem(TERMINAL_DEBUG_STORAGE_KEY) === "1";
   } catch {
@@ -47,12 +83,119 @@ function isTerminalPasteDebugEnabled() {
 }
 
 function debugTerminalPaste(message: string, payload?: Record<string, unknown>) {
-  if (!isTerminalPasteDebugEnabled()) return;
+  if (!isTerminalDebugEnabled()) return;
   if (payload) {
     console.debug(TERMINAL_PASTE_DEBUG_PREFIX, message, payload);
     return;
   }
   console.debug(TERMINAL_PASTE_DEBUG_PREFIX, message);
+}
+
+function debugTerminalWheel(message: string, payload?: Record<string, unknown>) {
+  if (!isTerminalDebugEnabled()) return;
+  if (payload) {
+    console.debug(TERMINAL_WHEEL_DEBUG_PREFIX, message, payload);
+    return;
+  }
+  console.debug(TERMINAL_WHEEL_DEBUG_PREFIX, message);
+}
+
+function clamp(value: number, min: number, max: number) {
+  return Math.min(Math.max(value, min), max);
+}
+
+function getTerminalBounds(term: TGhosttyTerminalInternal): TTerminalBounds | null {
+  const rectSource = term.canvas ?? term.element;
+  if (rectSource) {
+    const rect = rectSource.getBoundingClientRect();
+    if (rect.width > 0 && rect.height > 0) {
+      return {
+        left: rect.left,
+        top: rect.top,
+        width: rect.width,
+        height: rect.height,
+      };
+    }
+
+    const metrics = term.renderer?.getMetrics?.();
+    const fallbackCols = term.wasmTerm?.getDimensions?.().cols ?? term.cols;
+    const fallbackRows = term.wasmTerm?.getDimensions?.().rows ?? term.rows;
+    if (metrics?.width && metrics?.height && fallbackCols > 0 && fallbackRows > 0) {
+      return {
+        left: rect.left,
+        top: rect.top,
+        width: metrics.width * fallbackCols,
+        height: metrics.height * fallbackRows,
+      };
+    }
+  }
+
+  return null;
+}
+
+function getTerminalCellCoordinates(term: TGhosttyTerminalInternal, event: WheelEvent): TTerminalCellCoordinates | null {
+  const bounds = getTerminalBounds(term);
+  const cols = term.wasmTerm?.getDimensions?.().cols ?? term.cols;
+  const rows = term.wasmTerm?.getDimensions?.().rows ?? term.rows;
+
+  if (!bounds || cols <= 0 || rows <= 0 || bounds.width <= 0 || bounds.height <= 0) {
+    return null;
+  }
+
+  const localX = clamp(event.clientX - bounds.left, 0, bounds.width);
+  const localY = clamp(event.clientY - bounds.top, 0, bounds.height);
+
+  return {
+    col: clamp(Math.floor(localX / (bounds.width / cols)) + 1, 1, cols),
+    row: clamp(Math.floor(localY / (bounds.height / rows)) + 1, 1, rows),
+  };
+}
+
+function getWheelStepCount(event: WheelEvent) {
+  const delta = Math.abs(event.deltaY);
+  if (delta === 0) return 0;
+
+  let normalized = 0;
+  if (event.deltaMode === WheelEvent.DOM_DELTA_LINE) {
+    normalized = delta;
+  } else if (event.deltaMode === WheelEvent.DOM_DELTA_PAGE) {
+    normalized = delta * 3;
+  } else {
+    normalized = delta / TERMINAL_WHEEL_PIXEL_STEP;
+  }
+
+  return clamp(Math.max(1, Math.round(normalized)), 1, TERMINAL_WHEEL_MAX_STEPS);
+}
+
+function getWheelMouseButton(event: WheelEvent) {
+  if (event.deltaY === 0) return null;
+
+  const modifierMask = (event.shiftKey ? 4 : 0)
+    + (event.altKey ? 8 : 0)
+    + (event.ctrlKey ? 16 : 0);
+
+  return (event.deltaY > 0 ? TERMINAL_MOUSE_WHEEL_DOWN_BUTTON : TERMINAL_MOUSE_WHEEL_UP_BUTTON)
+    + modifierMask;
+}
+
+function buildWheelMouseSequence(term: TGhosttyTerminalInternal, event: WheelEvent) {
+  const coords = getTerminalCellCoordinates(term, event);
+  const button = getWheelMouseButton(event);
+  const steps = getWheelStepCount(event);
+  if (!coords || button === null || steps <= 0) return null;
+
+  const sequence = Array.from(
+    { length: steps },
+    () => `\x1b[<${button};${coords.col};${coords.row}M`,
+  ).join("");
+
+  return {
+    button,
+    col: coords.col,
+    row: coords.row,
+    sequence,
+    steps,
+  };
 }
 
 function getClipboardText(clipboardData: TClipboardLike | null | undefined) {
@@ -177,6 +320,8 @@ export function GhosttyTerminalMount(props: TGhosttyTerminalMountProps) {
       term.textarea.dataset.ghosttyTerminalTextarea = "true";
     }
 
+    const terminalInternal = term as TGhosttyTerminalInternal;
+
     const sendTerminalInput = (data: string) => {
       const input = (term as { input?: (next: string, fromPaste?: boolean) => void } | null)?.input;
       if (typeof input === "function") {
@@ -198,6 +343,51 @@ export function GhosttyTerminalMount(props: TGhosttyTerminalMountProps) {
       props.onData?.(text);
       return props.onData ? "onData" : "none";
     };
+
+    terminalInternal.attachCustomWheelEventHandler?.((event) => {
+      const wasmTerm = terminalInternal.wasmTerm;
+      const alternateScreen = wasmTerm?.isAlternateScreen?.() ?? false;
+      const mouseTracking = wasmTerm?.hasMouseTracking?.() ?? false;
+      const sgrMouseMode = wasmTerm?.getMode?.(TERMINAL_MOUSE_SGR_MODE, false) ?? false;
+
+      if (!mouseTracking) {
+        debugTerminalWheel("leaving wheel to ghostty default handler", {
+          alternateScreen,
+          deltaMode: event.deltaMode,
+          deltaY: event.deltaY,
+          mouseTracking,
+          sgrMouseMode,
+        });
+        return false;
+      }
+
+      const wheelSequence = buildWheelMouseSequence(terminalInternal, event);
+      if (!wheelSequence) {
+        debugTerminalWheel("failed to encode wheel mouse sequence", {
+          alternateScreen,
+          deltaMode: event.deltaMode,
+          deltaY: event.deltaY,
+          mouseTracking,
+          sgrMouseMode,
+        });
+        return false;
+      }
+
+      const method = sendTerminalInput(wheelSequence.sequence);
+      debugTerminalWheel("forwarded wheel as sgr mouse input", {
+        alternateScreen,
+        button: wheelSequence.button,
+        col: wheelSequence.col,
+        deltaMode: event.deltaMode,
+        deltaY: event.deltaY,
+        method,
+        mouseTracking,
+        row: wheelSequence.row,
+        sgrMouseMode,
+        steps: wheelSequence.steps,
+      });
+      return true;
+    });
 
     const handlePaste = (event: ClipboardEvent) => {
       if (!term) return;
@@ -294,6 +484,7 @@ export function GhosttyTerminalMount(props: TGhosttyTerminalMountProps) {
     disposed = true;
     cleanupPasteListeners?.();
     cleanupPasteListeners = null;
+    (term as TGhosttyTerminalInternal | null)?.attachCustomWheelEventHandler?.(undefined);
     props.onCleanup?.(term);
     term?.dispose();
     term = null;
