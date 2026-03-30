@@ -275,6 +275,14 @@ function BrowserChrome(props: {
   const boxShadow = () => props.isFocused()
     ? `0 0 0 1px ${focusBorderColor()}, 0 12px 30px rgba(15,23,42,0.18)`
     : "0 8px 24px rgba(15,23,42,0.12)";
+  const interactivePointerEvents = () => props.isInteractive() ? "auto" : "none";
+
+  createEffect(() => {
+    const pointerEvents = interactivePointerEvents();
+    iframeRefs.forEach((iframe) => {
+      iframe.style.pointerEvents = pointerEvents;
+    });
+  });
 
   return (
     <div
@@ -312,12 +320,13 @@ function BrowserChrome(props: {
           cursor: "grab",
           "user-select": "none",
           "flex-shrink": "0",
+          "pointer-events": interactivePointerEvents(),
         }}
         onPointerDown={(event) => props.onHeaderPointerDown(event)}
         onDblClick={(event) => props.onHeaderDoubleClick(event)}
       >
         {/* Tabs */}
-        <div style={{ display: "flex", "align-items": "center", gap: "2px", flex: "1", overflow: "hidden", "min-width": "0" }}>
+        <div style={{ display: "flex", "align-items": "center", gap: "2px", flex: "1", overflow: "hidden", "min-width": "0", "pointer-events": interactivePointerEvents() }}>
           <For each={props.element().data.tabs}>
             {(tab) => {
               const isActive = () => tab.id === props.element().data.activeTabId;
@@ -327,22 +336,23 @@ function BrowserChrome(props: {
                     display: "flex",
                     "align-items": "center",
                     gap: "4px",
-                     padding: "2px 8px 2px 10px",
-                     height: "26px",
-                     background: isActive() ? (props.element().style.backgroundColor ?? "#ffffff") : "transparent",
-                     border: isActive() ? `1px solid ${resolvedBorderColor()}` : "1px solid transparent",
-                     "border-bottom": isActive() ? `1px solid ${props.element().style.backgroundColor ?? "#ffffff"}` : "1px solid transparent",
-                     "border-radius": "6px 6px 0 0",
-                     "max-width": "160px",
+                    padding: "2px 8px 2px 10px",
+                    height: "26px",
+                    background: isActive() ? (props.element().style.backgroundColor ?? "#ffffff") : "transparent",
+                    border: isActive() ? `1px solid ${resolvedBorderColor()}` : "1px solid transparent",
+                    "border-bottom": isActive() ? `1px solid ${props.element().style.backgroundColor ?? "#ffffff"}` : "1px solid transparent",
+                    "border-radius": "6px 6px 0 0",
+                    "max-width": "160px",
                     cursor: "pointer",
                     "flex-shrink": "0",
+                    "pointer-events": interactivePointerEvents(),
                   }}
                   onPointerDown={(event) => {
                     event.stopPropagation();
                     props.onTabActivate(tab.id);
                   }}
                 >
-                  <span style={{ "font-size": "11px", color: "#374151", overflow: "hidden", "text-overflow": "ellipsis", "white-space": "nowrap", "max-width": "110px" }}>
+                  <span style={{ "font-size": "11px", color: "#374151", overflow: "hidden", "text-overflow": "ellipsis", "white-space": "nowrap", "max-width": "110px", "pointer-events": interactivePointerEvents() }}>
                     {tab.title || "New Tab"}
                   </span>
                   <button
@@ -362,6 +372,7 @@ function BrowserChrome(props: {
                       opacity: props.element().data.tabs.length <= 1 ? "0.3" : "1",
                       padding: "0",
                       "flex-shrink": "0",
+                      "pointer-events": interactivePointerEvents(),
                     }}
                     onPointerDown={(event) => event.stopPropagation()}
                     onClick={(event) => {
@@ -391,6 +402,7 @@ function BrowserChrome(props: {
               cursor: "pointer",
               "border-radius": "4px",
               "flex-shrink": "0",
+              "pointer-events": interactivePointerEvents(),
             }}
             onPointerDown={(event) => event.stopPropagation()}
             onClick={(event) => {
@@ -403,7 +415,7 @@ function BrowserChrome(props: {
         </div>
 
         {/* Widget controls */}
-        <div style={{ display: "flex", "align-items": "center", gap: "4px", "flex-shrink": "0" }}>
+        <div style={{ display: "flex", "align-items": "center", gap: "4px", "flex-shrink": "0", "pointer-events": interactivePointerEvents() }}>
           <button
             type="button"
             aria-label="Show resize handles"
@@ -419,6 +431,7 @@ function BrowserChrome(props: {
               color: "#374151",
               cursor: "pointer",
               "border-radius": "3px",
+              "pointer-events": interactivePointerEvents(),
             }}
             onPointerDown={(event) => event.stopPropagation()}
             onClick={(event) => {
@@ -443,6 +456,7 @@ function BrowserChrome(props: {
               color: "#374151",
               cursor: "pointer",
               "border-radius": "3px",
+              "pointer-events": interactivePointerEvents(),
             }}
             onPointerDown={(event) => event.stopPropagation()}
             onClick={(event) => {
@@ -466,13 +480,14 @@ function BrowserChrome(props: {
           background: "#f9fafb",
           "border-bottom": `1px solid ${resolvedBorderColor()}`,
           "flex-shrink": "0",
+          "pointer-events": interactivePointerEvents(),
         }}
         onPointerDown={(event) => event.stopPropagation()}
       >
         <button
           type="button"
           aria-label="Go back"
-          style={navBtnStyle()}
+          style={navBtnStyle(interactivePointerEvents())}
           onPointerDown={(event) => event.stopPropagation()}
           onClick={(event) => { event.stopPropagation(); handleBack(); }}
         >
@@ -481,7 +496,7 @@ function BrowserChrome(props: {
         <button
           type="button"
           aria-label="Go forward"
-          style={navBtnStyle()}
+          style={navBtnStyle(interactivePointerEvents())}
           onPointerDown={(event) => event.stopPropagation()}
           onClick={(event) => { event.stopPropagation(); handleForward(); }}
         >
@@ -490,7 +505,7 @@ function BrowserChrome(props: {
         <button
           type="button"
           aria-label="Reload"
-          style={navBtnStyle()}
+          style={navBtnStyle(interactivePointerEvents())}
           onPointerDown={(event) => event.stopPropagation()}
           onClick={(event) => { event.stopPropagation(); handleReload(); }}
         >
@@ -502,15 +517,16 @@ function BrowserChrome(props: {
           placeholder="Enter URL"
           style={{
             flex: "1",
-             height: "22px",
-             padding: "0 8px",
-             border: `1px solid ${resolvedBorderColor()}`,
-             "border-radius": "11px",
-             "font-size": "11px",
-             color: "#374151",
+            height: "22px",
+            padding: "0 8px",
+            border: `1px solid ${resolvedBorderColor()}`,
+            "border-radius": "11px",
+            "font-size": "11px",
+            color: "#374151",
             background: "#ffffff",
             outline: "none",
             "font-family": "ui-monospace, SFMono-Regular, Menlo, monospace",
+            "pointer-events": interactivePointerEvents(),
           }}
           onInput={(event) => setInputValue(event.currentTarget.value)}
           onFocus={(event) => {
@@ -530,13 +546,13 @@ function BrowserChrome(props: {
       {/* Content area — iframes are managed imperatively in the createEffect above */}
       <div
         ref={iframeContainerRef}
-        style={{ flex: "1", position: "relative", overflow: "hidden" }}
+        style={{ flex: "1", position: "relative", overflow: "hidden", "pointer-events": interactivePointerEvents() }}
       />
     </div>
   );
 }
 
-function navBtnStyle(): JSX.CSSProperties {
+function navBtnStyle(pointerEvents: string): JSX.CSSProperties {
   return {
     display: "inline-flex",
     "align-items": "center",
@@ -549,6 +565,7 @@ function navBtnStyle(): JSX.CSSProperties {
     cursor: "pointer",
     "border-radius": "4px",
     "flex-shrink": "0",
+    "pointer-events": pointerEvents,
   };
 }
 
@@ -799,6 +816,7 @@ export class IframeBrowserWidgetPlugin implements IPlugin {
         const interactive = context.state.focusedId === node.id() && context.state.mode === CanvasMode.SELECT;
         mountElement.style.pointerEvents = interactive ? "auto" : "none";
         mountElement.dataset.hostedWidgetInteractive = interactive ? "true" : "false";
+        mountElement.toggleAttribute("inert", !interactive);
 
         if (!interactive) return;
         const cleanupFocus = scheduleHostedWidgetFocus(mountElement);

@@ -583,10 +583,15 @@ describe("HostedSolidWidgetPlugin", () => {
 
     const mount = harness.stage.container().querySelector('[data-hosted-widget-id="terminal1"]') as HTMLDivElement;
     const root = harness.stage.container().querySelector('[data-hosted-widget-root="true"]') as HTMLDivElement;
+    const resizeButton = harness.stage.container().querySelector('[aria-label="Show resize handles"]') as HTMLButtonElement;
+    const closeButton = harness.stage.container().querySelector('[aria-label="Close widget"]') as HTMLButtonElement;
     expect(root.dataset.hostedWidgetFocused).toBe("false");
     expect(root.dataset.hostedWidgetInteractive).toBe("false");
     expect(mount.dataset.hostedWidgetInteractive).toBe("false");
     expect(mount.style.pointerEvents).toBe("none");
+    expect(mount.hasAttribute("inert")).toBe(true);
+    expect(resizeButton.style.pointerEvents).toBe("none");
+    expect(closeButton.style.pointerEvents).toBe("none");
 
     context.setState("focusedId", "terminal1");
     await flushCanvasEffects();
@@ -595,6 +600,9 @@ describe("HostedSolidWidgetPlugin", () => {
     expect(root.dataset.hostedWidgetInteractive).toBe("true");
     expect(mount.dataset.hostedWidgetInteractive).toBe("true");
     expect(mount.style.pointerEvents).toBe("auto");
+    expect(mount.hasAttribute("inert")).toBe(false);
+    expect(resizeButton.style.pointerEvents).toBe("auto");
+    expect(closeButton.style.pointerEvents).toBe("auto");
 
     context.setState("mode", CanvasMode.HAND);
     await flushCanvasEffects();
@@ -603,6 +611,9 @@ describe("HostedSolidWidgetPlugin", () => {
     expect(root.dataset.hostedWidgetInteractive).toBe("false");
     expect(mount.dataset.hostedWidgetInteractive).toBe("false");
     expect(mount.style.pointerEvents).toBe("none");
+    expect(mount.hasAttribute("inert")).toBe(true);
+    expect(resizeButton.style.pointerEvents).toBe("none");
+    expect(closeButton.style.pointerEvents).toBe("none");
 
     harness.destroy();
   });

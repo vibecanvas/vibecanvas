@@ -183,10 +183,15 @@ describe("IframeBrowserWidgetPlugin", () => {
       '[data-iframe-browser-widget-id="browser1"]',
     ) as HTMLDivElement;
     const root = mount.querySelector('[data-hosted-widget-root="true"]') as HTMLDivElement;
+    const newTabButton = mount.querySelector('[aria-label="New tab"]') as HTMLButtonElement;
+    const addressBar = mount.querySelector('input[type="text"]') as HTMLInputElement;
     expect(root.dataset.hostedWidgetFocused).toBe("false");
     expect(root.dataset.hostedWidgetInteractive).toBe("false");
     expect(mount.dataset.hostedWidgetInteractive).toBe("false");
     expect(mount.style.pointerEvents).toBe("none");
+    expect(mount.hasAttribute("inert")).toBe(true);
+    expect(newTabButton.style.pointerEvents).toBe("none");
+    expect(addressBar.style.pointerEvents).toBe("none");
 
     context.setState("focusedId", "browser1");
     await flushCanvasEffects();
@@ -195,6 +200,9 @@ describe("IframeBrowserWidgetPlugin", () => {
     expect(root.dataset.hostedWidgetInteractive).toBe("true");
     expect(mount.dataset.hostedWidgetInteractive).toBe("true");
     expect(mount.style.pointerEvents).toBe("auto");
+    expect(mount.hasAttribute("inert")).toBe(false);
+    expect(newTabButton.style.pointerEvents).toBe("auto");
+    expect(addressBar.style.pointerEvents).toBe("auto");
 
     context.setState("mode", CanvasMode.HAND);
     await flushCanvasEffects();
@@ -203,6 +211,9 @@ describe("IframeBrowserWidgetPlugin", () => {
     expect(root.dataset.hostedWidgetInteractive).toBe("false");
     expect(mount.dataset.hostedWidgetInteractive).toBe("false");
     expect(mount.style.pointerEvents).toBe("none");
+    expect(mount.hasAttribute("inert")).toBe(true);
+    expect(newTabButton.style.pointerEvents).toBe("none");
+    expect(addressBar.style.pointerEvents).toBe("none");
 
     harness.destroy();
   });

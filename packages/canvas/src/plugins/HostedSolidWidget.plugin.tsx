@@ -305,8 +305,8 @@ function getOrderKey(node: Konva.Node) {
 function HostedWidgetShell(props: {
   element: () => THostedWidgetElement;
   windowChrome: () => THostedWidgetChrome | null;
-   isFocused: () => boolean;
-   isInteractive: () => boolean;
+  isFocused: () => boolean;
+  isInteractive: () => boolean;
   onHeaderPointerDown: (event: PointerEvent | MouseEvent) => void;
   onHeaderDoubleClick: (event: MouseEvent) => void;
   onSelectPointerDown: (event: PointerEvent | MouseEvent) => void;
@@ -332,6 +332,7 @@ function HostedWidgetShell(props: {
   const boxShadow = () => props.isFocused()
     ? `0 0 0 1px ${focusBorderColor()}, 0 12px 30px rgba(15,23,42,0.22)`
     : "0 8px 24px rgba(15,23,42,0.16)";
+  const interactivePointerEvents = () => props.isInteractive() ? "auto" : "none";
 
   return (
     <div
@@ -365,27 +366,28 @@ function HostedWidgetShell(props: {
           "border-bottom": `1px solid ${borderColor()}`,
           cursor: "grab",
           "user-select": "none",
+          "pointer-events": interactivePointerEvents(),
         }}
         onPointerDown={(event) => props.onHeaderPointerDown(event)}
         onDblClick={(event) => props.onHeaderDoubleClick(event)}
       >
-        <div style={{ display: "flex", "align-items": "baseline", gap: "8px", overflow: "hidden", "min-width": "0" }}>
+        <div style={{ display: "flex", "align-items": "baseline", gap: "8px", overflow: "hidden", "min-width": "0", "pointer-events": interactivePointerEvents() }}>
           <div
             data-hosted-widget-title="true"
-            style={{ "font-size": "12px", color: titleColor(), "white-space": "nowrap", overflow: "hidden", "text-overflow": "ellipsis" }}
+            style={{ "font-size": "12px", color: titleColor(), "white-space": "nowrap", overflow: "hidden", "text-overflow": "ellipsis", "pointer-events": interactivePointerEvents() }}
           >
             {title()}
           </div>
           <Show when={subtitle()}>
             <div
               data-hosted-widget-subtitle="true"
-              style={{ "font-size": "10px", color: secondaryTextColor(), "text-transform": "uppercase", "letter-spacing": "0.08em" }}
+              style={{ "font-size": "10px", color: secondaryTextColor(), "text-transform": "uppercase", "letter-spacing": "0.08em", "pointer-events": interactivePointerEvents() }}
             >
               {subtitle()}
             </div>
           </Show>
         </div>
-        <div style={{ display: "flex", "align-items": "center", gap: "6px" }}>
+        <div style={{ display: "flex", "align-items": "center", gap: "6px", "pointer-events": interactivePointerEvents() }}>
           <button
             type="button"
             aria-label="Show resize handles"
@@ -400,7 +402,7 @@ function HostedWidgetShell(props: {
               background: props.element().data.type === "terminal" ? "#111827" : "#ffffff",
               color: titleColor(),
               cursor: "pointer",
-              "pointer-events": "auto",
+              "pointer-events": interactivePointerEvents(),
             }}
             onPointerDown={(event) => event.stopPropagation()}
             onClick={(event) => {
@@ -424,7 +426,7 @@ function HostedWidgetShell(props: {
               background: props.element().data.type === "terminal" ? "#111827" : "#ffffff",
               color: titleColor(),
               cursor: "pointer",
-              "pointer-events": "auto",
+              "pointer-events": interactivePointerEvents(),
             }}
             onPointerDown={(event) => event.stopPropagation()}
             onClick={(event) => {
@@ -448,7 +450,7 @@ function HostedWidgetShell(props: {
               background: props.element().data.type === "terminal" ? "#111827" : "#ffffff",
               color: titleColor(),
               cursor: "pointer",
-              "pointer-events": "auto",
+              "pointer-events": interactivePointerEvents(),
             }}
             onPointerDown={(event) => event.stopPropagation()}
             onClick={(event) => {
@@ -460,7 +462,7 @@ function HostedWidgetShell(props: {
           </button>
         </div>
       </div>
-      <div style={{ flex: 1, display: "flex", overflow: "hidden" }}>
+      <div style={{ flex: 1, display: "flex", overflow: "hidden", "pointer-events": interactivePointerEvents() }}>
         <Show when={props.children} fallback={<DefaultWidgetBody element={props.element} />}>
           {props.children}
         </Show>
@@ -789,6 +791,7 @@ export class HostedSolidWidgetPlugin implements IPlugin {
         const interactive = context.state.focusedId === node.id() && context.state.mode === CanvasMode.SELECT;
         mountElement.style.pointerEvents = interactive ? "auto" : "none";
         mountElement.dataset.hostedWidgetInteractive = interactive ? "true" : "false";
+        mountElement.toggleAttribute("inert", !interactive);
 
         if (!interactive) return;
         const cleanupFocus = scheduleHostedWidgetFocus(mountElement);
