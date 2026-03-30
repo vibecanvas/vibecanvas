@@ -13,7 +13,7 @@ import {
 import type { IPlugin, IPluginContext, TMouseEvent, TPointerEvent, TWheelEvent } from "../../plugins/interface";
 import { AsyncParallelHook, SyncExitHook, SyncHook } from "../../tapable";
 import { Camera } from "./Camera";
-import { Crdt } from "./Crdt";
+import { Crdt } from "./crdt";
 import { CanvasMode, Theme } from "./enum";
 import type { IState } from "./interface";
 import { History } from "./History";

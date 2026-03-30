@@ -1,7 +1,7 @@
 import { Repo, type DocHandle, type PeerId } from "@automerge/automerge-repo";
 import type { TCanvasDoc, TElement, TGroup, TImageData } from "@vibecanvas/shell/automerge/index";
 import { describe, expect, test } from "vitest";
-import { Crdt } from "../../../src/services/canvas/Crdt";
+import { Crdt } from "../../../src/services/canvas/crdt";
 
 async function createLocalHandle(overrides?: Partial<TCanvasDoc>): Promise<DocHandle<TCanvasDoc>> {
   const repo = new Repo({
