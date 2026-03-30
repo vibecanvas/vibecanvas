@@ -393,22 +393,28 @@ export class GroupPlugin implements IPlugin {
 
       if (!Shape1dPlugin.isShape1dNode(sourceNode)) return
       if (!(cloneNode instanceof Konva.Shape)) return
-      if (Shape1dPlugin.hasRenderableRuntime(cloneNode)) return
+
+      const cloneHasRenderableRuntime = Boolean(
+        Shape1dPlugin.hasRenderableRuntime(cloneNode as Konva.Node),
+      )
+      if (cloneHasRenderableRuntime) return
+
+      const cloneShape = cloneNode as Konva.Shape
 
       const replacement = Shape1dPlugin.createShapeFromElement(Shape1dPlugin.toTElement(sourceNode))
-      const parent = cloneNode.getParent()
+      const parent = cloneShape.getParent()
       if (!(parent instanceof Konva.Group)) return
 
       // Preserve the clone node's local/group-relative transform from the JSON clone
-      const originalAttrs = cloneNode.getAttrs()
-      const cloneLocalX = cloneNode.x()
-      const cloneLocalY = cloneNode.y()
-      const cloneRotation = cloneNode.rotation()
-      const cloneScaleX = cloneNode.scaleX()
-      const cloneScaleY = cloneNode.scaleY()
-      const cloneIndex = cloneChildren.indexOf(cloneNode)
+      const originalAttrs = cloneShape.getAttrs()
+      const cloneLocalX = cloneShape.x()
+      const cloneLocalY = cloneShape.y()
+      const cloneRotation = cloneShape.rotation()
+      const cloneScaleX = cloneShape.scaleX()
+      const cloneScaleY = cloneShape.scaleY()
+      const cloneIndex = cloneChildren.indexOf(cloneShape)
 
-      cloneNode.destroy()
+      cloneShape.destroy()
       parent.add(replacement)
       
       // Set local/group-relative position first
@@ -433,7 +439,7 @@ export class GroupPlugin implements IPlugin {
     return clone
   }
 
-static finalizePreviewClone(context: IPluginContext, clone: Konva.Group, plugin?: GroupPlugin) {
+  static finalizePreviewClone(context: IPluginContext, clone: Konva.Group, plugin?: GroupPlugin) {
     if (clone.isDragging()) {
       clone.stopDrag();
     }
@@ -463,10 +469,10 @@ static finalizePreviewClone(context: IPluginContext, clone: Konva.Group, plugin?
 
         if (node instanceof Konva.Text) {
           TextPlugin.setupShapeListeners(context, node)
+        } else if (node instanceof Konva.Path && !Shape1dPlugin.isShape1dNode(node)) {
+          PenPlugin.setupShapeListeners(context, node)
         } else if (Shape1dPlugin.isShape1dNode(node)) {
           Shape1dPlugin.setupShapeListeners(context, node)
-        } else if (node instanceof Konva.Path) {
-          PenPlugin.setupShapeListeners(context, node)
         } else {
           Shape2dPlugin.setupShapeListeners(context, node)
         }
