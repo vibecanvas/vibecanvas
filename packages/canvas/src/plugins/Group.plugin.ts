@@ -647,7 +647,9 @@ static finalizePreviewClone(context: IPluginContext, clone: Konva.Group, plugin?
       }
 
       if (plugin) {
-        plugin.#boundaries.values().forEach(b => b.update())
+        for (const boundary of plugin.#boundaries.values()) {
+          boundary.update()
+        }
       }
       // update shape position, dont propagate to parent
       if (e.currentTarget instanceof Konva.Group && e.type === 'dragmove') {
