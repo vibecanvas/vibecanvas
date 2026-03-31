@@ -23,9 +23,13 @@ const MIN_ROWS = 8;
 const MIN_COLS = 20;
 const FALLBACK_CELL_WIDTH = 8;
 const FALLBACK_CELL_HEIGHT = 18;
+// Temporary flag while terminal lifecycle sizing is still being tuned.
+const ENABLE_TERMINAL_LIFECYCLE_DEBUG_LOGS = false;
 const terminalLogicOwnership = new Map<string, symbol>();
 
 function debugTerminalLifecycle(message: string, payload?: Record<string, unknown>) {
+  if (!ENABLE_TERMINAL_LIFECYCLE_DEBUG_LOGS) return;
+
   if (payload) {
     console.debug("[terminal:lifecycle]", message, payload);
     return;
