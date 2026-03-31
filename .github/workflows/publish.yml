@@ -239,15 +239,6 @@ jobs:
       - name: Publish npm packages
         run: bun run scripts/publish-npm.ts
 
-      - name: Publish GitHub release
-        env:
-          VERSION: ${{ needs.check-version.outputs.version }}
-          RELEASE_NOTES: ${{ needs.check-version.outputs.release_notes }}
-        run: |
-          NOTES_FILE="$RUNNER_TEMP/release-notes.md"
-          printf '%s\n' "$RELEASE_NOTES" > "$NOTES_FILE"
-          bun run scripts/release.ts --tag "v$VERSION" --notes-file "$NOTES_FILE" --fail-if-exists
-
       - name: Create and push git tag
         env:
           VERSION: ${{ needs.check-version.outputs.version }}
@@ -260,6 +251,15 @@ jobs:
           fi
           git tag "$TAG"
           git push origin "$TAG"
+
+      - name: Publish GitHub release
+        env:
+          VERSION: ${{ needs.check-version.outputs.version }}
+          RELEASE_NOTES: ${{ needs.check-version.outputs.release_notes }}
+        run: |
+          NOTES_FILE="$RUNNER_TEMP/release-notes.md"
+          printf '%s\n' "$RELEASE_NOTES" > "$NOTES_FILE"
+          bun run scripts/release.ts --tag "v$VERSION" --notes-file "$NOTES_FILE" --fail-if-exists
 
       - name: Print release summary
         env:

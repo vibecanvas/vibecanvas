@@ -257,7 +257,7 @@ async function main() {
       : stripAuthorAttribution(await generateReleaseNotes(rootDir, tag))
 
     console.log(`[release] Creating release ${tag} and uploading assets...`)
-    const createArgs = ["gh", "release", "create", tag, ...assets, "--title", tag, "--notes", cleanedNotes]
+    const createArgs = ["gh", "release", "create", tag, ...assets, "--title", tag, "--notes", cleanedNotes, "--verify-tag"]
     if (manifest.channel !== "stable") {
       createArgs.push("--prerelease")
     }
