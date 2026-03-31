@@ -20,6 +20,7 @@ fxRunDatabaseMigrations({
   dataDir: config.paths.dataDir,
   cacheDir: config.paths.cacheDir,
   db,
+  sqlite,
 });
 
 sqlite.close();

@@ -61,7 +61,7 @@ jobs:
         run: bun install --frozen-lockfile
 
       - name: Install opencode CLI
-        run: bun install -g opencode-ai@1.2.10
+        run: bun install -g opencode-ai@1.3.5
 
       - name: Build Linux binary
         run: bun run scripts/build.ts --single

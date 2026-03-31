@@ -13,7 +13,7 @@ import { baseOs } from './orpc.base';
 import './preload/patch-negative-timeout';
 import { getServerVersion } from './runtime';
 import checkForUpgrade from './update';
-import { wsAdapter, repo } from './automerge-repo';
+import { initAutomergeRepo } from './automerge-repo';
 import { buildPtyConnectUrl } from './apis/api.opencode';
 
 
@@ -108,6 +108,7 @@ function getPublicAssetPath(pathname: string): string | null {
 
 export async function startServer(options: StartServerOptions): Promise<void> {
   const { port: preferredPort } = options;
+  const { repo, wsAdapter } = initAutomergeRepo();
   const currentVersion = getServerVersion();
   const isWatchMode = process.execArgv.includes('--watch');
   let hasCheckedLatestVersion = false;

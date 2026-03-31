@@ -37,7 +37,7 @@
     "release:github": "bun run scripts/release.ts",
     "version:update": "bun run scripts/update-version.ts",
     "dev": "bun run --parallel --filter '*' dev",
-    "client:dev": "cd apps/spa && bun run dev",
+    "client:dev": "cd apps/frontend && bun run dev",
     "server:dev": "cd apps/server && bun run --watch src/main.ts serve",
     "server:prod": "NODE_ENV=production cd apps/server && bun run --watch src/main.ts serve --port 7496"
   },

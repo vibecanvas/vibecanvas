@@ -1,7 +1,7 @@
 import { ctrlCreateChat } from "@vibecanvas/core/chat/ctrl.create-chat";
 import { ctrlDeleteChat } from "@vibecanvas/core/chat/ctrl.delete-chat";
 import { ctrlNewSession } from "@vibecanvas/core/chat/ctrl.new-session";
-import { repo } from "@vibecanvas/server/automerge-repo";
+import { getRepo } from "@vibecanvas/server/automerge-repo";
 import { homedir } from 'os';
 import { baseOs } from "../orpc.base";
 import { dbUpdatePublisher } from "./api.db";
@@ -11,6 +11,7 @@ const list = baseOs.api.chat.list.handler(async ({ context: { db } }) => {
 });
 
 const create = baseOs.api.chat.create.handler(async ({ input, context: { db, opencodeService } }) => {
+  const repo = getRepo();
   const [result, error] = await ctrlCreateChat({ db, repo, opencodeService }, {
     canvas_id: input.canvas_id,
     local_path: input.local_path ?? homedir(),

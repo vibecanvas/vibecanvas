@@ -1,12 +1,24 @@
 import { dirname, join, resolve } from "path";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "fs";
+import type { Database } from "bun:sqlite";
 import { migrate } from "drizzle-orm/bun-sqlite/migrator";
 import { getEmbeddedMigrationPath, listEmbeddedMigrationFiles } from "./embedded-migrations";
+
+const MIGRATIONS_TABLE = "__drizzle_migrations";
+const legacyBootstrapTables = ["automerge_repo_data", "canvas", "chats", "files", "filetrees"] as const;
+
+type TJournalEntry = {
+  idx: number;
+  when: number;
+  tag: string;
+  breakpoints: boolean;
+};
 
 type TArgs = {
   dataDir: string;
   cacheDir: string;
   db: Parameters<typeof migrate>[0];
+  sqlite?: Database;
   silent?: boolean;
 };
 
@@ -80,8 +92,72 @@ function resolveMigrationsFolder(dataDir: string, cacheDir: string): string {
   );
 }
 
+function tableExists(sqlite: { query: (sql: string) => { get(...args: unknown[]): unknown } }, tableName: string): boolean {
+  const row = sqlite
+    .query("SELECT name FROM sqlite_master WHERE type = 'table' AND name = ? LIMIT 1")
+    .get(tableName);
+  return row !== null && row !== undefined;
+}
+
+function readMigrationJournalEntries(migrationsFolder: string): TJournalEntry[] {
+  const journalPath = join(migrationsFolder, "meta", "_journal.json");
+  const journal = JSON.parse(readFileSync(journalPath, "utf8")) as { entries?: TJournalEntry[] };
+  return journal.entries ?? [];
+}
+
+function shouldBootstrapLegacyMigrationState(sqlite: { query: (sql: string) => { get(...args: unknown[]): unknown } }): boolean {
+  if (tableExists(sqlite, MIGRATIONS_TABLE)) {
+    return false;
+  }
+
+  return legacyBootstrapTables.every((tableName) => tableExists(sqlite, tableName));
+}
+
+function bootstrapLegacyMigrationState(
+  sqlite: {
+    run: (sql: string, ...args: unknown[]) => unknown;
+    transaction: (fn: () => void) => () => void;
+  },
+  migrationsFolder: string,
+): void {
+  const entries = readMigrationJournalEntries(migrationsFolder);
+  if (entries.length === 0) {
+    return;
+  }
+
+  sqlite.transaction(() => {
+    sqlite.run(`
+      CREATE TABLE IF NOT EXISTS ${MIGRATIONS_TABLE} (
+        id integer PRIMARY KEY AUTOINCREMENT NOT NULL,
+        hash text NOT NULL,
+        created_at numeric
+      )
+    `);
+
+    for (const entry of entries) {
+      sqlite.run(
+        `INSERT INTO ${MIGRATIONS_TABLE} (hash, created_at) VALUES (?, ?)`,
+        entry.tag,
+        entry.when,
+      );
+    }
+  })();
+}
+
 function fxRunDatabaseMigrations(args: TArgs): void {
   const migrationsFolder = resolveMigrationsFolder(args.dataDir, args.cacheDir);
+  const sqlite = (args.sqlite ?? (args.db as { $client?: unknown }).$client) as {
+    run: (sql: string, ...args: unknown[]) => unknown;
+    query: (sql: string) => { get(...args: unknown[]): unknown };
+    transaction: (fn: () => void) => () => void;
+  } | undefined;
+
+  if (sqlite && shouldBootstrapLegacyMigrationState(sqlite)) {
+    if (!args.silent) {
+      console.log("[DB] Legacy schema detected without drizzle journal; bootstrapping migration state");
+    }
+    bootstrapLegacyMigrationState(sqlite, migrationsFolder);
+  }
 
   if (!args.silent) {
     console.log(`[DB] Applying migrations from ${migrationsFolder}`);
@@ -95,4 +171,9 @@ function fxRunDatabaseMigrations(args: TArgs): void {
 }
 
 export default fxRunDatabaseMigrations;
-export { buildMigrationsFolderCandidates, resolveMigrationsFolder };
+export {
+  buildMigrationsFolderCandidates,
+  readMigrationJournalEntries,
+  resolveMigrationsFolder,
+  shouldBootstrapLegacyMigrationState,
+};

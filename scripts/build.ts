@@ -31,7 +31,7 @@ import { inferReleaseChannelFromVersion, readWrapperVersion, type TReleaseChanne
 const __dirname = path.dirname(new URL(import.meta.url).pathname)
 const rootDir = path.join(__dirname, "..")
 const serverDir = path.join(rootDir, "apps/server")
-const spaDir = path.join(rootDir, "apps/spa")
+const frontendDir = path.join(rootDir, "apps/frontend")
 const wrapperDir = path.join(rootDir, "apps/vibecanvas")
 const wrapperBinPath = path.join(wrapperDir, "bin/vibecanvas")
 const shellMigrationsDir = path.join(rootDir, "packages/imperative-shell/database-migrations")
@@ -154,22 +154,22 @@ async function assertPortableBinary(binaryPath: string): Promise<void> {
 // ============================================================
 
 async function bundleSpaAssets(): Promise<string[]> {
-  const spaDistDir = path.join(spaDir, "dist")
+  const frontendDistDir = path.join(frontendDir, "dist")
   const publicDir = path.join(serverDir, "public")
 
-  // Build SPA using Vite (SolidJS needs Vite's plugin system)
-  console.log("   Running Vite build...")
-  const viteBuild = await Bun.$`bun run --filter @vibecanvas/spa build`.quiet()
+  // Build frontend using Vite (SolidJS needs Vite's plugin system)
+  console.log("   Running frontend build...")
+  const viteBuild = await Bun.$`bun run --filter @vibecanvas/frontend build`.quiet()
   if (viteBuild.exitCode !== 0) {
-    console.error("SPA build failed:")
+    console.error("Frontend build failed:")
     console.error(viteBuild.stderr.toString())
     process.exit(1)
   }
 
-  // Clean old assets and copy fresh SPA build to public/
+  // Clean old assets and copy fresh frontend build to public/
   rmSync(path.join(publicDir, "assets"), { recursive: true, force: true })
   await Bun.$`mkdir -p ${publicDir}`
-  await Bun.$`cp -r ${spaDistDir}/* ${publicDir}/`.quiet()
+  await Bun.$`cp -r ${frontendDistDir}/* ${publicDir}/`.quiet()
 
   // Collect bundled files
   const bundledFiles: string[] = []

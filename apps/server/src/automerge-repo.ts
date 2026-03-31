@@ -2,14 +2,30 @@ import { txConfigPath } from "@vibecanvas/core/vibecanvas-config/tx.config-path"
 import { setupAutomergeServer } from "@vibecanvas/shell";
 import { existsSync, mkdirSync } from 'fs';
 
-// Get database path from config
-const [config, configError] = txConfigPath({ fs: { existsSync, mkdirSync } }, { isCompiled: true });
-if (configError) {
-  console.error('[Config Error]', configError);
-  process.exit(1);
+let repo: ReturnType<typeof setupAutomergeServer>["repo"] | null = null;
+let wsAdapter: ReturnType<typeof setupAutomergeServer>["wsAdapter"] | null = null;
+
+export function initAutomergeRepo() {
+  if (repo && wsAdapter) {
+    return { repo, wsAdapter };
+  }
+
+  const [config, configError] = txConfigPath({ fs: { existsSync, mkdirSync } }, { isCompiled: true });
+  if (configError || !config) {
+    console.error('[Config Error]', configError);
+    process.exit(1);
+  }
+
+  const instance = setupAutomergeServer(config.paths.databasePath);
+  repo = instance.repo;
+  wsAdapter = instance.wsAdapter;
+  return instance;
 }
 
-// Initialize Automerge repo with SQLite storage and WebSocket adapter
-const { wsAdapter, repo } = setupAutomergeServer(config.paths.databasePath);
+export function getRepo() {
+  return initAutomergeRepo().repo;
+}
 
-export { repo, wsAdapter };
+export function getWsAdapter() {
+  return initAutomergeRepo().wsAdapter;
+}

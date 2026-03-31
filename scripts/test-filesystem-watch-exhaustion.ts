@@ -1,30 +1,6 @@
 #!/usr/bin/env bun
 
-/**
- * test-filesystem-watch-exhaustion.ts
- *
- * Reproduces and validates the fix for HTTP connection pool exhaustion caused by
- * filesystem.watch SSE streams.
- *
- * The bug:
- * - filesystem.watch uses eventIterator (SSE) over HTTP fetch
- * - Without .route({ method: 'GET' }), it defaults to POST-based SSE
- * - Each watch opens a long-lived HTTP connection
- * - Browsers limit concurrent HTTP connections to ~6 per origin
- * - Multiple filetree/file-widget watches exhaust the pool
- * - Subsequent API calls (e.g. filesystem.files) hang indefinitely
- *
- * This script:
- * 1. Opens N concurrent filesystem.watch SSE connections
- * 2. After connections are established, makes a regular API call (filesystem.home)
- * 3. Verifies the regular API call completes within a timeout (not blocked)
- * 4. Verifies watch connections can be properly torn down via AbortSignal
- *
- * Usage:
- *   bun run scripts/test-filesystem-watch-exhaustion.ts [--url <base-url>] [--connections <n>] [--verbose]
- *
- * The server must be running before executing this script.
- */
+import path from "path"
 
 type TArgs = {
   baseUrl: string
@@ -32,6 +8,15 @@ type TArgs = {
   verbose: boolean
   apiTimeout: number
 }
+
+type TWatchConnection = {
+  proc: Bun.Subprocess
+  connected: Promise<boolean>
+  close: () => Promise<void>
+}
+
+const frontendDir = path.join(import.meta.dir, "..", "apps", "frontend")
+const WATCH_READY_PREFIX = "__WATCH_READY__"
 
 function parseArgs(): TArgs {
   const args = Bun.argv.slice(2)
@@ -65,153 +50,210 @@ function log(verbose: boolean, msg: string) {
   console.log(`[watch-exhaustion:${new Date().toISOString()}] ${msg}`)
 }
 
-/**
- * Make a regular (non-streaming) oRPC call to filesystem.home.
- * Uses the oRPC RPC protocol directly via fetch.
- */
-async function callFilesystemHome(baseUrl: string, signal?: AbortSignal): Promise<{ ok: boolean; durationMs: number; error?: string }> {
-  const start = performance.now()
+function withTimeout<T>(promise: Promise<T>, timeoutMs: number, label: string): Promise<T> {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error(`${label} timed out after ${timeoutMs}ms`)), timeoutMs)
+    promise
+      .then((value) => {
+        clearTimeout(timer)
+        resolve(value)
+      })
+      .catch((error) => {
+        clearTimeout(timer)
+        reject(error)
+      })
+  })
+}
+
+function frontendWorkerSource(): string {
+  return `
+import { createORPCClient, createSafeClient } from "@orpc/client";
+import { RPCLink } from "@orpc/client/websocket";
+import { apiContract } from "@vibecanvas/core-contract";
+
+const mode = process.argv[1];
+const baseUrl = process.argv[2];
+const pathArg = process.argv[3] ?? "/tmp";
+const watchId = process.argv[4] ?? crypto.randomUUID();
+
+const websocket = new WebSocket(baseUrl.replace(/^http/, "ws") + "/api");
+const client = createORPCClient(new RPCLink({ websocket }));
+const safeClient = createSafeClient(client);
+
+try {
+  if (mode === "home") {
+    const [err, result] = await safeClient.api.filesystem.home();
+    if (err || !result || "type" in result) {
+      console.error(err?.message ?? result?.message ?? "filesystem.home failed");
+      process.exit(2);
+    }
+    console.log("ok");
+    process.exit(0);
+  }
+
+  if (mode === "watch") {
+    const abort = new AbortController();
+    process.once("SIGTERM", () => abort.abort());
+    process.once("SIGINT", () => abort.abort());
+
+    const [err, iterator] = await safeClient.api.filesystem.watch(
+      { path: pathArg, watchId },
+      { signal: abort.signal },
+    );
+
+    if (err || !iterator) {
+      console.error(err?.message ?? "filesystem.watch failed");
+      process.exit(2);
+    }
+
+    console.log(${JSON.stringify(WATCH_READY_PREFIX)} + watchId);
+
+    try {
+      for await (const _event of iterator) {
+        if (abort.signal.aborted) break;
+      }
+    } catch (error) {
+      if (!abort.signal.aborted) {
+        console.error(error instanceof Error ? error.message : String(error));
+        process.exit(3);
+      }
+    }
+
+    process.exit(0);
+  }
+
+  console.error("Unknown worker mode");
+  process.exit(1);
+} finally {
   try {
-    const res = await fetch(`${baseUrl}/api.filesystem.home`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({}),
-      signal,
-    })
+    websocket.close(1000, "done");
+  } catch {}
+}
+`
+}
+
+function spawnFrontendWorker(args: string[]): Bun.Subprocess {
+  return Bun.spawn({
+    cmd: ["bun", "-e", frontendWorkerSource(), ...args],
+    cwd: frontendDir,
+    stdout: "pipe",
+    stderr: "pipe",
+    env: process.env,
+  })
+}
+
+async function readProcessText(proc: Bun.Subprocess): Promise<{ stdout: string; stderr: string; exitCode: number }> {
+  const [stdout, stderr, exitCode] = await Promise.all([
+    new Response(proc.stdout).text(),
+    new Response(proc.stderr).text(),
+    proc.exited,
+  ])
+  return { stdout, stderr, exitCode }
+}
+
+async function callFilesystemHome(baseUrl: string, timeoutMs: number): Promise<{ ok: boolean; durationMs: number; error?: string }> {
+  const start = performance.now()
+  const proc = spawnFrontendWorker(["home", baseUrl])
+
+  try {
+    const result = await withTimeout(readProcessText(proc), timeoutMs, "filesystem.home")
     const durationMs = performance.now() - start
-    if (!res.ok) {
-      return { ok: false, durationMs, error: `HTTP ${res.status}` }
+    if (result.exitCode !== 0) {
+      return { ok: false, durationMs, error: result.stderr.trim() || result.stdout.trim() || `worker exited ${result.exitCode}` }
     }
     return { ok: true, durationMs }
-  } catch (err) {
+  } catch (error) {
     const durationMs = performance.now() - start
-    return { ok: false, durationMs, error: err instanceof Error ? err.message : String(err) }
+    proc.kill(9)
+    return { ok: false, durationMs, error: error instanceof Error ? error.message : String(error) }
   }
 }
 
-/**
- * Open a filesystem.watch SSE connection using oRPC's RPC protocol.
- * Returns the response and an abort controller.
- */
-function openWatchConnection(
-  baseUrl: string,
-  watchPath: string,
-  verbose: boolean,
-): { abort: AbortController; connected: Promise<boolean> } {
-  const abort = new AbortController()
+function openWatchConnection(baseUrl: string, watchPath: string, verbose: boolean): TWatchConnection {
+  const watchId = crypto.randomUUID()
+  const proc = spawnFrontendWorker(["watch", baseUrl, watchPath, watchId])
 
   const connected = (async () => {
-    try {
-      // oRPC event iterators use the path-based URL format
-      // For GET-based SSE (with .route({ method: 'GET' })), it uses GET
-      // For POST-based SSE (without .route()), it uses POST with body
-      const res = await fetch(`${baseUrl}/api.filesystem.watch`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Accept": "text/event-stream",
-        },
-        body: JSON.stringify({ path: watchPath }),
-        signal: abort.signal,
-      })
-
-      if (!res.ok) {
-        log(verbose, `Watch connection failed: HTTP ${res.status}`)
-        return false
-      }
-
-      log(verbose, `Watch connection established for ${watchPath}`)
-      return true
-    } catch (err) {
-      if (abort.signal.aborted) {
-        log(verbose, `Watch connection aborted for ${watchPath}`)
-        return false
-      }
-      log(verbose, `Watch connection error: ${err}`)
+    await Bun.sleep(750)
+    const exitCode = await Promise.race([proc.exited.then((code) => code), Bun.sleep(1).then(() => null)])
+    if (typeof exitCode === "number") {
+      const stderr = await new Response(proc.stderr).text()
+      log(verbose, `Watch connection failed for ${watchId}: ${stderr.trim() || `worker exited ${exitCode}`}`)
       return false
     }
+
+    log(verbose, `Watch connection established for ${watchPath} (${watchId})`)
+    return true
   })()
 
-  return { abort, connected }
+  return {
+    proc,
+    connected,
+    close: async () => {
+      try {
+        proc.kill()
+      } catch {
+        // ignore cleanup failures
+      }
+      const result = await Promise.race([proc.exited, Bun.sleep(1000).then(() => "timeout")])
+      if (result === "timeout") {
+        try {
+          proc.kill(9)
+          await proc.exited
+        } catch {
+          // ignore forced cleanup failures
+        }
+      }
+    },
+  }
 }
 
-/**
- * Test 1: Verify that opening many watch connections doesn't block regular API calls.
- */
 async function testConnectionPoolExhaustion(args: TArgs): Promise<boolean> {
-  console.log(`\n[TEST 1] Connection Pool Exhaustion`)
+  console.log(`\n[TEST 1] Concurrent Watch Traffic`)
   console.log(`  Opening ${args.connections} concurrent watch connections...`)
 
-  const homedir = (await callFilesystemHome(args.baseUrl)).ok
-    ? "/tmp"
-    : "/tmp"
+  const watches: TWatchConnection[] = []
 
-  const watches: { abort: AbortController; connected: Promise<boolean> }[] = []
+  try {
+    for (let i = 0; i < args.connections; i += 1) {
+      watches.push(openWatchConnection(args.baseUrl, "/tmp", args.verbose))
+    }
 
-  // Open N watch connections
-  for (let i = 0; i < args.connections; i++) {
-    const watch = openWatchConnection(args.baseUrl, homedir, args.verbose)
-    watches.push(watch)
-  }
+    const connectedCount = (await Promise.all(watches.map((watch) => watch.connected))).filter(Boolean).length
+    console.log(`  ${connectedCount}/${args.connections} watch connections established`)
 
-  // Wait briefly for connections to be established
-  await Bun.sleep(1000)
+    console.log(`  Making regular API call (filesystem.home) with ${args.apiTimeout}ms timeout...`)
+    const result = await callFilesystemHome(args.baseUrl, args.apiTimeout)
 
-  const connectedCount = (await Promise.all(watches.map(w => w.connected))).filter(Boolean).length
-  console.log(`  ${connectedCount}/${args.connections} watch connections established`)
-
-  // Now try a regular API call with a timeout
-  console.log(`  Making regular API call (filesystem.home) with ${args.apiTimeout}ms timeout...`)
-
-  const timeoutAbort = new AbortController()
-  const timeout = setTimeout(() => timeoutAbort.abort(), args.apiTimeout)
-
-  const result = await callFilesystemHome(args.baseUrl, timeoutAbort.signal)
-  clearTimeout(timeout)
-
-  // Clean up watch connections
-  for (const watch of watches) {
-    watch.abort.abort()
-  }
-
-  if (!result.ok) {
-    if (result.error?.includes("abort")) {
-      console.log(`  FAIL: Regular API call timed out after ${args.apiTimeout}ms (connection pool exhausted!)`)
+    if (!result.ok) {
+      console.log(`  FAIL: Regular API call failed: ${result.error} (${result.durationMs.toFixed(0)}ms)`)
       return false
     }
-    console.log(`  FAIL: Regular API call failed: ${result.error} (${result.durationMs.toFixed(0)}ms)`)
-    return false
-  }
 
-  console.log(`  PASS: Regular API call completed in ${result.durationMs.toFixed(0)}ms`)
-  return true
+    console.log(`  PASS: Regular API call completed in ${result.durationMs.toFixed(0)}ms`)
+    return true
+  } finally {
+    await Promise.all(watches.map((watch) => watch.close()))
+  }
 }
 
-/**
- * Test 2: Verify that watch connections can be properly terminated via AbortSignal.
- */
 async function testAbortCleanup(args: TArgs): Promise<boolean> {
   console.log(`\n[TEST 2] Watch Connection Abort Cleanup`)
 
   const watch = openWatchConnection(args.baseUrl, "/tmp", args.verbose)
-
-  // Wait for connection
-  await Bun.sleep(500)
   const connected = await watch.connected
 
   if (!connected) {
-    console.log(`  SKIP: Could not establish watch connection (server may not support this endpoint)`)
+    console.log("  SKIP: Could not establish watch connection")
+    await watch.close()
     return true
   }
 
-  console.log(`  Watch connection established, aborting...`)
-  watch.abort.abort()
-
-  // Give the server time to process the disconnect
+  console.log("  Watch connection established, aborting...")
+  await watch.close()
   await Bun.sleep(500)
 
-  // Verify we can make a new connection (old one is cleaned up)
-  const result = await callFilesystemHome(args.baseUrl)
+  const result = await callFilesystemHome(args.baseUrl, args.apiTimeout)
   if (!result.ok) {
     console.log(`  FAIL: Post-abort API call failed: ${result.error}`)
     return false
@@ -221,25 +263,19 @@ async function testAbortCleanup(args: TArgs): Promise<boolean> {
   return true
 }
 
-/**
- * Test 3: Verify that rapidly opening/closing watch connections doesn't leak.
- */
 async function testRapidReconnect(args: TArgs): Promise<boolean> {
-  console.log(`\n[TEST 3] Rapid Watch Reconnect (simulates path changes)`)
+  console.log(`\n[TEST 3] Rapid Watch Reconnect`)
   const rapidCycles = 10
 
-  for (let i = 0; i < rapidCycles; i++) {
+  for (let i = 0; i < rapidCycles; i += 1) {
     const watch = openWatchConnection(args.baseUrl, "/tmp", args.verbose)
-    // Don't wait for connection - abort immediately (simulates rapid path changes)
     await Bun.sleep(50)
-    watch.abort.abort()
+    await watch.close()
   }
 
-  // Wait for server to process all disconnects
   await Bun.sleep(1000)
 
-  // Verify API still works
-  const result = await callFilesystemHome(args.baseUrl)
+  const result = await callFilesystemHome(args.baseUrl, args.apiTimeout)
   if (!result.ok) {
     console.log(`  FAIL: Post-rapid-reconnect API call failed: ${result.error}`)
     return false
@@ -257,21 +293,20 @@ async function main() {
   console.log(`  connections=${args.connections}`)
   console.log(`  apiTimeout=${args.apiTimeout}ms`)
 
-  // Quick health check
-  const health = await callFilesystemHome(args.baseUrl)
+  const health = await callFilesystemHome(args.baseUrl, args.apiTimeout)
   if (!health.ok) {
     console.error(`\nFATAL: Cannot reach server at ${args.baseUrl}`)
     console.error(`  Error: ${health.error}`)
-    console.error(`  Make sure the server is running: bun server:dev`)
+    console.error("  Make sure the server is running: bun server:dev")
     process.exit(1)
   }
   console.log(`  Server healthy (${health.durationMs.toFixed(0)}ms)`)
 
-  const results: boolean[] = []
-
-  results.push(await testConnectionPoolExhaustion(args))
-  results.push(await testAbortCleanup(args))
-  results.push(await testRapidReconnect(args))
+  const results = [
+    await testConnectionPoolExhaustion(args),
+    await testAbortCleanup(args),
+    await testRapidReconnect(args),
+  ]
 
   const passed = results.filter(Boolean).length
   const total = results.length
