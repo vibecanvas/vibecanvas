@@ -79,7 +79,7 @@ Use the leaf files for execution history and local context.
 - [x]: [B2](b/B2.md) - text: long, on select, box too small
 - [x]: [B3](b/B3.md) - version update not showing
 - [x]: [B4](b/B4.md) - update progress cli not moving
-- [ ]: [B7](b/B7.md) - iframe browser: click can latch canvas drag and trap release
+- [x]: [B7](b/B7.md) - iframe browser: click can latch canvas drag and trap release
 
 ## A dditions
 - [ ]: [A1](a/A1.md) - file: support common CodeMirror languages
