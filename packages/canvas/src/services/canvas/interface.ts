@@ -156,6 +156,12 @@ export type TPty = {
   cwd: string;
   status: "running" | "exited" | string;
   pid: number;
+  rows?: number;
+  cols?: number;
+  exitCode?: number | null;
+  signalCode?: string | null;
+  createdAt?: number;
+  updatedAt?: number;
 };
 
 export type TPtyCreateBody = {
@@ -164,6 +170,10 @@ export type TPtyCreateBody = {
   cwd?: string;
   title?: string;
   env?: Record<string, string>;
+  size?: {
+    rows: number;
+    cols: number;
+  };
 };
 
 export type TPtyUpdateBody = {
@@ -178,14 +188,12 @@ type TTerminalSafeResult<T> = Promise<[unknown, T | null | undefined]>;
 
 export type TTerminalSafeClient = {
   api: {
-    opencode: {
-      pty: {
-        list(args: { workingDirectory: string }): TTerminalSafeResult<TPty[]>;
-        create(args: { workingDirectory: string; body?: TPtyCreateBody }): TTerminalSafeResult<TPty>;
-        get(args: { workingDirectory: string; path: { ptyID: string } }): TTerminalSafeResult<TPty>;
-        update(args: { workingDirectory: string; path: { ptyID: string }; body: TPtyUpdateBody }): TTerminalSafeResult<TPty>;
-        remove(args: { workingDirectory: string; path: { ptyID: string } }): TTerminalSafeResult<unknown>;
-      };
+    pty: {
+      list(args: { workingDirectory: string }): TTerminalSafeResult<TPty[]>;
+      create(args: { workingDirectory: string; body?: TPtyCreateBody }): TTerminalSafeResult<TPty>;
+      get(args: { workingDirectory: string; path: { ptyID: string } }): TTerminalSafeResult<TPty>;
+      update(args: { workingDirectory: string; path: { ptyID: string }; body: TPtyUpdateBody }): TTerminalSafeResult<TPty>;
+      remove(args: { workingDirectory: string; path: { ptyID: string } }): TTerminalSafeResult<unknown>;
     };
   };
 };

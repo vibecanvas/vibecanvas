@@ -2,6 +2,7 @@ import { implement, onError, ORPCError } from "@orpc/server";
 import { apiContract } from "@vibecanvas/core-contract";
 import db from "@vibecanvas/shell/database/db";
 import { OpencodeService } from "@vibecanvas/shell/opencode/srv.opencode";
+import { PtyService } from "@vibecanvas/shell/pty/srv.pty";
 import { tExternal, tInternal } from "./error-fn";
 import type { Repo } from "@automerge/automerge-repo";
 
@@ -21,7 +22,7 @@ function isORPCError(value: unknown): value is ORPCError<string, unknown> {
 }
 
 export const baseOs = implement(apiContract)
-  .$context<{ db: typeof db, opencodeService: OpencodeService, requestId?: string, repo: Repo }>()
+  .$context<{ db: typeof db, opencodeService: OpencodeService, ptyService: PtyService, requestId?: string, repo: Repo }>()
   .use(onError((error) => {
     if (isErrorEntry(error)) {
       const msg = tExternal(error, 'en')

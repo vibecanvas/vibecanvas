@@ -88,36 +88,34 @@ function createTerminalSafeClientMock(overrides?: {
 }) {
   const safeClient: TTerminalSafeClient = {
     api: {
-      opencode: {
-        pty: {
-          list: vi.fn().mockResolvedValue([null, []]),
-          create: vi.fn().mockResolvedValue([null, null]),
-          get: vi.fn().mockImplementation(async () => {
-            overrides?.onGet?.();
-            return [null, {
-              id: "pty-restored",
-              title: "Terminal",
-              command: "zsh",
-              args: [],
-              cwd: ".",
-              status: "running",
-              pid: 1,
-            }];
-          }),
-          update: vi.fn().mockImplementation(async ({ body }) => {
-            overrides?.onUpdate?.(body.size!);
-            return [null, {
-              id: "pty-restored",
-              title: "Terminal",
-              command: "zsh",
-              args: [],
-              cwd: ".",
-              status: "running",
-              pid: 1,
-            }];
-          }),
-          remove: vi.fn().mockResolvedValue([null, { ok: true }]),
-        },
+      pty: {
+        list: vi.fn().mockResolvedValue([null, []]),
+        create: vi.fn().mockResolvedValue([null, null]),
+        get: vi.fn().mockImplementation(async () => {
+          overrides?.onGet?.();
+          return [null, {
+            id: "pty-restored",
+            title: "Terminal",
+            command: "zsh",
+            args: [],
+            cwd: ".",
+            status: "running",
+            pid: 1,
+          }];
+        }),
+        update: vi.fn().mockImplementation(async ({ body }) => {
+          overrides?.onUpdate?.(body.size!);
+          return [null, {
+            id: "pty-restored",
+            title: "Terminal",
+            command: "zsh",
+            args: [],
+            cwd: ".",
+            status: "running",
+            pid: 1,
+          }];
+        }),
+        remove: vi.fn().mockResolvedValue([null, { ok: true }]),
       },
     },
   };
@@ -221,7 +219,7 @@ describe("createTerminalContextLogic", () => {
       "pty:update:120x33",
       expect.stringContaining("ws:connect:ws://"),
     ]);
-    expect(vi.mocked(safeClient.api.opencode.pty.create)).not.toHaveBeenCalled();
+    expect(vi.mocked(safeClient.api.pty.create)).not.toHaveBeenCalled();
 
     dispose();
   });

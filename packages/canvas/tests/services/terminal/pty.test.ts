@@ -2,7 +2,7 @@ import { beforeAll, beforeEach, describe, expect, test, vi } from "vitest";
 
 const storage = new Map<string, string>();
 
-type THelpers = typeof import("../../../src/services/terminal/opencode-pty");
+type THelpers = typeof import("../../../src/services/terminal/pty");
 let helpers: THelpers;
 
 beforeAll(async () => {
@@ -32,10 +32,10 @@ beforeAll(async () => {
     configurable: true,
   });
 
-  helpers = await import("../../../src/services/terminal/opencode-pty");
+  helpers = await import("../../../src/services/terminal/pty");
 });
 
-describe("opencode-pty compatibility helpers", () => {
+describe("pty service helpers", () => {
   beforeEach(() => {
     localStorage.clear();
   });
@@ -89,7 +89,7 @@ describe("opencode-pty compatibility helpers", () => {
     expect(url).toBe("ws://localhost:3001/api/pty/pty%2F1/connect?workingDirectory=%2FUsers%2Ftest%2Fproject&cursor=55");
   });
 
-  test("createOpencodePtyService forwards through injected safe client", async () => {
+  test("createPtyService forwards through injected safe client", async () => {
     const safeClient = {
       api: {
         pty: {
@@ -102,7 +102,7 @@ describe("opencode-pty compatibility helpers", () => {
       },
     } as any;
 
-    const service = helpers.createOpencodePtyService(safeClient);
+    const service = helpers.createPtyService(safeClient);
 
     await service.list("/tmp/demo");
     await service.create("/tmp/demo", { title: "Terminal" });

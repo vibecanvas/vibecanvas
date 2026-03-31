@@ -6,6 +6,7 @@ import { filesystem } from './apis/api.filesystem';
 import { filetree } from './apis/api.filetree';
 import { notification } from './apis/api.notification';
 import { opencode } from './apis/api.opencode';
+import { pty } from './apis/api.pty';
 
 export const router = {
   api: {
@@ -15,6 +16,7 @@ export const router = {
     filesystem,
     filetree,
     opencode,
+    pty,
     db,
     notification,
   }

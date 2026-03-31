@@ -2,12 +2,12 @@ import { createMemo, createSignal } from "solid-js";
 import type { TTerminalSafeClient, TPty } from "../../services/canvas/interface";
 import {
   clearTerminalSessionState,
-  createOpencodePtyService,
+  createPtyService,
   extractCursorFromControlFrame,
   extractCursorFromMessageData,
   loadTerminalSessionState,
   saveTerminalSessionState,
-} from "../../services/terminal/opencode-pty";
+} from "../../services/terminal/pty";
 import type { TGhosttyTerminalInstance, TTerminalMountReadyArgs } from "./GhosttyTerminalMount";
 
 type TCreateTerminalContextArgs = {
@@ -90,7 +90,7 @@ function calculateTerminalSize(
 
 export function createTerminalContextLogic(args: TCreateTerminalContextArgs) {
   const logicInstanceToken = Symbol(args.terminalKey);
-  const ptyService = createOpencodePtyService(args.safeClient);
+  const ptyService = createPtyService(args.safeClient);
   const [status, setStatus] = createSignal<"idle" | "connecting" | "connected" | "error">("idle");
   const [errorMessage, setErrorMessage] = createSignal<string | null>(null);
   const [pty, setPty] = createSignal<TPty | null>(null);

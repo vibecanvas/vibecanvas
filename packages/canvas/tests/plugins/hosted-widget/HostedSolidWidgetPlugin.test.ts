@@ -115,30 +115,28 @@ import {
 function createTerminalSafeClientMock() {
   const safeClient: TTerminalSafeClient = {
     api: {
-      opencode: {
-        pty: {
-          list: vi.fn().mockResolvedValue([null, []]),
-          create: vi.fn().mockResolvedValue([null, {
-            id: "pty-1",
-            title: "Terminal",
-            command: "zsh",
-            args: [],
-            cwd: ".",
-            status: "running",
-            pid: 1,
-          }]),
-          get: vi.fn().mockResolvedValue([null, null]),
-          update: vi.fn().mockResolvedValue([null, {
-            id: "pty-1",
-            title: "Terminal",
-            command: "zsh",
-            args: [],
-            cwd: ".",
-            status: "running",
-            pid: 1,
-          }]),
-          remove: vi.fn().mockResolvedValue([null, { ok: true }]),
-        },
+      pty: {
+        list: vi.fn().mockResolvedValue([null, []]),
+        create: vi.fn().mockResolvedValue([null, {
+          id: "pty-1",
+          title: "Terminal",
+          command: "zsh",
+          args: [],
+          cwd: ".",
+          status: "running",
+          pid: 1,
+        }]),
+        get: vi.fn().mockResolvedValue([null, null]),
+        update: vi.fn().mockResolvedValue([null, {
+          id: "pty-1",
+          title: "Terminal",
+          command: "zsh",
+          args: [],
+          cwd: ".",
+          status: "running",
+          pid: 1,
+        }]),
+        remove: vi.fn().mockResolvedValue([null, { ok: true }]),
       },
     },
   };
@@ -889,8 +887,8 @@ describe("HostedSolidWidgetPlugin", () => {
     await new Promise((resolve) => setTimeout(resolve, 0));
     await flushCanvasEffects();
 
-    expect(safeClient.api.opencode.pty.create).toHaveBeenCalled();
-    expect(safeClient.api.opencode.pty.remove).toHaveBeenCalledTimes(1);
+    expect(safeClient.api.pty.create).toHaveBeenCalled();
+    expect(safeClient.api.pty.remove).toHaveBeenCalledTimes(1);
     expect(docHandle.doc().elements.terminal1).toBeUndefined();
     expect(harness.stage.container().querySelector('[data-hosted-widget-id="terminal1"]')).toBeNull();
 
@@ -899,7 +897,7 @@ describe("HostedSolidWidgetPlugin", () => {
 
   test("reloading hosted terminal restarts frontend and reconnects to existing PTY session", async () => {
     const safeClient = createTerminalSafeClientMock();
-    safeClient.api.opencode.pty.get = vi.fn().mockResolvedValue([null, {
+    safeClient.api.pty.get = vi.fn().mockResolvedValue([null, {
       id: "pty-reload",
       title: "Terminal",
       command: "zsh",
@@ -949,7 +947,7 @@ describe("HostedSolidWidgetPlugin", () => {
     await new Promise((resolve) => setTimeout(resolve, 0));
     await flushCanvasEffects();
     const initialConnectionCount = MockWebSocket.instances.length;
-    const initialGetCount = vi.mocked(safeClient.api.opencode.pty.get).mock.calls.length;
+    const initialGetCount = vi.mocked(safeClient.api.pty.get).mock.calls.length;
     expect(initialConnectionCount).toBeGreaterThan(0);
 
     const reloadButton = harness.stage.container().querySelector('[aria-label="Reload widget"]') as HTMLButtonElement;
@@ -959,15 +957,15 @@ describe("HostedSolidWidgetPlugin", () => {
     await flushCanvasEffects();
 
     expect(MockWebSocket.instances.length).toBeGreaterThan(initialConnectionCount);
-    expect(vi.mocked(safeClient.api.opencode.pty.get).mock.calls.length).toBeGreaterThan(initialGetCount);
-    expect(safeClient.api.opencode.pty.create).not.toHaveBeenCalled();
+    expect(vi.mocked(safeClient.api.pty.get).mock.calls.length).toBeGreaterThan(initialGetCount);
+    expect(safeClient.api.pty.create).not.toHaveBeenCalled();
 
     harness.destroy();
   });
 
   test("restored terminal session reconnects from cursor zero so a cold frontend can replay terminal state", async () => {
     const safeClient = createTerminalSafeClientMock();
-    safeClient.api.opencode.pty.get = vi.fn().mockResolvedValue([null, {
+    safeClient.api.pty.get = vi.fn().mockResolvedValue([null, {
       id: "pty-restored",
       title: "Terminal",
       command: "zsh",
@@ -1019,12 +1017,12 @@ describe("HostedSolidWidgetPlugin", () => {
     await new Promise((resolve) => setTimeout(resolve, 0));
     await flushCanvasEffects();
 
-    expect(safeClient.api.opencode.pty.get).toHaveBeenCalledWith({
+    expect(safeClient.api.pty.get).toHaveBeenCalledWith({
       workingDirectory: ".",
       path: { ptyID: "pty-restored" },
     });
     expect(MockWebSocket.instances[0]?.url).toContain("cursor=0");
-    expect(safeClient.api.opencode.pty.create).not.toHaveBeenCalled();
+    expect(safeClient.api.pty.create).not.toHaveBeenCalled();
 
     harness.destroy();
   });
