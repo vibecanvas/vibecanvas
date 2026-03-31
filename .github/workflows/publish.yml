@@ -92,7 +92,7 @@ jobs:
           fi
 
           NOTES_FILE="$RUNNER_TEMP/release-notes.md"
-          VERSION="$ROOT_VERSION" NOTES_FILE="$NOTES_FILE" bun <<'EOF'
+          VERSION="$ROOT_VERSION" NOTES_FILE="$NOTES_FILE" bun run - <<'EOF'
           const version = process.env.VERSION
           const notesFile = process.env.NOTES_FILE
 
