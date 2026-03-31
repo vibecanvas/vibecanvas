@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## 0.2.0-beta.2
+## 0.2.0-beta.3
 
 ### Added
 - New canvas architecture with Konva and plugins.

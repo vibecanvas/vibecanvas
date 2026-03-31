@@ -19,7 +19,7 @@ B ugs: Something is not working as expected.
 A dditions: New features or improvements.
 S ubtractions: Removing or simplifing parts of the codebase.
 E xplorations: Researching new technologies or ideas.
-D eployments: Shipable increments.
+D irections: Highlevel ideas for where to go and what to do next.
 
 The status are tagged:
 - [ ]: open
@@ -40,7 +40,7 @@ Based now lives at the repository root in `based/`.
 - `based/a/`: addition files.
 - `based/s/`: subtraction files.
 - `based/e/`: exploration files.
-- `based/d/`: deployment files.
+- `based/d/`: direction files.
 
 Each line in the overview stays short and links to one dedicated file.
 Each dedicated file stores the task context, TODOs, notes, and logs.
@@ -126,20 +126,10 @@ Use the leaf files for execution history and local context.
 - [ ]: [E7](e/E7.md) - should we include heartbeat
 - [ ]: [E8](e/E8.md)
 
-## D eployments
-- [x]: [D1](d/D1.md) - Opencode integration
-- [x]: [D2](d/D2.md) - DB refactor -> use opencode sessions
-- [x]: [D3](d/D3.md) - Terminal
-- [~]: [D4](d/D4.md) - Konva Refactor
-- [ ]: [D5](d/D5.md)
-- [ ]: [D6](d/D6.md)
-- [ ]: [D7](d/D7.md)
-
-## Roadmap
-- [ ] self host on server
-- [ ] ai can edit canvas
-- [ ] canvas render order
-- [ ]
+## D irections
+- [ ]: [D1](d/D1.md) - Self-hosted product and server story
+- [ ]: [D2](d/D2.md) - AI can edit the canvas directly
+- [ ]: [D3](d/D3.md) - Canvas render order and layering model
 
 ## Pragmatic Code Style
 
