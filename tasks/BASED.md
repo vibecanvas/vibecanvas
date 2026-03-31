@@ -82,25 +82,7 @@ Use the leaf files for execution history and local context.
 - [ ]: [B7](b/B7.md) - iframe browser: click can latch canvas drag and trap release
 
 ## A dditions
-- [ ]: [A1](a/A1.md) - Add undo for filetree
-- [ ]: [A2](a/A2.md) - Add undo for chat
-- [x]: [A3](a/A3.md) - filetree dnd
-- [x]: [A4](a/A4.md) - Textfile support
-- [x]: [A5](a/A5.md) - Terminal Support
-- [x]: [A6](a/A6.md) - Opencode slash and file commands
-- [ ]: [A7](a/A7.md) - chat and filetree collapse mode
-- [ ]: [A8](a/A8.md) - Missing Opencode commands
-- [ ]: [A9](a/A9.md) - git worktree support
-- [ ]: [A10](a/A10.md) - draw over elements (e.g. arrow)
-- [ ]: [A11](a/A11.md) - chat: copy btn per message
-- [ ]: [A12](a/A12.md) - terminal: support image pasting
-- [ ]: [A13](a/A13.md) - terminal: support text pasting
-- [ ]: [A14](a/A14.md) - filetree: add context menu for create,folder,open in terminal or file, delete, rename, copy path, copy relative path
-- [ ]: [A15](a/A15.md) - lsp-client
-- [x]: [A16](a/A16.md) - use https://specifications.freedesktop.org/basedir/latest/ like XDG_DATA_HOME
-- [ ]: [A16](a/A16.md)
-- [ ]: [A17](a/A17.md) - file: support common CodeMirror languages
-- [ ]: [A18](a/A18.md)
+- [ ]: [A1](a/A1.md) - file: support common CodeMirror languages
 
 ## S ubtractions
 - [ ]: [S1](s/S1.md) - double bun run dev -> find new port
@@ -117,19 +99,14 @@ Use the leaf files for execution history and local context.
 - [ ]: [S14](s/S14.md)
 
 ## E xplorations
-- [x]: [E1](e/E1.md) - Tauri Research
-- [x]: [E2](e/E2.md) - Terminal Research
-- [x]: [E3](e/E3.md) - File in Canvas Research
-- [ ]: [E4](e/E4.md) - canvas: TTerminalData dbl check if workingDir is needed as opencode pty stores cwd i think
+- [ ]: [E1](e/E1.md) - Tauri Research
 - [ ]: [E5](e/E5.md) - how to implement state machine system?
 - [ ]: [E6](e/E6.md) - should we include a task management
 - [ ]: [E7](e/E7.md) - should we include heartbeat
 - [ ]: [E8](e/E8.md)
 
 ## D irections
-- [ ]: [D1](d/D1.md) - Self-hosted product and server story
-- [ ]: [D2](d/D2.md) - AI can edit the canvas directly
-- [ ]: [D3](d/D3.md) - Canvas render order and layering model
+- [ ]: [D1](d/D1.md) - AI can edit the canvas directly
 
 ## Pragmatic Code Style
 
