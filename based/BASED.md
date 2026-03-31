@@ -99,7 +99,7 @@ Use the leaf files for execution history and local context.
 - [ ]: [A15](a/A15.md) - lsp-client
 - [x]: [A16](a/A16.md) - use https://specifications.freedesktop.org/basedir/latest/ like XDG_DATA_HOME
 - [ ]: [A16](a/A16.md)
-- [ ]: [A17](a/A17.md)
+- [ ]: [A17](a/A17.md) - file: support common CodeMirror languages
 - [ ]: [A18](a/A18.md)
 
 ## S ubtractions
