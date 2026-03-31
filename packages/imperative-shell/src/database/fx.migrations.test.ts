@@ -86,7 +86,7 @@ describe("readMigrationJournalEntries", () => {
 
 describe("shouldBootstrapLegacyMigrationState", () => {
   test("returns true when legacy tables exist without drizzle journal", () => {
-    const tables = new Set(["automerge_repo_data", "canvas", "chats", "files", "filetrees"]);
+    const tables = new Set(["automerge_repo_data", "canvas", "files", "filetrees"]);
     const sqlite = {
       query: () => ({
         get: (tableName: string) => (tables.has(tableName) ? { name: tableName } : null),
@@ -97,7 +97,7 @@ describe("shouldBootstrapLegacyMigrationState", () => {
   });
 
   test("returns false when drizzle journal table already exists", () => {
-    const tables = new Set(["__drizzle_migrations", "automerge_repo_data", "canvas", "chats", "files", "filetrees"]);
+    const tables = new Set(["__drizzle_migrations", "automerge_repo_data", "canvas", "files", "filetrees"]);
     const sqlite = {
       query: () => ({
         get: (tableName: string) => (tables.has(tableName) ? { name: tableName } : null),

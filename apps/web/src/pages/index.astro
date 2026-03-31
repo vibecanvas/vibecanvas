@@ -27,8 +27,8 @@ const heroMobileWebpHref = `${base}338x600.webp`;
     </header>
 
     <section class="hero">
-      <h1>Put OpenCode in an infinite canvas.</h1>
-      <p class="lead">Sketch ideas, talk with your agent, and ship code in one workspace.</p>
+      <h1>Put your development workspace in an infinite canvas.</h1>
+      <p class="lead">Sketch ideas, open terminals and files, and ship code in one workspace.</p>
       <figure class="hero-gif-frame">
         <picture>
           <source media="(max-width: 900px)" srcset={heroMobileWebpHref} type="image/webp" />
@@ -57,20 +57,18 @@ const heroMobileWebpHref = `${base}338x600.webp`;
 
     <section class="steps-grid">
       <article class="panel">
-        <h3>1. Install and set up OpenCode</h3>
-        <p>Install OpenCode, then run it once to complete auth in the CLI.</p>
-        <pre><code>bun add -g opencode-ai
-opencode</code></pre>
-      </article>
-      <article class="panel">
-        <h3>2. Launch Vibecanvas</h3>
-        <p>After install, start Vibecanvas from any project folder.</p>
+        <h3>1. Launch Vibecanvas</h3>
+        <p>Start Vibecanvas from any project folder.</p>
         <pre><code>vibecanvas
 vibecanvas upgrade --check</code></pre>
       </article>
       <article class="panel">
+        <h3>2. Add terminals and file trees</h3>
+        <p>Open a project, then create terminal and filesystem widgets on the canvas.</p>
+      </article>
+      <article class="panel">
         <h3>3. Open docs while building</h3>
-        <p>Use the docs section for setup, canvas flow, agent usage, and troubleshooting.</p>
+        <p>Use the docs section for setup, canvas flow, terminal usage, and troubleshooting.</p>
         <a class="inline-link" href={docsHref}>Go to /docs</a>
       </article>
     </section>

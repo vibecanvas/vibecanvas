@@ -7,7 +7,7 @@ import { CustomEvents } from "../custom-events";
 import { CanvasMode } from "../services/canvas/enum";
 
 const DRAW_CREATE_TOOLS: TTool[] = ["rectangle", "diamond", "ellipse", "line", "arrow", "pen"];
-const CLICK_CREATE_TOOLS: TTool[] = ["text", "image", "chat", "filesystem", "terminal", "browser"];
+const CLICK_CREATE_TOOLS: TTool[] = ["text", "image", "filesystem", "terminal", "browser"];
 
 function getShortcutTool(event: KeyboardEvent): TTool | null {
   if (event.metaKey || event.ctrlKey || event.altKey) return null;

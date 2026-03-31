@@ -5,7 +5,7 @@ import { migrate } from "drizzle-orm/bun-sqlite/migrator";
 import { getEmbeddedMigrationPath, listEmbeddedMigrationFiles } from "./embedded-migrations";
 
 const MIGRATIONS_TABLE = "__drizzle_migrations";
-const legacyBootstrapTables = ["automerge_repo_data", "canvas", "chats", "files", "filetrees"] as const;
+const legacyBootstrapTables = ["automerge_repo_data", "canvas", "files", "filetrees"] as const;
 
 type TJournalEntry = {
   idx: number;

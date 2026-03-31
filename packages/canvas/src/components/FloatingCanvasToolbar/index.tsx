@@ -14,7 +14,6 @@ import Minus from "lucide-solid/icons/minus";
 import Pencil from "lucide-solid/icons/pencil";
 import Type from "lucide-solid/icons/type";
 import Image from "lucide-solid/icons/image";
-import MessageCircle from "lucide-solid/icons/message-circle";
 import FolderTree from "lucide-solid/icons/folder-tree";
 import SquareTerminal from "lucide-solid/icons/square-terminal";
 import Globe from "lucide-solid/icons/globe";
@@ -46,7 +45,6 @@ const TOOL_ICONS: Record<TTool, () => JSX.Element> = {
   pen: () => <Pencil size={14} />,
   text: () => <Type size={14} />,
   image: () => <Image size={14} />,
-  chat: () => <MessageCircle size={14} />,
   filesystem: () => <FolderTree size={14} />,
   terminal: () => <SquareTerminal size={14} />,
   browser: () => <Globe size={14} />,

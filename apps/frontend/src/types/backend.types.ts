@@ -13,8 +13,5 @@ export type TCanvasId = string;
 // Canvas table schema
 export type TBackendCanvas = typeof schema.canvas.$inferSelect;
 
-// Chats table schema
-export type TBackendChat = typeof schema.chats.$inferSelect;
-
 // Filetrees table schema
 export type TBackendFileTree = typeof schema.filetrees.$inferSelect;

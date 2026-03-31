@@ -182,7 +182,6 @@ function createFiletreeSafeClientMock(overrides?: {
     api: {
       canvas: {
         get: vi.fn().mockResolvedValue([null, {
-          chats: [],
           canvas: [],
           fileTrees,
         }]),
@@ -264,8 +263,8 @@ describe("HostedSolidWidgetPlugin", () => {
   test("hydrates hosted widgets into Konva rects and one shared DOM root", async () => {
     const docHandle = createMockDocHandle({
       elements: {
-        chat1: {
-          id: "chat1",
+        treeA: {
+          id: "treeA",
           x: 40,
           y: 50,
           rotation: 0,
@@ -276,7 +275,7 @@ describe("HostedSolidWidgetPlugin", () => {
           createdAt: 1,
           updatedAt: 1,
           style: {},
-          data: { type: "chat", w: 420, h: 320, isCollapsed: false },
+          data: { type: "filetree", w: 420, h: 320, isCollapsed: false, globPattern: null },
         },
         tree1: {
           id: "tree1",
@@ -331,8 +330,8 @@ describe("HostedSolidWidgetPlugin", () => {
   test("bridges header drag from DOM back into hosted Konva node", async () => {
     const docHandle = createMockDocHandle({
       elements: {
-        chat1: {
-          id: "chat1",
+        treeA: {
+          id: "treeA",
           x: 20,
           y: 30,
           rotation: 0,
@@ -343,7 +342,7 @@ describe("HostedSolidWidgetPlugin", () => {
           createdAt: 1,
           updatedAt: 1,
           style: {},
-          data: { type: "chat", w: 420, h: 320, isCollapsed: false },
+          data: { type: "filetree", w: 420, h: 320, isCollapsed: false, globPattern: null },
         },
       },
     });
@@ -364,7 +363,7 @@ describe("HostedSolidWidgetPlugin", () => {
 
     await flushCanvasEffects();
 
-    const updated = docHandle.doc().elements.chat1;
+    const updated = docHandle.doc().elements.treeA;
     expect(updated?.x).toBe(70);
     expect(updated?.y).toBe(70);
 
@@ -386,7 +385,7 @@ describe("HostedSolidWidgetPlugin", () => {
           createdAt: 1,
           updatedAt: 1,
           style: {},
-          data: { type: "chat", w: 300, h: 240, isCollapsed: false },
+          data: { type: "filetree", w: 300, h: 240, isCollapsed: false, globPattern: null },
         },
         early: {
           id: "early",
@@ -424,8 +423,8 @@ describe("HostedSolidWidgetPlugin", () => {
   test("cleans hosted DOM mounts on destroy", async () => {
     const docHandle = createMockDocHandle({
       elements: {
-        chat1: {
-          id: "chat1",
+        treeA: {
+          id: "treeA",
           x: 20,
           y: 20,
           rotation: 0,
@@ -436,7 +435,7 @@ describe("HostedSolidWidgetPlugin", () => {
           createdAt: 1,
           updatedAt: 1,
           style: {},
-          data: { type: "chat", w: 320, h: 220, isCollapsed: false },
+          data: { type: "filetree", w: 320, h: 220, isCollapsed: false, globPattern: null },
         },
       },
     });

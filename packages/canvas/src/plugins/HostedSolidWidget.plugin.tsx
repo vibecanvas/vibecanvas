@@ -2,7 +2,7 @@ import { throttle } from "@solid-primitives/scheduled";
 import type { JSX } from "solid-js";
 import { children, createEffect, createSignal, onCleanup, Show } from "solid-js";
 import { render } from "solid-js/web";
-import type { TChatData, TElement, TFileData, TFiletreeData, TTerminalData } from "@vibecanvas/shell/automerge/index";
+import type { TElement, TFileData, TFiletreeData, TTerminalData } from "@vibecanvas/shell/automerge/index";
 import Konva from "konva";
 import FrameIcon from "lucide-solid/icons/frame";
 import RefreshCw from "lucide-solid/icons/refresh-cw";
@@ -25,9 +25,8 @@ import { scheduleHostedWidgetFocus } from "./hosted-widget-focus.shared";
 import { getNodeZIndex, setNodeZIndex } from "./render-order.shared";
 import { TransformPlugin } from "./Transform.plugin";
 
-const HOSTED_TYPES = new Set<THostedWidgetType>(["chat", "filetree", "terminal", "file"]);
+const HOSTED_TYPES = new Set<THostedWidgetType>(["filetree", "terminal", "file"]);
 const TOOL_TO_WIDGET_TYPE: Partial<Record<TTool, THostedWidgetType>> = {
-  chat: "chat",
   filesystem: "filetree",
   terminal: "terminal",
 };
@@ -131,7 +130,6 @@ function createFileElementFromDrop(args: { id?: string; x: number; y: number; pa
 
 function getWidgetHeaderLabel(element: THostedWidgetElement) {
   if (element.data.type === "terminal") return "untitled";
-  if (element.data.type === "chat") return "chat";
   if (element.data.type === "filetree") return "files";
   if (element.data.type === "file") return getFileName(element.data.path);
   return "widget";
@@ -146,33 +144,6 @@ function getDefaultWidgetChrome(element: THostedWidgetElement): THostedWidgetChr
 
 function getDefaultWidgetElement(type: THostedWidgetType, x: number, y: number, id = crypto.randomUUID()): THostedWidgetElement {
   const now = Date.now();
-
-  if (type === "chat") {
-    return {
-      id,
-      x,
-      y,
-      rotation: 0,
-      zIndex: "",
-      parentGroupId: null,
-      bindings: [],
-      locked: false,
-      createdAt: now,
-      updatedAt: now,
-      style: {
-        backgroundColor: "#f8fafc",
-        borderColor: "#cbd5e1",
-        headerColor: "#e2e8f0",
-        opacity: 1,
-      },
-      data: {
-        type: "chat",
-        w: 420,
-        h: 320,
-        isCollapsed: false,
-      } satisfies TChatData,
-    };
-  }
 
   if (type === "filetree") {
     return {
@@ -480,12 +451,6 @@ function DefaultWidgetBody(props: { element: () => THostedWidgetElement }) {
       <div style={{ "font-size": "12px", color: "#475569" }}>
         Hosted Solid widget placeholder for `{element().data.type}`.
       </div>
-      <Show when={element().data.type === "chat"}>
-        <div style={{ display: "grid", gap: "8px" }}>
-          <div style={{ padding: "10px", border: "1px solid #cbd5e1", background: "#ffffff" }}>User: sketch a layout</div>
-          <div style={{ padding: "10px", border: "1px solid #cbd5e1", background: "#eff6ff" }}>Agent: hosted chat mounts here</div>
-        </div>
-      </Show>
       <Show when={element().data.type === "filetree"}>
         <div style={{ display: "grid", gap: "6px", "font-size": "12px" }}>
           <div>src/</div>

@@ -46,7 +46,6 @@
     "@codemirror/state": "^6.5.4",
     "@codemirror/view": "^6.39.15",
     "@kobalte/core": "catalog:",
-    "@opencode-ai/sdk": "catalog:",
     "@orpc/contract": "catalog:",
     "@solid-primitives/scheduled": "^1.5.3",
     "@vibecanvas/shell": "workspace:*",

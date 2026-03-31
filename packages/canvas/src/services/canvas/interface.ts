@@ -1,4 +1,4 @@
-import type { TChatData, TElement, TFileData, TFiletreeData, TTerminalData } from "@vibecanvas/shell/automerge/index";
+import type { TElement, TFileData, TFiletreeData, TTerminalData } from "@vibecanvas/shell/automerge/index";
 import type * as schema from "@vibecanvas/shell/database/schema";
 import { Group } from "konva/lib/Group";
 import { Shape, ShapeConfig } from "konva/lib/Shape";
@@ -19,10 +19,9 @@ export type TDeleteImage = (args: {
   url: string;
 }) => Promise<{ ok: true }>;
 
-export type THostedWidgetType = "chat" | "filetree" | "terminal" | "file";
+export type THostedWidgetType = "filetree" | "terminal" | "file";
 
 export type THostedWidgetElementMap = {
-  chat: TElement & { data: TChatData };
   filetree: TElement & { data: TFiletreeData };
   terminal: TElement & { data: TTerminalData };
   file: TElement & { data: TFileData };
@@ -121,7 +120,6 @@ export type TFiletreeSafeClient = {
   api: {
     canvas: {
       get(args: { params: { id: string } }): TFiletreeSafeResult<{
-        chats: unknown[];
         canvas: unknown[];
         fileTrees: TFiletreeRow[];
       }>;

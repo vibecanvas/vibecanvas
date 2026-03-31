@@ -13,7 +13,7 @@ const SHAPE_TYPES = new Set(["rect", "ellipse", "diamond"]);
 const PEN_TYPES = new Set(["pen"]);
 const TEXT_TYPES = new Set(["text"]);
 const LINE_TYPES = new Set(["line", "arrow"]);
-const UNSUPPORTED_TYPES = new Set(["chat", "filetree", "terminal", "file", "image"]);
+const UNSUPPORTED_TYPES = new Set(["filetree", "terminal", "file", "image"]);
 
 type TStylableProperty = "fill" | "stroke" | "strokeWidth" | "opacity" | "fontFamily" | "lineType" | "startCap" | "endCap";
 

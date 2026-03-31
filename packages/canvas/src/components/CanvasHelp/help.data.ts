@@ -22,7 +22,6 @@ const TOOL_LABELS = {
   pen: "Pen",
   text: "Text",
   image: "Image",
-  chat: "Chat",
   filesystem: "Filesystem",
   terminal: "Terminal",
 } as const;

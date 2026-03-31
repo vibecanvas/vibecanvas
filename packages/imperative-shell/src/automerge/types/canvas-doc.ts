@@ -2,7 +2,7 @@
  * CanvasDoc - Automerge CRDT Document Structure
  *
  * Design decisions:
- * - Unified `elements` collection (all types: rect, chat, filetree, etc.)
+ * - Unified `elements` collection (all types: rect, filetree, terminal, etc.)
  * - Fractional `zIndex` for conflict-free ordering (like Figma)
  * - First-class groups with `parentGroupId` for nesting
  * - Bindings with anchor points in target's local coordinates
@@ -20,8 +20,8 @@
  * Anchor is in the TARGET element's local coordinate space (0-1 normalized).
  *
  * @example
- * // Arrow attached to top-center of a chat
- * { targetId: "chat-123", anchor: { x: 0.5, y: 0 } }
+ * // Arrow attached to top-center of a hosted widget
+ * { targetId: "widget-123", anchor: { x: 0.5, y: 0 } }
  *
  * // Arrow attached to right-center of a rect
  * { targetId: "rect-456", anchor: { x: 1, y: 0.5 } }
@@ -146,15 +146,8 @@ export type TImageData = {
 }
 
 // ============================================================================
-// WIDGET TYPES (chat, filetree)
+// WIDGET TYPES (filetree, terminal, file, iframe-browser)
 // ============================================================================
-
-export type TChatData = {
-  type: 'chat'
-  w: number
-  h: number
-  isCollapsed: boolean
-}
 
 export type TFiletreeData = {
   type: 'filetree'
@@ -209,7 +202,6 @@ export type TElementData =
   | TPenData
   | TTextData
   | TImageData
-  | TChatData
   | TFiletreeData
   | TTerminalData
   | TFileData
@@ -269,7 +261,7 @@ export type TElementType = TElementData['type']
 export type TDrawingType = 'rect' | 'ellipse' | 'diamond' | 'arrow' | 'line' | 'pen' | 'text' | 'image'
 
 /** Widget types */
-export type TWidgetType = 'chat' | 'filetree' | 'terminal' | 'file' | 'iframe-browser'
+export type TWidgetType = 'filetree' | 'terminal' | 'file' | 'iframe-browser'
 
 /** Type guard for drawings */
 export function isDrawing(element: TElement): boolean {
@@ -279,7 +271,7 @@ export function isDrawing(element: TElement): boolean {
 
 /** Type guard for widgets */
 export function isWidget(element: TElement): boolean {
-  const widgetTypes: TWidgetType[] = ['chat', 'filetree', 'terminal', 'file', 'iframe-browser']
+  const widgetTypes: TWidgetType[] = ['filetree', 'terminal', 'file', 'iframe-browser']
   return widgetTypes.includes(element.data.type as TWidgetType)
 }
 

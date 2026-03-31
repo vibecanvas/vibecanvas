@@ -2,7 +2,6 @@
 // Initialize global functions (tExternal, tInternal, executeRollbacks)
 import { onError } from '@orpc/server';
 import { RPCHandler } from '@orpc/server/bun-ws';
-import { OpencodeService } from '@vibecanvas/shell/opencode/srv.opencode';
 import { PtyService } from '@vibecanvas/shell/pty/srv.pty';
 import db from "@vibecanvas/shell/database/db";
 import { existsSync } from 'fs';
@@ -15,7 +14,6 @@ import './preload/patch-negative-timeout';
 import { getServerVersion } from './runtime';
 import checkForUpgrade from './update';
 import { initAutomergeRepo } from './automerge-repo';
-import { buildPtyConnectUrl } from './apis/api.opencode';
 
 
 // Export API type for Eden client
@@ -61,18 +59,6 @@ type EmbeddedAssetsModule = {
   getSpaFallbackAsset(): string | null;
 };
 
-type TPtyProxyMessage = string | Buffer | ArrayBuffer | Uint8Array;
-
-function isOpencodePtyConnectPath(pathname: string): boolean {
-  return /^\/api\/opencode\/pty\/[^/]+\/connect$/.test(pathname);
-}
-
-function extractOpencodePtyIdFromPath(pathname: string): string | null {
-  const match = pathname.match(/^\/api\/opencode\/pty\/([^/]+)\/connect$/);
-  if (!match) return null;
-  return decodeURIComponent(match[1]);
-}
-
 function isNativePtyConnectPath(pathname: string): boolean {
   return /^\/api\/pty\/[^/]+\/connect$/.test(pathname);
 }
@@ -81,13 +67,6 @@ function extractNativePtyIdFromPath(pathname: string): string | null {
   const match = pathname.match(/^\/api\/pty\/([^/]+)\/connect$/);
   if (!match) return null;
   return decodeURIComponent(match[1]);
-}
-
-function asProxyMessage(message: string | Buffer | ArrayBuffer | Uint8Array): TPtyProxyMessage {
-  if (typeof message === 'string') return message;
-  if (message instanceof ArrayBuffer) return message;
-  if (message instanceof Uint8Array) return message;
-  return message as Buffer;
 }
 
 let getEmbeddedAsset = (_pathname: string): string | null => null;
@@ -123,7 +102,6 @@ export async function startServer(options: StartServerOptions): Promise<void> {
   const currentVersion = getServerVersion();
   const isWatchMode = process.execArgv.includes('--watch');
   let hasCheckedLatestVersion = false;
-  let hasClosedOpencodeServer = false;
   let isShuttingDown = false;
   let bunServer: ReturnType<typeof Bun.serve<WebSocketData>> | null = null;
 
@@ -164,36 +142,9 @@ export async function startServer(options: StartServerOptions): Promise<void> {
       .catch(() => { });
   }
 
-  let opencodeService!: OpencodeService
   let ptyService!: PtyService
 
   ptyService = await PtyService.init()
-
-  console.log('[Opencode] Starting OpenCode...')
-  try {
-    opencodeService = await OpencodeService.init()
-  } catch (err) {
-    console.error('[Opencode] init failed:', err)
-    throw err
-  }
-
-  const opencodeServerUrl = opencodeService.getServerUrl()
-  if (opencodeServerUrl) {
-    console.log(`[Opencode] OpenCode ready on ${opencodeServerUrl}`)
-  } else {
-    console.log('[Opencode] OpenCode ready')
-  }
-
-  const closeOpencodeServer = (signal?: NodeJS.Signals | 'exit') => {
-    try {
-      if (hasClosedOpencodeServer) return
-      if (isWatchMode && signal === 'SIGTERM') return
-      hasClosedOpencodeServer = true
-      opencodeService.closeServer()
-    } catch (error) {
-      console.error('[Opencode] close failed:', error)
-    }
-  }
 
   const shutdownServer = async () => {
     if (isShuttingDown) return;
@@ -215,14 +166,14 @@ export async function startServer(options: StartServerOptions): Promise<void> {
   }
 
   if (!isWatchMode) {
-    process.once('exit', () => closeOpencodeServer('exit'))
+    process.once('exit', () => {
+      void ptyService.shutdown('Process exit')
+    })
   }
   process.once('SIGINT', () => {
-    closeOpencodeServer('SIGINT')
     void shutdownServer()
   })
   process.once('SIGTERM', () => {
-    closeOpencodeServer('SIGTERM')
     void shutdownServer()
   })
 
@@ -231,11 +182,6 @@ export async function startServer(options: StartServerOptions): Promise<void> {
     query: string;
     requestId: string;
   };
-
-  const opencodePtyProxyConnections = new Map<unknown, {
-    backend: WebSocket;
-    queue: TPtyProxyMessage[];
-  }>();
 
   const nativePtyConnections = new Map<unknown, {
     send(payload: string | Buffer | ArrayBuffer | Uint8Array): void;
@@ -251,7 +197,6 @@ export async function startServer(options: StartServerOptions): Promise<void> {
         const isWebSocketEndpoint =
           url.pathname === '/api' ||
           url.pathname === '/automerge' ||
-          isOpencodePtyConnectPath(url.pathname) ||
           isNativePtyConnectPath(url.pathname)
         if (isWebSocketEndpoint) {
           if (server.upgrade(req, {
@@ -341,73 +286,6 @@ export async function startServer(options: StartServerOptions): Promise<void> {
             };
             automergeConnections.set(ws, wrapper);
             wsAdapter.open(wrapper);
-          } else if (isOpencodePtyConnectPath(ws.data.path)) {
-            if (!opencodeService) {
-              ws.close(1013, 'OpenCode service not ready');
-              return;
-            }
-
-            const ptyID = extractOpencodePtyIdFromPath(ws.data.path);
-            if (!ptyID) {
-              ws.close(1008, 'Invalid PTY path');
-              return;
-            }
-
-            const query = new URLSearchParams(ws.data.query);
-            const workingDirectory = query.get('workingDirectory');
-            if (!workingDirectory) {
-              ws.close(1008, 'Missing workingDirectory');
-              return;
-            }
-
-            const cursor = query.get('cursor') ?? undefined;
-
-            let targetUrl: string;
-            try {
-              targetUrl = buildPtyConnectUrl({
-                opencodeService,
-                ptyID,
-                directory: workingDirectory,
-                cursor,
-              });
-            } catch {
-              ws.close(1011, 'Failed to build PTY target URL');
-              return;
-            }
-
-            const backend = new WebSocket(targetUrl);
-            backend.binaryType = 'arraybuffer';
-
-            const queue: TPtyProxyMessage[] = [];
-            opencodePtyProxyConnections.set(ws, { backend, queue });
-
-            backend.onopen = () => {
-              const state = opencodePtyProxyConnections.get(ws);
-              if (!state) return;
-
-              while (state.queue.length > 0 && backend.readyState === WebSocket.OPEN) {
-                const queued = state.queue.shift();
-                if (queued !== undefined) backend.send(queued);
-              }
-            };
-
-            backend.onmessage = (event) => {
-              if (ws.readyState !== WebSocket.OPEN) return;
-              ws.send(event.data as TPtyProxyMessage);
-            };
-
-            backend.onerror = () => {
-              if (ws.readyState === WebSocket.OPEN) {
-                ws.close(1011, 'PTY backend error');
-              }
-            };
-
-            backend.onclose = (event) => {
-              opencodePtyProxyConnections.delete(ws);
-              if (ws.readyState === WebSocket.OPEN) {
-                ws.close(event.code || 1000, event.reason || 'PTY closed');
-              }
-            };
           } else if (isNativePtyConnectPath(ws.data.path)) {
             const ptyID = extractNativePtyIdFromPath(ws.data.path);
             if (!ptyID) {
@@ -451,7 +329,6 @@ export async function startServer(options: StartServerOptions): Promise<void> {
             void handler.message(ws, message, {
               context: {
                 db,
-                opencodeService,
                 ptyService,
                 requestId: ws.data.requestId,
                 repo
@@ -483,17 +360,6 @@ export async function startServer(options: StartServerOptions): Promise<void> {
             } catch (err) {
               console.error('[WS:automerge] adapter.message() error:', err);
             }
-          } else if (isOpencodePtyConnectPath(ws.data.path)) {
-            const state = opencodePtyProxyConnections.get(ws);
-            if (!state) return;
-
-            const payload = asProxyMessage(message as string | Buffer | ArrayBuffer | Uint8Array);
-
-            if (state.backend.readyState === WebSocket.OPEN) {
-              state.backend.send(payload);
-            } else {
-              state.queue.push(payload);
-            }
           } else if (isNativePtyConnectPath(ws.data.path)) {
             const state = nativePtyConnections.get(ws);
             if (!state) return;
@@ -518,17 +384,6 @@ export async function startServer(options: StartServerOptions): Promise<void> {
             if (!wrapper) return;
             wsAdapter.close(wrapper, code ?? 1000, reason ?? '');
             automergeConnections.delete(ws);
-          } else if (isOpencodePtyConnectPath(ws.data.path)) {
-            const state = opencodePtyProxyConnections.get(ws);
-            if (!state) return;
-            opencodePtyProxyConnections.delete(ws);
-            try {
-              if (state.backend.readyState === WebSocket.OPEN || state.backend.readyState === WebSocket.CONNECTING) {
-                state.backend.close(code ?? 1000, reason ?? 'client closed');
-              }
-            } catch {
-              // ignore close propagation failures
-            }
           } else if (isNativePtyConnectPath(ws.data.path)) {
             const state = nativePtyConnections.get(ws);
             if (!state) return;

@@ -14,7 +14,6 @@ export type TTool =
   | "pen"
   | "text"
   | "image"
-  | "chat"
   | "filesystem"
   | "terminal"
   | "browser";
@@ -46,7 +45,6 @@ export const TOOL_SHORTCUTS: Record<string, TTool> = {
   "l": "line",
   "p": "pen",
   "t": "text",
-  "c": "chat",
   "f": "filesystem",
   "j": "terminal",
   "w": "browser",
@@ -65,7 +63,6 @@ export const TOOLS: IToolDefinition[] = [
   { tool: "pen", shortcut: "7", letterShortcut: "p" },
   { tool: "text", shortcut: "8", letterShortcut: "t" },
   { tool: "image", shortcut: "9" },
-  { tool: "chat", letterShortcut: "c" },
   { tool: "filesystem", letterShortcut: "f" },
   { tool: "terminal", letterShortcut: "j" },
   { tool: "browser", letterShortcut: "w" },

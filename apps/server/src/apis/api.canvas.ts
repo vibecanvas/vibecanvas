@@ -16,7 +16,6 @@ const get = baseOs.api.canvas.get.handler(async ({ input, context: { db } }) => 
   }
 
   return {
-    chats: result.chats,
     canvas: [result.canvas],
     fileTrees: result.fileTrees,
   }

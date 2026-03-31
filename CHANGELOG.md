@@ -4,6 +4,10 @@ All notable changes to this project will be documented in this file.
 
 ## 0.2.0-beta.3
 
+### Removed
+- Chat widget
+- OpenCode dependency
+
 ### Added
 - New canvas architecture with Konva and plugins.
 - Hosted widgets on the canvas, including terminal, file tree, file widgets, and iframe support.
