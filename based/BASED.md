@@ -112,7 +112,7 @@ Use the leaf files for execution history and local context.
 - [x]: [S7](s/S7.md) - use http in orpc
 - [x]: [S9](s/S9.md) - fix seo image of web
 - [x]: [S10](s/S10.md) - reverse websocket to orpc
-- [~]: [S12](s/S12.md) - refactor: konvajs
+- [x]: [S12](s/S12.md) - refactor: konvajs
 - [ ]: [S13](s/S13.md)
 - [ ]: [S14](s/S14.md)
 
