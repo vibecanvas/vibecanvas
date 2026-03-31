@@ -3,6 +3,7 @@ import type { TCanvasDoc } from "@vibecanvas/shell/automerge/index";
 import Konva from "konva";
 import type { Group } from "konva/lib/Group";
 import type { Shape, ShapeConfig } from "konva/lib/Shape";
+import { createRoot } from "solid-js";
 import { createStore, SetStoreFunction } from 'solid-js/store';
 import type { TCustomEvent } from "../../custom-events";
 import {
@@ -65,6 +66,7 @@ export class CanvasService {
   #setState: SetStoreFunction<IState>;
   #crdt: Crdt;
   #history: History;
+  #disposeSolidRoot: (() => void) | null = null;
 
   constructor(
     container: HTMLDivElement,
@@ -150,16 +152,19 @@ export class CanvasService {
       }
     }
 
-    this.#instancePromise = (async () => {
-      // @ts-expect-error is assigned in constructor
-      const { hooks } = this.#pluginContext;
-      plugins.forEach((plugin) => {
-        plugin.apply(this.#pluginContext);
-      });
-      hooks.init.call();
-      await hooks.initAsync.promise();
-      return this;
-    })();
+    this.#instancePromise = createRoot((dispose) => {
+      this.#disposeSolidRoot = dispose;
+
+      return (async () => {
+        const { hooks } = this.#pluginContext;
+        plugins.forEach((plugin) => {
+          plugin.apply(this.#pluginContext);
+        });
+        hooks.init.call();
+        await hooks.initAsync.promise();
+        return this;
+      })();
+    });
 
     this.#resizeObserver = new ResizeObserver(() => {
       this.#stage.size({
@@ -181,6 +186,8 @@ export class CanvasService {
 
   destroy() {
     this.#pluginContext.hooks.destroy.call();
+    this.#disposeSolidRoot?.();
+    this.#disposeSolidRoot = null;
     this.#stage.destroy();
     this.#resizeObserver.disconnect();
     this.#worldWidgetsRoot.remove();

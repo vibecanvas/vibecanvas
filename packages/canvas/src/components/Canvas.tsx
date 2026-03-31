@@ -1,7 +1,7 @@
 import { AutomergeUrl, DocHandle } from "@automerge/automerge-repo";
 import { TCanvasDoc } from "@vibecanvas/shell/automerge/index";
 import type * as schema from "@vibecanvas/shell/database/schema";
-import { createEffect, createResource, Match, Switch } from "solid-js";
+import { createEffect, createResource, Match, onCleanup, Switch } from "solid-js";
 import { findDocument } from "../services/automerge";
 import { CanvasService, defaultPlugins } from "../services/canvas/Canvas.service";
 import type { TCloneImage, TDeleteImage, TFileCapability, TFiletreeCapability, TTerminalCapability, TUploadImage } from "../services/canvas/interface";
@@ -70,6 +70,12 @@ export function Canvas(props: CanvasPageProps) {
     canvasService.initialized.then(() => {
       console.log("[CanvasPage] CanvasService initialized");
     });
+  });
+
+  onCleanup(() => {
+    canvasService?.destroy();
+    canvasService = null;
+    activeHandle = null;
   });
 
   return <div ref={containerRef} class="relative w-full h-full bg-gray-400/10">

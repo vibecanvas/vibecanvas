@@ -201,10 +201,11 @@ export class TransformPlugin implements IPlugin {
       const isMultiSelect = filteredSelection.length > 1
       const useCornerAnchors = isSingleGroupSelection || hasTextOnly || hasPenOnly || hasShape1dOnly || isMultiSelect
       this.#transformer.keepRatio(useCornerAnchors)
+      const nextAnchors = useCornerAnchors
+        ? [...TransformPlugin.GROUP_ANCHORS]
+        : [...TransformPlugin.DEFAULT_ANCHORS]
       this.#transformer.enabledAnchors(
-        useCornerAnchors
-          ? [...TransformPlugin.GROUP_ANCHORS]
-          : [...TransformPlugin.DEFAULT_ANCHORS]
+        nextAnchors
       )
       this.#transformer.setNodes(filteredSelection)
       this.#transformer.update()
