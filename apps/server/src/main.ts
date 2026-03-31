@@ -17,17 +17,41 @@ Commands:
   upgrade   Check for and install updates
 
 Options:
-  --port <number>   Port for server (default: 3000 dev, 7496 compiled)
-  --version, -v     Print version and exit
-  --help, -h        Show this help message
+  --port <number>      Port for server (default: 3000 dev, 7496 compiled)
+  --upgrade <version>  Upgrade to a specific version (e.g. 0.2.0-beta.3 or v0.2.0-beta.3)
+  --version, -v        Print version and exit
+  --help, -h           Show this help message
 
 Examples:
-  vibecanvas                    Start server on default port
-  vibecanvas serve --port 3001  Start server on port 3001
-  vibecanvas upgrade            Check for and install updates
-  vibecanvas upgrade --check    Check for updates without installing
-  vibecanvas --version          Print version
+  vibecanvas                      Start server on default port
+  vibecanvas serve --port 3001    Start server on port 3001
+  vibecanvas upgrade              Check for and install updates
+  vibecanvas upgrade --check      Check for updates without installing
+  vibecanvas --upgrade 0.2.0-beta.3
+                                  Upgrade to a specific version
+  vibecanvas --version            Print version
 `);
+}
+
+function rewriteArgvForUpgrade(argv: readonly string[], targetVersion: string): string[] {
+  const passthrough: string[] = [];
+
+  for (let i = 2; i < argv.length; i += 1) {
+    const arg = argv[i];
+
+    if (arg === '--upgrade') {
+      i += 1;
+      continue;
+    }
+
+    if (arg?.startsWith('--upgrade=')) {
+      continue;
+    }
+
+    passthrough.push(arg);
+  }
+
+  return [argv[0] ?? 'bun', argv[1] ?? 'vibecanvas', 'upgrade', '--target-version', targetVersion, ...passthrough];
 }
 
 async function main() {
@@ -52,6 +76,9 @@ async function main() {
       port: {
         type: 'string',
       },
+      upgrade: {
+        type: 'string',
+      },
     },
   });
 
@@ -62,6 +89,11 @@ async function main() {
   if (subcommand === 'upgrade') {
     const { runUpgrade } = await import('./cmd.upgrade');
     await runUpgrade(argv);
+  }
+
+  if (typeof values.upgrade === 'string') {
+    const { runUpgrade } = await import('./cmd.upgrade');
+    await runUpgrade(rewriteArgvForUpgrade(argv, values.upgrade));
   }
 
   // Top-level --help and --version (only when no subcommand or 'serve')
