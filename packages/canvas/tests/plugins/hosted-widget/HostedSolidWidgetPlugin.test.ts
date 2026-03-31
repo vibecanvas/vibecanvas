@@ -946,6 +946,8 @@ describe("HostedSolidWidgetPlugin", () => {
     });
 
     await flushCanvasEffects();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    await flushCanvasEffects();
     const initialConnectionCount = MockWebSocket.instances.length;
     const initialGetCount = vi.mocked(safeClient.api.opencode.pty.get).mock.calls.length;
     expect(initialConnectionCount).toBeGreaterThan(0);
@@ -963,7 +965,7 @@ describe("HostedSolidWidgetPlugin", () => {
     harness.destroy();
   });
 
-  test("restored terminal session reconnects using the saved cursor instead of restarting from zero", async () => {
+  test("restored terminal session reconnects from cursor zero so a cold frontend can replay terminal state", async () => {
     const safeClient = createTerminalSafeClientMock();
     safeClient.api.opencode.pty.get = vi.fn().mockResolvedValue([null, {
       id: "pty-restored",
@@ -1014,12 +1016,14 @@ describe("HostedSolidWidgetPlugin", () => {
     });
 
     await flushCanvasEffects();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    await flushCanvasEffects();
 
     expect(safeClient.api.opencode.pty.get).toHaveBeenCalledWith({
       workingDirectory: ".",
       path: { ptyID: "pty-restored" },
     });
-    expect(MockWebSocket.instances[0]?.url).toContain("cursor=321");
+    expect(MockWebSocket.instances[0]?.url).toContain("cursor=0");
     expect(safeClient.api.opencode.pty.create).not.toHaveBeenCalled();
 
     harness.destroy();

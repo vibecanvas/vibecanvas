@@ -1,6 +1,6 @@
 import { throttle } from "@solid-primitives/scheduled";
 import type { JSX } from "solid-js";
-import { createEffect, createSignal, onCleanup, Show } from "solid-js";
+import { children, createEffect, createSignal, onCleanup, Show } from "solid-js";
 import { render } from "solid-js/web";
 import type { TChatData, TElement, TFileData, TFiletreeData, TTerminalData } from "@vibecanvas/shell/automerge/index";
 import Konva from "konva";
@@ -314,6 +314,7 @@ function HostedWidgetShell(props: {
   onReload?: () => void;
   children?: JSX.Element;
 }) {
+  const resolvedChildren = children(() => props.children);
   const resolvedWindowChrome = () => ({
     ...getDefaultWidgetChrome(props.element()),
     ...(props.windowChrome() ?? {}),
@@ -463,8 +464,8 @@ function HostedWidgetShell(props: {
         </div>
       </div>
       <div style={{ flex: 1, display: "flex", overflow: "hidden", "pointer-events": interactivePointerEvents() }}>
-        <Show when={props.children} fallback={<DefaultWidgetBody element={props.element} />}>
-          {props.children}
+        <Show when={resolvedChildren()} fallback={<DefaultWidgetBody element={props.element} />}>
+          {resolvedChildren()}
         </Show>
       </div>
     </div>
@@ -598,7 +599,7 @@ export class HostedSolidWidgetPlugin implements IPlugin {
       localStorage.setItem(LAST_FILETREE_PATH_KEY, filetree.path);
     }
 
-    const element = getDefaultWidgetElement("filetree", pointer.x, pointer.y, filetree.id);
+    const element = getDefaultWidgetElement("filetree", pointer.x, pointer.y, filetree.id as any);
     this.insertHostedElement(context, element);
   }
 

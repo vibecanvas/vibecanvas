@@ -1,7 +1,47 @@
 import { init as initGhostty, Terminal as GhosttyTerminal } from "ghostty-web";
 import { onCleanup, onMount } from "solid-js";
 
-export type TGhosttyTerminalInstance = InstanceType<typeof GhosttyTerminal>;
+type TGhosttyTheme = {
+  background: string;
+  foreground: string;
+  cursor: string;
+  selectionBackground: string;
+};
+
+type TGhosttyTerminalOptions = {
+  cursorBlink: boolean;
+  cursorStyle: string;
+  fontFamily: string;
+  fontSize: number;
+  scrollback: number;
+  theme: TGhosttyTheme;
+};
+
+type TGhosttyDisposable = {
+  dispose: () => void;
+};
+
+export type TGhosttyTerminalInstance = {
+  cols: number;
+  rows: number;
+  element?: HTMLDivElement | null;
+  textarea?: HTMLTextAreaElement | null;
+  canvas?: HTMLCanvasElement | null;
+  renderer?: TGhosttyRendererLike;
+  wasmTerm?: TGhosttyWasmTerminalLike;
+  attachCustomWheelEventHandler?: (handler?: (event: WheelEvent) => boolean) => void;
+  open: (root: HTMLDivElement) => void;
+  onData: (handler: (data: string) => void) => TGhosttyDisposable | void;
+  onResize: (handler: (next: { cols: number; rows: number }) => void) => TGhosttyDisposable | void;
+  resize: (cols: number, rows: number) => void;
+  write: (data: string) => void;
+  clear: () => void;
+  dispose: () => void;
+  paste?: (next: string) => void;
+  input?: (next: string, fromPaste?: boolean) => void;
+  getViewportY?: () => number;
+  scrollToLine?: (line: number) => void;
+};
 
 export type TTerminalMountReadyArgs = {
   term: TGhosttyTerminalInstance;
@@ -13,7 +53,7 @@ type TGhosttyTerminalMountProps = {
   class?: string;
   onReady: (args: TTerminalMountReadyArgs) => void | Promise<void>;
   onData?: (data: string) => void;
-  onResize?: (next: { cols: number; rows: number }) => void;
+  onResize?: (next: { cols: number; rows: number }, term: TGhosttyTerminalInstance | null) => void;
   onCleanup?: (term: TGhosttyTerminalInstance | null) => void;
 };
 
@@ -39,12 +79,7 @@ type TGhosttyRendererLike = {
   getMetrics?: () => { width: number; height: number };
 };
 
-type TGhosttyTerminalInternal = TGhosttyTerminalInstance & {
-  attachCustomWheelEventHandler?: (handler?: (event: WheelEvent) => boolean) => void;
-  canvas?: HTMLCanvasElement | null;
-  renderer?: TGhosttyRendererLike;
-  wasmTerm?: TGhosttyWasmTerminalLike;
-};
+type TGhosttyTerminalInternal = TGhosttyTerminalInstance;
 
 type TTerminalBounds = {
   left: number;
@@ -72,6 +107,10 @@ type TClipboardSummary = {
   textLength: number;
   hasNonText: boolean;
   hasAnyPayload: boolean;
+};
+
+type TClipboardEventLike = Event & {
+  clipboardData?: TClipboardLike | null;
 };
 
 function isTerminalDebugEnabled() {
@@ -233,10 +272,15 @@ function summarizeClipboardData(clipboardData: TClipboardLike | null | undefined
 
 function describeElement(value: EventTarget | Element | null | undefined) {
   if (!(value instanceof Element)) return null;
+  const htmlValue = value as HTMLElement;
   return {
     tagName: value.tagName,
-    dataset: { ...value.dataset },
+    dataset: { ...htmlValue.dataset },
   };
+}
+
+function asClipboardEventLike(event: Event): TClipboardEventLike {
+  return event as TClipboardEventLike;
 }
 
 async function readClipboardFallback() {
@@ -280,6 +324,7 @@ function ensureGhosttyInit(): Promise<void> {
 }
 
 export function GhosttyTerminalMount(props: TGhosttyTerminalMountProps) {
+  const GhosttyTerminalCtor = GhosttyTerminal as unknown as new (options: TGhosttyTerminalOptions) => TGhosttyTerminalInstance;
   let hostRef: HTMLDivElement | undefined;
   let rootRef: HTMLDivElement | undefined;
   let term: TGhosttyTerminalInstance | null = null;
@@ -294,7 +339,7 @@ export function GhosttyTerminalMount(props: TGhosttyTerminalMountProps) {
     rootRef.style.caretColor = "transparent";
     rootRef.style.outline = "none";
 
-    term = new GhosttyTerminal({
+    term = new GhosttyTerminalCtor({
       cursorBlink: true,
       cursorStyle: "bar",
       fontFamily: "JetBrains Mono Variable, monospace",
@@ -323,7 +368,7 @@ export function GhosttyTerminalMount(props: TGhosttyTerminalMountProps) {
     const terminalInternal = term as TGhosttyTerminalInternal;
 
     const sendTerminalInput = (data: string) => {
-      const input = (term as { input?: (next: string, fromPaste?: boolean) => void } | null)?.input;
+      const input = term?.input;
       if (typeof input === "function") {
         input.call(term, data, true);
         return "term.input";
@@ -334,7 +379,7 @@ export function GhosttyTerminalMount(props: TGhosttyTerminalMountProps) {
     };
 
     const pasteText = (text: string) => {
-      const paste = (term as { paste?: (next: string) => void } | null)?.paste;
+      const paste = term?.paste;
       if (typeof paste === "function") {
         paste.call(term, text);
         return "term.paste";
@@ -389,23 +434,24 @@ export function GhosttyTerminalMount(props: TGhosttyTerminalMountProps) {
       return true;
     });
 
-    const handlePaste = (event: ClipboardEvent) => {
+    const handlePaste = (event: Event) => {
+      const clipboardEvent = asClipboardEventLike(event);
       if (!term) return;
-      if (event.defaultPrevented) return;
+      if (clipboardEvent.defaultPrevented) return;
 
-      const summary = summarizeClipboardData(event.clipboardData);
+      const summary = summarizeClipboardData(clipboardEvent.clipboardData);
       debugTerminalPaste("paste event", {
         activeElement: describeElement(document.activeElement),
-        target: describeElement(event.target),
-        currentTarget: describeElement(event.currentTarget),
+        target: describeElement(clipboardEvent.target),
+        currentTarget: describeElement(clipboardEvent.currentTarget),
         hostContainsActiveElement: !!hostRef?.contains(document.activeElement),
         ...summary,
       });
 
-      const text = getClipboardText(event.clipboardData);
+      const text = getClipboardText(clipboardEvent.clipboardData);
       if (text) {
-        event.preventDefault();
-        event.stopPropagation();
+        clipboardEvent.preventDefault();
+        clipboardEvent.stopPropagation();
         const method = pasteText(text);
         debugTerminalPaste("handled text paste", {
           method,
@@ -415,8 +461,8 @@ export function GhosttyTerminalMount(props: TGhosttyTerminalMountProps) {
       }
 
       if (summary.hasNonText) {
-        event.preventDefault();
-        event.stopPropagation();
+        clipboardEvent.preventDefault();
+        clipboardEvent.stopPropagation();
         const method = sendTerminalInput("\x16");
         debugTerminalPaste("handled non-text paste", {
           method,
@@ -474,7 +520,7 @@ export function GhosttyTerminalMount(props: TGhosttyTerminalMountProps) {
     });
 
     term.onResize((next) => {
-      props.onResize?.(next);
+      props.onResize?.(next, term);
     });
 
     await props.onReady({ term, root: rootRef, host: hostRef });
