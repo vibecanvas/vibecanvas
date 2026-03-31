@@ -153,6 +153,7 @@ function getDefaultBrowserElement(x: number, y: number): TBrowserElement {
 function BrowserChrome(props: {
   element: () => TBrowserElement;
   isFocused: () => boolean;
+  isSelectable: () => boolean;
   isInteractive: () => boolean;
   onHeaderPointerDown: (event: PointerEvent | MouseEvent) => void;
   onHeaderDoubleClick: (event: MouseEvent) => void;
@@ -296,7 +297,7 @@ function BrowserChrome(props: {
         inset: `${CONTENT_INSET}px`,
         display: "flex",
         "flex-direction": "column",
-        "pointer-events": props.isInteractive() ? "auto" : "none",
+        "pointer-events": props.isSelectable() ? "auto" : "none",
         border: `1px solid ${resolvedBorderColor()}`,
         background: props.element().style.backgroundColor ?? "#ffffff",
         "box-shadow": boxShadow(),
@@ -813,10 +814,14 @@ export class IframeBrowserWidgetPlugin implements IPlugin {
 
     const dispose = render(() => {
       createEffect(() => {
-        const interactive = context.state.focusedId === node.id() && context.state.mode === CanvasMode.SELECT;
-        mountElement.style.pointerEvents = interactive ? "auto" : "none";
+        const transformerVisible =
+          context.state.selection.some((candidate) => candidate.id() === node.id())
+          && node.getAttr(BROWSER_TRANSFORMER_ATTR) === true;
+        const selectable = context.state.mode === CanvasMode.SELECT && !transformerVisible;
+        const interactive = context.state.focusedId === node.id() && selectable;
+        mountElement.style.pointerEvents = selectable ? "auto" : "none";
         mountElement.dataset.hostedWidgetInteractive = interactive ? "true" : "false";
-        mountElement.toggleAttribute("inert", !interactive);
+        mountElement.toggleAttribute("inert", !selectable);
 
         if (!interactive) return;
         const cleanupFocus = scheduleHostedWidgetFocus(mountElement);
@@ -827,7 +832,18 @@ export class IframeBrowserWidgetPlugin implements IPlugin {
         <BrowserChrome
           element={currentElement}
           isFocused={() => context.state.focusedId === node.id()}
-          isInteractive={() => context.state.focusedId === node.id() && context.state.mode === CanvasMode.SELECT}
+          isSelectable={() => {
+            const transformerVisible =
+              context.state.selection.some((candidate) => candidate.id() === node.id())
+              && node.getAttr(BROWSER_TRANSFORMER_ATTR) === true;
+            return context.state.mode === CanvasMode.SELECT && !transformerVisible;
+          }}
+          isInteractive={() => {
+            const transformerVisible =
+              context.state.selection.some((candidate) => candidate.id() === node.id())
+              && node.getAttr(BROWSER_TRANSFORMER_ATTR) === true;
+            return context.state.focusedId === node.id() && context.state.mode === CanvasMode.SELECT && !transformerVisible;
+          }}
           onSelectPointerDown={(event) => this.#selectBrowserNode(context, node, event)}
           onHeaderPointerDown={(event) => this.#beginDomDrag(context, node, event)}
           onHeaderDoubleClick={(event) => {
@@ -992,9 +1008,14 @@ export class IframeBrowserWidgetPlugin implements IPlugin {
       context.stage.batchDraw();
     };
 
-    const onPointerUp = () => {
+    let finalized = false;
+    const finalizeDrag = () => {
+      if (finalized) return;
+      finalized = true;
       window.removeEventListener("pointermove", onPointerMove as EventListener);
-      window.removeEventListener("pointerup", onPointerUp);
+      window.removeEventListener("pointerup", finalizeDrag);
+      window.removeEventListener("pointercancel", finalizeDrag);
+      window.removeEventListener("blur", finalizeDrag);
       this.#cleanupDrag = null;
 
       const afterElements = collectSelectionShapes(activeSelection)
@@ -1018,10 +1039,15 @@ export class IframeBrowserWidgetPlugin implements IPlugin {
     };
 
     window.addEventListener("pointermove", onPointerMove as EventListener);
-    window.addEventListener("pointerup", onPointerUp, { once: true });
+    window.addEventListener("pointerup", finalizeDrag, { once: true });
+    window.addEventListener("pointercancel", finalizeDrag, { once: true });
+    window.addEventListener("blur", finalizeDrag, { once: true });
     this.#cleanupDrag = () => {
       window.removeEventListener("pointermove", onPointerMove as EventListener);
-      window.removeEventListener("pointerup", onPointerUp);
+      window.removeEventListener("pointerup", finalizeDrag);
+      window.removeEventListener("pointercancel", finalizeDrag);
+      window.removeEventListener("blur", finalizeDrag);
+      finalized = true;
     };
   }
 

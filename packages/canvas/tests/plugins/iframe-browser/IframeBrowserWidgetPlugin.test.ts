@@ -1,8 +1,10 @@
+import Konva from "konva";
 import { afterEach, describe, expect, test, vi } from "vitest";
 import type { IPluginContext } from "../../../src/plugins/interface";
 import { IframeBrowserWidgetPlugin } from "../../../src/plugins/IframeBrowserWidget.plugin";
 import { RenderOrderPlugin } from "../../../src/plugins/RenderOrder.plugin";
 import { SceneHydratorPlugin } from "../../../src/plugins/SceneHydrator.plugin";
+import { SelectPlugin } from "../../../src/plugins/Select.plugin";
 import { CanvasMode } from "../../../src/services/canvas/enum";
 import {
   createCanvasTestHarness,
@@ -161,7 +163,7 @@ describe("IframeBrowserWidgetPlugin", () => {
     expect(document.querySelectorAll("[data-iframe-browser-widget-id]")).toHaveLength(0);
   });
 
-  test("only enables iframe browser DOM pointer events while focused in select mode", async () => {
+  test("browser root is selectable before focus, becomes interactive when focused, and disables DOM pointer events while transformer is visible", async () => {
     let context!: IPluginContext;
     const docHandle = createMockDocHandle({
       elements: {
@@ -188,8 +190,8 @@ describe("IframeBrowserWidgetPlugin", () => {
     expect(root.dataset.hostedWidgetFocused).toBe("false");
     expect(root.dataset.hostedWidgetInteractive).toBe("false");
     expect(mount.dataset.hostedWidgetInteractive).toBe("false");
-    expect(mount.style.pointerEvents).toBe("none");
-    expect(mount.hasAttribute("inert")).toBe(true);
+    expect(mount.style.pointerEvents).toBe("auto");
+    expect(mount.hasAttribute("inert")).toBe(false);
     expect(newTabButton.style.pointerEvents).toBe("none");
     expect(addressBar.style.pointerEvents).toBe("none");
 
@@ -203,6 +205,19 @@ describe("IframeBrowserWidgetPlugin", () => {
     expect(mount.hasAttribute("inert")).toBe(false);
     expect(newTabButton.style.pointerEvents).toBe("auto");
     expect(addressBar.style.pointerEvents).toBe("auto");
+
+    const resizeButton = mount.querySelector('[aria-label="Show resize handles"]') as HTMLButtonElement;
+    expect(resizeButton).not.toBeNull();
+    resizeButton.click();
+    await flushCanvasEffects();
+
+    expect(root.dataset.hostedWidgetFocused).toBe("true");
+    expect(root.dataset.hostedWidgetInteractive).toBe("false");
+    expect(mount.dataset.hostedWidgetInteractive).toBe("false");
+    expect(mount.style.pointerEvents).toBe("none");
+    expect(mount.hasAttribute("inert")).toBe(true);
+    expect(newTabButton.style.pointerEvents).toBe("none");
+    expect(addressBar.style.pointerEvents).toBe("none");
 
     context.setState("mode", CanvasMode.HAND);
     await flushCanvasEffects();
@@ -253,5 +268,154 @@ describe("IframeBrowserWidgetPlugin", () => {
     } finally {
       vi.useRealTimers();
     }
+  });
+
+  test("browser root is selectable before iframe internals become interactive", async () => {
+    let context!: IPluginContext;
+    const docHandle = createMockDocHandle({
+      elements: {
+        browser1: createBrowserElement(),
+      },
+    });
+
+    const harness = await createCanvasTestHarness({
+      docHandle,
+      plugins: [new RenderOrderPlugin(), new SelectPlugin(), new IframeBrowserWidgetPlugin(), new SceneHydratorPlugin()],
+      initializeScene: (ctx) => {
+        context = ctx;
+      },
+    });
+
+    await flushCanvasEffects();
+
+    const mount = harness.stage.container().querySelector(
+      '[data-iframe-browser-widget-id="browser1"]',
+    ) as HTMLDivElement;
+    const iframe = mount.querySelector("iframe") as HTMLIFrameElement;
+    const browserNode = harness.staticForegroundLayer.findOne((candidate: Konva.Node) => candidate.id() === "browser1") as Konva.Rect | null;
+
+    expect(browserNode).not.toBeNull();
+    expect(mount.style.pointerEvents).toBe("auto");
+    expect(iframe.style.pointerEvents).toBe("none");
+    expect(context.state.selection).toHaveLength(0);
+    expect(context.state.focusedId).toBeNull();
+
+    browserNode!.fire("pointerdown", {
+      target: browserNode,
+      currentTarget: browserNode,
+      evt: new MouseEvent("pointerdown", { bubbles: true, button: 0, clientX: 120, clientY: 120 }),
+    });
+
+    expect(context.state.selection.map((node) => node.id())).toEqual(["browser1"]);
+    expect(context.state.focusedId).toBe("browser1");
+
+    await flushCanvasEffects();
+
+    expect(mount.style.pointerEvents).toBe("auto");
+    expect(iframe.style.pointerEvents).toBe("auto");
+
+    harness.destroy();
+  });
+
+  test("bridges header drag from DOM back into browser Konva node", async () => {
+    const docHandle = createMockDocHandle({
+      elements: {
+        browser1: createBrowserElement(),
+      },
+    });
+
+    const harness = await createCanvasTestHarness({
+      docHandle,
+      plugins: [new RenderOrderPlugin(), new IframeBrowserWidgetPlugin(), new SceneHydratorPlugin()],
+    });
+
+    await flushCanvasEffects();
+
+    const header = harness.stage.container().querySelector("[data-hosted-widget-header='true']") as HTMLDivElement | null;
+    expect(header).not.toBeNull();
+
+    header?.dispatchEvent(new MouseEvent("pointerdown", { bubbles: true, button: 0, clientX: 100, clientY: 100 }));
+    window.dispatchEvent(new MouseEvent("pointermove", { bubbles: true, clientX: 150, clientY: 140 }));
+    window.dispatchEvent(new MouseEvent("pointerup", { bubbles: true, clientX: 150, clientY: 140 }));
+
+    await flushCanvasEffects();
+
+    const updated = docHandle.doc().elements.browser1;
+    expect(updated?.x).toBe(90);
+    expect(updated?.y).toBe(90);
+
+    harness.destroy();
+  });
+
+  test("browser DOM drag stops on window blur", async () => {
+    const docHandle = createMockDocHandle({
+      elements: {
+        browser1: createBrowserElement(),
+      },
+    });
+
+    const harness = await createCanvasTestHarness({
+      docHandle,
+      plugins: [new RenderOrderPlugin(), new IframeBrowserWidgetPlugin(), new SceneHydratorPlugin()],
+    });
+
+    await flushCanvasEffects();
+
+    const header = harness.stage.container().querySelector("[data-hosted-widget-header='true']") as HTMLDivElement | null;
+    const browserNode = harness.staticForegroundLayer.findOne((candidate: Konva.Node) => candidate.id() === "browser1") as Konva.Rect | null;
+    expect(header).not.toBeNull();
+    expect(browserNode).not.toBeNull();
+
+    header?.dispatchEvent(new MouseEvent("pointerdown", { bubbles: true, button: 0, clientX: 100, clientY: 100 }));
+    window.dispatchEvent(new MouseEvent("pointermove", { bubbles: true, clientX: 140, clientY: 130 }));
+    expect(browserNode!.x()).toBe(80);
+    expect(browserNode!.y()).toBe(80);
+
+    window.dispatchEvent(new Event("blur"));
+    window.dispatchEvent(new MouseEvent("pointermove", { bubbles: true, clientX: 170, clientY: 160 }));
+    await flushCanvasEffects();
+
+    expect(browserNode!.x()).toBe(80);
+    expect(browserNode!.y()).toBe(80);
+
+    window.dispatchEvent(new MouseEvent("pointerup", { bubbles: true, clientX: 170, clientY: 160 }));
+    await flushCanvasEffects();
+    harness.destroy();
+  });
+
+  test("browser DOM drag stops on pointercancel", async () => {
+    const docHandle = createMockDocHandle({
+      elements: {
+        browser1: createBrowserElement(),
+      },
+    });
+
+    const harness = await createCanvasTestHarness({
+      docHandle,
+      plugins: [new RenderOrderPlugin(), new IframeBrowserWidgetPlugin(), new SceneHydratorPlugin()],
+    });
+
+    await flushCanvasEffects();
+
+    const header = harness.stage.container().querySelector("[data-hosted-widget-header='true']") as HTMLDivElement | null;
+    const browserNode = harness.staticForegroundLayer.findOne((candidate: Konva.Node) => candidate.id() === "browser1") as Konva.Rect | null;
+    expect(header).not.toBeNull();
+    expect(browserNode).not.toBeNull();
+
+    header?.dispatchEvent(new MouseEvent("pointerdown", { bubbles: true, button: 0, clientX: 100, clientY: 100 }));
+    window.dispatchEvent(new MouseEvent("pointermove", { bubbles: true, clientX: 130, clientY: 120 }));
+    expect(browserNode!.x()).toBe(70);
+    expect(browserNode!.y()).toBe(70);
+
+    window.dispatchEvent(new MouseEvent("pointercancel", { bubbles: true, clientX: 130, clientY: 120 }));
+    window.dispatchEvent(new MouseEvent("pointermove", { bubbles: true, clientX: 160, clientY: 150 }));
+    await flushCanvasEffects();
+
+    expect(browserNode!.x()).toBe(70);
+    expect(browserNode!.y()).toBe(70);
+
+    window.dispatchEvent(new MouseEvent("pointerup", { bubbles: true, clientX: 160, clientY: 150 }));
+    await flushCanvasEffects();
+    harness.destroy();
   });
 });
