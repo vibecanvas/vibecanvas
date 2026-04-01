@@ -1,12 +1,7 @@
 import Konva from "konva";
 import { describe, expect, test } from "vitest";
 import type { TCanvasDoc, TElement, TGroup } from "@vibecanvas/shell/automerge/index";
-import { GroupPlugin } from "../../../src/plugins/Group.plugin";
-import { RenderOrderPlugin } from "../../../src/plugins/RenderOrder.plugin";
-import { SceneHydratorPlugin } from "../../../src/plugins/SceneHydrator.plugin";
-import { Shape2dPlugin } from "../../../src/plugins/Shape2d.plugin";
-import type { IPluginContext } from "../../../src/plugins/interface";
-import { ContextMenuPlugin } from "../../../src/plugins/ContextMenu.plugin";
+import { ContextMenuPlugin, GroupPlugin, RenderOrderPlugin, SceneHydratorPlugin, Shape2dPlugin, type IPluginContext } from "../../../src/plugins";
 import { createCanvasTestHarness, createMockDocHandle, flushCanvasEffects } from "../../test-setup";
 
 function createRectElement(overrides?: Partial<TElement>): TElement {

@@ -248,7 +248,9 @@ That separation is what makes selection, group boundaries, transforms, and hydra
 
 ## Plugin System
 
-Plugins are defined in `packages/canvas/src/plugins/interface.ts`.
+Plugins are defined by the shared contract in `packages/canvas/src/plugins/shared/interface.ts`.
+
+The implementation layout is folder-per-plugin under `packages/canvas/src/plugins/<PluginName>/<PluginName>.plugin.ts[x]`, and shared cross-plugin helpers/contracts live under `packages/canvas/src/plugins/shared/`. The old flat root compatibility stubs were removed, so imports should target either `packages/canvas/src/plugins/index.ts` or the real folder/shared paths.
 
 Each plugin receives an `IPluginContext` containing:
 
@@ -913,7 +915,7 @@ These fixtures encode the intended interaction semantics for selection depth and
 
 Preferred path:
 
-1. create or extend a plugin in `packages/canvas/src/plugins/`
+1. create or extend a plugin in `packages/canvas/src/plugins/<PluginName>/<PluginName>.plugin.ts[x]`
 2. use `IPluginContext`
 3. expose shared helpers through `context.capabilities` only when needed across plugins
 4. coordinate through hooks or custom events
@@ -999,31 +1001,33 @@ Current incomplete or rough areas:
 
 ### Plugin contracts and registry
 
-- `packages/canvas/src/plugins/interface.ts`
+- `packages/canvas/src/plugins/shared/interface.ts`
 - `packages/canvas/src/plugins/index.ts`
+- `packages/canvas/src/plugins/shared/`
 - `packages/canvas/src/custom-events.ts`
 
 ### Default runtime plugins
 
-- `packages/canvas/src/plugins/EventListener.plugin.ts`
-- `packages/canvas/src/plugins/Grid.plugin.ts`
-- `packages/canvas/src/plugins/CameraControl.plugin.ts`
-- `packages/canvas/src/plugins/HistoryControl.plugin.ts`
-- `packages/canvas/src/plugins/Toolbar.plugin.ts`
-- `packages/canvas/src/plugins/Help.plugin.ts`
-- `packages/canvas/src/plugins/Recorder.plugin.ts`
-- `packages/canvas/src/plugins/Select.plugin.ts`
-- `packages/canvas/src/plugins/Transform.plugin.ts`
-- `packages/canvas/src/plugins/Shape1d.plugin.ts`
-- `packages/canvas/src/plugins/Shape2d.plugin.ts`
-- `packages/canvas/src/plugins/Text.plugin.ts`
-- `packages/canvas/src/plugins/Group.plugin.ts`
-- `packages/canvas/src/plugins/HostedSolidWidget.plugin.tsx`
-- `packages/canvas/src/plugins/SceneHydrator.plugin.ts`
+- `packages/canvas/src/plugins/EventListener/EventListener.plugin.ts`
+- `packages/canvas/src/plugins/Grid/Grid.plugin.ts`
+- `packages/canvas/src/plugins/CameraControl/CameraControl.plugin.ts`
+- `packages/canvas/src/plugins/HistoryControl/HistoryControl.plugin.ts`
+- `packages/canvas/src/plugins/Toolbar/Toolbar.plugin.ts`
+- `packages/canvas/src/plugins/Help/Help.plugin.ts`
+- `packages/canvas/src/plugins/Recorder/Recorder.plugin.ts`
+- `packages/canvas/src/plugins/Select/Select.plugin.ts`
+- `packages/canvas/src/plugins/Transform/Transform.plugin.ts`
+- `packages/canvas/src/plugins/Shape1d/Shape1d.plugin.ts`
+- `packages/canvas/src/plugins/Shape2d/Shape2d.plugin.ts`
+- `packages/canvas/src/plugins/Text/Text.plugin.ts`
+- `packages/canvas/src/plugins/Group/Group.plugin.ts`
+- `packages/canvas/src/plugins/HostedSolidWidget/HostedSolidWidget.plugin.tsx`
+- `packages/canvas/src/plugins/IframeBrowserWidget/IframeBrowserWidget.plugin.tsx`
+- `packages/canvas/src/plugins/SceneHydrator/SceneHydrator.plugin.ts`
 
 ### Reference / non-default plugin
 
-- `packages/canvas/src/plugins/ExampleScene.plugin.ts`
+- `packages/canvas/src/plugins/ExampleScene/ExampleScene.plugin.ts`
 
 ### Overlay UI
 

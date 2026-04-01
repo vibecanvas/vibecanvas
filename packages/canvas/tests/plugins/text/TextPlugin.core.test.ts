@@ -2,9 +2,7 @@ import Konva from "konva";
 import type { DocHandle } from "@automerge/automerge-repo";
 import type { TCanvasDoc, TElement } from "@vibecanvas/shell/automerge/index";
 import { describe, expect, test } from "vitest";
-import { TextPlugin } from "../../../src/plugins/Text.plugin";
-import { TransformPlugin } from "../../../src/plugins/Transform.plugin";
-import type { IPluginContext } from "../../../src/plugins/interface";
+import { TextPlugin, TransformPlugin, type IPluginContext } from "../../../src/plugins";
 import { createCanvasTestHarness, createMockDocHandle, exportStageSnapshot, flushCanvasEffects } from "../../test-setup";
 import { dragShape, simulateTransformerResize } from "./helpers";
 

@@ -1,21 +1,23 @@
 import Konva from "konva";
 import { describe, expect, test, vi } from "vitest";
-import { CameraControlPlugin } from "../../../src/plugins/CameraControl.plugin";
-import { EventListenerPlugin } from "../../../src/plugins/EventListener.plugin";
-import { GridPlugin } from "../../../src/plugins/Grid.plugin";
-import { GroupPlugin } from "../../../src/plugins/Group.plugin";
-import { HelpPlugin } from "../../../src/plugins/Help.plugin";
-import { HistoryControlPlugin } from "../../../src/plugins/HistoryControl.plugin";
-import type { IPluginContext } from "../../../src/plugins/interface";
-import { SelectPlugin } from "../../../src/plugins/Select.plugin";
-import { Shape2dPlugin } from "../../../src/plugins/Shape2d.plugin";
-import { ToolbarPlugin } from "../../../src/plugins/Toolbar.plugin";
-import { TransformPlugin } from "../../../src/plugins/Transform.plugin";
+import {
+  CameraControlPlugin,
+  EventListenerPlugin,
+  GridPlugin,
+  GroupPlugin,
+  HelpPlugin,
+  HistoryControlPlugin,
+  SelectPlugin,
+  Shape2dPlugin,
+  TextPlugin,
+  ToolbarPlugin,
+  TransformPlugin,
+  type IPluginContext,
+} from "../../../src/plugins";
 import { initializeScene01SelectOuterGroupFromChild } from "../../scenarios/01-select-outer-group-from-child";
 import { initializeScene03TopLevelMixedSelection } from "../../scenarios/03-top-level-mixed-selection";
 import { initializeScene04MultiselectRectAndText } from "../../scenarios/04-multiselect-rect-and-text";
 import { createCanvasTestHarness, exportStageSnapshot, flushCanvasEffects } from "../../test-setup";
-import { TextPlugin } from "../../../src/plugins/Text.plugin";
 
 function getAbsoluteRectMetrics(shape: Konva.Rect) {
   const absolutePosition = shape.absolutePosition();

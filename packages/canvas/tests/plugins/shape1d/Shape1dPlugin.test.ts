@@ -2,11 +2,7 @@ import Konva from "konva";
 import type { TArrowData, TElement, TLineData } from "@vibecanvas/shell/automerge/index";
 import { describe, expect, test } from "vitest";
 import { CustomEvents } from "../../../src/custom-events";
-import { SceneHydratorPlugin } from "../../../src/plugins/SceneHydrator.plugin";
-import { SelectPlugin } from "../../../src/plugins/Select.plugin";
-import { Shape1dPlugin } from "../../../src/plugins/Shape1d.plugin";
-import type { IPluginContext } from "../../../src/plugins/interface";
-import { TransformPlugin } from "../../../src/plugins/Transform.plugin";
+import { SceneHydratorPlugin, SelectPlugin, Shape1dPlugin, TransformPlugin, type IPluginContext } from "../../../src/plugins";
 import { CanvasMode } from "../../../src/services/canvas/enum";
 import { createCanvasTestHarness, createMockDocHandle, flushCanvasEffects } from "../../test-setup";
 

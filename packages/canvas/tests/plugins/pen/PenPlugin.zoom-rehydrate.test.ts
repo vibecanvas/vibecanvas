@@ -1,10 +1,8 @@
 import Konva from "konva";
 import type { TElement } from "@vibecanvas/shell/automerge/index";
 import { describe, expect, test } from "vitest";
-import { PenPlugin } from "../../../src/plugins/Pen.plugin";
-import { SceneHydratorPlugin } from "../../../src/plugins/SceneHydrator.plugin";
-import type { IPluginContext } from "../../../src/plugins/interface";
-import { createPenDataFromStrokePoints } from "../../../src/plugins/pen.math";
+import { PenPlugin, SceneHydratorPlugin, type IPluginContext } from "../../../src/plugins";
+import { createPenDataFromStrokePoints } from "../../../src/plugins/shared/pen.math";
 import { createCanvasTestHarness, createMockDocHandle, flushCanvasEffects } from "../../test-setup";
 
 function createPenElement(id: string): TElement {

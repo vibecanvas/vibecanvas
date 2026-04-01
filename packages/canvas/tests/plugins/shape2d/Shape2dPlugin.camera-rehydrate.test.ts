@@ -1,8 +1,6 @@
 import Konva from "konva";
 import { describe, expect, test } from "vitest";
-import { SceneHydratorPlugin } from "../../../src/plugins/SceneHydrator.plugin";
-import { Shape2dPlugin } from "../../../src/plugins/Shape2d.plugin";
-import type { IPluginContext } from "../../../src/plugins/interface";
+import { SceneHydratorPlugin, Shape2dPlugin, type IPluginContext } from "../../../src/plugins";
 import { createCanvasTestHarness, createMockDocHandle, flushCanvasEffects } from "../../test-setup";
 
 describe("Shape2dPlugin - camera rehydrate", () => {

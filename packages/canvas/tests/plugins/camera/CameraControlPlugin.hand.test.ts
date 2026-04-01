@@ -1,11 +1,6 @@
 import Konva from "konva";
 import { describe, expect, test } from "vitest";
-import { CameraControlPlugin } from "../../../src/plugins/CameraControl.plugin";
-import { GroupPlugin } from "../../../src/plugins/Group.plugin";
-import type { IPlugin, IPluginContext } from "../../../src/plugins/interface";
-import { SelectPlugin } from "../../../src/plugins/Select.plugin";
-import { Shape2dPlugin } from "../../../src/plugins/Shape2d.plugin";
-import { TransformPlugin } from "../../../src/plugins/Transform.plugin";
+import { CameraControlPlugin, GroupPlugin, SelectPlugin, Shape2dPlugin, TransformPlugin, type IPlugin, type IPluginContext } from "../../../src/plugins";
 import { CanvasMode } from "../../../src/services/canvas/enum";
 import { initializeScene03TopLevelMixedSelection } from "../../scenarios/03-top-level-mixed-selection";
 import { createCanvasTestHarness, flushCanvasEffects } from "../../test-setup";

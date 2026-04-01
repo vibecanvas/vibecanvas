@@ -2,11 +2,7 @@ import Konva from "konva";
 import type { TElement } from "@vibecanvas/shell/automerge/index";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { CustomEvents } from "../../../src/custom-events";
-import { ImagePlugin } from "../../../src/plugins/Image.plugin";
-import { RenderOrderPlugin } from "../../../src/plugins/RenderOrder.plugin";
-import { SceneHydratorPlugin } from "../../../src/plugins/SceneHydrator.plugin";
-import { SelectPlugin } from "../../../src/plugins/Select.plugin";
-import type { IPluginContext } from "../../../src/plugins/interface";
+import { ImagePlugin, RenderOrderPlugin, SceneHydratorPlugin, SelectPlugin, type IPluginContext } from "../../../src/plugins";
 import { createCanvasTestHarness, createMockDocHandle, flushCanvasEffects } from "../../test-setup";
 
 vi.mock("../../../src/utils/image", () => ({

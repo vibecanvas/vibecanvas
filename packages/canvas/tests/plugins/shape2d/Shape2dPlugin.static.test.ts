@@ -1,9 +1,8 @@
 import Konva from "konva";
 import { describe, expect, test } from "vitest";
-import { Shape2dPlugin } from "../../../src/plugins/Shape2d.plugin";
+import { Shape2dPlugin, type IPluginContext } from "../../../src/plugins";
 import { CustomEvents } from "../../../src/custom-events";
 import { CanvasMode } from "../../../src/services/canvas/enum";
-import type { IPluginContext } from "../../../src/plugins/interface";
 import { createCanvasTestHarness, createMockDocHandle, flushCanvasEffects } from "../../test-setup";
 
 function createStageHost() {

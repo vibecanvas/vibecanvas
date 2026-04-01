@@ -1,10 +1,6 @@
 import Konva from "konva";
 import { afterEach, describe, expect, test, vi } from "vitest";
-import type { IPluginContext } from "../../../src/plugins/interface";
-import { IframeBrowserWidgetPlugin } from "../../../src/plugins/IframeBrowserWidget.plugin";
-import { RenderOrderPlugin } from "../../../src/plugins/RenderOrder.plugin";
-import { SceneHydratorPlugin } from "../../../src/plugins/SceneHydrator.plugin";
-import { SelectPlugin } from "../../../src/plugins/Select.plugin";
+import { IframeBrowserWidgetPlugin, RenderOrderPlugin, SceneHydratorPlugin, SelectPlugin, type IPluginContext } from "../../../src/plugins";
 import { CanvasMode } from "../../../src/services/canvas/enum";
 import {
   createCanvasTestHarness,

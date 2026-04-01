@@ -1,9 +1,5 @@
 import { describe, expect, test, beforeEach } from "vitest";
-import { SelectionStyleMenuPlugin } from "../../../src/plugins/SelectionStyleMenu.plugin";
-import { SelectPlugin } from "../../../src/plugins/Select.plugin";
-import { Shape1dPlugin } from "../../../src/plugins/Shape1d.plugin";
-import { Shape2dPlugin } from "../../../src/plugins/Shape2d.plugin";
-import { TextPlugin } from "../../../src/plugins/Text.plugin";
+import { SelectionStyleMenuPlugin, SelectPlugin, Shape1dPlugin, Shape2dPlugin, TextPlugin } from "../../../src/plugins";
 import { createCanvasTestHarness, flushCanvasEffects } from "../../test-setup";
 
 describe("SelectionStyleMenuPlugin", () => {

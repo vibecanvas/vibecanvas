@@ -1,7 +1,5 @@
 import Konva from "konva";
-import type { IPluginContext } from "../../src/plugins/interface";
-import { GroupPlugin } from "../../src/plugins/Group.plugin";
-import { Shape2dPlugin } from "../../src/plugins/Shape2d.plugin";
+import { GroupPlugin, Shape2dPlugin, type IPluginContext } from "../../src/plugins";
 
 /**
  * Scene 01: outer group with grouped children and one extra shape

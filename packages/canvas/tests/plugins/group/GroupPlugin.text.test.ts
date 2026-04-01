@@ -2,12 +2,7 @@ import Konva from "konva";
 import type { DocHandle } from "@automerge/automerge-repo";
 import type { TCanvasDoc } from "@vibecanvas/shell/automerge/index";
 import { describe, expect, test } from "vitest";
-import { GroupPlugin } from "../../../src/plugins/Group.plugin";
-import { SelectPlugin } from "../../../src/plugins/Select.plugin";
-import { Shape2dPlugin } from "../../../src/plugins/Shape2d.plugin";
-import { TextPlugin } from "../../../src/plugins/Text.plugin";
-import { TransformPlugin } from "../../../src/plugins/Transform.plugin";
-import type { IPluginContext } from "../../../src/plugins/interface";
+import { GroupPlugin, SelectPlugin, Shape2dPlugin, TextPlugin, TransformPlugin, type IPluginContext } from "../../../src/plugins";
 import { createCanvasTestHarness, createMockDocHandle, flushCanvasEffects } from "../../test-setup";
 
 describe("GroupPlugin – text integration", () => {

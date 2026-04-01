@@ -98,12 +98,8 @@ class MockWebSocket {
 
 vi.stubGlobal("WebSocket", MockWebSocket as unknown as typeof WebSocket);
 
-import type { IPluginContext } from "../../../src/plugins/interface";
 import { CustomEvents } from "../../../src/custom-events";
-import { HostedSolidWidgetPlugin } from "../../../src/plugins/HostedSolidWidget.plugin";
-import { RenderOrderPlugin } from "../../../src/plugins/RenderOrder.plugin";
-import { SceneHydratorPlugin } from "../../../src/plugins/SceneHydrator.plugin";
-import { TransformPlugin } from "../../../src/plugins/Transform.plugin";
+import { HostedSolidWidgetPlugin, RenderOrderPlugin, SceneHydratorPlugin, TransformPlugin, type IPluginContext } from "../../../src/plugins";
 import { CanvasMode } from "../../../src/services/canvas/enum";
 import {
   createCanvasTestHarness,
