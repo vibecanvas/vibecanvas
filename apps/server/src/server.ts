@@ -2,7 +2,7 @@
 // Initialize global functions (tExternal, tInternal, executeRollbacks)
 import { onError } from '@orpc/server';
 import { RPCHandler } from '@orpc/server/bun-ws';
-import { OpencodeService } from '@vibecanvas/shell/opencode/srv.opencode';
+import { PtyService } from '@vibecanvas/shell/pty/srv.pty';
 import db from "@vibecanvas/shell/database/db";
 import { existsSync } from 'fs';
 import { join, normalize } from 'path';
@@ -13,8 +13,7 @@ import { baseOs } from './orpc.base';
 import './preload/patch-negative-timeout';
 import { getServerVersion } from './runtime';
 import checkForUpgrade from './update';
-import { wsAdapter } from './automerge-repo';
-import { buildPtyConnectUrl } from './apis/api.opencode';
+import { initAutomergeRepo } from './automerge-repo';
 
 
 // Export API type for Eden client
@@ -60,23 +59,14 @@ type EmbeddedAssetsModule = {
   getSpaFallbackAsset(): string | null;
 };
 
-type TPtyProxyMessage = string | Buffer | ArrayBuffer | Uint8Array;
-
-function isPtyConnectPath(pathname: string): boolean {
-  return /^\/api\/opencode\/pty\/[^/]+\/connect$/.test(pathname);
+function isNativePtyConnectPath(pathname: string): boolean {
+  return /^\/api\/pty\/[^/]+\/connect$/.test(pathname);
 }
 
-function extractPtyIdFromPath(pathname: string): string | null {
-  const match = pathname.match(/^\/api\/opencode\/pty\/([^/]+)\/connect$/);
+function extractNativePtyIdFromPath(pathname: string): string | null {
+  const match = pathname.match(/^\/api\/pty\/([^/]+)\/connect$/);
   if (!match) return null;
   return decodeURIComponent(match[1]);
-}
-
-function asProxyMessage(message: string | Buffer | ArrayBuffer | Uint8Array): TPtyProxyMessage {
-  if (typeof message === 'string') return message;
-  if (message instanceof ArrayBuffer) return message;
-  if (message instanceof Uint8Array) return message;
-  return message as Buffer;
 }
 
 let getEmbeddedAsset = (_pathname: string): string | null => null;
@@ -108,10 +98,10 @@ function getPublicAssetPath(pathname: string): string | null {
 
 export async function startServer(options: StartServerOptions): Promise<void> {
   const { port: preferredPort } = options;
+  const { repo, wsAdapter } = initAutomergeRepo();
   const currentVersion = getServerVersion();
   const isWatchMode = process.execArgv.includes('--watch');
   let hasCheckedLatestVersion = false;
-  let hasClosedOpencodeServer = false;
   let isShuttingDown = false;
   let bunServer: ReturnType<typeof Bun.serve<WebSocketData>> | null = null;
 
@@ -152,37 +142,19 @@ export async function startServer(options: StartServerOptions): Promise<void> {
       .catch(() => { });
   }
 
-  let opencodeService!: OpencodeService
+  let ptyService!: PtyService
 
-  console.log('[Opencode] Starting OpenCode...')
-  try {
-    opencodeService = await OpencodeService.init()
-  } catch (err) {
-    console.error('[Opencode] init failed:', err)
-    throw err
-  }
+  ptyService = await PtyService.init()
 
-  const opencodeServerUrl = opencodeService.getServerUrl()
-  if (opencodeServerUrl) {
-    console.log(`[Opencode] OpenCode ready on ${opencodeServerUrl}`)
-  } else {
-    console.log('[Opencode] OpenCode ready')
-  }
-
-  const closeOpencodeServer = (signal?: NodeJS.Signals | 'exit') => {
-    try {
-      if (hasClosedOpencodeServer) return
-      if (isWatchMode && signal === 'SIGTERM') return
-      hasClosedOpencodeServer = true
-      opencodeService.closeServer()
-    } catch (error) {
-      console.error('[Opencode] close failed:', error)
-    }
-  }
-
-  const shutdownServer = () => {
+  const shutdownServer = async () => {
     if (isShuttingDown) return;
     isShuttingDown = true;
+
+    try {
+      await ptyService.shutdown('Server shutdown')
+    } catch (error) {
+      console.error('[PTY] shutdown failed:', error)
+    }
 
     try {
       bunServer?.stop();
@@ -194,15 +166,15 @@ export async function startServer(options: StartServerOptions): Promise<void> {
   }
 
   if (!isWatchMode) {
-    process.once('exit', () => closeOpencodeServer('exit'))
+    process.once('exit', () => {
+      void ptyService.shutdown('Process exit')
+    })
   }
   process.once('SIGINT', () => {
-    closeOpencodeServer('SIGINT')
-    shutdownServer()
+    void shutdownServer()
   })
   process.once('SIGTERM', () => {
-    closeOpencodeServer('SIGTERM')
-    shutdownServer()
+    void shutdownServer()
   })
 
   type WebSocketData = {
@@ -211,95 +183,95 @@ export async function startServer(options: StartServerOptions): Promise<void> {
     requestId: string;
   };
 
-  const ptyProxyConnections = new Map<unknown, {
-    backend: WebSocket;
-    queue: TPtyProxyMessage[];
+  const nativePtyConnections = new Map<unknown, {
+    send(payload: string | Buffer | ArrayBuffer | Uint8Array): void;
+    detach(): void;
   }>();
 
   const httpPort = serveWithPortFallback((port) => {
     bunServer = Bun.serve<WebSocketData>({
       port,
       async fetch(req, server) {
-      const url = new URL(req.url)
+        const url = new URL(req.url)
 
-       const isWebSocketEndpoint =
+        const isWebSocketEndpoint =
           url.pathname === '/api' ||
           url.pathname === '/automerge' ||
-          isPtyConnectPath(url.pathname)
-      if (isWebSocketEndpoint) {
-        if (server.upgrade(req, {
-          data: {
-            path: url.pathname,
-            query: url.search,
-            requestId: crypto.randomUUID(),
-          },
-        })) {
-          return
+          isNativePtyConnectPath(url.pathname)
+        if (isWebSocketEndpoint) {
+          if (server.upgrade(req, {
+            data: {
+              path: url.pathname,
+              query: url.search,
+              requestId: crypto.randomUUID(),
+            },
+          })) {
+            return
+          }
+
+          return new Response('Upgrade failed', { status: 500 })
         }
 
-        return new Response('Upgrade failed', { status: 500 })
-      }
+        if (req.method === 'GET' && url.pathname.startsWith('/files/')) {
+          const fileMeta = fileMetaFromPathname(url.pathname)
+          if (!fileMeta) {
+            return new Response('Not Found', { status: 404 })
+          }
 
-      if (req.method === 'GET' && url.pathname.startsWith('/files/')) {
-        const fileMeta = fileMetaFromPathname(url.pathname)
-        if (!fileMeta) {
-          return new Response('Not Found', { status: 404 })
-        }
+          const record = db.query.files.findFirst({
+            where: (table, { eq, and }) => and(
+              eq(table.id, fileMeta.id),
+              eq(table.format, fileMeta.format),
+            )
+          }).sync()
+          if (!record) {
+            return new Response('Not Found', { status: 404 })
+          }
 
-        const record = db.query.files.findFirst({
-          where: (table, { eq, and }) => and(
-            eq(table.hash, fileMeta.hash),
-            eq(table.format, fileMeta.format),
-          )
-        }).sync()
-        if (!record) {
-          return new Response('Not Found', { status: 404 })
-        }
+          const etag = `"${record.id}:${record.hash}"`
+          const ifNoneMatch = req.headers.get('if-none-match')
+          if (ifNoneMatch === etag) {
+            return new Response(null, {
+              status: 304,
+              headers: {
+                'ETag': etag,
+                'Cache-Control': 'public, max-age=31536000, immutable',
+              }
+            })
+          }
 
-        const etag = `"${record.hash}"`
-        const ifNoneMatch = req.headers.get('if-none-match')
-        if (ifNoneMatch === etag) {
-          return new Response(null, {
-            status: 304,
+          const bytes = Buffer.from(record.base64, 'base64')
+          return new Response(bytes, {
             headers: {
-              'ETag': etag,
+              'Content-Type': record.format,
               'Cache-Control': 'public, max-age=31536000, immutable',
+              'ETag': etag,
             }
           })
         }
 
-        const bytes = Buffer.from(record.base64, 'base64')
-        return new Response(bytes, {
-          headers: {
-            'Content-Type': record.format,
-            'Cache-Control': 'public, max-age=31536000, immutable',
-            'ETag': etag,
-          }
-        })
-      }
+        const embeddedAsset = getEmbeddedAsset(url.pathname)
+        if (embeddedAsset) {
+          return new Response(Bun.file(embeddedAsset))
+        }
 
-      const embeddedAsset = getEmbeddedAsset(url.pathname)
-      if (embeddedAsset) {
-        return new Response(Bun.file(embeddedAsset))
-      }
+        const publicAsset = getPublicAssetPath(url.pathname)
+        if (publicAsset) {
+          return new Response(Bun.file(publicAsset))
+        }
 
-      const publicAsset = getPublicAssetPath(url.pathname)
-      if (publicAsset) {
-        return new Response(Bun.file(publicAsset))
-      }
+        const spaFallbackAsset = getSpaFallbackAsset()
+        if (spaFallbackAsset) {
+          return new Response(Bun.file(spaFallbackAsset))
+        }
 
-      const spaFallbackAsset = getSpaFallbackAsset()
-      if (spaFallbackAsset) {
-        return new Response(Bun.file(spaFallbackAsset))
-      }
+        const publicSpaFallback = getPublicAssetPath('/')
+        if (publicSpaFallback) {
+          return new Response(Bun.file(publicSpaFallback))
+        }
 
-      const publicSpaFallback = getPublicAssetPath('/')
-      if (publicSpaFallback) {
-        return new Response(Bun.file(publicSpaFallback))
-      }
-
-      return new Response('Not Found', { status: 404 })
-    },
+        return new Response('Not Found', { status: 404 })
+      },
       websocket: {
         data: {} as WebSocketData,
         open(ws) {
@@ -314,13 +286,8 @@ export async function startServer(options: StartServerOptions): Promise<void> {
             };
             automergeConnections.set(ws, wrapper);
             wsAdapter.open(wrapper);
-          } else if (isPtyConnectPath(ws.data.path)) {
-            if (!opencodeService) {
-              ws.close(1013, 'OpenCode service not ready');
-              return;
-            }
-
-            const ptyID = extractPtyIdFromPath(ws.data.path);
+          } else if (isNativePtyConnectPath(ws.data.path)) {
+            const ptyID = extractNativePtyIdFromPath(ws.data.path);
             if (!ptyID) {
               ws.close(1008, 'Invalid PTY path');
               return;
@@ -333,54 +300,28 @@ export async function startServer(options: StartServerOptions): Promise<void> {
               return;
             }
 
-            const cursor = query.get('cursor') ?? undefined;
+            const rawCursor = query.get('cursor');
+            const cursor = rawCursor === null ? undefined : Number.parseInt(rawCursor, 10);
+            const attachment = ptyService.attach({
+              workingDirectory,
+              ptyID,
+              cursor: Number.isFinite(cursor) ? cursor : undefined,
+              send: (data) => {
+                if (ws.readyState !== WebSocket.OPEN) return;
+                ws.send(data);
+              },
+              close: (code, reason) => {
+                if (ws.readyState !== WebSocket.OPEN) return;
+                ws.close(code ?? 1000, reason ?? 'PTY closed');
+              },
+            });
 
-            let targetUrl: string;
-            try {
-              targetUrl = buildPtyConnectUrl({
-                opencodeService,
-                ptyID,
-                directory: workingDirectory,
-                cursor,
-              });
-            } catch {
-              ws.close(1011, 'Failed to build PTY target URL');
+            if (!attachment) {
+              ws.close(1008, 'PTY not found');
               return;
             }
 
-            const backend = new WebSocket(targetUrl);
-            backend.binaryType = 'arraybuffer';
-
-            const queue: TPtyProxyMessage[] = [];
-            ptyProxyConnections.set(ws, { backend, queue });
-
-            backend.onopen = () => {
-              const state = ptyProxyConnections.get(ws);
-              if (!state) return;
-
-              while (state.queue.length > 0 && backend.readyState === WebSocket.OPEN) {
-                const queued = state.queue.shift();
-                if (queued !== undefined) backend.send(queued);
-              }
-            };
-
-            backend.onmessage = (event) => {
-              if (ws.readyState !== WebSocket.OPEN) return;
-              ws.send(event.data as TPtyProxyMessage);
-            };
-
-            backend.onerror = () => {
-              if (ws.readyState === WebSocket.OPEN) {
-                ws.close(1011, 'PTY backend error');
-              }
-            };
-
-            backend.onclose = (event) => {
-              ptyProxyConnections.delete(ws);
-              if (ws.readyState === WebSocket.OPEN) {
-                ws.close(event.code || 1000, event.reason || 'PTY closed');
-              }
-            };
+            nativePtyConnections.set(ws, attachment);
           }
         },
         message(ws, message) {
@@ -388,8 +329,9 @@ export async function startServer(options: StartServerOptions): Promise<void> {
             void handler.message(ws, message, {
               context: {
                 db,
-                opencodeService,
+                ptyService,
                 requestId: ws.data.requestId,
+                repo
               },
             }).catch((error) => {
               console.error(error)
@@ -418,17 +360,10 @@ export async function startServer(options: StartServerOptions): Promise<void> {
             } catch (err) {
               console.error('[WS:automerge] adapter.message() error:', err);
             }
-          } else if (isPtyConnectPath(ws.data.path)) {
-            const state = ptyProxyConnections.get(ws);
+          } else if (isNativePtyConnectPath(ws.data.path)) {
+            const state = nativePtyConnections.get(ws);
             if (!state) return;
-
-            const payload = asProxyMessage(message as string | Buffer | ArrayBuffer | Uint8Array);
-
-            if (state.backend.readyState === WebSocket.OPEN) {
-              state.backend.send(payload);
-            } else {
-              state.queue.push(payload);
-            }
+            state.send(message as string | Buffer | ArrayBuffer | Uint8Array);
           }
         },
         pong(ws, data) {
@@ -449,17 +384,11 @@ export async function startServer(options: StartServerOptions): Promise<void> {
             if (!wrapper) return;
             wsAdapter.close(wrapper, code ?? 1000, reason ?? '');
             automergeConnections.delete(ws);
-          } else if (isPtyConnectPath(ws.data.path)) {
-            const state = ptyProxyConnections.get(ws);
+          } else if (isNativePtyConnectPath(ws.data.path)) {
+            const state = nativePtyConnections.get(ws);
             if (!state) return;
-            ptyProxyConnections.delete(ws);
-            try {
-              if (state.backend.readyState === WebSocket.OPEN || state.backend.readyState === WebSocket.CONNECTING) {
-                state.backend.close(code ?? 1000, reason ?? 'client closed');
-              }
-            } catch {
-              // ignore close propagation failures
-            }
+            nativePtyConnections.delete(ws);
+            state.detach();
           }
         },
       },

@@ -27,17 +27,17 @@ export function toPublicFileUrl(fileName: string): string {
   return `/files/${fileName}`;
 }
 
-export function fileMetaFromPathname(pathname: string): { hash: string; format: TImageFormat } | null {
+export function fileMetaFromPathname(pathname: string): { id: string; format: TImageFormat } | null {
   if (!pathname.startsWith("/files/")) return null;
   const fileName = pathname.slice("/files/".length);
-  const match = fileName.match(/^([a-f0-9]{64})\.(jpg|jpeg|png|gif|webp)$/i);
+  const match = fileName.match(/^([a-f0-9-]{36})\.(jpg|jpeg|png|gif|webp)$/i);
   if (!match?.[1] || !match?.[2]) return null;
 
-  const hash = match[1];
+  const id = match[1];
   const extension = match[2];
   if (!extension) return null;
   const format = formatFromExtension(extension);
   if (!format) return null;
 
-  return { hash, format };
+  return { id, format };
 }

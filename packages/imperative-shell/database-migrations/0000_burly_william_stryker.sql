@@ -1,4 +1,4 @@
-CREATE TABLE `agent_logs` (
+CREATE TABLE IF NOT EXISTS `agent_logs` (
 	`id` text PRIMARY KEY NOT NULL,
 	`canvas_id` text NOT NULL,
 	`session_id` text NOT NULL,
@@ -8,23 +8,23 @@ CREATE TABLE `agent_logs` (
 	FOREIGN KEY (`canvas_id`) REFERENCES `canvas`(`id`) ON UPDATE no action ON DELETE cascade
 );
 --> statement-breakpoint
-CREATE TABLE `automerge_repo_data` (
+CREATE TABLE IF NOT EXISTS `automerge_repo_data` (
 	`key` text PRIMARY KEY NOT NULL,
 	`updated_at` text DEFAULT (datetime()) NOT NULL,
 	`data` blob NOT NULL
 );
 --> statement-breakpoint
-CREATE INDEX `automerge_keys` ON `automerge_repo_data` (`key`);--> statement-breakpoint
-CREATE INDEX `automerge_updated_at` ON `automerge_repo_data` (`updated_at`);--> statement-breakpoint
-CREATE TABLE `canvas` (
+CREATE INDEX IF NOT EXISTS `automerge_keys` ON `automerge_repo_data` (`key`);--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS `automerge_updated_at` ON `automerge_repo_data` (`updated_at`);--> statement-breakpoint
+CREATE TABLE IF NOT EXISTS `canvas` (
 	`id` text PRIMARY KEY NOT NULL,
 	`name` text NOT NULL,
 	`automerge_url` text NOT NULL,
 	`created_at` integer DEFAULT (unixepoch()) NOT NULL
 );
 --> statement-breakpoint
-CREATE UNIQUE INDEX `canvas_name_unique` ON `canvas` (`name`);--> statement-breakpoint
-CREATE TABLE `chats` (
+CREATE UNIQUE INDEX IF NOT EXISTS `canvas_name_unique` ON `canvas` (`name`);--> statement-breakpoint
+CREATE TABLE IF NOT EXISTS `chats` (
 	`id` text PRIMARY KEY NOT NULL,
 	`canvas_id` text NOT NULL,
 	`title` text NOT NULL,
@@ -36,7 +36,7 @@ CREATE TABLE `chats` (
 	FOREIGN KEY (`canvas_id`) REFERENCES `canvas`(`id`) ON UPDATE no action ON DELETE cascade
 );
 --> statement-breakpoint
-CREATE TABLE `files` (
+CREATE TABLE IF NOT EXISTS `files` (
 	`id` text PRIMARY KEY NOT NULL,
 	`hash` text NOT NULL,
 	`format` text NOT NULL,
@@ -44,8 +44,8 @@ CREATE TABLE `files` (
 	`created_at` integer DEFAULT (unixepoch()) NOT NULL
 );
 --> statement-breakpoint
-CREATE UNIQUE INDEX `files_hash_unique` ON `files` (`hash`);--> statement-breakpoint
-CREATE TABLE `filetrees` (
+CREATE UNIQUE INDEX IF NOT EXISTS `files_hash_unique` ON `files` (`hash`);--> statement-breakpoint
+CREATE TABLE IF NOT EXISTS `filetrees` (
 	`id` text PRIMARY KEY NOT NULL,
 	`canvas_id` text NOT NULL,
 	`path` text NOT NULL,

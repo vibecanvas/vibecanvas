@@ -93,7 +93,7 @@ export async function runUpgrade(argv: readonly string[]): Promise<never> {
 Options:
   --check              Check for updates without installing
   --method <method>    Override install method (curl, npm, unknown)
-  --target-version <v> Target specific version
+  --target-version <v> Target specific version (leading "v" optional)
   --help, -h           Show this help message
 `);
     process.exit(0);

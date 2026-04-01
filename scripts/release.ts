@@ -13,10 +13,11 @@
 
 import path from "path"
 import { cpSync, existsSync, mkdirSync, readdirSync, rmSync } from "fs"
+import type { TReleaseChannel } from "./release-channel"
 
 type TReleaseManifest = {
   version: string
-  channel: "stable" | "beta" | "nightly"
+  channel: TReleaseChannel
   targets: Record<
     string,
     {
@@ -30,6 +31,8 @@ type TReleaseManifest = {
 
 type TArgs = {
   tag?: string
+  notesFile?: string
+  failIfExists: boolean
 }
 
 type TCmdResult = {
@@ -40,9 +43,18 @@ type TCmdResult = {
 
 function parseArgs(argv: string[]): TArgs {
   const inlineTag = argv.find((arg) => arg.startsWith("--tag="))?.slice("--tag=".length)
-  const index = argv.indexOf("--tag")
-  const flagTag = index >= 0 ? argv[index + 1] : undefined
-  return { tag: inlineTag ?? flagTag }
+  const tagIndex = argv.indexOf("--tag")
+  const flagTag = tagIndex >= 0 ? argv[tagIndex + 1] : undefined
+
+  const inlineNotesFile = argv.find((arg) => arg.startsWith("--notes-file="))?.slice("--notes-file=".length)
+  const notesFileIndex = argv.indexOf("--notes-file")
+  const flagNotesFile = notesFileIndex >= 0 ? argv[notesFileIndex + 1] : undefined
+
+  return {
+    tag: inlineTag ?? flagTag,
+    notesFile: inlineNotesFile ?? flagNotesFile,
+    failIfExists: argv.includes("--fail-if-exists"),
+  }
 }
 
 async function runCommand(command: string[], cwd: string): Promise<TCmdResult> {
@@ -172,6 +184,20 @@ async function generateReleaseNotes(rootDir: string, tag: string): Promise<strin
   return result.stdout
 }
 
+async function readReleaseNotes(notesFile: string): Promise<string> {
+  if (!existsSync(notesFile)) {
+    throw new Error(`Release notes file not found: ${notesFile}`)
+  }
+
+  const notes = await Bun.file(notesFile).text()
+  const trimmed = notes.trim()
+  if (!trimmed) {
+    throw new Error(`Release notes file is empty: ${notesFile}`)
+  }
+
+  return trimmed
+}
+
 export function stripAuthorAttribution(notes: string): string {
   const lines = notes.split("\n")
   const newContributorsIndex = lines.findIndex((line) =>
@@ -216,18 +242,22 @@ async function main() {
   const exists = await releaseExists(rootDir, tag)
 
   if (exists) {
+    if (args.failIfExists) {
+      throw new Error(`Release ${tag} already exists. Refusing to overwrite an existing release.`)
+    }
+
     console.log(`[release] Release ${tag} exists. Uploading assets with --clobber...`)
     const upload = await runCommand(["gh", "release", "upload", tag, ...assets, "--clobber"], rootDir)
     if (upload.exitCode !== 0) {
       throw new Error(`Failed to upload assets: ${upload.stderr || upload.stdout}`)
     }
   } else {
-    console.log(`[release] Generating release notes for ${tag}...`)
-    const rawNotes = await generateReleaseNotes(rootDir, tag)
-    const cleanedNotes = stripAuthorAttribution(rawNotes)
+    const cleanedNotes = args.notesFile
+      ? await readReleaseNotes(args.notesFile)
+      : stripAuthorAttribution(await generateReleaseNotes(rootDir, tag))
 
     console.log(`[release] Creating release ${tag} and uploading assets...`)
-    const createArgs = ["gh", "release", "create", tag, ...assets, "--title", tag, "--notes", cleanedNotes]
+    const createArgs = ["gh", "release", "create", tag, ...assets, "--title", tag, "--notes", cleanedNotes, "--verify-tag"]
     if (manifest.channel !== "stable") {
       createArgs.push("--prerelease")
     }

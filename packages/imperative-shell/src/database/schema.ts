@@ -27,17 +27,6 @@ export const canvas = sqliteTable("canvas", {
 
 export const ZCanvasSelect = createSelectSchema(canvas);
 
-export const chats = sqliteTable("chats", {
-  id: text("id").primaryKey(),
-  canvas_id: text("canvas_id").notNull().references(() => canvas.id, { onDelete: "cascade" }),
-  session_id: text("session_id").notNull(),
-  local_path: text("local_path").notNull(),
-  created_at: integer("created_at", { mode: "timestamp" }).notNull().default(sql`(unixepoch())`),
-  updated_at: integer("updated_at", { mode: "timestamp" }).notNull().default(sql`(unixepoch())`),
-});
-
-export const ZChatsSelect = createSelectSchema(chats);
-
 export const filetrees = sqliteTable("filetrees", {
   id: text("id").primaryKey(),
   canvas_id: text("canvas_id").notNull().references(() => canvas.id, { onDelete: "cascade" }),
@@ -53,11 +42,13 @@ export const ZFileTreeSelect = createSelectSchema(filetrees);
 
 export const files = sqliteTable("files", {
   id: text("id").primaryKey(),
-  hash: text("hash").notNull().unique(),
+  hash: text("hash").notNull(),
   format: text("format", { enum: ["image/jpeg", "image/png", "image/gif", "image/webp"] }).notNull(),
   base64: text("base64").notNull(),
   created_at: integer("created_at", { mode: "timestamp" }).notNull().default(sql`(unixepoch())`),
-});
+}, (table) => [
+  index("files_hash_idx").on(table.hash),
+]);
 
 export const ZFilesSelect = createSelectSchema(files);
 

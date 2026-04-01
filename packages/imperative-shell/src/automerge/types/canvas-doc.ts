@@ -2,7 +2,7 @@
  * CanvasDoc - Automerge CRDT Document Structure
  *
  * Design decisions:
- * - Unified `elements` collection (all types: rect, chat, filetree, etc.)
+ * - Unified `elements` collection (all types: rect, filetree, terminal, etc.)
  * - Fractional `zIndex` for conflict-free ordering (like Figma)
  * - First-class groups with `parentGroupId` for nesting
  * - Bindings with anchor points in target's local coordinates
@@ -20,8 +20,8 @@
  * Anchor is in the TARGET element's local coordinate space (0-1 normalized).
  *
  * @example
- * // Arrow attached to top-center of a chat
- * { targetId: "chat-123", anchor: { x: 0.5, y: 0 } }
+ * // Arrow attached to top-center of a hosted widget
+ * { targetId: "widget-123", anchor: { x: 0.5, y: 0 } }
  *
  * // Arrow attached to right-center of a rect
  * { targetId: "rect-456", anchor: { x: 1, y: 0.5 } }
@@ -42,7 +42,7 @@ export type TBaseElement = {
   id: string
   x: number
   y: number
-  angle: number
+  rotation: number
   zIndex: string              // Fractional index for ordering (lexicographic)
   parentGroupId: string | null      // Single parent group (groups nest via parentGroupId)
   bindings: TBinding[]        // Sticky connections with anchor points
@@ -146,15 +146,8 @@ export type TImageData = {
 }
 
 // ============================================================================
-// WIDGET TYPES (chat, filetree)
+// WIDGET TYPES (filetree, terminal, file, iframe-browser)
 // ============================================================================
-
-export type TChatData = {
-  type: 'chat'
-  w: number
-  h: number
-  isCollapsed: boolean
-}
 
 export type TFiletreeData = {
   type: 'filetree'
@@ -181,6 +174,21 @@ export type TFileData = {
   renderer: 'pdf' | 'image' | 'text' | 'code' | 'markdown' | 'audio' | 'video' | 'unknown'
 }
 
+export type TIframeBrowserTab = {
+  id: string
+  url: string
+  title: string
+}
+
+export type TIframeBrowserData = {
+  type: 'iframe-browser'
+  w: number
+  h: number
+  isCollapsed: boolean
+  tabs: TIframeBrowserTab[]
+  activeTabId: string
+}
+
 // ============================================================================
 // UNIFIED ELEMENT
 // ============================================================================
@@ -194,10 +202,10 @@ export type TElementData =
   | TPenData
   | TTextData
   | TImageData
-  | TChatData
   | TFiletreeData
   | TTerminalData
   | TFileData
+  | TIframeBrowserData
 
 export type TElementStyle = {
   backgroundColor?: string
@@ -220,9 +228,8 @@ export type TElement = TBaseElement & {
 
 export type TGroup = {
   id: string
-  name: string
-  color: string | null         // Optional group highlight color
   parentGroupId: string | null // For nested groups
+  zIndex: string               // Ordering token among siblings in the same parent
   locked: boolean              // Prevents editing of children
   createdAt: number
 }
@@ -254,7 +261,7 @@ export type TElementType = TElementData['type']
 export type TDrawingType = 'rect' | 'ellipse' | 'diamond' | 'arrow' | 'line' | 'pen' | 'text' | 'image'
 
 /** Widget types */
-export type TWidgetType = 'chat' | 'filetree' | 'terminal' | 'file'
+export type TWidgetType = 'filetree' | 'terminal' | 'file' | 'iframe-browser'
 
 /** Type guard for drawings */
 export function isDrawing(element: TElement): boolean {
@@ -264,7 +271,7 @@ export function isDrawing(element: TElement): boolean {
 
 /** Type guard for widgets */
 export function isWidget(element: TElement): boolean {
-  const widgetTypes: TWidgetType[] = ['chat', 'filetree', 'terminal', 'file']
+  const widgetTypes: TWidgetType[] = ['filetree', 'terminal', 'file', 'iframe-browser']
   return widgetTypes.includes(element.data.type as TWidgetType)
 }
 

@@ -175,7 +175,7 @@ async function runRawMode(args: TArgs): Promise<TProbeStats[]> {
 }
 
 async function runAutomergeMode(args: TArgs): Promise<TProbeStats[]> {
-  const spaDir = path.join(process.cwd(), "apps", "spa")
+  const frontendDir = path.join(process.cwd(), "apps", "frontend")
 
   const workerSource = `
 const patchKey = "__vibecanvas_negative_timeout_patch__";
@@ -279,7 +279,7 @@ process.exit(0);
       String(args.clients),
       args.verbose ? "1" : "0",
     ],
-    cwd: spaDir,
+    cwd: frontendDir,
     stdout: "pipe",
     stderr: "pipe",
     env: process.env,

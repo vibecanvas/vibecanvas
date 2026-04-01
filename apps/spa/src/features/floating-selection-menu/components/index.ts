@@ -1,5 +1,0 @@
-export { SelectionStyleMenu } from './SelectionStyleMenu'
-export { ColorPicker } from './ColorPicker'
-export { StrokeWidthPicker } from './StrokeWidthPicker'
-export { FontFamilyPicker } from './FontFamilyPicker'
-export { OpacitySlider } from './OpacitySlider'

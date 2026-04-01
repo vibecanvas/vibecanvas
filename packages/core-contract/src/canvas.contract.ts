@@ -1,17 +1,14 @@
 import { oc } from "@orpc/contract";
-import { ZCanvasSelect, ZChatsSelect, ZFileTreeSelect } from "@vibecanvas/shell/database/schema";
+import { ZCanvasSelect, ZFileTreeSelect } from "@vibecanvas/shell/database/schema";
 import { z } from "zod";
 
 const getCanvasByIdResponseSchema = z.object({
-  chats: ZChatsSelect.array(),
   canvas: ZCanvasSelect.array(),
   fileTrees: ZFileTreeSelect.array(),
 });
 
 const createCanvasInputSchema = z.object({
   name: z.string(),
-  path: z.string(),
-  automerge_url: z.string(),
 });
 
 const updateCanvasInputSchema = z.object({
@@ -37,5 +34,5 @@ export default oc.router({
 
   remove: oc
     .input(z.object({ params: z.object({ id: z.string() }) }))
-    .output(z.void()),
+    .output(ZCanvasSelect),
 });

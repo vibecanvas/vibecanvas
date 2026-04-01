@@ -147,22 +147,11 @@ async function assertWsOpen(url: string, timeoutMs: number): Promise<WebSocket> 
   )
 }
 
-async function assertHttpApi(baseUrl: string, timeoutMs: number): Promise<void> {
-  const response = await withTimeout(
-    fetch(`${baseUrl}/api/canvas/list`, {
-      method: "POST",
-      headers: {
-        "content-type": "application/json",
-      },
-      body: "{}",
-    }),
-    timeoutMs,
-    "fetch /api/canvas/list",
-  )
-
-  if (response.status === 404) {
-    throw new Error("HTTP /api route was not matched (404)")
-  }
+async function assertApiWebSocket(baseUrl: string, timeoutMs: number): Promise<void> {
+  const wsUrl = baseUrl.replace(/^http/, "ws") + "/api"
+  const rpcWs = await assertWsOpen(wsUrl, timeoutMs)
+  await Bun.sleep(250)
+  rpcWs.close(1000, "test done")
 }
 
 async function main() {
@@ -180,8 +169,7 @@ async function main() {
     stderr: "pipe",
     env: {
       ...process.env,
-      VIBECANVAS_HOME: tempConfigDir,
-      VIBECANVAS_CONFIG_DIR: tempConfigDir,
+      VIBECANVAS_CONFIG: tempConfigDir,
     },
   })
 
@@ -217,8 +205,8 @@ async function main() {
       console.log(`[test-binary] PASS asset ${assetUrl}`)
     }
 
-    await assertHttpApi(baseUrl, args.requestTimeoutMs)
-    console.log("[test-binary] PASS http /api")
+    await assertApiWebSocket(baseUrl, args.requestTimeoutMs)
+    console.log("[test-binary] PASS ws /api")
 
     const automergeWs = await assertWsOpen(`ws://127.0.0.1:${args.port}/automerge`, args.requestTimeoutMs)
     await Bun.sleep(250)

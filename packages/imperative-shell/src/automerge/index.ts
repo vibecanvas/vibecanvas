@@ -34,10 +34,11 @@ export type {
   TDrawingStyle,
   TDrawingType,
   // Widget data types
-  TChatData,
   TFiletreeData,
   TTerminalData,
   TFileData,
+  TIframeBrowserTab,
+  TIframeBrowserData,
   TWidgetType,
   // Geometry
   TPoint2D,

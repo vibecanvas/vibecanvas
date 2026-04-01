@@ -2,13 +2,14 @@ import { ORPCError } from "@orpc/contract";
 import { ctrlCreateFiletree } from "@vibecanvas/core/filetree/ctrl.create-filetree";
 import { ctrlDeleteFiletree } from "@vibecanvas/core/filetree/ctrl.delete-filetree";
 import { ctrlUpdateFiletree } from "@vibecanvas/core/filetree/ctrl.update-filetree";
-import { repo } from "@vibecanvas/server/automerge-repo";
+import { getRepo } from "@vibecanvas/server/automerge-repo";
 import { tExternal } from "@vibecanvas/server/error-fn";
 import { baseOs } from "../orpc.base";
 import { dbUpdatePublisher } from "./api.db";
 
 
 const create = baseOs.api.filetree.create.handler(async ({ input, context: { db } }) => {
+  const repo = getRepo();
   const [result, error] = await ctrlCreateFiletree({ db, repo }, {
     canvas_id: input.canvas_id,
     title: 'File Tree',

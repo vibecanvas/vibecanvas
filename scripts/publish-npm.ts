@@ -17,6 +17,7 @@
  * - --tag latest  -> default stable channel used by `npm i vibecanvas`
  * - --tag beta    -> opt-in channel used by `npm i vibecanvas@beta`
  * - --tag nightly -> opt-in channel used by `npm i vibecanvas@nightly`
+ * - if --tag is omitted, it is inferred from apps/vibecanvas/package.json version
  *
  * Usage examples:
  * - NPM_TOKEN=xxxx bun run scripts/publish-npm.ts
@@ -26,6 +27,7 @@
 
 import path from "path"
 import { unlinkSync } from "fs"
+import { inferNpmTagFromVersion, readWrapperVersion } from "./release-channel"
 
 type TReleaseManifest = {
   targets: Record<string, { packageName: string }>
@@ -65,7 +67,7 @@ function parseArgs(argv: string[]): TArgs {
   }
 
   const inlineTag = argv.find((arg) => arg.startsWith("--tag="))?.slice("--tag=".length)
-  const tag = inlineTag ?? get("--tag") ?? "latest"
+  const tag = inlineTag ?? get("--tag")
 
   const inlineConcurrency = argv.find((arg) => arg.startsWith("--concurrency="))?.slice("--concurrency=".length)
   const concurrencyRaw = inlineConcurrency ?? get("--concurrency") ?? "10"
@@ -85,7 +87,7 @@ function parseArgs(argv: string[]): TArgs {
   }
 
   return {
-    tag,
+    tag: tag ?? "",
     concurrency: concurrencyNum,
     includeWrapper: !argv.includes("--no-wrapper"),
   }
@@ -321,8 +323,13 @@ async function loadTasks(rootDir: string, includeWrapper: boolean): Promise<TPac
 }
 
 async function main() {
-  const args = parseArgs(process.argv.slice(2))
   const rootDir = path.join(path.dirname(new URL(import.meta.url).pathname), "..")
+  const version = await readWrapperVersion(rootDir)
+  const parsedArgs = parseArgs(process.argv.slice(2))
+  const args: TArgs = {
+    ...parsedArgs,
+    tag: parsedArgs.tag || inferNpmTagFromVersion(version),
+  }
 
   const authMode = resolvePublishAuthMode()
   console.log(`[publish] auth mode=${authMode}`)

@@ -15,7 +15,7 @@ function readConfigAutoupdate(): boolean | "notify" | undefined {
   const [configPathData] = txConfigPath({ fs: { existsSync, mkdirSync } }, { isCompiled });
   if (!configPathData) return undefined;
 
-  const configFilePath = join(configPathData.configDir, "config.json");
+  const configFilePath = join(configPathData.paths.configDir, "config.json");
   if (!existsSync(configFilePath)) return undefined;
 
   try {

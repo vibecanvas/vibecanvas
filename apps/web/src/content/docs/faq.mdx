@@ -4,48 +4,25 @@ description: Common questions about Vibecanvas.
 order: 3
 ---
 
-## What agents do you support?
+## What runtime do the terminal widgets use?
 
-Currently, Vibecanvas chat runs through **OpenCode**.
+Vibecanvas uses a built-in Bun PTY backend for terminal widgets.
 
-Install with:
+## What can the terminal access right now?
 
-```bash
-bun add -g opencode-ai
-```
-
-Then run `opencode` once to complete setup.
-
-## What can chat access right now?
-
-Today, chat can read your local project files through the chat path you choose.
+Terminal widgets run in your local project path and have access to the same files and tools available in that environment.
 
 Current limitations:
 
-- Chat does not see canvas elements directly yet.
-- Chat can still get visual context if you paste screenshots from your clipboard into chat.
+- Terminal sessions are kept in memory by the local server.
+- Sessions do not survive a full server restart yet.
+- Windows PTY support depends on Bun platform support.
 
-## Do my global OpenCode configs work in Vibecanvas?
+## Can the AI edit the canvas for me?
 
-Yes. Vibecanvas uses OpenCode sessions, so your global OpenCode setup is reused.
+Not yet. Right now the AI can help through chat and terminal-driven workflows, but it cannot directly edit the canvas itself.
 
-In practice, these global OpenCode features are valid in Vibecanvas chat:
-
-- Agents
-- Skills
-- Commands
-
-If they are available in your OpenCode CLI environment, they are generally available to sessions started by Vibecanvas.
-
-## Why does chat UI look simpler than OpenCode?
-
-The current chat UI does not expose every OpenCode capability yet.
-
-Examples:
-
-- Some OpenCode features are available in the runtime but not fully represented in the Vibecanvas chat interface.
-- The UI is focused on core prompt + streamed response workflows first.
-- Advanced OpenCode controls may be added to the UI in future releases.
+Direct AI canvas editing is planned and should arrive soon.
 
 ## How do I upgrade Vibecanvas?
 
@@ -55,6 +32,31 @@ Use the built-in CLI command:
 vibecanvas upgrade --check
 vibecanvas upgrade
 ```
+
+To install a specific version instead of the latest one:
+
+```bash
+vibecanvas --upgrade 0.2.0-beta.3
+```
+
+## How do I run Vibecanvas on a different port?
+
+Use the `serve` command with `--port`:
+
+```bash
+vibecanvas serve --port 3001
+```
+
+`vibecanvas` by itself also starts the `serve` command. For backward compatibility, a positional number is treated as the port too.
+
+## How do I see the CLI help or version?
+
+```bash
+vibecanvas --help
+vibecanvas --version
+```
+
+You can also use the short flags `-h` and `-v`.
 
 ## Where can I ask questions or share feedback?
 
