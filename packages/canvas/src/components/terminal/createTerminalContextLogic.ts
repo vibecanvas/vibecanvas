@@ -104,6 +104,7 @@ export function createTerminalContextLogic(args: TCreateTerminalContextArgs) {
   let sizePushTimer: ReturnType<typeof setTimeout> | null = null;
   let term: TGhosttyTerminalInstance | null = null;
   let connection: ReturnType<typeof ptyService.connect> | null = null;
+  let pendingInputBuffer = "";
   let hasAuthoritativeCursor = false;
   let activeMountSessionId = 0;
   let bootstrappedMountSessionId = 0;
@@ -216,6 +217,13 @@ export function createTerminalContextLogic(args: TCreateTerminalContextArgs) {
     });
     connection.close();
     connection = null;
+  };
+
+  const flushPendingInput = () => {
+    if (!pendingInputBuffer) return;
+    if (!connection || connection.socket.readyState !== WebSocket.OPEN) return;
+    connection.send(pendingInputBuffer);
+    pendingInputBuffer = "";
   };
 
   const restartFrontend = async () => {
@@ -375,6 +383,7 @@ export function createTerminalContextLogic(args: TCreateTerminalContextArgs) {
         if (!canControlTerminal(mountSessionId)) return;
         setStatus("connected");
         setErrorMessage(null);
+        flushPendingInput();
         debugTerminalLifecycle("pty websocket opened", { ptyID, cursor: cursorValue });
       },
       onClose: () => {
@@ -637,7 +646,12 @@ export function createTerminalContextLogic(args: TCreateTerminalContextArgs) {
 
   const handleTerminalData = (data: string) => {
     if (!isTerminalOwner()) return;
-    connection?.send(data);
+    if (!connection || connection.socket.readyState !== WebSocket.OPEN) {
+      pendingInputBuffer += data;
+      return;
+    }
+
+    connection.send(data);
   };
 
   const handleTerminalResize = (next: { cols: number; rows: number }, sourceTerm?: TGhosttyTerminalInstance | null) => {

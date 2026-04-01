@@ -498,6 +498,7 @@ Terminal reload behavior:
 - the hosted terminal header exposes a reload button owned by `HostedSolidWidgetPlugin`
 - reload remounts the frontend terminal subtree and reconnects to the existing PTY session without deleting the backend PTY
 - standalone `TerminalWidget` also exposes a reload control through the same terminal context logic
+- terminal text insertion requested before the PTY websocket is open is buffered and flushed on connect so early drag/drop path insertion is not lost during mount or reconnect timing
 
 #### Hosted filetree runtime
 
@@ -506,6 +507,9 @@ The filetree is also package-owned under `packages/canvas/src/components/filetre
 - `FiletreeHostedWidget.tsx` adapts a hosted `filetree` element into the shared filetree UI
 - `FiletreeWidget.tsx` owns the filetree controls, nested tree rendering, and drag/drop affordances
 - `createFiletreeContextLogic.ts` owns backend row loading, directory traversal, lazy folder expansion, and watch/unwatch lifecycle
+- dragging a filetree node onto blank canvas still creates a hosted file/filetree element, but dropping onto a hosted terminal now inserts the node path into that terminal as shell-escaped text instead of creating a new canvas element
+- after a successful filetree-to-terminal drop, the canvas also moves widget selection/focus to that terminal and focuses the terminal input so the user can continue typing without an extra click
+- hosted terminal drop routing is geometry-based at the canvas plugin layer, not focus-based; this matters because the terminal cannot already own focus while the user is dragging out of the filetree
 - like terminal, visible filetree positioning after reload is a plugin projection concern first and a widget layout concern second
 
 #### `SceneHydratorPlugin`

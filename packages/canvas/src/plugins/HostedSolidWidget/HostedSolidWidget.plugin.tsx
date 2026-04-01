@@ -19,6 +19,7 @@ import {
   isHostedType,
   parseDroppedNode,
   screenToWorld,
+  toShellEscapedPathText,
 } from "./HostedSolidWidget.helpers";
 import { createHostedWidgetMount } from "./HostedSolidWidget.mount";
 import { createHostedNode, hostedNodeToElement, isHostedNode, updateHostedNode } from "./HostedSolidWidget.node";
@@ -99,6 +100,9 @@ export class HostedSolidWidgetPlugin implements IPlugin {
       if (!node) return;
 
       event.preventDefault();
+
+      if (this.tryDropIntoTerminal(context, event, node.path)) return;
+
       const point = screenToWorld(context, { x: event.clientX, y: event.clientY });
 
       if (node.is_dir) {
@@ -124,6 +128,33 @@ export class HostedSolidWidgetPlugin implements IPlugin {
       container.removeEventListener("dragover", onDragOver);
       container.removeEventListener("drop", onDrop);
     });
+  }
+
+  private tryDropIntoTerminal(context: IPluginContext, event: DragEvent, path: string) {
+    const mount = this.findTerminalMountAtPoint(event.clientX, event.clientY);
+    if (!mount) return false;
+
+      const insertedText = toShellEscapedPathText(path);
+    context.setState("mode", CanvasMode.SELECT);
+    context.hooks.customEvent.call(CustomEvents.TOOL_SELECT, "select");
+    context.setState("selection", [mount.node]);
+    context.setState("focusedId", mount.node.id());
+    mount.focus();
+    mount.insertText(insertedText);
+    return true;
+  }
+
+  private findTerminalMountAtPoint(clientX: number, clientY: number) {
+    const mounts = [...this.#mounts.values()].filter((candidate) => candidate.node.getAttr(HOSTED_ELEMENT_ATTR)?.data?.type === "terminal");
+
+    for (let index = mounts.length - 1; index >= 0; index -= 1) {
+      const mount = mounts[index];
+      const rect = mount.mountElement.getBoundingClientRect();
+      const hit = clientX >= rect.left && clientX <= rect.right && clientY >= rect.top && clientY <= rect.bottom;
+      if (hit) return mount;
+    }
+
+    return null;
   }
 
   private setupCapabilities(context: IPluginContext) {

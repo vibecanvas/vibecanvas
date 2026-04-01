@@ -20,6 +20,10 @@ export type TMountRecord = {
   setWindowChrome: (chrome: THostedWidgetChrome | null) => void;
   beforeRemove: () => void | Promise<void>;
   setBeforeRemove: (handler: (() => void | Promise<void>) | null) => void;
+  focus: () => void;
+  setFocus: (handler: (() => void) | null) => void;
+  insertText: (text: string) => void;
+  setInsertText: (handler: ((text: string) => void) | null) => void;
   setAutoSize: (handler: ((size: { width: number; height: number }) => void) | null) => void;
 };
 

@@ -87,6 +87,7 @@ Use the leaf files for execution history and local context.
 ## A dditions
 - [ ]: [A1](a/A1.md) - file: support common CodeMirror languages
 - [ ]: [A2] - add inline text support to diamond and ellipse
+- [ ]: [A3] - copy paste elements/groups
 
 ## S ubtractions
 - [ ]: [S1](s/S1.md) - double bun run dev -> find new port

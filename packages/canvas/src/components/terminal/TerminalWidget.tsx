@@ -13,6 +13,8 @@ type TTerminalWidgetProps = {
   setWindowChrome?: (chrome: THostedWidgetChrome | null) => void;
   registerBeforeRemove?: (handler: (() => void | Promise<void>) | null) => void;
   registerReload?: (handler: (() => void | Promise<void>) | null) => void;
+  registerFocus?: (handler: (() => void) | null) => void;
+  registerInsertText?: (handler: ((text: string) => void) | null) => void;
 };
 
 export function TerminalWidget(props: TTerminalWidgetProps) {
@@ -33,6 +35,15 @@ export function TerminalWidget(props: TTerminalWidgetProps) {
     props.registerReload?.(() => terminalLogic.restartFrontend().then(() => {
       setMountRevision((value) => value + 1);
     }));
+    props.registerFocus?.(() => {
+      clearFocusRetryTimers();
+      rootRef?.focus({ preventScroll: true });
+      focusTerminalInputSurface();
+    });
+    props.registerInsertText?.((text) => {
+      focusTerminalInputSurface();
+      terminalLogic.handleTerminalData(text);
+    });
   }
 
   const clearFocusRetryTimers = () => {
@@ -60,6 +71,8 @@ export function TerminalWidget(props: TTerminalWidgetProps) {
     props.setWindowChrome?.(null);
     props.registerBeforeRemove?.(null);
     props.registerReload?.(null);
+    props.registerFocus?.(null);
+    props.registerInsertText?.(null);
   });
 
   createEffect(() => {

@@ -48,6 +48,10 @@ export function parseDroppedNode(event: DragEvent): TDroppedNode | null {
   }
 }
 
+export function toShellEscapedPathText(path: string): string {
+  return `'${path.replaceAll("'", `'\\''`)}' `;
+}
+
 export function createFileElementFromDrop(
   runtime: THostedWidgetFactoryRuntime = defaultFactoryRuntime,
   payload: { id?: string; x: number; y: number; path: string },

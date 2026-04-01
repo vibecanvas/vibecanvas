@@ -7,6 +7,8 @@ All notable changes to this project will be documented in this file.
 ### Fixed
 - Persisted native canvas drag position updates for hosted widgets and iframe browser widgets so reload restores the latest location.
 - Fixed selection style menu updates so dragging a stylable element or group and then changing color/width/font/curve no longer snaps it back to its pre-drag position.
+- Fixed broken TypeScript typings
+- Fixed filetree-to-terminal drops so dropping a file or folder onto a hosted terminal inserts the shell-escaped path, focuses the terminal, and keeps blank-canvas drops creating hosted widgets.
 ### Refactor
 - Restructured plugins into subfolders
 

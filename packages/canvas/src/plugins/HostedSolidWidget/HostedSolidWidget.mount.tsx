@@ -31,6 +31,8 @@ export function createHostedWidgetMount(
   const [currentElement, setCurrentElement] = createSignal(payload.element);
   const [windowChrome, setWindowChrome] = createSignal<THostedWidgetChrome | null>(null);
   const [beforeRemove, setBeforeRemove] = createSignal<(() => void | Promise<void>) | null>(null);
+  const [focus, setFocus] = createSignal<(() => void) | null>(null);
+  const [insertText, setInsertText] = createSignal<((text: string) => void) | null>(null);
   const [autoSize, setAutoSize] = createSignal<((size: { width: number; height: number }) => void) | null>(null);
 
   const dispose = render(() => {
@@ -100,6 +102,8 @@ export function createHostedWidgetMount(
             safeClient={context.capabilities.terminal?.safeClient}
             setWindowChrome={(chrome) => setWindowChrome(() => chrome)}
             registerBeforeRemove={(handler) => setBeforeRemove(() => handler)}
+            registerFocus={(handler) => setFocus(() => handler)}
+            registerInsertText={(handler) => setInsertText(() => handler)}
           />
         </Show>
       </HostedWidgetShell>
@@ -114,6 +118,10 @@ export function createHostedWidgetMount(
     setWindowChrome: (nextWindowChrome) => setWindowChrome(() => nextWindowChrome),
     beforeRemove: () => beforeRemove()?.(),
     setBeforeRemove: (handler) => setBeforeRemove(() => handler),
+    focus: () => focus()?.(),
+    setFocus: (handler) => setFocus(() => handler),
+    insertText: (text) => insertText()?.(text),
+    setInsertText: (handler) => setInsertText(() => handler),
     setAutoSize: (handler) => setAutoSize(() => handler),
   };
 
