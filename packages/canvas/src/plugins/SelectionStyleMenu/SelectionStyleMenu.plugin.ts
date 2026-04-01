@@ -85,14 +85,14 @@ export class SelectionStyleMenuPlugin implements IPlugin {
           sections,
           values,
           colorStorageKey: "canvas-selection-style-menu",
-          onFillChange: (color) => this.applyStyleChange(context, resolved(), "fill", color),
-          onStrokeChange: (color) => this.applyStyleChange(context, resolved(), "stroke", color),
-          onStrokeWidthChange: (width) => this.applyStyleChange(context, resolved(), "strokeWidth", width),
-          onOpacityChange: (opacity) => this.applyStyleChange(context, resolved(), "opacity", opacity),
-          onFontFamilyChange: (fontFamily) => this.applyStyleChange(context, resolved(), "fontFamily", fontFamily),
-          onLineTypeChange: (lineType) => this.applyStyleChange(context, resolved(), "lineType", lineType),
-          onStartCapChange: (capStyle) => this.applyStyleChange(context, resolved(), "startCap", capStyle),
-          onEndCapChange: (capStyle) => this.applyStyleChange(context, resolved(), "endCap", capStyle),
+          onFillChange: (color) => this.applyStyleChange(context, "fill", color),
+          onStrokeChange: (color) => this.applyStyleChange(context, "stroke", color),
+          onStrokeWidthChange: (width) => this.applyStyleChange(context, "strokeWidth", width),
+          onOpacityChange: (opacity) => this.applyStyleChange(context, "opacity", opacity),
+          onFontFamilyChange: (fontFamily) => this.applyStyleChange(context, "fontFamily", fontFamily),
+          onLineTypeChange: (lineType) => this.applyStyleChange(context, "lineType", lineType),
+          onStartCapChange: (capStyle) => this.applyStyleChange(context, "startCap", capStyle),
+          onEndCapChange: (capStyle) => this.applyStyleChange(context, "endCap", capStyle),
         });
       }, mountElement);
     });
@@ -197,10 +197,10 @@ export class SelectionStyleMenuPlugin implements IPlugin {
 
   private applyStyleChange(
     context: IPluginContext,
-    resolved: TResolvedSelection,
     property: TStylableProperty,
     value: string | number,
   ) {
+    const resolved = this.getResolvedSelection(context);
     const beforeElements = resolved.elements.map((element) => structuredClone(element));
     const supplementalBeforeElements = new Map<string, TElement>();
     const afterElements = resolved.elements.flatMap((element) => {

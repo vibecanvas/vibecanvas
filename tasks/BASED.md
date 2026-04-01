@@ -82,7 +82,7 @@ Use the leaf files for execution history and local context.
 - [x]: [B7](b/B7.md) - iframe browser: click can latch canvas drag and trap release
 - [x]: [B8](b/B8.md) - hosted widgets: transformer resize loses control when pointer crosses DOM
 - [x]: [B9](b/B9.md) - hosted/iframe widgets: canvas drag not persisted on reload
-- [ ]: [B10](b/B10.md) - style menu: drag then style jumps selection back to old position
+- [x]: [B10](b/B10.md) - style menu: drag then style jumps selection back to old position
 
 ## A dditions
 - [ ]: [A1](a/A1.md) - file: support common CodeMirror languages
@@ -102,6 +102,7 @@ Use the leaf files for execution history and local context.
 - [x]: [S13](s/S13.md) - canvas plugins: folder-per-plugin refactor plan
 - [x]: [S14](s/S14.md) - canvas: keep recorder plugin in development only
 - [x]: [S15] - inline text support -> fix position (use pretext lib?)
+- [ ]: [S16](s/S16.md) - canvas: fix broken TypeScript typings in packages/canvas
 
 ## E xplorations
 - [ ]: [E1](e/E1.md) - Tauri Research
