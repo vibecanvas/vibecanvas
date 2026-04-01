@@ -105,6 +105,7 @@ Use the leaf files for execution history and local context.
 - [ ]: [E5](e/E5.md) - how to implement state machine system?
 - [ ]: [E6](e/E6.md) - should we include a task management
 - [ ]: [E7](e/E7.md) - should we include heartbeat
+- [ ]: [E8](e/E8.md) - canvas CLI: query/edit surface exploration
 
 ## D irections
 - [ ]: [D1](d/D1.md) - AI can edit the canvas directly
