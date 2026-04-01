@@ -20,7 +20,8 @@ import type { IState } from "./interface";
 import { History } from "./History";
 
 export function defaultPlugins(
-  args: { onToggleSidebar: () => void }
+  args: { onToggleSidebar: () => void },
+  env: Pick<ImportMetaEnv, "DEV"> = import.meta.env,
 ): IPlugin[] {
   const groupPlugin = new GroupPlugin();
   const plugins = [
@@ -32,7 +33,6 @@ export function defaultPlugins(
     new ToolbarPlugin(args.onToggleSidebar),
     new SelectionStyleMenuPlugin(),
     new HelpPlugin(),
-    new RecorderPlugin(),
     new RenderOrderPlugin(),
     new SelectPlugin(),
     new TransformPlugin(),
@@ -48,6 +48,10 @@ export function defaultPlugins(
     // new ExampleScenePlugin(groupPlugin)
     new SceneHydratorPlugin()
   ];
+
+  if (env.DEV) {
+    plugins.splice(8, 0, new RecorderPlugin());
+  }
 
   return plugins
 }

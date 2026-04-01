@@ -283,7 +283,7 @@ The runtime uses lightweight tapable-style hooks from `packages/canvas/src/tapab
 4. `HistoryControlPlugin`
 5. `ToolbarPlugin`
 6. `HelpPlugin`
-7. `RecorderPlugin`
+7. `RecorderPlugin` *(development only; mounted beside help when `import.meta.env.DEV` is true)*
 8. `SelectPlugin`
 9. `TransformPlugin`
 10. `Shape1dPlugin`
@@ -298,6 +298,7 @@ Important notes:
 - `ExampleScenePlugin` still exists, but it is not part of the default runtime anymore.
 - `SceneHydratorPlugin` is the current startup path for real document content.
 - `HostedSolidWidgetPlugin` is the package-owned path for `terminal` and `filetree` document elements.
+- production builds omit `RecorderPlugin`, so recorder UI, event capture, and CRDT monkeypatching stay out of the shipped runtime.
 
 ### Plugin responsibilities
 
@@ -358,9 +359,9 @@ Planned layout note:
 
 #### `RecorderPlugin`
 
-Owns test recording controls and runtime event capture.
+Owns development-only test recording controls and runtime event capture.
 
-- mounts a compact recorder UI into the stage container beside `HelpPlugin` in the bottom-right corner
+- mounts a compact recorder UI into the stage container beside `HelpPlugin` in the bottom-right corner during development only
 - exposes start, stop, clear, and export actions for test recordings
 - records minimal replay data instead of raw browser event dumps
 - captures the initial document snapshot used to boot the scene
@@ -776,7 +777,7 @@ Planned extension for regression recordings:
 
 Current implementation status:
 
-- `RecorderPlugin` is implemented and mounted in the default plugin stack
+- `RecorderPlugin` is implemented and mounted only in the development default plugin stack
 - a focused `RecorderPlugin.test.ts` verifies the recorder UI, reduced-events default/toggle, filtered pointermove capture, keyboard capture, CRDT capture, and export wiring
 
 ### Planned recording format
@@ -1094,7 +1095,7 @@ flowchart TD
   D --> J[Install default plugins]
 
   J --> K[EventListenerPlugin publishes hooks]
-  J --> K2[RecorderPlugin mounts bottom-right recorder UI]
+  J --> K2[DEV only: RecorderPlugin mounts bottom-right recorder UI]
   J --> L[Shape1d, Shape2d, Text, and Group plugins register capabilities]
   J --> L2[HostedSolidWidgetPlugin registers terminal and filetree widget runtime]
   J --> M[SceneHydratorPlugin initAsync load]

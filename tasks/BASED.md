@@ -97,7 +97,7 @@ Use the leaf files for execution history and local context.
 - [x]: [S10](s/S10.md) - reverse websocket to orpc
 - [x]: [S12](s/S12.md) - refactor: konvajs
 - [ ]: [S13](s/S13.md) - canvas plugins: folder-per-plugin refactor plan
-- [ ]: [S14](s/S14.md) - canvas: keep recorder plugin in development only
+- [x]: [S14](s/S14.md) - canvas: keep recorder plugin in development only
 
 ## E xplorations
 - [ ]: [E1](e/E1.md) - Tauri Research
