@@ -708,12 +708,42 @@ export class HostedSolidWidgetPlugin implements IPlugin {
   }
 
   private setupNodeListeners(context: IPluginContext, node: Konva.Rect) {
+    let originalElement: TElement | null = null;
+
     node.on("destroy", () => {
       this.unmountWidget(node.id());
     });
 
+    node.on("dragstart", () => {
+      originalElement = structuredClone(this.toElement(node));
+    });
+
     node.on("dragmove transform", () => {
       this.syncMountedNode(node);
+    });
+
+    node.on("dragend", () => {
+      const beforeElement = originalElement ? structuredClone(originalElement) : null;
+      const afterElement = structuredClone(this.toElement(node));
+      originalElement = null;
+
+      context.crdt.patch({ elements: [afterElement], groups: [] });
+      if (!beforeElement) return;
+
+      const didMove = beforeElement.x !== afterElement.x || beforeElement.y !== afterElement.y;
+      if (!didMove) return;
+
+      context.history.record({
+        label: "drag-hosted-widget",
+        undo: () => {
+          context.capabilities.updateShapeFromTElement?.(beforeElement);
+          context.crdt.patch({ elements: [beforeElement], groups: [] });
+        },
+        redo: () => {
+          context.capabilities.updateShapeFromTElement?.(afterElement);
+          context.crdt.patch({ elements: [afterElement], groups: [] });
+        },
+      });
     });
 
     node.on("pointerclick", (event) => {

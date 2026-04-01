@@ -425,4 +425,50 @@ describe("IframeBrowserWidgetPlugin", () => {
     await flushCanvasEffects();
     harness.destroy();
   });
+
+  test("native Konva drag persists iframe browser position across reload", async () => {
+    const docHandle = createMockDocHandle({
+      elements: {
+        browser1: createBrowserElement(),
+      },
+    });
+
+    const harness = await createCanvasTestHarness({
+      docHandle,
+      plugins: [new RenderOrderPlugin(), new IframeBrowserWidgetPlugin(), new SceneHydratorPlugin()],
+    });
+
+    await flushCanvasEffects();
+
+    const node = harness.staticForegroundLayer.findOne("#browser1") as Konva.Rect | null;
+    expect(node).not.toBeNull();
+
+    node!.fire("dragstart", { target: node, currentTarget: node, evt: new MouseEvent("dragstart", { bubbles: true }) });
+    node!.position({ x: 170, y: 190 });
+    node!.fire("dragmove", { target: node, currentTarget: node, evt: new MouseEvent("dragmove", { bubbles: true }) });
+    node!.fire("dragend", { target: node, currentTarget: node, evt: new MouseEvent("dragend", { bubbles: true }) });
+
+    await flushCanvasEffects();
+
+    expect(node!.x()).toBe(170);
+    expect(node!.y()).toBe(190);
+    expect(docHandle.doc().elements.browser1?.x).toBe(170);
+    expect(docHandle.doc().elements.browser1?.y).toBe(190);
+
+    harness.destroy();
+
+    const reloadedHarness = await createCanvasTestHarness({
+      docHandle,
+      plugins: [new RenderOrderPlugin(), new IframeBrowserWidgetPlugin(), new SceneHydratorPlugin()],
+    });
+
+    await flushCanvasEffects();
+
+    const reloadedNode = reloadedHarness.staticForegroundLayer.findOne("#browser1") as Konva.Rect | null;
+    expect(reloadedNode).not.toBeNull();
+    expect(reloadedNode!.x()).toBe(170);
+    expect(reloadedNode!.y()).toBe(190);
+
+    reloadedHarness.destroy();
+  });
 });

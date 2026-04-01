@@ -1637,4 +1637,63 @@ describe("HostedSolidWidgetPlugin", () => {
       vi.useRealTimers();
     }
   });
+
+  test("native Konva drag persists hosted widget position across reload", async () => {
+    const docHandle = createMockDocHandle({
+      elements: {
+        terminal1: {
+          id: "terminal1",
+          x: 100,
+          y: 120,
+          rotation: 0,
+          zIndex: "z00000001",
+          parentGroupId: null,
+          bindings: [],
+          locked: false,
+          createdAt: 1,
+          updatedAt: 1,
+          style: {},
+          data: { type: "terminal", w: 320, h: 220, isCollapsed: false, workingDirectory: "." },
+        },
+      },
+    });
+
+    const harness = await createCanvasTestHarness({
+      docHandle,
+      plugins: [new RenderOrderPlugin(), new HostedSolidWidgetPlugin(), new SceneHydratorPlugin()],
+    });
+
+    await flushCanvasEffects();
+
+    const node = harness.staticForegroundLayer.findOne("#terminal1") as Konva.Rect | null;
+    expect(node).not.toBeNull();
+
+    node!.fire("dragstart", { target: node, currentTarget: node, evt: new MouseEvent("dragstart", { bubbles: true }) });
+    node!.position({ x: 170, y: 190 });
+    node!.fire("dragmove", { target: node, currentTarget: node, evt: new MouseEvent("dragmove", { bubbles: true }) });
+    node!.fire("dragend", { target: node, currentTarget: node, evt: new MouseEvent("dragend", { bubbles: true }) });
+
+    await flushCanvasEffects();
+
+    expect(node!.x()).toBe(170);
+    expect(node!.y()).toBe(190);
+    expect(docHandle.doc().elements.terminal1?.x).toBe(170);
+    expect(docHandle.doc().elements.terminal1?.y).toBe(190);
+
+    harness.destroy();
+
+    const reloadedHarness = await createCanvasTestHarness({
+      docHandle,
+      plugins: [new RenderOrderPlugin(), new HostedSolidWidgetPlugin(), new SceneHydratorPlugin()],
+    });
+
+    await flushCanvasEffects();
+
+    const reloadedNode = reloadedHarness.staticForegroundLayer.findOne("#terminal1") as Konva.Rect | null;
+    expect(reloadedNode).not.toBeNull();
+    expect(reloadedNode!.x()).toBe(170);
+    expect(reloadedNode!.y()).toBe(190);
+
+    reloadedHarness.destroy();
+  });
 });

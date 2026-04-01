@@ -81,6 +81,7 @@ Use the leaf files for execution history and local context.
 - [x]: [B4](b/B4.md) - update progress cli not moving
 - [x]: [B7](b/B7.md) - iframe browser: click can latch canvas drag and trap release
 - [x]: [B8](b/B8.md) - hosted widgets: transformer resize loses control when pointer crosses DOM
+- [x]: [B9](b/B9.md) - hosted/iframe widgets: canvas drag not persisted on reload
 
 ## A dditions
 - [ ]: [A1](a/A1.md) - file: support common CodeMirror languages

@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## 0.2.1
+
+### Fixed
+- Persisted native canvas drag position updates for hosted widgets and iframe browser widgets so reload restores the latest location.
+- Added regression coverage for hosted widget and iframe browser Konva drag persistence.
+
 ## 0.2.0
 
 ### Removed
