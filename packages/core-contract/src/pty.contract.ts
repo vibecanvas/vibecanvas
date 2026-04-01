@@ -68,7 +68,7 @@ export default oc.router({
 
   get: oc
     .input(ptyPathInputSchema)
-    .output(zPty),
+    .output(zPty.nullable()),
 
   update: oc
     .input(ptyUpdateInputSchema)

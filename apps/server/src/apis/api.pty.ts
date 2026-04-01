@@ -10,9 +10,7 @@ const create = baseOs.api.pty.create.handler(async ({ input, context: { ptyServi
 });
 
 const get = baseOs.api.pty.get.handler(async ({ input, context: { ptyService } }) => {
-  const pty = ptyService.get(input.workingDirectory, input.path.ptyID);
-  if (!pty) throw new ORPCError("NOT_FOUND", { message: "PTY not found" });
-  return pty;
+  return ptyService.get(input.workingDirectory, input.path.ptyID) ?? null;
 });
 
 const update = baseOs.api.pty.update.handler(async ({ input, context: { ptyService } }) => {

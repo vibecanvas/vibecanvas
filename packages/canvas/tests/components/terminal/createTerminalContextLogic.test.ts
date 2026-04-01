@@ -224,6 +224,69 @@ describe("createTerminalContextLogic", () => {
     dispose();
   });
 
+  test("missing restored pty silently clears stale state and creates a fresh pty", async () => {
+    storage.set("vibecanvas-terminal-session:terminal-1", JSON.stringify({
+      terminalKey: "terminal-1",
+      workingDirectory: ".",
+      ptyID: "pty-missing",
+      cursor: 321,
+      rows: 24,
+      cols: 80,
+      title: "Terminal",
+      scrollY: 0,
+    }));
+
+    const safeClient = createTerminalSafeClientMock();
+    safeClient.api.pty.get = vi.fn().mockResolvedValue([null, null]);
+    safeClient.api.pty.create = vi.fn().mockResolvedValue([null, {
+      id: "pty-fresh",
+      title: "Terminal",
+      command: "zsh",
+      args: [],
+      cwd: ".",
+      status: "running",
+      pid: 2,
+    }]);
+
+    const host = document.createElement("div");
+    const root = document.createElement("div");
+    setClientSize(host, 960, 594);
+    setClientSize(root, 960, 594);
+
+    let logic!: ReturnType<typeof createTerminalContextLogic>;
+    const dispose = createRoot((rootDispose) => {
+      logic = createTerminalContextLogic({
+        terminalKey: "terminal-1",
+        workingDirectory: ".",
+        title: "Terminal",
+        safeClient,
+      });
+      return rootDispose;
+    });
+
+    const term = createMockTerminal((_cols, _rows) => {
+      logic.handleTerminalResize({ cols: term.cols, rows: term.rows }, term);
+    });
+
+    await logic.handleTerminalReady({ term, root, host });
+    await vi.runAllTimersAsync();
+
+    expect(safeClient.api.pty.get).toHaveBeenCalledWith({
+      workingDirectory: ".",
+      path: { ptyID: "pty-missing" },
+    });
+    expect(safeClient.api.pty.create).toHaveBeenCalledWith({
+      workingDirectory: ".",
+      body: { title: "Terminal" },
+    });
+    expect(localStorage.getItem("vibecanvas-terminal-session:terminal-1")).toContain('"ptyID":"pty-fresh"');
+    expect(MockWebSocket.instances[0]?.url).toContain("/api/pty/pty-fresh/connect");
+    expect(logic.status()).not.toBe("error");
+    expect(logic.errorMessage()).toBeNull();
+
+    dispose();
+  });
+
   test("ignores zero-sized stale mount and avoids stale 20x8 backend sync", async () => {
     const events: string[] = [];
     storage.set("vibecanvas-terminal-session:terminal-1", JSON.stringify({
