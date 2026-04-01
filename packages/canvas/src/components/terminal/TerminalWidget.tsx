@@ -30,7 +30,9 @@ export function TerminalWidget(props: TTerminalWidgetProps) {
 
   if (terminalLogic) {
     props.registerBeforeRemove?.(() => terminalLogic.removeTerminal());
-    props.registerReload?.(() => terminalLogic.restartFrontend().then(() => setMountRevision((value) => value + 1)));
+    props.registerReload?.(() => terminalLogic.restartFrontend().then(() => {
+      setMountRevision((value) => value + 1);
+    }));
   }
 
   const clearFocusRetryTimers = () => {
@@ -119,7 +121,7 @@ export function TerminalWidget(props: TTerminalWidgetProps) {
 
       {terminalLogic ? (
         <Show when={mountRevision()} keyed>
-          {() => (
+          <>
             <GhosttyTerminalMount
               class="h-full w-full min-w-0 flex-1 overflow-hidden bg-[#111214]"
               onReady={terminalLogic.handleTerminalReady}
@@ -127,7 +129,7 @@ export function TerminalWidget(props: TTerminalWidgetProps) {
               onResize={terminalLogic.handleTerminalResize}
               onCleanup={terminalLogic.handleTerminalCleanup}
             />
-          )}
+          </>
         </Show>
       ) : (
         <div class="flex h-full w-full flex-1 items-center justify-center bg-[#111214] px-3 text-center text-xs text-red-200">

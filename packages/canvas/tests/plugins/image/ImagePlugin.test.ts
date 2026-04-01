@@ -93,7 +93,7 @@ function altDragImage(node: Konva.Image, args: { deltaX: number; deltaY?: number
 
 describe("ImagePlugin", () => {
   beforeEach(() => {
-    vi.spyOn(ImagePlugin as never, "loadImageIntoNode" as never).mockResolvedValue(undefined as never);
+    vi.spyOn(ImagePlugin, "loadImageIntoNode").mockResolvedValue(undefined);
   });
 
   afterEach(() => {
@@ -142,7 +142,7 @@ describe("ImagePlugin", () => {
       appCapabilities: {
         uploadImage,
         cloneImage: vi.fn(async ({ url }: { url: string }) => ({ url })),
-        deleteImage: vi.fn(async () => ({ ok: true })),
+        deleteImage: vi.fn(async () => ({ ok: true as const })),
         notification,
       },
     });
@@ -183,7 +183,7 @@ describe("ImagePlugin", () => {
       appCapabilities: {
         uploadImage,
         cloneImage: vi.fn(async ({ url }: { url: string }) => ({ url })),
-        deleteImage: vi.fn(async () => ({ ok: true })),
+        deleteImage: vi.fn(async () => ({ ok: true as const })),
         notification: {
           showError: vi.fn(),
           showSuccess: vi.fn(),
@@ -226,7 +226,7 @@ describe("ImagePlugin", () => {
       appCapabilities: {
         uploadImage,
         cloneImage: vi.fn(async ({ url }: { url: string }) => ({ url })),
-        deleteImage: vi.fn(async () => ({ ok: true })),
+        deleteImage: vi.fn(async () => ({ ok: true as const })),
         notification: {
           showError: vi.fn(),
           showSuccess: vi.fn(),
@@ -262,7 +262,7 @@ describe("ImagePlugin", () => {
       plugins: [new RenderOrderPlugin(), new ImagePlugin(), new SceneHydratorPlugin()],
       appCapabilities: {
         cloneImage,
-        deleteImage: vi.fn(async () => ({ ok: true })),
+        deleteImage: vi.fn(async () => ({ ok: true as const })),
         notification: {
           showError: vi.fn(),
           showSuccess: vi.fn(),

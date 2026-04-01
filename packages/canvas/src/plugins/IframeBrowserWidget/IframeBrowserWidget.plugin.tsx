@@ -317,7 +317,7 @@ export class IframeBrowserWidgetPlugin implements IPlugin {
         window.removeEventListener("blur", clearPendingInteraction);
         dispose();
       },
-      setElement: (nextElement) => setCurrentElement(() => nextElement),
+      setElement: (nextElement) => setCurrentElement(nextElement),
       setPendingInteraction: (pending) => setPendingInteraction(pending),
     });
 

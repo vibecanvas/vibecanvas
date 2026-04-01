@@ -56,6 +56,7 @@ export function createImageNode(
     height: data.h,
     opacity: element.style.opacity ?? 1,
     draggable: false,
+    image: undefined,
   });
 
   syncNodeMetadata(node, element);

@@ -102,7 +102,7 @@ Use the leaf files for execution history and local context.
 - [x]: [S13](s/S13.md) - canvas plugins: folder-per-plugin refactor plan
 - [x]: [S14](s/S14.md) - canvas: keep recorder plugin in development only
 - [x]: [S15] - inline text support -> fix position (use pretext lib?)
-- [ ]: [S16](s/S16.md) - canvas: fix broken TypeScript typings in packages/canvas
+- [x]: [S16](s/S16.md) - canvas: fix broken TypeScript typings in packages/canvas
 
 ## E xplorations
 - [ ]: [E1](e/E1.md) - Tauri Research
@@ -110,6 +110,8 @@ Use the leaf files for execution history and local context.
 - [ ]: [E6](e/E6.md) - should we include a task management
 - [ ]: [E7](e/E7.md) - should we include heartbeat
 - [ ]: [E8](e/E8.md) - canvas CLI: query/edit surface exploration
+- [ ]: [E9] - tmux for persistant pty sessions
+- [ ]: [E10] - headless chrome to stream to canvas
 
 ## D irections
 - [ ]: [D1](d/D1.md) - AI can edit the canvas directly

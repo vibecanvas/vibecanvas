@@ -50,9 +50,9 @@ function getCloneTargets(context: IPluginContext, touchedNode: TCloneRoot) {
 function createPreviewClone(node: TCloneRoot) {
   if (node instanceof Konva.Group) return GroupPlugin.createPreviewClone(node);
   if (node instanceof Konva.Text) return TextPlugin.createPreviewClone(node);
+  if (node.getClassName() === "Image") return ImagePlugin.createPreviewClone(node as Konva.Image);
+  if (PenPlugin.isPenNode(node)) return PenPlugin.createPreviewClone(node);
   if (Shape1dPlugin.isShape1dNode(node)) return Shape1dPlugin.createPreviewClone(node);
-  if (node instanceof Konva.Path) return PenPlugin.createPreviewClone(node);
-  if (node instanceof Konva.Image) return ImagePlugin.createPreviewClone(node);
   return Shape2dPlugin.createPreviewClone(node);
 }
 
@@ -69,12 +69,12 @@ function finalizePreviewClone(context: IPluginContext, sourceNode: TCloneRoot, p
     return Shape1dPlugin.finalizePreviewClone(context, previewNode);
   }
 
-  if (sourceNode instanceof Konva.Path && previewNode instanceof Konva.Path) {
+  if (PenPlugin.isPenNode(sourceNode) && PenPlugin.isPenNode(previewNode)) {
     return PenPlugin.finalizePreviewClone(context, previewNode);
   }
 
-  if (sourceNode instanceof Konva.Image && previewNode instanceof Konva.Image) {
-    return ImagePlugin.finalizePreviewClone(context, previewNode);
+  if (sourceNode.getClassName() === "Image" && previewNode.getClassName() === "Image") {
+    return ImagePlugin.finalizePreviewClone(context, previewNode as Konva.Image);
   }
 
   if (previewNode instanceof Konva.Shape) {

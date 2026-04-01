@@ -1,4 +1,4 @@
-import { TOOLS } from "../FloatingCanvasToolbar/toolbar.types";
+import { TOOLS, type TTool } from "../FloatingCanvasToolbar/toolbar.types";
 
 export type THelpShortcutItem = {
   label: string;
@@ -11,7 +11,7 @@ export type THelpSection = {
   items: THelpShortcutItem[];
 };
 
-const TOOL_LABELS = {
+const TOOL_LABELS: Record<TTool, string> = {
   hand: "Hand",
   select: "Select",
   rectangle: "Rectangle",
@@ -24,7 +24,8 @@ const TOOL_LABELS = {
   image: "Image",
   filesystem: "Filesystem",
   terminal: "Terminal",
-} as const;
+  browser: "Browser",
+};
 
 const TOOL_SHORTCUT_LABELS = TOOLS.map((tool) => ({
   label: TOOL_LABELS[tool.tool],

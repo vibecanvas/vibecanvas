@@ -1,4 +1,4 @@
-import type { TElement } from "@vibecanvas/shell/automerge/index";
+import type { TElement, TImageData } from "@vibecanvas/shell/automerge/index";
 import Konva from "konva";
 import type { IPluginContext } from "../shared/interface";
 
@@ -26,7 +26,7 @@ export function cloneBackendFileForElement(
         ...payload.element,
         updatedAt: Date.now(),
         data: {
-          ...payload.element.data,
+          ...(payload.element.data as TImageData),
           url,
         },
       };

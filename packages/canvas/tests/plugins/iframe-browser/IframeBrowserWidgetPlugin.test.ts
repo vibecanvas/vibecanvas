@@ -1,4 +1,5 @@
 import Konva from "konva";
+import type { TBrowserElement } from "../../../src/plugins/IframeBrowserWidget/IframeBrowserWidget.types";
 import { afterEach, describe, expect, test, vi } from "vitest";
 import { IframeBrowserWidgetPlugin, RenderOrderPlugin, SceneHydratorPlugin, SelectPlugin, type IPluginContext } from "../../../src/plugins";
 import { CanvasMode } from "../../../src/services/canvas/enum";
@@ -8,12 +9,22 @@ import {
   flushCanvasEffects,
 } from "../../test-setup";
 
+const TAB_1_ID = "00000000-0000-0000-0000-000000000001";
+const TAB_2_ID = "00000000-0000-0000-0000-000000000002";
+
+function getBrowserDocElement(docHandle: ReturnType<typeof createMockDocHandle>, id = "browser1"): TBrowserElement {
+  const element = docHandle.doc().elements[id];
+  expect(element?.data.type).toBe("iframe-browser");
+  if (!element || element.data.type !== "iframe-browser") throw new Error("Expected iframe-browser element");
+  return element as TBrowserElement;
+}
+
 function createBrowserElement(args?: {
   id?: string;
   tabs?: Array<{ id: string; url: string; title: string }>;
   activeTabId?: string;
 }) {
-  const tabs = args?.tabs ?? [{ id: "tab-1", url: "about:blank#start", title: "Start" }];
+  const tabs = args?.tabs ?? [{ id: TAB_1_ID, url: "about:blank#start", title: "Start" }];
 
   return {
     id: args?.id ?? "browser1",
@@ -83,7 +94,7 @@ describe("IframeBrowserWidgetPlugin", () => {
     expect(iframes).toHaveLength(1);
     expect(iframes[0]).toBe(initialIframe);
     expect(initialIframe?.dataset.persisted).toBe("yes");
-    expect(docHandle.doc().elements.browser1?.data.tabs[0]?.url).toBe("about:blank#next");
+    expect(getBrowserDocElement(docHandle).data.tabs[0]?.url).toBe("about:blank#next");
 
     harness.destroy();
   });
@@ -93,10 +104,10 @@ describe("IframeBrowserWidgetPlugin", () => {
       elements: {
         browser1: createBrowserElement({
           tabs: [
-            { id: "tab-1", url: "about:blank#one", title: "One" },
-            { id: "tab-2", url: "about:blank#two", title: "Two" },
+            { id: TAB_1_ID, url: "about:blank#one", title: "One" },
+            { id: TAB_2_ID, url: "about:blank#two", title: "Two" },
           ],
-          activeTabId: "tab-2",
+          activeTabId: TAB_2_ID,
         }),
       },
     });
@@ -121,9 +132,9 @@ describe("IframeBrowserWidgetPlugin", () => {
     await flushCanvasEffects();
 
     expect(mount?.querySelectorAll("iframe")).toHaveLength(1);
-    expect(docHandle.doc().elements.browser1?.data.tabs.map((tab) => tab.id)).toEqual(["tab-1"]);
+    expect(getBrowserDocElement(docHandle).data.tabs.map((tab) => tab.id)).toEqual([TAB_1_ID]);
 
-    const randomUUIDSpy = vi.spyOn(globalThis.crypto, "randomUUID").mockReturnValue("tab-2");
+    const randomUUIDSpy = vi.spyOn(globalThis.crypto, "randomUUID").mockReturnValue(TAB_2_ID);
     const newTabButton = mount?.querySelector('[aria-label="New tab"]') as HTMLButtonElement | null;
     expect(newTabButton).not.toBeNull();
     newTabButton!.click();
@@ -131,7 +142,7 @@ describe("IframeBrowserWidgetPlugin", () => {
     await flushCanvasEffects();
 
     expect(randomUUIDSpy).toHaveBeenCalled();
-    expect(docHandle.doc().elements.browser1?.data.tabs.map((tab) => tab.id)).toEqual(["tab-1", "tab-2"]);
+    expect(getBrowserDocElement(docHandle).data.tabs.map((tab) => tab.id)).toEqual([TAB_1_ID, TAB_2_ID]);
     expect(mount?.querySelectorAll("iframe")).toHaveLength(2);
 
     harness.destroy();

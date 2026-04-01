@@ -1463,8 +1463,10 @@ describe("HostedSolidWidgetPlugin", () => {
     await flushCanvasEffects();
 
     const updated = docHandle.doc().elements.terminal1;
-    expect(Math.round(updated!.data.w)).toBe(480);
-    expect(Math.round(updated!.data.h)).toBe(275);
+    expect(updated?.data.type).toBe("terminal");
+    if (!updated || updated.data.type !== "terminal") throw new Error("Expected terminal element");
+    expect(Math.round(updated.data.w)).toBe(480);
+    expect(Math.round(updated.data.h)).toBe(275);
     expect(node.scaleX()).toBe(1);
     expect(node.scaleY()).toBe(1);
 

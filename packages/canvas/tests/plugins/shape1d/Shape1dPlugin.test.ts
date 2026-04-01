@@ -271,9 +271,10 @@ describe("Shape1dPlugin", () => {
     const roundTrip = Shape1dPlugin.toTElement(node);
 
     expect(roundTrip.data.type).toBe("arrow");
+    if (roundTrip.data.type !== "arrow") throw new Error("Expected arrow data");
     expect((roundTrip.data as TArrowData).lineType).toBe("curved");
     expect((roundTrip.data as TArrowData).endCap).toBe("arrow");
-    expect(roundTrip.data.points).toEqual(updated.data.points);
+    expect(roundTrip.data.points).toEqual((updated.data as TArrowData).points);
     expect(roundTrip.style.strokeWidth).toBe(7);
     expect(node.getClientRect().width).toBeGreaterThan(0);
 

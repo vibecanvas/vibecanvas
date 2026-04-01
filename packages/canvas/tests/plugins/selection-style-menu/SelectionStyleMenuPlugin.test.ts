@@ -1,3 +1,4 @@
+import Konva from "konva";
 import { describe, expect, test, beforeEach } from "vitest";
 import { SelectionStyleMenuPlugin, SelectPlugin, Shape1dPlugin, Shape2dPlugin, TextPlugin } from "../../../src/plugins";
 import { createCanvasTestHarness, flushCanvasEffects } from "../../test-setup";
@@ -147,7 +148,7 @@ describe("SelectionStyleMenuPlugin", () => {
     greenFillButton?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
     await flushCanvasEffects();
 
-    const rect = harness.staticForegroundLayer.findOne("#rect-1");
+    const rect = harness.staticForegroundLayer.findOne("#rect-1") as Konva.Rect | null;
     currentFill = rect?.fill() as string;
     expect(currentFill).toBe("#c3e6cb");
     harness.destroy();
@@ -222,8 +223,8 @@ describe("SelectionStyleMenuPlugin", () => {
     greenButtons[1]?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
     await flushCanvasEffects();
 
-    const rect = harness.staticForegroundLayer.findOne("#rect-1");
-    const text = harness.staticForegroundLayer.findOne("#text-1");
+    const rect = harness.staticForegroundLayer.findOne("#rect-1") as Konva.Rect | null;
+    const text = harness.staticForegroundLayer.findOne("#text-1") as Konva.Text | null;
     expect(rect?.stroke()).toBe("#2f9e44");
     expect(text?.fill()).toBe("#2f9e44");
     harness.destroy();

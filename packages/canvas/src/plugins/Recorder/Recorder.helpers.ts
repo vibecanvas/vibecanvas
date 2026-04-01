@@ -77,7 +77,7 @@ export function createPointerStep(
   };
 }
 
-export function createPointerMoveStep(runtime: { context: IPluginContext }, payload: { event: TPointerEvent }): TStep {
+export function createPointerMoveStep(runtime: { context: IPluginContext }, payload: { event: TMouseEvent }): TStep {
   const { x, y } = getPointerPosition(runtime.context);
 
   return {

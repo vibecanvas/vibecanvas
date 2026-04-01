@@ -330,7 +330,7 @@ export function BrowserChrome(props: {
   );
 }
 
-function navBtnStyle(pointerEvents: string): JSX.CSSProperties {
+function navBtnStyle(pointerEvents: JSX.CSSProperties["pointer-events"]): JSX.CSSProperties {
   return {
     display: "inline-flex",
     "align-items": "center",
@@ -347,7 +347,7 @@ function navBtnStyle(pointerEvents: string): JSX.CSSProperties {
   };
 }
 
-function controlBtnStyle(borderColor: string, pointerEvents: string): JSX.CSSProperties {
+function controlBtnStyle(borderColor: string, pointerEvents: JSX.CSSProperties["pointer-events"]): JSX.CSSProperties {
   return {
     display: "inline-flex",
     "align-items": "center",

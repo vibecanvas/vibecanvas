@@ -70,6 +70,12 @@ export function CodeEditor(props: TCodeEditorProps) {
 
   const languageCompartment = new Compartment();
   const editableCompartment = new Compartment();
+  const editorKeymap = [
+    ...closeBracketsKeymap,
+    ...defaultKeymap,
+    ...searchKeymap,
+    ...historyKeymap,
+  ] as unknown as Parameters<typeof keymap.of>[0];
 
   onMount(async () => {
     const languageExtension = await getLanguageExtension(props.path);
@@ -88,12 +94,7 @@ export function CodeEditor(props: TCodeEditorProps) {
         autocompletion(),
         highlightSelectionMatches(),
         search(),
-        keymap.of([
-          ...closeBracketsKeymap,
-          ...defaultKeymap,
-          ...searchKeymap,
-          ...historyKeymap,
-        ]),
+        keymap.of(editorKeymap),
         syntaxHighlighting(defaultHighlightStyle, { fallback: true }),
         languageCompartment.of(languageExtension ? [languageExtension] : []),
         editableCompartment.of([

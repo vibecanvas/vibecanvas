@@ -12,7 +12,7 @@ export function beginHostedDomDrag(
     cleanupDrag: (() => void) | null;
     setCleanupDrag: (cleanup: (() => void) | null) => void;
     selectHostedNode: (context: IPluginContext, node: Konva.Rect, event: PointerEvent | MouseEvent) => void;
-    filterSelection: (selection: Konva.Node[]) => Konva.Node[];
+    filterSelection: (selection: Array<Konva.Group | Konva.Shape>) => Array<Konva.Group | Konva.Shape>;
     isHostedNode: (node: Konva.Node | null | undefined) => node is Konva.Rect;
     syncMountedNode: (node: Konva.Rect) => void;
   },
