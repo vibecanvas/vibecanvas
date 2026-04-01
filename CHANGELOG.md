@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## 0.2.0-beta.3
+## 0.2.0
 
 ### Removed
 - Chat widget
