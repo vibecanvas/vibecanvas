@@ -14,11 +14,6 @@ Vibecanvas uses **oRPC** for type-safe APIs over WebSockets. All communication b
 - **Contract-First**: Define the API shape before implementation
 - **Zod Integration**: Input/output validation using Zod schemas
 
-## Project-Specific Notes
-
-- Chat transcript history is served from OpenCode session APIs (`opencode.session.messages`), not a separate local `agent-logs` contract.
-- Keep OpenCode features grouped under `opencode.contract.ts` with nested routers (`opencode.session.*`, `opencode.app.*`, etc.).
-
 ## Architecture
 
 ```
@@ -370,7 +365,6 @@ if ('children' in result) {
 
 - Contract files: `<feature>.contract.ts`
 - API handlers: `api.<feature>.ts`
-- Router key: lowercase, hyphenated for keys (`filetree`) and nested namespaces for grouped APIs (`opencode.session.messages`)
 
 ### Zod Patterns
 
@@ -442,7 +436,6 @@ packages/core-contract/src/
 ├── index.ts                    # Root router aggregation
 ├── canvas.contract.ts          # Canvas CRUD
 ├── chat.contract.ts            # Chat CRUD
-├── opencode.contract.ts        # OpenCode APIs (prompt, events, session, app)
 ├── filetree.contract.ts        # Filetree widget CRUD
 ├── project-dir.contract.ts     # Filesystem operations
 ├── file.contract.ts            # File upload

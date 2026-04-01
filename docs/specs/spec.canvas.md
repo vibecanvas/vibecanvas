@@ -483,7 +483,6 @@ The terminal is now fully package-owned under `packages/canvas/src/components/te
 - `TerminalWidget.tsx` owns the terminal shell UI and optional standalone chrome
 - `GhosttyTerminalMount.tsx` owns Ghostty init/open/dispose via Solid mount cleanup
 - `createTerminalContextLogic.ts` owns PTY lifecycle, reconnect, persisted cursor/size state, and websocket handling
-- `services/terminal/opencode-pty.ts` owns websocket URL construction, cursor extraction helpers, and localStorage session state helpers
 
 Terminal reconnect behavior:
 

@@ -6,35 +6,12 @@ Runs completly local. Reuses your llm subscriptions.
 
 The project is organized as a monorepo and follows a **Functional Core / Imperative Shell** architecture.
 
-## Important: OpenCode Required
-
-Vibecanvas now runs agent sessions through **OpenCode**.
-
-Before using Vibecanvas chat, install OpenCode globally:
-
-```bash
-# bun
-bun add -g opencode-ai
-
-# npm
-npm i -g opencode-ai
-
-# pnpm
-pnpm add -g opencode-ai
-
-# yarn
-yarn global add opencode-ai
-```
-
-Then run `opencode` once and complete authentication/setup in the CLI.
-
 ## Features
 
 - Infinite canvas UI for drawing, selecting, transforming, and grouping elements
 - Real-time CRDT sync with Automerge for conflict-free collaboration
 - Unified WebSocket API endpoint for app RPC (`/api`)
 - Dedicated Automerge sync endpoint (`/automerge`)
-- Built-in OpenCode agent integration and chat sessions
 - Native binary distribution for macOS, Linux, and Windows
 - Auto-update checks in the CLI/server runtime
 
@@ -64,7 +41,7 @@ vibecanvas
 
 Open [http://localhost:7496](http://localhost:7496) to use the app.
 
-For common setup/runtime questions (OpenCode config support, chat limitations, upgrades), see the FAQ:
+For common setup/runtime questions, see the FAQ:
 
 - https://vibecanvas.dev/docs/faq
 
