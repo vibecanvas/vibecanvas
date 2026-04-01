@@ -126,7 +126,6 @@ Theme-aware colors that auto-switch with `.dark` class:
 | Utility | Font |
 |---------|------|
 | `font-mono` | JetBrains Mono Variable |
-| `font-display` | Gabriele |
 
 ## Border Radius
 

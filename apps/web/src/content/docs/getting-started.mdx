@@ -23,15 +23,37 @@ bun add -g vibecanvas
 npm i -g vibecanvas
 ```
 
+```bash
+pnpm add -g vibecanvas
+```
+
 ## Run
 
 From your project directory:
 
 ```bash
+cd your-project
 vibecanvas
 ```
 
+`vibecanvas` starts the local server by default. It is equivalent to `vibecanvas serve`.
+
+If you want a specific port:
+
+```bash
+vibecanvas serve --port 3001
+```
+
 Once launched, open the canvas and start creating frames, notes, and task flows.
+
+## Check the CLI
+
+```bash
+vibecanvas --help
+vibecanvas --version
+```
+
+Short aliases are also available: `vibecanvas -h` and `vibecanvas -v`.
 
 ## Upgrade
 
@@ -41,6 +63,12 @@ vibecanvas upgrade
 ```
 
 Use `--check` for a dry run, or `upgrade` to install the latest version.
+
+To install a specific release:
+
+```bash
+vibecanvas --upgrade 0.2.0-beta.3
+```
 
 ## What to do first
 

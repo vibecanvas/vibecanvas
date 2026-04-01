@@ -12,8 +12,6 @@
    ============================================ */
 
 @theme {
-  /* Typography */
-  --font-display: 'Gabriele', monospace;
 
   /* Border Radius - Terminal aesthetic (none) */
   --radius-*: initial;

@@ -16,18 +16,42 @@ bun --version
 
 ## 2) Install Vibecanvas globally
 
+Choose the package manager you already use:
+
+```bash
+bun add -g vibecanvas
+```
+
+```bash
+npm i -g vibecanvas
+```
+
 ```bash
 pnpm add -g vibecanvas
 ```
 
-Any package manager is fine; use the one your team already uses.
+## 3) Verify the CLI is available
 
-## 3) Launch from your project
+```bash
+vibecanvas --version
+```
+
+## 4) Launch from your project
 
 ```bash
 cd your-project
 vibecanvas
 ```
+
+Running `vibecanvas` starts the `serve` command by default.
+
+To choose a port explicitly:
+
+```bash
+vibecanvas serve --port 3001
+```
+
+The default port is `3000` in development and `7496` in compiled builds.
 
 ## 5) Verify core behavior
 
@@ -42,7 +66,17 @@ vibecanvas upgrade --check
 vibecanvas upgrade
 ```
 
-The CLI upgrade command is built into `apps/server/src/main.ts`.
+To install a specific release:
+
+```bash
+vibecanvas --upgrade 0.2.0-beta.3
+```
+
+If you need the full command list:
+
+```bash
+vibecanvas --help
+```
 
 If one of these fails, ask in Discussions:
 

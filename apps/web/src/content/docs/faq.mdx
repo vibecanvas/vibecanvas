@@ -18,6 +18,12 @@ Current limitations:
 - Sessions do not survive a full server restart yet.
 - Windows PTY support depends on Bun platform support.
 
+## Can the AI edit the canvas for me?
+
+Not yet. Right now the AI can help through chat and terminal-driven workflows, but it cannot directly edit the canvas itself.
+
+Direct AI canvas editing is planned and should arrive soon.
+
 ## How do I upgrade Vibecanvas?
 
 Use the built-in CLI command:
@@ -26,6 +32,31 @@ Use the built-in CLI command:
 vibecanvas upgrade --check
 vibecanvas upgrade
 ```
+
+To install a specific version instead of the latest one:
+
+```bash
+vibecanvas --upgrade 0.2.0-beta.3
+```
+
+## How do I run Vibecanvas on a different port?
+
+Use the `serve` command with `--port`:
+
+```bash
+vibecanvas serve --port 3001
+```
+
+`vibecanvas` by itself also starts the `serve` command. For backward compatibility, a positional number is treated as the port too.
+
+## How do I see the CLI help or version?
+
+```bash
+vibecanvas --help
+vibecanvas --version
+```
+
+You can also use the short flags `-h` and `-v`.
 
 ## Where can I ask questions or share feedback?
 
