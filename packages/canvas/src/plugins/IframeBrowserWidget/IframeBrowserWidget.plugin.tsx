@@ -1,510 +1,39 @@
-import { throttle } from "@solid-primitives/scheduled";
-import type { JSX } from "solid-js";
-import { For, createEffect, createSignal, onCleanup } from "solid-js";
+import { createEffect, createSignal, onCleanup } from "solid-js";
 import { render } from "solid-js/web";
 import type { TElement } from "@vibecanvas/shell/automerge/index";
-import type { TIframeBrowserData, TIframeBrowserTab } from "@vibecanvas/shell/automerge/index";
 import Konva from "konva";
-import FrameIcon from "lucide-solid/icons/frame";
-import XIcon from "lucide-solid/icons/x";
-import PlusIcon from "lucide-solid/icons/plus";
-import ChevronLeftIcon from "lucide-solid/icons/chevron-left";
-import ChevronRightIcon from "lucide-solid/icons/chevron-right";
-import RefreshCwIcon from "lucide-solid/icons/refresh-cw";
 import type { TTool } from "../../components/FloatingCanvasToolbar/toolbar.types";
 import { CustomEvents } from "../../custom-events";
 import { CanvasMode } from "../../services/canvas/enum";
 import type { IPlugin, IPluginContext } from "../shared/interface";
-import { getWorldPosition, setWorldPosition } from "../shared/node-space";
+import { setWorldPosition } from "../shared/node-space";
 import { scheduleHostedWidgetFocus } from "../shared/hosted-widget-focus.shared";
-import { getNodeZIndex, setNodeZIndex } from "../shared/render-order.shared";
+import { setNodeZIndex } from "../shared/render-order.shared";
 import {
-  collectHostedWidgetSelectionShapes,
   getHostedWidgetOrderKey,
-  getHostedWidgetPointerWorldPoint,
   getHostedWidgetScreenBounds,
   HOSTED_WIDGET_NODE_ATTR,
   HOSTED_WIDGET_TRANSFORMER_VISIBLE_ATTR,
 } from "../shared/hosted-widget.shared";
-import { TransformPlugin } from "../Transform/Transform.plugin";
-
-const BROWSER_TYPE_ATTR = "vcBrowserWidgetType";
-const BROWSER_ELEMENT_ATTR = "vcBrowserElementSnapshot";
-const BROWSER_WIDGET_CLASS = "vc-iframe-browser-widget";
-const CONTENT_INSET = 14;
-const HEADER_HEIGHT = 32; // tab bar row
-const ADDRESS_BAR_HEIGHT = 32; // address bar row
-
-type TBrowserElement = TElement & { data: TIframeBrowserData };
-
-type TBrowserMountRecord = {
-  node: Konva.Rect;
-  mountElement: HTMLDivElement;
-  dispose: () => void;
-  setElement: (el: TBrowserElement) => void;
-  setPendingInteraction: (pending: boolean) => void;
-};
-
-// ── Utilities ────────────────────────────────────────────────────────────────
-
-function normalizeUrl(raw: string): string {
-  const s = raw.trim();
-  if (!s) return "";
-  if (/^(https?|about|data|blob):/.test(s)) return s;
-  return `https://${s}`;
-}
-
-function getDefaultBrowserElement(x: number, y: number): TBrowserElement {
-  const tabId = crypto.randomUUID();
-  const now = Date.now();
-  return {
-    id: crypto.randomUUID(),
-    x,
-    y,
-    rotation: 0,
-    zIndex: "",
-    parentGroupId: null,
-    bindings: [],
-    locked: false,
-    createdAt: now,
-    updatedAt: now,
-    style: {
-      backgroundColor: "#ffffff",
-      borderColor: "#d1d5db",
-      headerColor: "#f3f4f6",
-      opacity: 1,
-    },
-    data: {
-      type: "iframe-browser",
-      w: 800,
-      h: 560,
-      isCollapsed: false,
-      tabs: [{ id: tabId, url: "", title: "New Tab" }],
-      activeTabId: tabId,
-    } satisfies TIframeBrowserData,
-  };
-}
-
-// ── Browser Chrome Component ─────────────────────────────────────────────────
-
-function BrowserChrome(props: {
-  element: () => TBrowserElement;
-  isFocused: () => boolean;
-  isInteractive: () => boolean;
-  onHeaderPointerDown: (event: PointerEvent | MouseEvent) => void;
-  onHeaderDoubleClick: (event: MouseEvent) => void;
-  onSelectPointerDown: (event: PointerEvent | MouseEvent) => void;
-  onRemove: () => void;
-  onTabAdd: () => void;
-  onTabClose: (tabId: string) => void;
-  onTabActivate: (tabId: string) => void;
-  onNavigate: (url: string) => void;
-  onTitleUpdate: (tabId: string, title: string) => void;
-}): JSX.Element {
-  // Kept outside reactive system — imperative iframe lifecycle (see createEffect below)
-  const iframeRefs = new Map<string, HTMLIFrameElement>();
-  let iframeContainerRef: HTMLDivElement | undefined;
-
-  const activeTab = () => {
-    const el = props.element();
-    return el.data.tabs.find((t) => t.id === el.data.activeTabId) ?? el.data.tabs[0];
-  };
-
-  const activeTabUrl = () => activeTab()?.url ?? "";
-
-  const [inputValue, setInputValue] = createSignal(activeTabUrl());
-  const [addressBarFocused, setAddressBarFocused] = createSignal(false);
-
-  // Sync address bar to active tab URL when not focused
-  createEffect(() => {
-    const url = activeTabUrl();
-    if (!addressBarFocused()) {
-      setInputValue(url);
-    }
-  });
-
-  // Manage iframes imperatively so that tab switches / tab mutations never destroy
-  // existing iframes and lose their navigation state. SolidJS <For> diffs by reference
-  // equality — since tab objects are always new references after any mutation, using
-  // <For> here would recreate every iframe on every state change.
-  createEffect(() => {
-    if (!iframeContainerRef) return;
-    const tabs = props.element().data.tabs;
-    const activeTabId = props.element().data.activeTabId;
-
-    // Create iframes for tabs that don't have one yet
-    for (const tab of tabs) {
-      if (!iframeRefs.has(tab.id)) {
-        const iframe = document.createElement("iframe");
-        iframe.setAttribute(
-          "sandbox",
-          "allow-scripts allow-same-origin allow-forms allow-popups allow-presentation",
-        );
-        iframe.style.cssText = "position:absolute;inset:0;width:100%;height:100%;border:none;display:none;";
-        iframe.addEventListener("load", () => handleIframeLoad(tab.id));
-        iframeContainerRef.appendChild(iframe);
-        iframeRefs.set(tab.id, iframe);
-        // Set src after appending so load fires correctly
-        iframe.src = tab.url ? normalizeUrl(tab.url) : "about:blank";
-      }
-    }
-
-    // Update visibility and remove iframes for closed tabs
-    const currentTabIds = new Set(tabs.map((t) => t.id));
-    for (const [tabId, iframe] of [...iframeRefs]) {
-      if (!currentTabIds.has(tabId)) {
-        iframe.remove();
-        iframeRefs.delete(tabId);
-      } else {
-        iframe.style.display = tabId === activeTabId ? "block" : "none";
-      }
-    }
-  });
-
-  const handleNavigateSubmit = () => {
-    const url = inputValue().trim();
-    const normalized = normalizeUrl(url);
-    setInputValue(normalized);
-    // Imperatively update the active iframe src
-    const tabId = activeTab()?.id;
-    if (tabId) {
-      const ref = iframeRefs.get(tabId);
-      if (ref) ref.src = normalized || "about:blank";
-    }
-    props.onNavigate(normalized);
-  };
-
-  const handleBack = () => {
-    const ref = iframeRefs.get(activeTab()?.id ?? "");
-    if (!ref) return;
-    try { ref.contentWindow?.history.back(); } catch { /* cross-origin */ }
-  };
-
-  const handleForward = () => {
-    const ref = iframeRefs.get(activeTab()?.id ?? "");
-    if (!ref) return;
-    try { ref.contentWindow?.history.forward(); } catch { /* cross-origin */ }
-  };
-
-  const handleReload = () => {
-    const ref = iframeRefs.get(activeTab()?.id ?? "");
-    if (!ref) return;
-    ref.src = ref.src; // force reload, works cross-origin
-  };
-
-  const handleIframeLoad = (tabId: string) => {
-    const ref = iframeRefs.get(tabId);
-    if (!ref) return;
-    try {
-      const title = ref.contentDocument?.title;
-      if (title) props.onTitleUpdate(tabId, title);
-      const href = ref.contentWindow?.location.href;
-      if (href && href !== "about:blank" && tabId === activeTab()?.id) {
-        setInputValue(href);
-      }
-    } catch { /* cross-origin: silently ignore */ }
-  };
-
-  const borderColor = () => props.element().style.borderColor ?? "#d1d5db";
-  const focusBorderColor = () => "#2563eb";
-  const resolvedBorderColor = () => props.isFocused() ? focusBorderColor() : borderColor();
-  const headerBg = () => props.element().style.headerColor ?? "#f3f4f6";
-  const boxShadow = () => props.isFocused()
-    ? `0 0 0 1px ${focusBorderColor()}, 0 12px 30px rgba(15,23,42,0.18)`
-    : "0 8px 24px rgba(15,23,42,0.12)";
-  const interactivePointerEvents = () => props.isInteractive() ? "auto" : "none";
-
-  createEffect(() => {
-    const pointerEvents = interactivePointerEvents();
-    iframeRefs.forEach((iframe) => {
-      iframe.style.pointerEvents = pointerEvents;
-    });
-  });
-
-  return (
-    <div
-      data-hosted-widget-root="true"
-      data-hosted-widget-focus-root="true"
-      data-hosted-widget-focused={props.isFocused() ? "true" : "false"}
-      data-hosted-widget-interactive={props.isInteractive() ? "true" : "false"}
-      tabIndex={-1}
-      style={{
-        position: "absolute",
-        inset: `${CONTENT_INSET}px`,
-        display: "flex",
-        "flex-direction": "column",
-        "pointer-events": props.isInteractive() ? "auto" : "none",
-        border: `1px solid ${resolvedBorderColor()}`,
-        background: props.element().style.backgroundColor ?? "#ffffff",
-        "box-shadow": boxShadow(),
-        overflow: "hidden",
-        "font-family": "ui-sans-serif, system-ui, -apple-system, sans-serif",
-      }}
-      onPointerDown={(event) => props.onSelectPointerDown(event)}
-    >
-      {/* Tab bar row — drag handle */}
-      <div
-        data-hosted-widget-header="true"
-        style={{
-          display: "flex",
-          "align-items": "center",
-          "justify-content": "space-between",
-          gap: "4px",
-          padding: "0 6px",
-          height: `${HEADER_HEIGHT}px`,
-          background: headerBg(),
-          "border-bottom": `1px solid ${resolvedBorderColor()}`,
-          cursor: "grab",
-          "user-select": "none",
-          "flex-shrink": "0",
-          "pointer-events": interactivePointerEvents(),
-        }}
-        onPointerDown={(event) => props.onHeaderPointerDown(event)}
-        onDblClick={(event) => props.onHeaderDoubleClick(event)}
-      >
-        {/* Tabs */}
-        <div style={{ display: "flex", "align-items": "center", gap: "2px", flex: "1", overflow: "hidden", "min-width": "0", "pointer-events": interactivePointerEvents() }}>
-          <For each={props.element().data.tabs}>
-            {(tab) => {
-              const isActive = () => tab.id === props.element().data.activeTabId;
-              return (
-                <div
-                  style={{
-                    display: "flex",
-                    "align-items": "center",
-                    gap: "4px",
-                    padding: "2px 8px 2px 10px",
-                    height: "26px",
-                    background: isActive() ? (props.element().style.backgroundColor ?? "#ffffff") : "transparent",
-                    border: isActive() ? `1px solid ${resolvedBorderColor()}` : "1px solid transparent",
-                    "border-bottom": isActive() ? `1px solid ${props.element().style.backgroundColor ?? "#ffffff"}` : "1px solid transparent",
-                    "border-radius": "6px 6px 0 0",
-                    "max-width": "160px",
-                    cursor: "pointer",
-                    "flex-shrink": "0",
-                    "pointer-events": interactivePointerEvents(),
-                  }}
-                  onPointerDown={(event) => {
-                    event.stopPropagation();
-                    props.onTabActivate(tab.id);
-                  }}
-                >
-                  <span style={{ "font-size": "11px", color: "#374151", overflow: "hidden", "text-overflow": "ellipsis", "white-space": "nowrap", "max-width": "110px", "pointer-events": interactivePointerEvents() }}>
-                    {tab.title || "New Tab"}
-                  </span>
-                  <button
-                    type="button"
-                    aria-label="Close tab"
-                    disabled={props.element().data.tabs.length <= 1}
-                    style={{
-                      display: "inline-flex",
-                      "align-items": "center",
-                      "justify-content": "center",
-                      width: "14px",
-                      height: "14px",
-                      border: "none",
-                      background: "transparent",
-                      color: "#9ca3af",
-                      cursor: props.element().data.tabs.length <= 1 ? "not-allowed" : "pointer",
-                      opacity: props.element().data.tabs.length <= 1 ? "0.3" : "1",
-                      padding: "0",
-                      "flex-shrink": "0",
-                      "pointer-events": interactivePointerEvents(),
-                    }}
-                    onPointerDown={(event) => event.stopPropagation()}
-                    onClick={(event) => {
-                      event.stopPropagation();
-                      props.onTabClose(tab.id);
-                    }}
-                  >
-                    <XIcon size={10} />
-                  </button>
-                </div>
-              );
-            }}
-          </For>
-          {/* New tab button */}
-          <button
-            type="button"
-            aria-label="New tab"
-            style={{
-              display: "inline-flex",
-              "align-items": "center",
-              "justify-content": "center",
-              width: "22px",
-              height: "22px",
-              border: "none",
-              background: "transparent",
-              color: "#6b7280",
-              cursor: "pointer",
-              "border-radius": "4px",
-              "flex-shrink": "0",
-              "pointer-events": interactivePointerEvents(),
-            }}
-            onPointerDown={(event) => event.stopPropagation()}
-            onClick={(event) => {
-              event.stopPropagation();
-              props.onTabAdd();
-            }}
-          >
-            <PlusIcon size={12} />
-          </button>
-        </div>
-
-        {/* Widget controls */}
-        <div style={{ display: "flex", "align-items": "center", gap: "4px", "flex-shrink": "0", "pointer-events": interactivePointerEvents() }}>
-          <button
-            type="button"
-            aria-label="Show resize handles"
-            title="Resize"
-            style={{
-              display: "inline-flex",
-              "align-items": "center",
-              "justify-content": "center",
-              width: "22px",
-              height: "22px",
-              border: `1px solid ${resolvedBorderColor()}`,
-              background: "#ffffff",
-              color: "#374151",
-              cursor: "pointer",
-              "border-radius": "3px",
-              "pointer-events": interactivePointerEvents(),
-            }}
-            onPointerDown={(event) => event.stopPropagation()}
-            onClick={(event) => {
-              event.stopPropagation();
-              props.onHeaderDoubleClick(event as unknown as MouseEvent);
-            }}
-          >
-            <FrameIcon size={11} />
-          </button>
-          <button
-            type="button"
-            aria-label="Close widget"
-            title="Close"
-            style={{
-              display: "inline-flex",
-              "align-items": "center",
-              "justify-content": "center",
-              width: "22px",
-              height: "22px",
-              border: `1px solid ${resolvedBorderColor()}`,
-              background: "#ffffff",
-              color: "#374151",
-              cursor: "pointer",
-              "border-radius": "3px",
-              "pointer-events": interactivePointerEvents(),
-            }}
-            onPointerDown={(event) => event.stopPropagation()}
-            onClick={(event) => {
-              event.stopPropagation();
-              props.onRemove();
-            }}
-          >
-            <XIcon size={12} />
-          </button>
-        </div>
-      </div>
-
-      {/* Address bar row — NOT a drag handle */}
-      <div
-        style={{
-          display: "flex",
-          "align-items": "center",
-          gap: "4px",
-          padding: "0 8px",
-          height: `${ADDRESS_BAR_HEIGHT}px`,
-          background: "#f9fafb",
-          "border-bottom": `1px solid ${resolvedBorderColor()}`,
-          "flex-shrink": "0",
-          "pointer-events": interactivePointerEvents(),
-        }}
-        onPointerDown={(event) => event.stopPropagation()}
-      >
-        <button
-          type="button"
-          aria-label="Go back"
-          style={navBtnStyle(interactivePointerEvents())}
-          onPointerDown={(event) => event.stopPropagation()}
-          onClick={(event) => { event.stopPropagation(); handleBack(); }}
-        >
-          <ChevronLeftIcon size={13} />
-        </button>
-        <button
-          type="button"
-          aria-label="Go forward"
-          style={navBtnStyle(interactivePointerEvents())}
-          onPointerDown={(event) => event.stopPropagation()}
-          onClick={(event) => { event.stopPropagation(); handleForward(); }}
-        >
-          <ChevronRightIcon size={13} />
-        </button>
-        <button
-          type="button"
-          aria-label="Reload"
-          style={navBtnStyle(interactivePointerEvents())}
-          onPointerDown={(event) => event.stopPropagation()}
-          onClick={(event) => { event.stopPropagation(); handleReload(); }}
-        >
-          <RefreshCwIcon size={12} />
-        </button>
-        <input
-          type="text"
-          value={inputValue()}
-          placeholder="Enter URL"
-          style={{
-            flex: "1",
-            height: "22px",
-            padding: "0 8px",
-            border: `1px solid ${resolvedBorderColor()}`,
-            "border-radius": "11px",
-            "font-size": "11px",
-            color: "#374151",
-            background: "#ffffff",
-            outline: "none",
-            "font-family": "ui-monospace, SFMono-Regular, Menlo, monospace",
-            "pointer-events": interactivePointerEvents(),
-          }}
-          onInput={(event) => setInputValue(event.currentTarget.value)}
-          onFocus={(event) => {
-            event.stopPropagation();
-            setAddressBarFocused(true);
-            event.currentTarget.select();
-          }}
-          onBlur={() => setAddressBarFocused(false)}
-          onPointerDown={(event) => event.stopPropagation()}
-          onKeyDown={(event) => {
-            event.stopPropagation();
-            if (event.key === "Enter") handleNavigateSubmit();
-          }}
-        />
-      </div>
-
-      {/* Content area — iframes are managed imperatively in the createEffect above */}
-      <div
-        ref={iframeContainerRef}
-        style={{ flex: "1", position: "relative", overflow: "hidden", "pointer-events": interactivePointerEvents() }}
-      />
-    </div>
-  );
-}
-
-function navBtnStyle(pointerEvents: string): JSX.CSSProperties {
-  return {
-    display: "inline-flex",
-    "align-items": "center",
-    "justify-content": "center",
-    width: "22px",
-    height: "22px",
-    border: "none",
-    background: "transparent",
-    color: "#6b7280",
-    cursor: "pointer",
-    "border-radius": "4px",
-    "flex-shrink": "0",
-    "pointer-events": pointerEvents,
-  };
-}
+import { BrowserChrome } from "./IframeBrowserWidget.chrome";
+import {
+  BROWSER_ELEMENT_ATTR,
+  BROWSER_TYPE_ATTR,
+  BROWSER_WIDGET_CLASS,
+  CONTENT_INSET,
+} from "./IframeBrowserWidget.constants";
+import { beginDomDrag } from "./IframeBrowserWidget.drag";
+import {
+  activateBrowserTab,
+  addTabToBrowserElement,
+  closeTabOnBrowserElement,
+  getDefaultBrowserElement,
+  isBrowserNode,
+  navigateBrowserTab,
+  toElement,
+  updateBrowserTabTitle,
+} from "./IframeBrowserWidget.helpers";
+import type { TBrowserElement, TBrowserMountRecord } from "./IframeBrowserWidget.types";
 
 // ── Plugin ───────────────────────────────────────────────────────────────────
 
@@ -530,11 +59,7 @@ export class IframeBrowserWidgetPlugin implements IPlugin {
   }
 
   static isBrowserNode(node: Konva.Node | null | undefined): node is Konva.Rect {
-    return (
-      node instanceof Konva.Rect &&
-      node.getAttr(HOSTED_WIDGET_NODE_ATTR) === true &&
-      node.getAttr(BROWSER_TYPE_ATTR) === "iframe-browser"
-    );
+    return isBrowserNode(node);
   }
 
   #setupToolState(context: IPluginContext) {
@@ -725,61 +250,12 @@ export class IframeBrowserWidgetPlugin implements IPlugin {
       context.crdt.patch({ elements: [this.#toElement(node)], groups: [] });
     };
 
-    const handleTabAdd = () => {
-      const current = currentElement();
-      const newTab: TIframeBrowserTab = { id: crypto.randomUUID(), url: "", title: "New Tab" };
-      updateElement({
-        ...current,
-        updatedAt: Date.now(),
-        data: { ...current.data, tabs: [...current.data.tabs, newTab], activeTabId: newTab.id },
-      });
-    };
-
-    const handleTabClose = (tabId: string) => {
-      const current = currentElement();
-      if (current.data.tabs.length <= 1) return;
-      const nextTabs = current.data.tabs.filter((t) => t.id !== tabId);
-      const nextActiveId =
-        current.data.activeTabId === tabId
-          ? (nextTabs[nextTabs.length - 1]?.id ?? nextTabs[0]?.id ?? "")
-          : current.data.activeTabId;
-      updateElement({
-        ...current,
-        updatedAt: Date.now(),
-        data: { ...current.data, tabs: nextTabs, activeTabId: nextActiveId },
-      });
-    };
-
-    const handleTabActivate = (tabId: string) => {
-      const current = currentElement();
-      if (current.data.activeTabId === tabId) return;
-      updateElement({
-        ...current,
-        updatedAt: Date.now(),
-        data: { ...current.data, activeTabId: tabId },
-      });
-    };
-
-    const handleNavigate = (url: string) => {
-      const current = currentElement();
-      const normalized = normalizeUrl(url);
-      const nextTabs = current.data.tabs.map((t) =>
-        t.id === current.data.activeTabId ? { ...t, url: normalized } : t,
-      );
-      updateElement({
-        ...current,
-        updatedAt: Date.now(),
-        data: { ...current.data, tabs: nextTabs },
-      });
-    };
-
+    const handleTabAdd = () => updateElement(addTabToBrowserElement(currentElement()));
+    const handleTabClose = (tabId: string) => updateElement(closeTabOnBrowserElement(currentElement(), tabId));
+    const handleTabActivate = (tabId: string) => updateElement(activateBrowserTab(currentElement(), tabId));
+    const handleNavigate = (url: string) => updateElement(navigateBrowserTab(currentElement(), url));
     const handleTitleUpdate = (tabId: string, title: string) => {
-      const current = currentElement();
-      const tab = current.data.tabs.find((t) => t.id === tabId);
-      if (!tab || tab.title === title) return;
-      const nextTabs = current.data.tabs.map((t) => (t.id === tabId ? { ...t, title } : t));
-      // Title updates are cosmetic — update signal only, no CRDT write
-      setCurrentElement(() => ({ ...current, data: { ...current.data, tabs: nextTabs } }));
+      setCurrentElement((current) => updateBrowserTabTitle(current, tabId, title));
     };
 
     const clearPendingInteraction = () => {
@@ -928,132 +404,20 @@ export class IframeBrowserWidgetPlugin implements IPlugin {
   }
 
   #beginDomDrag(context: IPluginContext, node: Konva.Rect, event: PointerEvent | MouseEvent) {
-    if (event.button !== 0) return;
-    event.preventDefault();
-    event.stopPropagation();
-
-    this.#selectBrowserNode(context, node, event);
-    this.#cleanupDrag?.();
-
-    const activeSelection = TransformPlugin.filterSelection(
-      context.state.selection.some((c) => c.id() === node.id())
-        ? context.state.selection
-        : [node],
-    );
-
-    const startPointerWorld = getHostedWidgetPointerWorldPoint(context, { x: event.clientX, y: event.clientY });
-    const pointerOffsets = new Map(
-      activeSelection.map((candidate) => {
-        const position = getWorldPosition(candidate);
-        return [
-          candidate.id(),
-          { x: position.x - startPointerWorld.x, y: position.y - startPointerWorld.y },
-        ];
-      }),
-    );
-
-    const beforeElements = collectHostedWidgetSelectionShapes(activeSelection)
-      .map((shape) => context.capabilities.toElement?.(shape))
-      .filter((el): el is TElement => Boolean(el))
-      .map((el) => structuredClone(el));
-
-    const throttledPatch = throttle((elements: TElement[]) => {
-      context.crdt.patch({ elements, groups: [] });
-    }, 100);
-
-    const onPointerMove = (moveEvent: PointerEvent | MouseEvent) => {
-      const pointerWorld = getHostedWidgetPointerWorldPoint(context, { x: moveEvent.clientX, y: moveEvent.clientY });
-
-      activeSelection.forEach((candidate) => {
-        const offset = pointerOffsets.get(candidate.id());
-        if (!offset) return;
-        setWorldPosition(candidate, {
-          x: pointerWorld.x + offset.x,
-          y: pointerWorld.y + offset.y,
-        });
-        if (IframeBrowserWidgetPlugin.isBrowserNode(candidate)) {
-          this.#syncMountedNode(candidate);
-        }
-      });
-
-      const liveElements = collectHostedWidgetSelectionShapes(activeSelection)
-        .map((shape) => context.capabilities.toElement?.(shape))
-        .filter((el): el is TElement => Boolean(el))
-        .map((el) => structuredClone(el));
-      if (liveElements.length > 0) throttledPatch(liveElements);
-
-      context.stage.batchDraw();
-    };
-
-    let finalized = false;
-    const finalizeDrag = () => {
-      if (finalized) return;
-      finalized = true;
-      window.removeEventListener("pointermove", onPointerMove as EventListener);
-      window.removeEventListener("pointerup", finalizeDrag);
-      window.removeEventListener("pointercancel", finalizeDrag);
-      window.removeEventListener("blur", finalizeDrag);
-      this.#cleanupDrag = null;
-
-      const afterElements = collectHostedWidgetSelectionShapes(activeSelection)
-        .map((shape) => context.capabilities.toElement?.(shape))
-        .filter((el): el is TElement => Boolean(el))
-        .map((el) => structuredClone(el));
-
-      if (afterElements.length === 0) return;
-      context.crdt.patch({ elements: afterElements, groups: [] });
-      context.history.record({
-        label: "drag-browser-widget",
-        undo: () => {
-          beforeElements.forEach((el) => context.capabilities.updateShapeFromTElement?.(el));
-          context.crdt.patch({ elements: beforeElements, groups: [] });
-        },
-        redo: () => {
-          afterElements.forEach((el) => context.capabilities.updateShapeFromTElement?.(el));
-          context.crdt.patch({ elements: afterElements, groups: [] });
-        },
-      });
-    };
-
-    window.addEventListener("pointermove", onPointerMove as EventListener);
-    window.addEventListener("pointerup", finalizeDrag, { once: true });
-    window.addEventListener("pointercancel", finalizeDrag, { once: true });
-    window.addEventListener("blur", finalizeDrag, { once: true });
-    this.#cleanupDrag = () => {
-      window.removeEventListener("pointermove", onPointerMove as EventListener);
-      window.removeEventListener("pointerup", finalizeDrag);
-      window.removeEventListener("pointercancel", finalizeDrag);
-      window.removeEventListener("blur", finalizeDrag);
-      finalized = true;
-    };
+    beginDomDrag({
+      cleanupDrag: () => this.#cleanupDrag?.(),
+      setCleanupDrag: (cleanup) => {
+        this.#cleanupDrag = cleanup;
+      },
+      context,
+      node,
+      selectNode: (innerContext, innerNode, innerEvent) => this.#selectBrowserNode(innerContext, innerNode, innerEvent),
+      isBrowserNode: IframeBrowserWidgetPlugin.isBrowserNode,
+      syncMountedNode: (innerNode) => this.#syncMountedNode(innerNode),
+    }, event);
   }
 
   #toElement(node: Konva.Rect): TBrowserElement {
-    const snapshot = structuredClone(
-      node.getAttr(BROWSER_ELEMENT_ATTR) as TBrowserElement | undefined,
-    );
-    if (!snapshot) throw new Error("Missing browser widget snapshot");
-
-    const worldPosition = getWorldPosition(node);
-    const absoluteScale = node.getAbsoluteScale();
-    const layer = node.getLayer();
-    const layerScaleX = layer?.scaleX() ?? 1;
-    const layerScaleY = layer?.scaleY() ?? 1;
-    const parent = node.getParent();
-
-    return {
-      ...snapshot,
-      x: worldPosition.x,
-      y: worldPosition.y,
-      rotation: node.getAbsoluteRotation(),
-      parentGroupId: parent instanceof Konva.Group ? parent.id() : null,
-      zIndex: getNodeZIndex(node),
-      updatedAt: Date.now(),
-      data: {
-        ...snapshot.data,
-        w: node.width() * (absoluteScale.x / layerScaleX),
-        h: node.height() * (absoluteScale.y / layerScaleY),
-      },
-    };
+    return toElement(node);
   }
 }

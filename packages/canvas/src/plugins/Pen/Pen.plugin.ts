@@ -1,5 +1,4 @@
-import { throttle } from "@solid-primitives/scheduled";
-import type { TElement, TElementStyle, TPenData } from "@vibecanvas/shell/automerge/index";
+import type { TElement } from "@vibecanvas/shell/automerge/index";
 import Konva from "konva";
 import type { TTool } from "../../components/FloatingCanvasToolbar/toolbar.types";
 import { CustomEvents } from "../../custom-events";
@@ -7,18 +6,18 @@ import { CanvasMode } from "../../services/canvas/enum";
 import type { IPlugin, IPluginContext } from "../shared/interface";
 import {
   createPenDataFromStrokePoints,
-  getStrokePathFromPenData,
-  scalePenDataPoints,
   type TStrokePoint,
 } from "../shared/pen.math";
-import { startSelectionCloneDrag } from "../shared/clone-drag";
-import { getWorldPosition, setWorldPosition } from "../shared/node-space";
-import { getNodeZIndex, setNodeZIndex } from "../shared/render-order.shared";
-import { TransformPlugin } from "../Transform/Transform.plugin";
-
-const DEFAULT_FILL = "#0f172a";
-const DEFAULT_OPACITY = 0.92;
-const DEFAULT_STROKE_WIDTH = 7;
+import { setupPenCapabilities } from "./pen.capabilities";
+import { DEFAULT_FILL, DEFAULT_OPACITY, DEFAULT_STROKE_WIDTH } from "./pen.constants";
+import {
+  createPenPathFromElement,
+  isPenNode,
+  penPathToElement,
+  updatePenPathFromElement,
+} from "./pen.element";
+import { createPenCloneDrag, createPenPreviewClone, finalizePenPreviewClone } from "./pen.clone";
+import { penNodeToPositionPatch, safeStopPenDrag, setupPenShapeListeners } from "./pen.listeners";
 
 export class PenPlugin implements IPlugin {
   #activeTool: TTool = "select";
@@ -29,7 +28,7 @@ export class PenPlugin implements IPlugin {
   apply(context: IPluginContext): void {
     this.setupToolState(context);
     this.setupDrawFlow(context);
-    PenPlugin.setupCapabilities(context);
+    setupPenCapabilities(context);
     context.hooks.destroy.tap(() => {
       this.resetPreview();
       this.#points = [];
@@ -103,7 +102,7 @@ export class PenPlugin implements IPlugin {
 
       if (!(node instanceof Konva.Path)) return;
 
-      PenPlugin.setupShapeListeners(context, node);
+      setupPenShapeListeners(context, node);
       node.setDraggable(true);
       node.listening(true);
       node.visible(true);
@@ -113,7 +112,7 @@ export class PenPlugin implements IPlugin {
         nodes: [node],
         position: "front",
       });
-      const element = PenPlugin.toTElement(node);
+      const element = penPathToElement(node);
       context.crdt.patch({ elements: [element], groups: [] });
     };
 
@@ -151,7 +150,7 @@ export class PenPlugin implements IPlugin {
       return;
     }
 
-    PenPlugin.updatePathFromElement(previewPath, element);
+    updatePenPathFromElement(previewPath, element);
     previewPath.listening(false);
     previewPath.visible(true);
     previewPath.getLayer()?.batchDraw();
@@ -210,40 +209,6 @@ export class PenPlugin implements IPlugin {
     };
   }
 
-  private static setupCapabilities(context: IPluginContext) {
-    const previousCreate = context.capabilities.createShapeFromTElement;
-    context.capabilities.createShapeFromTElement = (element) => {
-      if (element.data.type !== "pen") return previousCreate?.(element) ?? null;
-
-      const node = PenPlugin.createPathFromElement(element);
-      PenPlugin.setupShapeListeners(context, node);
-      node.draggable(true);
-      return node;
-    };
-
-    const previousToElement = context.capabilities.toElement;
-    context.capabilities.toElement = (node) => {
-      if (node instanceof Konva.Path && PenPlugin.isPenPath(node)) {
-        return PenPlugin.toTElement(node);
-      }
-      return previousToElement?.(node) ?? null;
-    };
-
-    const previousUpdate = context.capabilities.updateShapeFromTElement;
-    context.capabilities.updateShapeFromTElement = (element) => {
-      if (element.data.type !== "pen") return previousUpdate?.(element) ?? null;
-
-      const node = context.staticForegroundLayer.findOne((candidate: Konva.Node) => {
-        return candidate instanceof Konva.Path && candidate.id() === element.id;
-      });
-
-      if (!(node instanceof Konva.Path)) return null;
-
-      PenPlugin.updatePathFromElement(node, element);
-      return node;
-    };
-  }
-
   private static getPressure(event?: MouseEvent | TouchEvent | PointerEvent) {
     if (event instanceof PointerEvent && Number.isFinite(event.pressure) && event.pressure > 0) {
       return event.pressure;
@@ -252,367 +217,43 @@ export class PenPlugin implements IPlugin {
     return 0.5;
   }
 
-  private static getStrokeWidthFromStyle(style: TElementStyle) {
-    return style.strokeWidth ?? DEFAULT_STROKE_WIDTH;
-  }
-
-  private static getFillFromStyle(style: TElementStyle) {
-    return style.backgroundColor ?? style.strokeColor ?? DEFAULT_FILL;
-  }
-
-  private static getColorStyleKey(style: TElementStyle): "backgroundColor" | "strokeColor" {
-    if (typeof style.strokeColor === "string" && typeof style.backgroundColor !== "string") {
-      return "strokeColor";
-    }
-
-    return "backgroundColor";
-  }
-
-  private static isPenPath(node: Konva.Path) {
-    const data = node.getAttr("vcElementData") as TPenData | undefined;
-    return data?.type === "pen";
-  }
-
   static isPenNode(node: Konva.Node): node is Konva.Path {
-    return node instanceof Konva.Path && PenPlugin.isPenPath(node);
-  }
-
-  private static createStyleFromNode(node: Konva.Path, baseStyle: TElementStyle): TElementStyle {
-    const nodeFill = node.fill();
-    const fill = typeof nodeFill === "string" ? nodeFill : DEFAULT_FILL;
-    const style: TElementStyle = {
-      ...structuredClone(baseStyle),
-      opacity: node.opacity(),
-      strokeWidth: node.getAttr("vcPenStrokeWidth") ?? DEFAULT_STROKE_WIDTH,
-    };
-
-    const colorStyleKey = PenPlugin.getColorStyleKey(baseStyle);
-    delete style.backgroundColor;
-    delete style.strokeColor;
-    style[colorStyleKey] = fill;
-
-    return style;
+    return isPenNode(node);
   }
 
   static createPathFromElement(element: TElement): Konva.Path {
-    if (element.data.type !== "pen") {
-      throw new Error("Unsupported element type for PenPlugin");
-    }
-
-    const node = new Konva.Path({
-      id: element.id,
-      x: element.x,
-      y: element.y,
-      rotation: element.rotation,
-      data: getStrokePathFromPenData(element, {
-        size: PenPlugin.getStrokeWidthFromStyle(element.style),
-      }),
-      fill: PenPlugin.getFillFromStyle(element.style),
-      opacity: element.style.opacity ?? DEFAULT_OPACITY,
-      listening: true,
-      draggable: false,
-    });
-
-    node.setAttr("vcElementData", structuredClone(element.data));
-    node.setAttr("vcElementStyle", structuredClone(element.style));
-    node.setAttr("vcPenStrokeWidth", PenPlugin.getStrokeWidthFromStyle(element.style));
-    setNodeZIndex(node, element.zIndex);
-    return node;
+    return createPenPathFromElement(element);
   }
 
   static updatePathFromElement(node: Konva.Path, element: TElement) {
-    if (element.data.type !== "pen") return;
-
-    node.id(element.id);
-    setWorldPosition(node, { x: element.x, y: element.y });
-    node.rotation(element.rotation);
-    node.data(getStrokePathFromPenData(element, {
-      size: PenPlugin.getStrokeWidthFromStyle(element.style),
-    }));
-    node.fill(PenPlugin.getFillFromStyle(element.style));
-    node.opacity(element.style.opacity ?? DEFAULT_OPACITY);
-    node.scale({ x: 1, y: 1 });
-    node.setAttr("vcElementData", structuredClone(element.data));
-    node.setAttr("vcElementStyle", structuredClone(element.style));
-    node.setAttr("vcPenStrokeWidth", PenPlugin.getStrokeWidthFromStyle(element.style));
-    setNodeZIndex(node, element.zIndex);
+    updatePenPathFromElement(node, element);
   }
 
   static toTElement(node: Konva.Path): TElement {
-    const baseData = structuredClone(node.getAttr("vcElementData") as TPenData | undefined);
-    if (!baseData || baseData.type !== "pen") {
-      throw new Error("Pen path is missing vcElementData metadata");
-    }
-
-    const baseStyle = structuredClone((node.getAttr("vcElementStyle") as TElementStyle | undefined) ?? {});
-    const absoluteScale = node.getAbsoluteScale();
-    const layer = node.getLayer();
-    const layerScaleX = layer?.scaleX() ?? 1;
-    const layerScaleY = layer?.scaleY() ?? 1;
-    const scaleX = absoluteScale.x / layerScaleX;
-    const scaleY = absoluteScale.y / layerScaleY;
-    const worldPosition = getWorldPosition(node);
-    const parent = node.getParent();
-    const parentGroupId = parent instanceof Konva.Group ? parent.id() : null;
-
-    return {
-      id: node.id(),
-      rotation: node.getAbsoluteRotation(),
-      x: worldPosition.x,
-      y: worldPosition.y,
-      bindings: [],
-      createdAt: Date.now(),
-      locked: false,
-      parentGroupId,
-      updatedAt: Date.now(),
-      zIndex: getNodeZIndex(node),
-      data: {
-        ...baseData,
-        points: scalePenDataPoints(baseData.points, scaleX, scaleY),
-      },
-      style: PenPlugin.createStyleFromNode(node, baseStyle),
-    };
+    return penPathToElement(node);
   }
 
   static createPreviewClone(node: Konva.Path) {
-    const element = PenPlugin.toTElement(node);
-    const clone = PenPlugin.createPathFromElement({
-      ...element,
-      id: crypto.randomUUID(),
-      parentGroupId: null,
-      data: structuredClone(element.data),
-      style: structuredClone(element.style),
-    });
-
-    clone.setDraggable(true);
-    return clone;
+    return createPenPreviewClone(node);
   }
 
   static createCloneDrag(context: IPluginContext, node: Konva.Path) {
-    const previewClone = PenPlugin.createPreviewClone(node);
-    context.dynamicLayer.add(previewClone);
-    previewClone.startDrag();
-
-    const finalizeCloneDrag = () => {
-      previewClone.off("dragend", finalizeCloneDrag);
-      const cloned = PenPlugin.finalizePreviewClone(context, previewClone);
-      context.setState("selection", cloned ? [cloned] : []);
-    };
-
-    previewClone.on("dragend", finalizeCloneDrag);
-    return previewClone;
+    return createPenCloneDrag(context, node);
   }
 
   static finalizePreviewClone(context: IPluginContext, previewClone: Konva.Path) {
-    if (previewClone.isDragging()) {
-      previewClone.stopDrag();
-    }
-
-    previewClone.moveTo(context.staticForegroundLayer);
-    PenPlugin.setupShapeListeners(context, previewClone);
-    previewClone.setDraggable(true);
-    context.capabilities.renderOrder?.assignOrderOnInsert({
-      parent: context.staticForegroundLayer,
-      nodes: [previewClone],
-      position: "front",
-    });
-    context.crdt.patch({ elements: [PenPlugin.toTElement(previewClone)], groups: [] });
-    return previewClone;
+    return finalizePenPreviewClone(context, previewClone);
   }
 
   static setupShapeListeners(context: IPluginContext, node: Konva.Path) {
-    let originalElement: TElement | null = null;
-    let isCloneDrag = false;
-    const multiDragStartPositions = new Map<string, { x: number; y: number }>();
-    const passengerOriginalElements = new Map<string, TElement[]>();
-
-    node.on("pointerclick", (event) => {
-      if (context.state.mode !== CanvasMode.SELECT) return;
-      context.hooks.customEvent.call(CustomEvents.ELEMENT_POINTERCLICK, event);
-    });
-
-    node.on("pointerdown dragstart", (event) => {
-      if (context.state.mode !== CanvasMode.SELECT) {
-        PenPlugin.safeStopDrag(node);
-        return;
-      }
-
-      if (event.type === "pointerdown") {
-        const earlyExit = context.hooks.customEvent.call(CustomEvents.ELEMENT_POINTERDOWN, event);
-        if (earlyExit) event.cancelBubble = true;
-      }
-
-      if (event.type === "dragstart" && event.evt?.altKey) {
-        isCloneDrag = true;
-        PenPlugin.safeStopDrag(node);
-        if (startSelectionCloneDrag(context, node)) {
-          isCloneDrag = false;
-          return;
-        }
-        PenPlugin.createCloneDrag(context, node);
-      }
-    });
-
-    node.on("pointerdblclick", (event) => {
-      if (context.state.mode !== CanvasMode.SELECT) return;
-      const earlyExit = context.hooks.customEvent.call(CustomEvents.ELEMENT_POINTERDBLCLICK, event);
-      if (earlyExit) event.cancelBubble = true;
-    });
-
-    const applyElement = (element: TElement) => {
-      context.capabilities.updateShapeFromTElement?.(element);
-      let parent = node.getParent();
-      while (parent instanceof Konva.Group) {
-        parent.fire("transform");
-        parent = parent.getParent();
-      }
-    };
-
-    const throttledPatch = throttle((patch: Pick<TElement, "id" | "x" | "y" | "parentGroupId" | "updatedAt">) => {
-      context.crdt.patch({ elements: [patch], groups: [] });
-    }, 100);
-
-    node.on("dragstart", (event) => {
-      if (isCloneDrag || event.evt?.altKey) return;
-
-      originalElement = PenPlugin.toTElement(node);
-      multiDragStartPositions.clear();
-      passengerOriginalElements.clear();
-      const selected = TransformPlugin.filterSelection(context.state.selection);
-      selected.forEach((selectedNode) => {
-        multiDragStartPositions.set(selectedNode.id(), { ...selectedNode.absolutePosition() });
-        if (selectedNode === node) return;
-
-        if (selectedNode instanceof Konva.Shape) {
-          const element = context.capabilities.toElement?.(selectedNode);
-          if (element) passengerOriginalElements.set(selectedNode.id(), [structuredClone(element)]);
-        } else if (selectedNode instanceof Konva.Group) {
-          const childElements = (selectedNode.find((child: Konva.Node) => child instanceof Konva.Shape) as Konva.Shape[])
-            .map((child) => context.capabilities.toElement?.(child))
-            .filter(Boolean) as TElement[];
-          passengerOriginalElements.set(selectedNode.id(), structuredClone(childElements));
-        }
-      });
-    });
-
-    node.on("dragmove", () => {
-      if (isCloneDrag) return;
-
-      throttledPatch(PenPlugin.toPositionPatch(node));
-      const selected = TransformPlugin.filterSelection(context.state.selection);
-      if (selected.length <= 1) return;
-
-      const start = multiDragStartPositions.get(node.id());
-      if (!start) return;
-      const current = node.absolutePosition();
-      const dx = current.x - start.x;
-      const dy = current.y - start.y;
-
-      selected.forEach((other) => {
-        if (other === node) return;
-        if (other.isDragging()) return;
-
-        const otherStart = multiDragStartPositions.get(other.id());
-        if (!otherStart) return;
-        other.absolutePosition({ x: otherStart.x + dx, y: otherStart.y + dy });
-      });
-    });
-
-    node.on("dragend", () => {
-      if (isCloneDrag) {
-        isCloneDrag = false;
-        originalElement = null;
-        multiDragStartPositions.clear();
-        passengerOriginalElements.clear();
-        return;
-      }
-
-      const nextElement = PenPlugin.toTElement(node);
-      const beforeElement = originalElement ? structuredClone(originalElement) : null;
-      const afterElement = structuredClone(nextElement);
-
-      context.crdt.patch({ elements: [afterElement], groups: [] });
-
-      const selected = TransformPlugin.filterSelection(context.state.selection);
-      const passengers = selected.filter((selectedNode) => selectedNode !== node);
-      const passengerAfterElements = new Map<string, TElement[]>();
-      passengers.forEach((passenger) => {
-        if (passenger instanceof Konva.Shape) {
-          const element = context.capabilities.toElement?.(passenger);
-          if (element) {
-            const elements = [structuredClone(element)];
-            passengerAfterElements.set(passenger.id(), elements);
-            context.crdt.patch({ elements, groups: [] });
-          }
-        } else if (passenger instanceof Konva.Group) {
-          const childElements = (passenger.find((child: Konva.Node) => child instanceof Konva.Shape) as Konva.Shape[])
-            .map((child) => context.capabilities.toElement?.(child))
-            .filter(Boolean) as TElement[];
-          const cloned = structuredClone(childElements);
-          passengerAfterElements.set(passenger.id(), cloned);
-          if (cloned.length > 0) context.crdt.patch({ elements: cloned, groups: [] });
-        }
-      });
-
-      if (!beforeElement) return;
-
-      const didMove = beforeElement.x !== afterElement.x || beforeElement.y !== afterElement.y;
-      const capturedStartPositions = new Map(multiDragStartPositions);
-      const capturedPassengerOriginals = new Map(passengerOriginalElements);
-      multiDragStartPositions.clear();
-      originalElement = null;
-      if (!didMove) return;
-
-      context.history.record({
-        label: "drag-pen",
-        undo() {
-          applyElement(beforeElement);
-          context.crdt.patch({ elements: [beforeElement], groups: [] });
-          passengers.forEach((passenger) => {
-            const startPos = capturedStartPositions.get(passenger.id());
-            if (startPos) passenger.absolutePosition(startPos);
-            const originalEls = capturedPassengerOriginals.get(passenger.id());
-            if (originalEls && originalEls.length > 0) {
-              context.crdt.patch({ elements: originalEls, groups: [] });
-            }
-          });
-        },
-        redo() {
-          applyElement(afterElement);
-          context.crdt.patch({ elements: [afterElement], groups: [] });
-          passengers.forEach((passenger) => {
-            const afterEls = passengerAfterElements.get(passenger.id());
-            if (!afterEls || afterEls.length === 0) return;
-            if (passenger instanceof Konva.Shape) {
-              context.capabilities.updateShapeFromTElement?.(afterEls[0]);
-              context.crdt.patch({ elements: afterEls, groups: [] });
-            }
-          });
-        },
-      });
-    });
+    setupPenShapeListeners(context, node);
   }
 
   static safeStopDrag(node: Konva.Node) {
-    try {
-      if (node.isDragging()) {
-        node.stopDrag();
-      }
-    } catch {
-      return;
-    }
+    safeStopPenDrag(node);
   }
 
   private static toPositionPatch(node: Konva.Path) {
-    const worldPosition = getWorldPosition(node);
-    const parent = node.getParent();
-
-    return {
-      id: node.id(),
-      x: worldPosition.x,
-      y: worldPosition.y,
-      parentGroupId: parent instanceof Konva.Group ? parent.id() : null,
-      updatedAt: Date.now(),
-    };
+    return penNodeToPositionPatch(node);
   }
 }

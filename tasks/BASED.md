@@ -82,9 +82,11 @@ Use the leaf files for execution history and local context.
 - [x]: [B7](b/B7.md) - iframe browser: click can latch canvas drag and trap release
 - [x]: [B8](b/B8.md) - hosted widgets: transformer resize loses control when pointer crosses DOM
 - [x]: [B9](b/B9.md) - hosted/iframe widgets: canvas drag not persisted on reload
+- [ ]: [B10](b/B10.md) - style menu: drag then style jumps selection back to old position
 
 ## A dditions
 - [ ]: [A1](a/A1.md) - file: support common CodeMirror languages
+- [ ]: [A2] - add inline text support to diamond and ellipse
 
 ## S ubtractions
 - [ ]: [S1](s/S1.md) - double bun run dev -> find new port
@@ -97,8 +99,9 @@ Use the leaf files for execution history and local context.
 - [x]: [S9](s/S9.md) - fix seo image of web
 - [x]: [S10](s/S10.md) - reverse websocket to orpc
 - [x]: [S12](s/S12.md) - refactor: konvajs
-- [ ]: [S13](s/S13.md) - canvas plugins: folder-per-plugin refactor plan
+- [x]: [S13](s/S13.md) - canvas plugins: folder-per-plugin refactor plan
 - [x]: [S14](s/S14.md) - canvas: keep recorder plugin in development only
+- [x]: [S15] - inline text support -> fix position (use pretext lib?)
 
 ## E xplorations
 - [ ]: [E1](e/E1.md) - Tauri Research
