@@ -754,7 +754,13 @@ export class HostedSolidWidgetPlugin implements IPlugin {
     const [autoSize, setAutoSize] = createSignal<((size: { width: number; height: number }) => void) | null>(null);
     const dispose = render(() => {
       createEffect(() => {
-        const interactive = context.state.focusedId === node.id() && context.state.mode === CanvasMode.SELECT;
+        const transformerVisible =
+          context.state.selection.some((candidate) => candidate.id() === node.id())
+          && node.getAttr(HOSTED_TRANSFORMER_VISIBLE_ATTR) === true;
+        const interactive =
+          context.state.focusedId === node.id()
+          && context.state.mode === CanvasMode.SELECT
+          && !transformerVisible;
         mountElement.style.pointerEvents = interactive ? "auto" : "none";
         mountElement.dataset.hostedWidgetInteractive = interactive ? "true" : "false";
         mountElement.toggleAttribute("inert", !interactive);
@@ -769,7 +775,12 @@ export class HostedSolidWidgetPlugin implements IPlugin {
           element={currentElement}
           windowChrome={windowChrome}
           isFocused={() => context.state.focusedId === node.id()}
-          isInteractive={() => context.state.focusedId === node.id() && context.state.mode === CanvasMode.SELECT}
+          isInteractive={() => {
+            const transformerVisible =
+              context.state.selection.some((candidate) => candidate.id() === node.id())
+              && node.getAttr(HOSTED_TRANSFORMER_VISIBLE_ATTR) === true;
+            return context.state.focusedId === node.id() && context.state.mode === CanvasMode.SELECT && !transformerVisible;
+          }}
           onSelectPointerDown={(event) => {
             this.selectHostedNode(context, node, event);
           }}

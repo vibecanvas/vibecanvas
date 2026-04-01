@@ -46,6 +46,7 @@ type TBrowserMountRecord = {
   mountElement: HTMLDivElement;
   dispose: () => void;
   setElement: (el: TBrowserElement) => void;
+  setPendingInteraction: (pending: boolean) => void;
 };
 
 // ── Utilities ────────────────────────────────────────────────────────────────
@@ -153,7 +154,6 @@ function getDefaultBrowserElement(x: number, y: number): TBrowserElement {
 function BrowserChrome(props: {
   element: () => TBrowserElement;
   isFocused: () => boolean;
-  isSelectable: () => boolean;
   isInteractive: () => boolean;
   onHeaderPointerDown: (event: PointerEvent | MouseEvent) => void;
   onHeaderDoubleClick: (event: MouseEvent) => void;
@@ -297,7 +297,7 @@ function BrowserChrome(props: {
         inset: `${CONTENT_INSET}px`,
         display: "flex",
         "flex-direction": "column",
-        "pointer-events": props.isSelectable() ? "auto" : "none",
+        "pointer-events": props.isInteractive() ? "auto" : "none",
         border: `1px solid ${resolvedBorderColor()}`,
         background: props.element().style.backgroundColor ?? "#ffffff",
         "box-shadow": boxShadow(),
@@ -722,6 +722,9 @@ export class IframeBrowserWidgetPlugin implements IPlugin {
 
     node.on("pointerdown", (event) => {
       if (context.state.mode !== CanvasMode.SELECT) return;
+      if (context.state.focusedId !== node.id()) {
+        this.#mounts.get(node.id())?.setPendingInteraction(true);
+      }
       const earlyExit = context.hooks.customEvent.call(CustomEvents.ELEMENT_POINTERDOWN, event);
       if (earlyExit) event.cancelBubble = true;
     });
@@ -748,6 +751,7 @@ export class IframeBrowserWidgetPlugin implements IPlugin {
     context.worldWidgetsRoot.appendChild(mountElement);
 
     const [currentElement, setCurrentElement] = createSignal<TBrowserElement>(element);
+    const [pendingInteraction, setPendingInteraction] = createSignal(false);
 
     const updateElement = (nextElement: TBrowserElement) => {
       setCurrentElement(() => nextElement);
@@ -812,16 +816,23 @@ export class IframeBrowserWidgetPlugin implements IPlugin {
       setCurrentElement(() => ({ ...current, data: { ...current.data, tabs: nextTabs } }));
     };
 
+    const clearPendingInteraction = () => {
+      setPendingInteraction(false);
+    };
+
+    window.addEventListener("pointerup", clearPendingInteraction);
+    window.addEventListener("pointercancel", clearPendingInteraction);
+    window.addEventListener("blur", clearPendingInteraction);
+
     const dispose = render(() => {
       createEffect(() => {
         const transformerVisible =
           context.state.selection.some((candidate) => candidate.id() === node.id())
           && node.getAttr(BROWSER_TRANSFORMER_ATTR) === true;
-        const selectable = context.state.mode === CanvasMode.SELECT && !transformerVisible;
-        const interactive = context.state.focusedId === node.id() && selectable;
-        mountElement.style.pointerEvents = selectable ? "auto" : "none";
+        const interactive = context.state.focusedId === node.id() && context.state.mode === CanvasMode.SELECT && !transformerVisible && !pendingInteraction();
+        mountElement.style.pointerEvents = interactive ? "auto" : "none";
         mountElement.dataset.hostedWidgetInteractive = interactive ? "true" : "false";
-        mountElement.toggleAttribute("inert", !selectable);
+        mountElement.toggleAttribute("inert", !interactive);
 
         if (!interactive) return;
         const cleanupFocus = scheduleHostedWidgetFocus(mountElement);
@@ -832,17 +843,11 @@ export class IframeBrowserWidgetPlugin implements IPlugin {
         <BrowserChrome
           element={currentElement}
           isFocused={() => context.state.focusedId === node.id()}
-          isSelectable={() => {
-            const transformerVisible =
-              context.state.selection.some((candidate) => candidate.id() === node.id())
-              && node.getAttr(BROWSER_TRANSFORMER_ATTR) === true;
-            return context.state.mode === CanvasMode.SELECT && !transformerVisible;
-          }}
           isInteractive={() => {
             const transformerVisible =
               context.state.selection.some((candidate) => candidate.id() === node.id())
               && node.getAttr(BROWSER_TRANSFORMER_ATTR) === true;
-            return context.state.focusedId === node.id() && context.state.mode === CanvasMode.SELECT && !transformerVisible;
+            return context.state.focusedId === node.id() && context.state.mode === CanvasMode.SELECT && !transformerVisible && !pendingInteraction();
           }}
           onSelectPointerDown={(event) => this.#selectBrowserNode(context, node, event)}
           onHeaderPointerDown={(event) => this.#beginDomDrag(context, node, event)}
@@ -864,8 +869,14 @@ export class IframeBrowserWidgetPlugin implements IPlugin {
     this.#mounts.set(node.id(), {
       node,
       mountElement,
-      dispose,
+      dispose: () => {
+        window.removeEventListener("pointerup", clearPendingInteraction);
+        window.removeEventListener("pointercancel", clearPendingInteraction);
+        window.removeEventListener("blur", clearPendingInteraction);
+        dispose();
+      },
       setElement: (nextElement) => setCurrentElement(() => nextElement),
+      setPendingInteraction: (pending) => setPendingInteraction(pending),
     });
 
     this.#syncMountedNode(node);

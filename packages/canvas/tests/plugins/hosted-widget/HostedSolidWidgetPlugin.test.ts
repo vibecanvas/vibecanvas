@@ -665,6 +665,67 @@ describe("HostedSolidWidgetPlugin", () => {
     }
   });
 
+  test("hosted widget disables DOM pointer events while transformer handles are shown", async () => {
+    let context!: IPluginContext;
+    const docHandle = createMockDocHandle({
+      elements: {
+        terminal1: {
+          id: "terminal1",
+          x: 30,
+          y: 40,
+          rotation: 0,
+          zIndex: "z00000001",
+          parentGroupId: null,
+          bindings: [],
+          locked: false,
+          createdAt: 1,
+          updatedAt: 1,
+          style: {},
+          data: { type: "terminal", w: 320, h: 220, isCollapsed: false, workingDirectory: "." },
+        },
+      },
+    });
+
+    const harness = await createCanvasTestHarness({
+      docHandle,
+      plugins: [new RenderOrderPlugin(), new HostedSolidWidgetPlugin(), new SceneHydratorPlugin()],
+      initializeScene: (ctx) => {
+        context = ctx;
+      },
+    });
+
+    await flushCanvasEffects();
+
+    const mount = harness.stage.container().querySelector('[data-hosted-widget-id="terminal1"]') as HTMLDivElement;
+    const root = harness.stage.container().querySelector('[data-hosted-widget-root="true"]') as HTMLDivElement;
+    const resizeButton = harness.stage.container().querySelector('[aria-label="Show resize handles"]') as HTMLButtonElement;
+    const closeButton = harness.stage.container().querySelector('[aria-label="Close widget"]') as HTMLButtonElement;
+
+    context.setState("focusedId", "terminal1");
+    await flushCanvasEffects();
+
+    expect(root.dataset.hostedWidgetFocused).toBe("true");
+    expect(root.dataset.hostedWidgetInteractive).toBe("true");
+    expect(mount.dataset.hostedWidgetInteractive).toBe("true");
+    expect(mount.style.pointerEvents).toBe("auto");
+    expect(mount.hasAttribute("inert")).toBe(false);
+    expect(resizeButton.style.pointerEvents).toBe("auto");
+    expect(closeButton.style.pointerEvents).toBe("auto");
+
+    resizeButton.click();
+    await flushCanvasEffects();
+
+    expect(root.dataset.hostedWidgetFocused).toBe("true");
+    expect(root.dataset.hostedWidgetInteractive).toBe("false");
+    expect(mount.dataset.hostedWidgetInteractive).toBe("false");
+    expect(mount.style.pointerEvents).toBe("none");
+    expect(mount.hasAttribute("inert")).toBe(true);
+    expect(resizeButton.style.pointerEvents).toBe("none");
+    expect(closeButton.style.pointerEvents).toBe("none");
+
+    harness.destroy();
+  });
+
   test("first focus transition on filetree focuses the filetree root container", async () => {
     vi.useFakeTimers();
 

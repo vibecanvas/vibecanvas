@@ -163,7 +163,7 @@ describe("IframeBrowserWidgetPlugin", () => {
     expect(document.querySelectorAll("[data-iframe-browser-widget-id]")).toHaveLength(0);
   });
 
-  test("browser root is selectable before focus, becomes interactive when focused, and disables DOM pointer events while transformer is visible", async () => {
+  test("browser DOM stays transparent before focus, becomes interactive when focused, and disables DOM pointer events while transformer is visible", async () => {
     let context!: IPluginContext;
     const docHandle = createMockDocHandle({
       elements: {
@@ -190,8 +190,8 @@ describe("IframeBrowserWidgetPlugin", () => {
     expect(root.dataset.hostedWidgetFocused).toBe("false");
     expect(root.dataset.hostedWidgetInteractive).toBe("false");
     expect(mount.dataset.hostedWidgetInteractive).toBe("false");
-    expect(mount.style.pointerEvents).toBe("auto");
-    expect(mount.hasAttribute("inert")).toBe(false);
+    expect(mount.style.pointerEvents).toBe("none");
+    expect(mount.hasAttribute("inert")).toBe(true);
     expect(newTabButton.style.pointerEvents).toBe("none");
     expect(addressBar.style.pointerEvents).toBe("none");
 
@@ -270,7 +270,7 @@ describe("IframeBrowserWidgetPlugin", () => {
     }
   });
 
-  test("browser root is selectable before iframe internals become interactive", async () => {
+  test("browser focus click does not arm iframe DOM until pointer release", async () => {
     let context!: IPluginContext;
     const docHandle = createMockDocHandle({
       elements: {
@@ -295,7 +295,7 @@ describe("IframeBrowserWidgetPlugin", () => {
     const browserNode = harness.staticForegroundLayer.findOne((candidate: Konva.Node) => candidate.id() === "browser1") as Konva.Rect | null;
 
     expect(browserNode).not.toBeNull();
-    expect(mount.style.pointerEvents).toBe("auto");
+    expect(mount.style.pointerEvents).toBe("none");
     expect(iframe.style.pointerEvents).toBe("none");
     expect(context.state.selection).toHaveLength(0);
     expect(context.state.focusedId).toBeNull();
@@ -306,9 +306,16 @@ describe("IframeBrowserWidgetPlugin", () => {
       evt: new MouseEvent("pointerdown", { bubbles: true, button: 0, clientX: 120, clientY: 120 }),
     });
 
+    await flushCanvasEffects();
+
     expect(context.state.selection.map((node) => node.id())).toEqual(["browser1"]);
     expect(context.state.focusedId).toBe("browser1");
 
+    expect(mount.dataset.hostedWidgetInteractive).toBe("false");
+    expect(mount.style.pointerEvents).toBe("none");
+    expect(iframe.style.pointerEvents).toBe("none");
+
+    window.dispatchEvent(new MouseEvent("pointerup", { bubbles: true, clientX: 120, clientY: 120 }));
     await flushCanvasEffects();
 
     expect(mount.style.pointerEvents).toBe("auto");

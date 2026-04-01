@@ -80,6 +80,7 @@ Use the leaf files for execution history and local context.
 - [x]: [B3](b/B3.md) - version update not showing
 - [x]: [B4](b/B4.md) - update progress cli not moving
 - [x]: [B7](b/B7.md) - iframe browser: click can latch canvas drag and trap release
+- [x]: [B8](b/B8.md) - hosted widgets: transformer resize loses control when pointer crosses DOM
 
 ## A dditions
 - [ ]: [A1](a/A1.md) - file: support common CodeMirror languages
@@ -95,15 +96,13 @@ Use the leaf files for execution history and local context.
 - [x]: [S9](s/S9.md) - fix seo image of web
 - [x]: [S10](s/S10.md) - reverse websocket to orpc
 - [x]: [S12](s/S12.md) - refactor: konvajs
-- [ ]: [S13](s/S13.md)
-- [ ]: [S14](s/S14.md)
+- [ ]: [S13](s/S13.md) - canvas plugins: folder-per-plugin refactor plan
 
 ## E xplorations
 - [ ]: [E1](e/E1.md) - Tauri Research
 - [ ]: [E5](e/E5.md) - how to implement state machine system?
 - [ ]: [E6](e/E6.md) - should we include a task management
 - [ ]: [E7](e/E7.md) - should we include heartbeat
-- [ ]: [E8](e/E8.md)
 
 ## D irections
 - [ ]: [D1](d/D1.md) - AI can edit the canvas directly
