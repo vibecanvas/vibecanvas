@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## Upcoming (0.2.1)
+## 0.2.1
 
 ### Fixed
 - Persisted native canvas drag position updates for hosted widgets and iframe browser widgets so reload restores the latest location.
