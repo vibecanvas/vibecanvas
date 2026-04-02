@@ -85,7 +85,7 @@ Use the leaf files for execution history and local context.
 - [x]: [B10](b/B10.md) - style menu: drag then style jumps selection back to old position
 
 ## A dditions
-- [ ]: [A1](a/A1.md) - file: support common CodeMirror languages
+- [x]: [A1] - file: support common CodeMirror languages
 - [ ]: [A2] - add inline text support to diamond and ellipse
 - [ ]: [A3] - copy paste elements/groups
 
@@ -102,7 +102,7 @@ Use the leaf files for execution history and local context.
 - [x]: [S12](s/S12.md) - refactor: konvajs
 - [x]: [S13](s/S13.md) - canvas plugins: folder-per-plugin refactor plan
 - [x]: [S14](s/S14.md) - canvas: keep recorder plugin in development only
-- [x]: [S15] - inline text support -> fix position (use pretext lib?)
+- [ ]: [S15] - inline text support -> fix position (use pretext lib?)
 - [x]: [S16](s/S16.md) - canvas: fix broken TypeScript typings in packages/canvas
 
 ## E xplorations
