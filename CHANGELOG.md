@@ -6,6 +6,7 @@ All notable changes to this project will be documented in this file.
 
 ### Fixed
 - Fixed hosted terminal and other hosted widgets getting stuck non-interactive after resize, so focus returns normally once the transform completes.
+- Made PTY terminal websocket connections more resilient by switching the canvas terminal transport to PartySocket reconnecting websockets.
 
 ## 0.2.1
 

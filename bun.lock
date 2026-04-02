@@ -16,7 +16,7 @@
     },
     "apps/frontend": {
       "name": "@vibecanvas/frontend",
-      "version": "0.2.0",
+      "version": "0.2.2",
       "dependencies": {
         "@automerge/automerge": "catalog:",
         "@automerge/automerge-repo": "catalog:",
@@ -56,7 +56,7 @@
     },
     "apps/server": {
       "name": "@vibecanvas/server",
-      "version": "0.2.0",
+      "version": "0.2.2",
       "dependencies": {
         "@automerge/automerge": "catalog:",
         "@automerge/automerge-repo": "catalog:",
@@ -79,7 +79,7 @@
     },
     "apps/vibecanvas": {
       "name": "vibecanvas",
-      "version": "0.2.0",
+      "version": "0.2.2",
       "bin": {
         "vibecanvas": "./bin/vibecanvas",
       },
@@ -97,7 +97,7 @@
     },
     "apps/web": {
       "name": "@vibecanvas/web",
-      "version": "0.2.0",
+      "version": "0.2.2",
       "dependencies": {
         "@astrojs/mdx": "^4.2.2",
         "@astrojs/solid-js": "^5.0.6",
@@ -107,7 +107,7 @@
     },
     "packages/canvas": {
       "name": "@vibecanvas/canvas",
-      "version": "0.2.0",
+      "version": "0.2.2",
       "dependencies": {
         "@automerge/automerge": "catalog:",
         "@automerge/automerge-repo": "catalog:",
@@ -138,6 +138,7 @@
         "konva": "^9.3.22",
         "lucide-solid": "catalog:",
         "microdiff": "^1.5.0",
+        "partysocket": "^1.1.16",
         "pdfjs-dist": "^4.10.38",
         "perfect-freehand": "^1.2.2",
         "solid-js": "catalog:",
@@ -159,7 +160,7 @@
     },
     "packages/core-contract": {
       "name": "@vibecanvas/core-contract",
-      "version": "0.2.0",
+      "version": "0.2.2",
       "dependencies": {
         "@orpc/contract": "catalog:",
         "@vibecanvas/shell": "workspace:*",
@@ -169,7 +170,7 @@
     },
     "packages/functional-core": {
       "name": "@vibecanvas/core",
-      "version": "0.2.0",
+      "version": "0.2.2",
       "dependencies": {
         "@automerge/automerge": "catalog:",
         "@automerge/automerge-repo": "catalog:",
@@ -180,7 +181,7 @@
     },
     "packages/imperative-shell": {
       "name": "@vibecanvas/shell",
-      "version": "0.2.0",
+      "version": "0.2.2",
       "dependencies": {
         "@automerge/automerge": "catalog:",
         "@automerge/automerge-repo": "catalog:",

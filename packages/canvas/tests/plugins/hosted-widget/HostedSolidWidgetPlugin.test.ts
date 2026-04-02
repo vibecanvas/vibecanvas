@@ -69,11 +69,17 @@ class MockWebSocket {
   sent: string[] = [];
   #listeners = new Map<string, Set<(event: any) => void>>();
 
+  #emit(type: string, event: any) {
+    this.#listeners.get(type)?.forEach((listener) => listener(event));
+  }
+
   constructor(url: string) {
     this.url = url;
     MockWebSocket.instances.push(this);
     queueMicrotask(() => {
+      const event = new Event("open");
       this.onopen?.();
+      this.#emit("open", event);
     });
   }
 
@@ -91,7 +97,7 @@ class MockWebSocket {
     this.readyState = MockWebSocket.CLOSED;
     const event = { code, reason } as CloseEvent;
     this.onclose?.(event);
-    this.#listeners.get("close")?.forEach((listener) => listener(event));
+    this.#emit("close", event);
   }
 
   send(payload: string) {
@@ -110,6 +116,14 @@ import {
   createMockDocHandle,
   flushCanvasEffects,
 } from "../../test-setup";
+
+async function flushTerminalSocketConnect() {
+  for (let i = 0; i < 4; i += 1) {
+    await flushCanvasEffects();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+  }
+  await flushCanvasEffects();
+}
 
 function createTerminalSafeClientMock() {
   const safeClient: TTerminalSafeClient = {
@@ -1002,18 +1016,14 @@ describe("HostedSolidWidgetPlugin", () => {
       },
     });
 
-    await flushCanvasEffects();
-    await new Promise((resolve) => setTimeout(resolve, 0));
-    await flushCanvasEffects();
+    await flushTerminalSocketConnect();
     const initialConnectionCount = MockWebSocket.instances.length;
     const initialGetCount = vi.mocked(safeClient.api.pty.get).mock.calls.length;
     expect(initialConnectionCount).toBeGreaterThan(0);
 
     const reloadButton = harness.stage.container().querySelector('[aria-label="Reload widget"]') as HTMLButtonElement;
     reloadButton.click();
-    await flushCanvasEffects();
-    await new Promise((resolve) => setTimeout(resolve, 0));
-    await flushCanvasEffects();
+    await flushTerminalSocketConnect();
 
     expect(MockWebSocket.instances.length).toBeGreaterThan(initialConnectionCount);
     expect(vi.mocked(safeClient.api.pty.get).mock.calls.length).toBeGreaterThan(initialGetCount);
@@ -1072,7 +1082,7 @@ describe("HostedSolidWidgetPlugin", () => {
       },
     });
 
-    await flushCanvasEffects();
+    await flushTerminalSocketConnect();
     await new Promise((resolve) => setTimeout(resolve, 0));
     await flushCanvasEffects();
 
@@ -1404,7 +1414,7 @@ describe("HostedSolidWidgetPlugin", () => {
       },
     });
 
-    await flushCanvasEffects();
+    await flushTerminalSocketConnect();
 
     const mount = harness.stage.container().querySelector('[data-hosted-widget-id="terminal1"]') as HTMLDivElement;
     expect(mount).not.toBeNull();
@@ -1435,7 +1445,7 @@ describe("HostedSolidWidgetPlugin", () => {
     });
 
     harness.stage.container().dispatchEvent(dropEvent);
-    await flushCanvasEffects();
+    await flushTerminalSocketConnect();
 
     const socket = MockWebSocket.instances.at(-1);
     const textarea = harness.stage.container().querySelector('[data-ghostty-terminal-textarea="true"]') as HTMLTextAreaElement | null;
@@ -1481,7 +1491,7 @@ describe("HostedSolidWidgetPlugin", () => {
       },
     });
 
-    await flushCanvasEffects();
+    await flushTerminalSocketConnect();
 
     const mount = harness.stage.container().querySelector('[data-hosted-widget-id="terminal1"]') as HTMLDivElement;
     expect(mount).not.toBeNull();
@@ -1512,7 +1522,7 @@ describe("HostedSolidWidgetPlugin", () => {
     });
 
     harness.stage.container().dispatchEvent(dropEvent);
-    await flushCanvasEffects();
+    await flushTerminalSocketConnect();
 
     const socket = MockWebSocket.instances.at(-1);
     const textarea = harness.stage.container().querySelector('[data-ghostty-terminal-textarea="true"]') as HTMLTextAreaElement | null;
