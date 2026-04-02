@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## Upcoming (0.2.2)
+
+### Fixed
+- Fixed hosted terminal and other hosted widgets getting stuck non-interactive after resize, so focus returns normally once the transform completes.
+
 ## 0.2.1
 
 ### Fixed

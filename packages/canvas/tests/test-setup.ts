@@ -30,6 +30,59 @@ export function ensureResizeObserver() {
   vi.stubGlobal("ResizeObserver", MockResizeObserver);
 }
 
+function createEmptyDomRect(): DOMRect {
+  return {
+    x: 0,
+    y: 0,
+    width: 0,
+    height: 0,
+    top: 0,
+    right: 0,
+    bottom: 0,
+    left: 0,
+    toJSON() {
+      return {
+        x: 0,
+        y: 0,
+        width: 0,
+        height: 0,
+        top: 0,
+        right: 0,
+        bottom: 0,
+        left: 0,
+      };
+    },
+  } as DOMRect;
+}
+
+function createEmptyDomRectList(): DOMRectList {
+  const rects = [] as unknown as DOMRectList;
+  Object.defineProperty(rects, "length", { configurable: true, value: 0 });
+  Object.defineProperty(rects, "item", {
+    configurable: true,
+    value: () => null,
+  });
+  return rects;
+}
+
+export function ensureRangeGeometryMocks() {
+  if (typeof Range === "undefined") return;
+
+  if (typeof Range.prototype.getBoundingClientRect !== "function") {
+    Object.defineProperty(Range.prototype, "getBoundingClientRect", {
+      configurable: true,
+      value: () => createEmptyDomRect(),
+    });
+  }
+
+  if (typeof Range.prototype.getClientRects !== "function") {
+    Object.defineProperty(Range.prototype, "getClientRects", {
+      configurable: true,
+      value: () => createEmptyDomRectList(),
+    });
+  }
+}
+
 export function createMockDocHandle(overrides?: Partial<TCanvasDoc>): DocHandle<TCanvasDoc> {
   const docState: TCanvasDoc = {
     id: "test-doc",
@@ -69,6 +122,7 @@ export async function createCanvasTestHarness(args: {
   appCapabilities?: Pick<IPluginContext["capabilities"], "uploadImage" | "cloneImage" | "deleteImage" | "notification" | "terminal" | "filetree" | "file">;
 }) : Promise<TCanvasTestHarness> {
   ensureResizeObserver();
+  ensureRangeGeometryMocks();
 
   const container = createTestContainer({ width: args.width, height: args.height });
   const docHandle = args.docHandle ?? createMockDocHandle();

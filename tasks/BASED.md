@@ -83,6 +83,15 @@ Use the leaf files for execution history and local context.
 - [x]: [B8](b/B8.md) - hosted widgets: transformer resize loses control when pointer crosses DOM
 - [x]: [B9](b/B9.md) - hosted/iframe widgets: canvas drag not persisted on reload
 - [x]: [B10](b/B10.md) - style menu: drag then style jumps selection back to old position
+- [ ]: [B11] - terminal after resize is not focuable anymore
+- [ ]: [B12] - Recorder.file.ts:37 Uncaught (in promise) TypeError: Failed to execute 'showSaveFilePicker' on 'Window': Illegal invocation
+    at saveJsonFile (Recorder.file.ts:37:34)
+    at RecorderPlugin.exportRecording (Recorder.plugin.ts:248:11)
+    at HTMLButtonElement.export [as $$click] (Recorder.plugin.ts:86:35)
+saveJsonFile	@	Recorder.file.ts:37
+exportRecording	@	Recorder.plugin.ts:248
+export	@	Recorder.plugin.ts:86
+
 
 ## A dditions
 - [x]: [A1] - file: support common CodeMirror languages
@@ -113,6 +122,9 @@ Use the leaf files for execution history and local context.
 - [ ]: [E8](e/E8.md) - canvas CLI: query/edit surface exploration
 - [ ]: [E9] - tmux for persistant pty sessions
 - [ ]: [E10] - headless chrome to stream to canvas
+- [ ]: [E11] - https://github.com/cr0hn/dockerscan
+- [ ]: [E12] - https://github.com/superradcompany/microsandbox
+- [ ]: [E13] - Add Pluginsystem for server
 
 ## D irections
 - [ ]: [D1](d/D1.md) - AI can edit the canvas directly

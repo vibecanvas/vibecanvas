@@ -61,6 +61,7 @@ export class TransformPlugin implements IPlugin {
       const elements = shapes.map(shape => context.capabilities.toElement?.(shape)).filter(Boolean) as TElement[]
       TransformPlugin.normalizeSelectedGroupTransforms(transformerNodes)
       TransformPlugin.applyElementsToShapes(context, elements)
+      TransformPlugin.clearHostedWidgetTransformerState(context, transformerNodes)
       TransformPlugin.refreshSelectedGroups(context)
       refreshTransformer()
       const beforeElements = structuredClone(originalElements)
@@ -120,6 +121,22 @@ export class TransformPlugin implements IPlugin {
       node.rotation(0)
       node.skew({ x: 0, y: 0 })
     })
+  }
+
+  private static clearHostedWidgetTransformerState(context: IPluginContext, nodes: Konva.Node[]) {
+    let clearedHostedWidget = false
+
+    nodes.forEach(node => {
+      if (!(node instanceof Konva.Rect)) return
+      if (node.getAttr(HOSTED_WIDGET_NODE_ATTR) !== true) return
+      if (node.getAttr(HOSTED_WIDGET_TRANSFORMER_VISIBLE_ATTR) !== true) return
+
+      node.setAttr(HOSTED_WIDGET_TRANSFORMER_VISIBLE_ATTR, false)
+      clearedHostedWidget = true
+    })
+
+    if (!clearedHostedWidget) return
+    context.setState('selection', [...context.state.selection])
   }
 
   private static applyElementsToShapes(context: IPluginContext, elements: TElement[]) {
