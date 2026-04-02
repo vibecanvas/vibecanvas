@@ -249,7 +249,7 @@ export class RecorderPlugin implements IPlugin {
       {
         document,
         url: URL,
-        showSaveFilePicker: runtimeWindow.showSaveFilePicker,
+        showSaveFilePicker: runtimeWindow.showSaveFilePicker?.bind(runtimeWindow),
       },
       {
         fileName: `${this.#recordingData.name}.json`,

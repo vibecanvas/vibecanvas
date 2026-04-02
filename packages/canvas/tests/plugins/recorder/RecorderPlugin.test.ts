@@ -18,7 +18,10 @@ describe("RecorderPlugin", () => {
       }),
       close: vi.fn(async () => {}),
     }));
-    const showSaveFilePicker = vi.fn(async () => ({ createWritable }));
+    const showSaveFilePicker = vi.fn(async function (this: typeof window | undefined) {
+      expect(this).toBe(window);
+      return { createWritable };
+    });
 
     vi.stubGlobal("URL", {
       createObjectURL: vi.fn(() => "blob:test-recording"),

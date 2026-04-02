@@ -57,11 +57,7 @@ function createEmptyDomRect(): DOMRect {
 
 function createEmptyDomRectList(): DOMRectList {
   const rects = [] as unknown as DOMRectList;
-  Object.defineProperty(rects, "length", { configurable: true, value: 0 });
-  Object.defineProperty(rects, "item", {
-    configurable: true,
-    value: () => null,
-  });
+  rects.item = () => null;
   return rects;
 }
 
