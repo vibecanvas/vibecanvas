@@ -54,6 +54,7 @@
     "lucide-solid": "catalog:",
     "microdiff": "^1.5.0",
     "pdfjs-dist": "^4.10.38",
+    "partysocket": "^1.1.16",
     "perfect-freehand": "^1.2.2",
     "solid-js": "catalog:",
     "zod": "catalog:"

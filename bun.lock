@@ -16,7 +16,7 @@
     },
     "apps/frontend": {
       "name": "@vibecanvas/frontend",
-      "version": "0.2.0",
+      "version": "0.2.2",
       "dependencies": {
         "@automerge/automerge": "catalog:",
         "@automerge/automerge-repo": "catalog:",
@@ -56,7 +56,7 @@
     },
     "apps/server": {
       "name": "@vibecanvas/server",
-      "version": "0.2.0",
+      "version": "0.2.2",
       "dependencies": {
         "@automerge/automerge": "catalog:",
         "@automerge/automerge-repo": "catalog:",
@@ -79,7 +79,7 @@
     },
     "apps/vibecanvas": {
       "name": "vibecanvas",
-      "version": "0.2.0",
+      "version": "0.2.2",
       "bin": {
         "vibecanvas": "./bin/vibecanvas",
       },
@@ -97,7 +97,7 @@
     },
     "apps/web": {
       "name": "@vibecanvas/web",
-      "version": "0.2.0",
+      "version": "0.2.2",
       "dependencies": {
         "@astrojs/mdx": "^4.2.2",
         "@astrojs/solid-js": "^5.0.6",
@@ -107,7 +107,7 @@
     },
     "packages/canvas": {
       "name": "@vibecanvas/canvas",
-      "version": "0.2.0",
+      "version": "0.2.2",
       "dependencies": {
         "@automerge/automerge": "catalog:",
         "@automerge/automerge-repo": "catalog:",
@@ -138,6 +138,7 @@
         "konva": "^9.3.22",
         "lucide-solid": "catalog:",
         "microdiff": "^1.5.0",
+        "partysocket": "^1.1.16",
         "pdfjs-dist": "^4.10.38",
         "perfect-freehand": "^1.2.2",
         "solid-js": "catalog:",
@@ -159,7 +160,7 @@
     },
     "packages/core-contract": {
       "name": "@vibecanvas/core-contract",
-      "version": "0.2.0",
+      "version": "0.2.2",
       "dependencies": {
         "@orpc/contract": "catalog:",
         "@vibecanvas/shell": "workspace:*",
@@ -169,7 +170,7 @@
     },
     "packages/functional-core": {
       "name": "@vibecanvas/core",
-      "version": "0.2.0",
+      "version": "0.2.2",
       "dependencies": {
         "@automerge/automerge": "catalog:",
         "@automerge/automerge-repo": "catalog:",
@@ -180,13 +181,14 @@
     },
     "packages/imperative-shell": {
       "name": "@vibecanvas/shell",
-      "version": "0.2.0",
+      "version": "0.2.2",
       "dependencies": {
         "@automerge/automerge": "catalog:",
         "@automerge/automerge-repo": "catalog:",
         "@automerge/automerge-repo-network-websocket": "catalog:",
         "@orpc/server": "catalog:",
         "@vibecanvas/core": "workspace:*",
+        "bun-pty": "^0.4.8",
         "drizzle-orm": "catalog:",
         "drizzle-zod": "catalog:",
         "zod": "catalog:",
@@ -896,6 +898,8 @@
     "bun": ["bun@1.3.10", "", { "optionalDependencies": { "@oven/bun-darwin-aarch64": "1.3.10", "@oven/bun-darwin-x64": "1.3.10", "@oven/bun-darwin-x64-baseline": "1.3.10", "@oven/bun-linux-aarch64": "1.3.10", "@oven/bun-linux-aarch64-musl": "1.3.10", "@oven/bun-linux-x64": "1.3.10", "@oven/bun-linux-x64-baseline": "1.3.10", "@oven/bun-linux-x64-musl": "1.3.10", "@oven/bun-linux-x64-musl-baseline": "1.3.10", "@oven/bun-windows-aarch64": "1.3.10", "@oven/bun-windows-x64": "1.3.10", "@oven/bun-windows-x64-baseline": "1.3.10" }, "os": [ "linux", "win32", "darwin", ], "cpu": [ "x64", "arm64", ], "bin": { "bun": "bin/bun.exe", "bunx": "bin/bunx.exe" } }, "sha512-S/CXaXXIyA4CMjdMkYQ4T2YMqnAn4s0ysD3mlsY4bUiOCqGlv28zck4Wd4H4kpvbekx15S9mUeLQ7Uxd0tYTLA=="],
 
     "bun-plugin-tailwind": ["bun-plugin-tailwind@0.1.2", "", { "peerDependencies": { "bun": ">=1.0.0" } }, "sha512-41jNC1tZRSK3s1o7pTNrLuQG8kL/0vR/JgiTmZAJ1eHwe0w5j6HFPKeqEk0WAD13jfrUC7+ULuewFBBCoADPpg=="],
+
+    "bun-pty": ["bun-pty@0.4.8", "", {}, "sha512-rO70Mrbr13+jxHHHu2YBkk2pNqrJE5cJn29WE++PUr+GFA0hq/VgtQPZANJ8dJo6d7XImvBk37Innt8GM7O28w=="],
 
     "bun-types": ["bun-types@1.3.11", "", { "dependencies": { "@types/node": "*" } }, "sha512-1KGPpoxQWl9f6wcZh57LvrPIInQMn2TQ7jsgxqpRzg+l0QPOFvJVH7HmvHo/AiPgwXy+/Thf6Ov3EdVn1vOabg=="],
 

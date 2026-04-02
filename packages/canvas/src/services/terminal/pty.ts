@@ -1,4 +1,5 @@
 import type { TPty, TPtyCreateBody, TPtyUpdateBody, TTerminalSafeClient } from "../canvas/interface";
+import { WebSocket as PartySocketWebSocket } from "partysocket";
 
 export type TTerminalSessionState = {
   terminalKey: string;
@@ -166,7 +167,7 @@ class PtyService {
   }
 
   connect(args: TPtyConnectArgs) {
-    const ws = new WebSocket(buildPtyWebSocketUrl(args));
+    const ws = new PartySocketWebSocket(buildPtyWebSocketUrl(args));
 
     ws.onopen = () => {
       args.onOpen?.();

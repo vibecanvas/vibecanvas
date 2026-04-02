@@ -23,12 +23,18 @@ class MockWebSocket {
   onmessage: ((event: MessageEvent) => void) | null = null;
   #listeners = new Map<string, Set<(event: unknown) => void>>();
 
+  #emit(type: string, event: unknown) {
+    this.#listeners.get(type)?.forEach((listener) => listener(event));
+  }
+
   constructor(url: string) {
     this.url = url;
     MockWebSocket.instances.push(this);
-    setTimeout(() => {
+    queueMicrotask(() => {
+      const event = new Event("open");
       this.onopen?.();
-    }, 0);
+      this.#emit("open", event);
+    });
   }
 
   addEventListener(type: string, listener: (event: unknown) => void) {
@@ -44,7 +50,7 @@ class MockWebSocket {
   close(code = 1000, reason = "") {
     const event = { code, reason } as CloseEvent;
     this.onclose?.(event);
-    this.#listeners.get("close")?.forEach((listener) => listener(event));
+    this.#emit("close", event);
   }
 
   send(_: string) {}
@@ -200,6 +206,7 @@ describe("createTerminalContextLogic", () => {
     });
 
     await logic.handleTerminalReady({ term, root, host });
+    await vi.advanceTimersByTimeAsync(0);
 
     events.push(`ws:connect:${MockWebSocket.instances[0]?.url ?? "missing"}`);
 
@@ -269,6 +276,7 @@ describe("createTerminalContextLogic", () => {
     });
 
     await logic.handleTerminalReady({ term, root, host });
+    await vi.advanceTimersByTimeAsync(0);
     await vi.runAllTimersAsync();
 
     expect(safeClient.api.pty.get).toHaveBeenCalledWith({
@@ -345,6 +353,7 @@ describe("createTerminalContextLogic", () => {
 
     await zeroReady;
     await realReady;
+    await vi.advanceTimersByTimeAsync(0);
     await vi.runAllTimersAsync();
 
     expect(events).toContain("pty:get");
@@ -426,6 +435,7 @@ describe("createTerminalContextLogic", () => {
 
     await readyA;
     await readyB;
+    await vi.advanceTimersByTimeAsync(0);
     await vi.runAllTimersAsync();
 
     expect(events).toContain("logicB:resize:120x33");
