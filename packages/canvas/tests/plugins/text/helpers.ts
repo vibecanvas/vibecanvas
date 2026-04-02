@@ -1,15 +1,17 @@
 import Konva from "konva";
-import { GroupPlugin } from "../../../src/plugins/Group.plugin";
-import { SelectPlugin } from "../../../src/plugins/Select.plugin";
-import { Shape2dPlugin } from "../../../src/plugins/Shape2d.plugin";
-import { TextPlugin } from "../../../src/plugins/Text.plugin";
-import { TransformPlugin } from "../../../src/plugins/Transform.plugin";
-import { EventListenerPlugin } from "../../../src/plugins/EventListener.plugin";
-import { CameraControlPlugin } from "../../../src/plugins/CameraControl.plugin";
-import { HistoryControlPlugin } from "../../../src/plugins/HistoryControl.plugin";
-import { HelpPlugin } from "../../../src/plugins/Help.plugin";
-import { ToolbarPlugin } from "../../../src/plugins/Toolbar.plugin";
-import { GridPlugin } from "../../../src/plugins/Grid.plugin";
+import {
+  CameraControlPlugin,
+  EventListenerPlugin,
+  GridPlugin,
+  GroupPlugin,
+  HelpPlugin,
+  HistoryControlPlugin,
+  SelectPlugin,
+  Shape2dPlugin,
+  TextPlugin,
+  ToolbarPlugin,
+  TransformPlugin,
+} from "../../../src/plugins";
 
 export function createFullPluginStack() {
   const groupPlugin = new GroupPlugin();

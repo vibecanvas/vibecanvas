@@ -5,8 +5,7 @@ import type { DocHandle } from "@automerge/automerge-repo";
 import type { TCanvasDoc } from "@vibecanvas/shell/automerge/index";
 import { createRoot } from "solid-js";
 import { vi } from "vitest";
-import type { IPlugin } from "../src/plugins/interface";
-import type { IPluginContext } from "../src/plugins/interface";
+import type { IPlugin, IPluginContext } from "../src/plugins";
 import { CanvasService } from "../src/services/canvas/Canvas.service";
 
 type TCanvasTestHarness = {

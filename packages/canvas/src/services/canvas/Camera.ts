@@ -1,5 +1,5 @@
 import type Konva from "konva";
-import { IPluginContext } from "src/plugins/interface";
+import { IPluginContext } from "src/plugins/shared/interface";
 
 const MIN_ZOOM = 0.25;
 const MAX_ZOOM = 4;

@@ -2,13 +2,7 @@ import Konva from "konva";
 import type { DocHandle } from "@automerge/automerge-repo";
 import type { TCanvasDoc, TElement } from "@vibecanvas/shell/automerge/index";
 import { describe, expect, test } from "vitest";
-import { GroupPlugin } from "../../../src/plugins/Group.plugin";
-import { RenderOrderPlugin } from "../../../src/plugins/RenderOrder.plugin";
-import { SceneHydratorPlugin } from "../../../src/plugins/SceneHydrator.plugin";
-import { SelectPlugin } from "../../../src/plugins/Select.plugin";
-import { Shape1dPlugin } from "../../../src/plugins/Shape1d.plugin";
-import { Shape2dPlugin } from "../../../src/plugins/Shape2d.plugin";
-import type { IPluginContext } from "../../../src/plugins/interface";
+import { GroupPlugin, RenderOrderPlugin, SceneHydratorPlugin, SelectPlugin, Shape1dPlugin, Shape2dPlugin, type IPluginContext } from "../../../src/plugins";
 import { createCanvasTestHarness, createMockDocHandle, flushCanvasEffects } from "../../test-setup";
 
 function createLineOrArrowElement(args: {

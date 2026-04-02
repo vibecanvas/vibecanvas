@@ -1,9 +1,8 @@
 import Konva from "konva";
 import { describe, expect, test } from "vitest";
-import { Shape2dPlugin } from "../../../src/plugins/Shape2d.plugin";
+import { Shape2dPlugin, type IPluginContext } from "../../../src/plugins";
 import { CustomEvents } from "../../../src/custom-events";
 import { CanvasMode } from "../../../src/services/canvas/enum";
-import type { IPluginContext } from "../../../src/plugins/interface";
 import { createCanvasTestHarness, createMockDocHandle, flushCanvasEffects } from "../../test-setup";
 
 function createStageHost() {
@@ -51,6 +50,7 @@ describe("Shape2dPlugin static helpers", () => {
     const element = Shape2dPlugin.toTElement(diamond);
 
     expect(element.data.type).toBe("diamond");
+    if (element.data.type !== "diamond") throw new Error("Expected diamond data");
     expect(element.x).toBeCloseTo(150, 8);
     expect(element.y).toBeCloseTo(250, 8);
     expect(element.rotation).toBeCloseTo(20, 8);
@@ -81,6 +81,7 @@ describe("Shape2dPlugin static helpers", () => {
     const element = Shape2dPlugin.toTElement(ellipse);
 
     expect(element.data.type).toBe("ellipse");
+    if (element.data.type !== "ellipse") throw new Error("Expected ellipse data");
     expect(element.x).toBeCloseTo(200, 8);
     expect(element.y).toBeCloseTo(300, 8);
     expect(element.rotation).toBeCloseTo(30, 8);
@@ -130,6 +131,7 @@ describe("Shape2dPlugin static helpers", () => {
 
     expect(clonedDiamond.id()).not.toBe(diamond.id());
     expect(clonedDiamondElement.data.type).toBe("diamond");
+    if (clonedDiamondElement.data.type !== "diamond") throw new Error("Expected diamond clone data");
     expect(clonedDiamondElement.x).toBeCloseTo(80, 8);
     expect(clonedDiamondElement.y).toBeCloseTo(90, 8);
     expect(clonedDiamondElement.data.w).toBeCloseTo(100, 8);
@@ -137,6 +139,7 @@ describe("Shape2dPlugin static helpers", () => {
 
     expect(clonedEllipse.id()).not.toBe(ellipse.id());
     expect(clonedEllipseElement.data.type).toBe("ellipse");
+    if (clonedEllipseElement.data.type !== "ellipse") throw new Error("Expected ellipse clone data");
     expect(clonedEllipseElement.x).toBeCloseTo(120, 8);
     expect(clonedEllipseElement.y).toBeCloseTo(140, 8);
     expect(clonedEllipseElement.data.rx).toBeCloseTo(50, 8);

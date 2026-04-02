@@ -1,6 +1,5 @@
 import { describe, expect, test, vi } from "vitest";
-import { HelpPlugin } from "../../../src/plugins/Help.plugin";
-import { RecorderPlugin } from "../../../src/plugins/Recorder.plugin";
+import { HelpPlugin, RecorderPlugin } from "../../../src/plugins";
 import { defaultPlugins } from "../../../src/services/canvas/Canvas.service";
 
 describe("defaultPlugins", () => {

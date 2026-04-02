@@ -2,11 +2,7 @@ import Konva from "konva";
 import type { TElement } from "@vibecanvas/shell/automerge/index";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { CustomEvents } from "../../../src/custom-events";
-import { ImagePlugin } from "../../../src/plugins/Image.plugin";
-import { RenderOrderPlugin } from "../../../src/plugins/RenderOrder.plugin";
-import { SceneHydratorPlugin } from "../../../src/plugins/SceneHydrator.plugin";
-import { SelectPlugin } from "../../../src/plugins/Select.plugin";
-import type { IPluginContext } from "../../../src/plugins/interface";
+import { ImagePlugin, RenderOrderPlugin, SceneHydratorPlugin, SelectPlugin, type IPluginContext } from "../../../src/plugins";
 import { createCanvasTestHarness, createMockDocHandle, flushCanvasEffects } from "../../test-setup";
 
 vi.mock("../../../src/utils/image", () => ({
@@ -97,7 +93,7 @@ function altDragImage(node: Konva.Image, args: { deltaX: number; deltaY?: number
 
 describe("ImagePlugin", () => {
   beforeEach(() => {
-    vi.spyOn(ImagePlugin as never, "loadImageIntoNode" as never).mockResolvedValue(undefined as never);
+    vi.spyOn(ImagePlugin, "loadImageIntoNode").mockResolvedValue(undefined);
   });
 
   afterEach(() => {
@@ -146,7 +142,7 @@ describe("ImagePlugin", () => {
       appCapabilities: {
         uploadImage,
         cloneImage: vi.fn(async ({ url }: { url: string }) => ({ url })),
-        deleteImage: vi.fn(async () => ({ ok: true })),
+        deleteImage: vi.fn(async () => ({ ok: true as const })),
         notification,
       },
     });
@@ -187,7 +183,7 @@ describe("ImagePlugin", () => {
       appCapabilities: {
         uploadImage,
         cloneImage: vi.fn(async ({ url }: { url: string }) => ({ url })),
-        deleteImage: vi.fn(async () => ({ ok: true })),
+        deleteImage: vi.fn(async () => ({ ok: true as const })),
         notification: {
           showError: vi.fn(),
           showSuccess: vi.fn(),
@@ -230,7 +226,7 @@ describe("ImagePlugin", () => {
       appCapabilities: {
         uploadImage,
         cloneImage: vi.fn(async ({ url }: { url: string }) => ({ url })),
-        deleteImage: vi.fn(async () => ({ ok: true })),
+        deleteImage: vi.fn(async () => ({ ok: true as const })),
         notification: {
           showError: vi.fn(),
           showSuccess: vi.fn(),
@@ -266,7 +262,7 @@ describe("ImagePlugin", () => {
       plugins: [new RenderOrderPlugin(), new ImagePlugin(), new SceneHydratorPlugin()],
       appCapabilities: {
         cloneImage,
-        deleteImage: vi.fn(async () => ({ ok: true })),
+        deleteImage: vi.fn(async () => ({ ok: true as const })),
         notification: {
           showError: vi.fn(),
           showSuccess: vi.fn(),

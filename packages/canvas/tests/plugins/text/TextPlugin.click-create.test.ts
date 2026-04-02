@@ -1,7 +1,6 @@
 import Konva from "konva";
 import { describe, expect, test } from "vitest";
-import { TextPlugin } from "../../../src/plugins/Text.plugin";
-import type { IPluginContext } from "../../../src/plugins/interface";
+import { TextPlugin, type IPluginContext } from "../../../src/plugins";
 import { CanvasMode } from "../../../src/services/canvas/enum";
 import { CustomEvents } from "../../../src/custom-events";
 import { createCanvasTestHarness, flushCanvasEffects } from "../../test-setup";

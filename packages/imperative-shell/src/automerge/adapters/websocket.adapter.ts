@@ -73,7 +73,6 @@ export class BunWSServerAdapter extends NetworkAdapter {
     if (!this._isReady) {
       this._isReady = true
       this._resolveReady()
-      this.emit("ready")
     }
     
     // Clear any existing keepalive to prevent duplicate intervals

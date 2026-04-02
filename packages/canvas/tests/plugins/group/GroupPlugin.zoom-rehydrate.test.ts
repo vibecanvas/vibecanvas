@@ -1,10 +1,6 @@
 import Konva from "konva";
 import { describe, expect, test } from "vitest";
-import { GroupPlugin } from "../../../src/plugins/Group.plugin";
-import { RenderOrderPlugin } from "../../../src/plugins/RenderOrder.plugin";
-import { SceneHydratorPlugin } from "../../../src/plugins/SceneHydrator.plugin";
-import { Shape2dPlugin } from "../../../src/plugins/Shape2d.plugin";
-import type { IPluginContext } from "../../../src/plugins/interface";
+import { GroupPlugin, RenderOrderPlugin, SceneHydratorPlugin, Shape2dPlugin, type IPluginContext } from "../../../src/plugins";
 import { createCanvasTestHarness, createMockDocHandle, flushCanvasEffects } from "../../test-setup";
 
 describe("GroupPlugin - zoom rehydrate", () => {

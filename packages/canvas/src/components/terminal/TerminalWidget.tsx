@@ -13,6 +13,8 @@ type TTerminalWidgetProps = {
   setWindowChrome?: (chrome: THostedWidgetChrome | null) => void;
   registerBeforeRemove?: (handler: (() => void | Promise<void>) | null) => void;
   registerReload?: (handler: (() => void | Promise<void>) | null) => void;
+  registerFocus?: (handler: (() => void) | null) => void;
+  registerInsertText?: (handler: ((text: string) => void) | null) => void;
 };
 
 export function TerminalWidget(props: TTerminalWidgetProps) {
@@ -30,7 +32,18 @@ export function TerminalWidget(props: TTerminalWidgetProps) {
 
   if (terminalLogic) {
     props.registerBeforeRemove?.(() => terminalLogic.removeTerminal());
-    props.registerReload?.(() => terminalLogic.restartFrontend().then(() => setMountRevision((value) => value + 1)));
+    props.registerReload?.(() => terminalLogic.restartFrontend().then(() => {
+      setMountRevision((value) => value + 1);
+    }));
+    props.registerFocus?.(() => {
+      clearFocusRetryTimers();
+      rootRef?.focus({ preventScroll: true });
+      focusTerminalInputSurface();
+    });
+    props.registerInsertText?.((text) => {
+      focusTerminalInputSurface();
+      terminalLogic.handleTerminalData(text);
+    });
   }
 
   const clearFocusRetryTimers = () => {
@@ -58,6 +71,8 @@ export function TerminalWidget(props: TTerminalWidgetProps) {
     props.setWindowChrome?.(null);
     props.registerBeforeRemove?.(null);
     props.registerReload?.(null);
+    props.registerFocus?.(null);
+    props.registerInsertText?.(null);
   });
 
   createEffect(() => {
@@ -119,7 +134,7 @@ export function TerminalWidget(props: TTerminalWidgetProps) {
 
       {terminalLogic ? (
         <Show when={mountRevision()} keyed>
-          {() => (
+          <>
             <GhosttyTerminalMount
               class="h-full w-full min-w-0 flex-1 overflow-hidden bg-[#111214]"
               onReady={terminalLogic.handleTerminalReady}
@@ -127,7 +142,7 @@ export function TerminalWidget(props: TTerminalWidgetProps) {
               onResize={terminalLogic.handleTerminalResize}
               onCleanup={terminalLogic.handleTerminalCleanup}
             />
-          )}
+          </>
         </Show>
       ) : (
         <div class="flex h-full w-full flex-1 items-center justify-center bg-[#111214] px-3 text-center text-xs text-red-200">

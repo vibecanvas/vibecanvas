@@ -1,7 +1,4 @@
-import type { IPluginContext } from "../../src/plugins/interface";
-import { GroupPlugin } from "../../src/plugins/Group.plugin";
-import { Shape2dPlugin } from "../../src/plugins/Shape2d.plugin";
-import { TextPlugin } from "../../src/plugins/Text.plugin";
+import { GroupPlugin, Shape2dPlugin, TextPlugin, type IPluginContext } from "../../src/plugins";
 
 /**
  * Scene 05: a group g that contains a text node t and a rect r.

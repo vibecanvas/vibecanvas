@@ -2,8 +2,7 @@ import Konva from "konva";
 import type { DocHandle } from "@automerge/automerge-repo";
 import type { TCanvasDoc } from "@vibecanvas/shell/automerge/index";
 import { describe, expect, test } from "vitest";
-import { TextPlugin } from "../../../src/plugins/Text.plugin";
-import type { IPluginContext } from "../../../src/plugins/interface";
+import { TextPlugin, type IPluginContext } from "../../../src/plugins";
 import { CanvasMode } from "../../../src/services/canvas/enum";
 import { initializeScene05GroupWithTextAndRect } from "../../scenarios/05-group-with-text-and-rect";
 import {

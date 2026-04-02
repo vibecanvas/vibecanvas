@@ -1,12 +1,7 @@
 import Konva from "konva";
 import { createEffect } from "solid-js";
 import { describe, expect, test, vi } from "vitest";
-import { GroupPlugin } from "../../../src/plugins/Group.plugin";
-import type { IPlugin, IPluginContext } from "../../../src/plugins/interface";
-import { SelectPlugin } from "../../../src/plugins/Select.plugin";
-import { Shape2dPlugin } from "../../../src/plugins/Shape2d.plugin";
-import { TextPlugin } from "../../../src/plugins/Text.plugin";
-import { TransformPlugin } from "../../../src/plugins/Transform.plugin";
+import { GroupPlugin, SelectPlugin, Shape2dPlugin, TextPlugin, TransformPlugin, type IPlugin, type IPluginContext } from "../../../src/plugins";
 import { initializeScene01SelectOuterGroupFromChild } from "../../scenarios/01-select-outer-group-from-child";
 import { initializeScene02NestedGroupsLeafShapes } from "../../scenarios/02-nested-groups-leaf-shapes";
 import { initializeScene05GroupWithTextAndRect } from "../../scenarios/05-group-with-text-and-rect";

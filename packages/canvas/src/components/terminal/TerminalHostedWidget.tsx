@@ -7,6 +7,8 @@ type TTerminalHostedWidgetProps = {
   safeClient?: TTerminalSafeClient;
   setWindowChrome?: (chrome: THostedWidgetChrome | null) => void;
   registerBeforeRemove?: (handler: (() => void | Promise<void>) | null) => void;
+  registerFocus?: (handler: (() => void) | null) => void;
+  registerInsertText?: (handler: ((text: string) => void) | null) => void;
 };
 
 export function TerminalHostedWidget(props: TTerminalHostedWidgetProps) {
@@ -20,6 +22,8 @@ export function TerminalHostedWidget(props: TTerminalHostedWidgetProps) {
         safeClient={props.safeClient}
         setWindowChrome={props.setWindowChrome}
         registerBeforeRemove={props.registerBeforeRemove}
+        registerFocus={props.registerFocus}
+        registerInsertText={props.registerInsertText}
       />
     </div>
   );

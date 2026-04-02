@@ -66,6 +66,7 @@ class MockWebSocket {
   onclose: ((event: CloseEvent) => void) | null = null;
   onerror: ((event: Event) => void) | null = null;
   onmessage: ((event: MessageEvent) => void) | null = null;
+  sent: string[] = [];
   #listeners = new Map<string, Set<(event: any) => void>>();
 
   constructor(url: string) {
@@ -93,17 +94,15 @@ class MockWebSocket {
     this.#listeners.get("close")?.forEach((listener) => listener(event));
   }
 
-  send(_: string) {}
+  send(payload: string) {
+    this.sent.push(payload);
+  }
 }
 
 vi.stubGlobal("WebSocket", MockWebSocket as unknown as typeof WebSocket);
 
-import type { IPluginContext } from "../../../src/plugins/interface";
 import { CustomEvents } from "../../../src/custom-events";
-import { HostedSolidWidgetPlugin } from "../../../src/plugins/HostedSolidWidget.plugin";
-import { RenderOrderPlugin } from "../../../src/plugins/RenderOrder.plugin";
-import { SceneHydratorPlugin } from "../../../src/plugins/SceneHydrator.plugin";
-import { TransformPlugin } from "../../../src/plugins/Transform.plugin";
+import { HostedSolidWidgetPlugin, RenderOrderPlugin, SceneHydratorPlugin, TransformPlugin, type IPluginContext } from "../../../src/plugins";
 import { CanvasMode } from "../../../src/services/canvas/enum";
 import {
   createCanvasTestHarness,
@@ -1376,6 +1375,156 @@ describe("HostedSolidWidgetPlugin", () => {
     harness.destroy();
   });
 
+  test("dropping a filetree file node on terminal inserts shell-escaped path, focuses terminal, and does not create a file widget", async () => {
+    const safeClient = createTerminalSafeClientMock();
+    const docHandle = createMockDocHandle({
+      elements: {
+        terminal1: {
+          id: "terminal1",
+          x: 30,
+          y: 40,
+          rotation: 0,
+          zIndex: "z00000001",
+          parentGroupId: null,
+          bindings: [],
+          locked: false,
+          createdAt: 1,
+          updatedAt: 1,
+          style: {},
+          data: { type: "terminal", w: 320, h: 220, isCollapsed: false, workingDirectory: "." },
+        },
+      },
+    });
+
+    const harness = await createCanvasTestHarness({
+      docHandle,
+      plugins: [new RenderOrderPlugin(), new HostedSolidWidgetPlugin(), new SceneHydratorPlugin()],
+      appCapabilities: {
+        terminal: { safeClient },
+      },
+    });
+
+    await flushCanvasEffects();
+
+    const mount = harness.stage.container().querySelector('[data-hosted-widget-id="terminal1"]') as HTMLDivElement;
+    expect(mount).not.toBeNull();
+    vi.spyOn(mount, "getBoundingClientRect").mockReturnValue({
+      left: 30,
+      top: 40,
+      right: 350,
+      bottom: 260,
+      width: 320,
+      height: 220,
+      x: 30,
+      y: 40,
+      toJSON: () => ({}),
+    } as DOMRect);
+
+    const dropEvent = new Event("drop", { bubbles: true, cancelable: true }) as DragEvent;
+    Object.defineProperties(dropEvent, {
+      clientX: { value: 120 },
+      clientY: { value: 100 },
+      dataTransfer: {
+        value: {
+          types: ["application/x-vibecanvas-filetree-node"],
+          getData: (type: string) => type === "application/x-vibecanvas-filetree-node"
+            ? JSON.stringify({ path: "/tmp/demo/it's here.ts", name: "it's here.ts", is_dir: false })
+            : "",
+        },
+      },
+    });
+
+    harness.stage.container().dispatchEvent(dropEvent);
+    await flushCanvasEffects();
+
+    const socket = MockWebSocket.instances.at(-1);
+    const textarea = harness.stage.container().querySelector('[data-ghostty-terminal-textarea="true"]') as HTMLTextAreaElement | null;
+    expect(socket?.sent.at(-1)).toBe("'/tmp/demo/it'\\''s here.ts' ");
+    expect(textarea).not.toBeNull();
+    expect(document.activeElement).toBe(textarea);
+    expect(Object.values(docHandle.doc().elements)).toHaveLength(1);
+    expect(harness.stage.container().querySelector('[data-file-widget-root="true"]')).toBeNull();
+
+    harness.destroy();
+  });
+
+  test("dropping a filetree folder node on terminal inserts shell-escaped path, focuses terminal, and does not create a filetree widget", async () => {
+    const safeClient = createTerminalSafeClientMock();
+    const docHandle = createMockDocHandle({
+      elements: {
+        terminal1: {
+          id: "terminal1",
+          x: 30,
+          y: 40,
+          rotation: 0,
+          zIndex: "z00000001",
+          parentGroupId: null,
+          bindings: [],
+          locked: false,
+          createdAt: 1,
+          updatedAt: 1,
+          style: {},
+          data: { type: "terminal", w: 320, h: 220, isCollapsed: false, workingDirectory: "." },
+        },
+      },
+    });
+
+    const harness = await createCanvasTestHarness({
+      docHandle,
+      plugins: [new RenderOrderPlugin(), new HostedSolidWidgetPlugin(), new SceneHydratorPlugin()],
+      appCapabilities: {
+        terminal: { safeClient },
+        filetree: {
+          canvasId: "canvas-1",
+          safeClient: createFiletreeSafeClientMock(),
+        },
+      },
+    });
+
+    await flushCanvasEffects();
+
+    const mount = harness.stage.container().querySelector('[data-hosted-widget-id="terminal1"]') as HTMLDivElement;
+    expect(mount).not.toBeNull();
+    vi.spyOn(mount, "getBoundingClientRect").mockReturnValue({
+      left: 30,
+      top: 40,
+      right: 350,
+      bottom: 260,
+      width: 320,
+      height: 220,
+      x: 30,
+      y: 40,
+      toJSON: () => ({}),
+    } as DOMRect);
+
+    const dropEvent = new Event("drop", { bubbles: true, cancelable: true }) as DragEvent;
+    Object.defineProperties(dropEvent, {
+      clientX: { value: 120 },
+      clientY: { value: 100 },
+      dataTransfer: {
+        value: {
+          types: ["application/x-vibecanvas-filetree-node"],
+          getData: (type: string) => type === "application/x-vibecanvas-filetree-node"
+            ? JSON.stringify({ path: "/tmp/demo/folder with spaces", name: "folder with spaces", is_dir: true })
+            : "",
+        },
+      },
+    });
+
+    harness.stage.container().dispatchEvent(dropEvent);
+    await flushCanvasEffects();
+
+    const socket = MockWebSocket.instances.at(-1);
+    const textarea = harness.stage.container().querySelector('[data-ghostty-terminal-textarea="true"]') as HTMLTextAreaElement | null;
+    expect(socket?.sent.at(-1)).toBe("'/tmp/demo/folder with spaces' ");
+    expect(textarea).not.toBeNull();
+    expect(document.activeElement).toBe(textarea);
+    expect(Object.values(docHandle.doc().elements)).toHaveLength(1);
+    expect(Object.values(docHandle.doc().elements).some((element) => element.data.type === "filetree" && element.id !== "terminal1")).toBe(false);
+
+    harness.destroy();
+  });
+
   test("terminal hosted layout constrains flex children so terminal content can shrink to widget bounds", async () => {
     const safeClient = createTerminalSafeClientMock();
     const docHandle = createMockDocHandle({
@@ -1467,8 +1616,10 @@ describe("HostedSolidWidgetPlugin", () => {
     await flushCanvasEffects();
 
     const updated = docHandle.doc().elements.terminal1;
-    expect(Math.round(updated!.data.w)).toBe(480);
-    expect(Math.round(updated!.data.h)).toBe(275);
+    expect(updated?.data.type).toBe("terminal");
+    if (!updated || updated.data.type !== "terminal") throw new Error("Expected terminal element");
+    expect(Math.round(updated.data.w)).toBe(480);
+    expect(Math.round(updated.data.h)).toBe(275);
     expect(node.scaleX()).toBe(1);
     expect(node.scaleY()).toBe(1);
 
@@ -1636,5 +1787,64 @@ describe("HostedSolidWidgetPlugin", () => {
     } finally {
       vi.useRealTimers();
     }
+  });
+
+  test("native Konva drag persists hosted widget position across reload", async () => {
+    const docHandle = createMockDocHandle({
+      elements: {
+        terminal1: {
+          id: "terminal1",
+          x: 100,
+          y: 120,
+          rotation: 0,
+          zIndex: "z00000001",
+          parentGroupId: null,
+          bindings: [],
+          locked: false,
+          createdAt: 1,
+          updatedAt: 1,
+          style: {},
+          data: { type: "terminal", w: 320, h: 220, isCollapsed: false, workingDirectory: "." },
+        },
+      },
+    });
+
+    const harness = await createCanvasTestHarness({
+      docHandle,
+      plugins: [new RenderOrderPlugin(), new HostedSolidWidgetPlugin(), new SceneHydratorPlugin()],
+    });
+
+    await flushCanvasEffects();
+
+    const node = harness.staticForegroundLayer.findOne("#terminal1") as Konva.Rect | null;
+    expect(node).not.toBeNull();
+
+    node!.fire("dragstart", { target: node, currentTarget: node, evt: new MouseEvent("dragstart", { bubbles: true }) });
+    node!.position({ x: 170, y: 190 });
+    node!.fire("dragmove", { target: node, currentTarget: node, evt: new MouseEvent("dragmove", { bubbles: true }) });
+    node!.fire("dragend", { target: node, currentTarget: node, evt: new MouseEvent("dragend", { bubbles: true }) });
+
+    await flushCanvasEffects();
+
+    expect(node!.x()).toBe(170);
+    expect(node!.y()).toBe(190);
+    expect(docHandle.doc().elements.terminal1?.x).toBe(170);
+    expect(docHandle.doc().elements.terminal1?.y).toBe(190);
+
+    harness.destroy();
+
+    const reloadedHarness = await createCanvasTestHarness({
+      docHandle,
+      plugins: [new RenderOrderPlugin(), new HostedSolidWidgetPlugin(), new SceneHydratorPlugin()],
+    });
+
+    await flushCanvasEffects();
+
+    const reloadedNode = reloadedHarness.staticForegroundLayer.findOne("#terminal1") as Konva.Rect | null;
+    expect(reloadedNode).not.toBeNull();
+    expect(reloadedNode!.x()).toBe(170);
+    expect(reloadedNode!.y()).toBe(190);
+
+    reloadedHarness.destroy();
   });
 });

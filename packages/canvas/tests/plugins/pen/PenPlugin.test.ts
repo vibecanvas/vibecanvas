@@ -1,14 +1,9 @@
 import Konva from "konva";
 import { describe, expect, test, vi } from "vitest";
 import { CustomEvents } from "../../../src/custom-events";
-import { PenPlugin } from "../../../src/plugins/Pen.plugin";
-import { SceneHydratorPlugin } from "../../../src/plugins/SceneHydrator.plugin";
-import { SelectionStyleMenuPlugin } from "../../../src/plugins/SelectionStyleMenu.plugin";
-import { Shape2dPlugin } from "../../../src/plugins/Shape2d.plugin";
-import type { IPluginContext } from "../../../src/plugins/interface";
-import { TransformPlugin } from "../../../src/plugins/Transform.plugin";
+import { PenPlugin, SceneHydratorPlugin, SelectionStyleMenuPlugin, Shape2dPlugin, TransformPlugin, type IPluginContext } from "../../../src/plugins";
 import { CanvasMode } from "../../../src/services/canvas/enum";
-import { createPenDataFromStrokePoints, type TStrokePoint } from "../../../src/plugins/pen.math";
+import { createPenDataFromStrokePoints, type TStrokePoint } from "../../../src/plugins/shared/pen.math";
 import { createCanvasTestHarness, createMockDocHandle, flushCanvasEffects } from "../../test-setup";
 import type { TElement, TPenData } from "@vibecanvas/shell/automerge/index";
 

@@ -81,9 +81,13 @@ Use the leaf files for execution history and local context.
 - [x]: [B4](b/B4.md) - update progress cli not moving
 - [x]: [B7](b/B7.md) - iframe browser: click can latch canvas drag and trap release
 - [x]: [B8](b/B8.md) - hosted widgets: transformer resize loses control when pointer crosses DOM
+- [x]: [B9](b/B9.md) - hosted/iframe widgets: canvas drag not persisted on reload
+- [x]: [B10](b/B10.md) - style menu: drag then style jumps selection back to old position
 
 ## A dditions
-- [ ]: [A1](a/A1.md) - file: support common CodeMirror languages
+- [x]: [A1] - file: support common CodeMirror languages
+- [ ]: [A2] - add inline text support to diamond and ellipse
+- [ ]: [A3] - copy paste elements/groups
 
 ## S ubtractions
 - [ ]: [S1](s/S1.md) - double bun run dev -> find new port
@@ -96,14 +100,19 @@ Use the leaf files for execution history and local context.
 - [x]: [S9](s/S9.md) - fix seo image of web
 - [x]: [S10](s/S10.md) - reverse websocket to orpc
 - [x]: [S12](s/S12.md) - refactor: konvajs
-- [ ]: [S13](s/S13.md) - canvas plugins: folder-per-plugin refactor plan
+- [x]: [S13](s/S13.md) - canvas plugins: folder-per-plugin refactor plan
 - [x]: [S14](s/S14.md) - canvas: keep recorder plugin in development only
+- [ ]: [S15] - inline text support -> fix position (use pretext lib?)
+- [x]: [S16](s/S16.md) - canvas: fix broken TypeScript typings in packages/canvas
 
 ## E xplorations
 - [ ]: [E1](e/E1.md) - Tauri Research
 - [ ]: [E5](e/E5.md) - how to implement state machine system?
 - [ ]: [E6](e/E6.md) - should we include a task management
 - [ ]: [E7](e/E7.md) - should we include heartbeat
+- [ ]: [E8](e/E8.md) - canvas CLI: query/edit surface exploration
+- [ ]: [E9] - tmux for persistant pty sessions
+- [ ]: [E10] - headless chrome to stream to canvas
 
 ## D irections
 - [ ]: [D1](d/D1.md) - AI can edit the canvas directly

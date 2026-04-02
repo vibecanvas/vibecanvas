@@ -2,11 +2,7 @@ import Konva from "konva";
 import type { DocHandle } from "@automerge/automerge-repo";
 import type { TCanvasDoc } from "@vibecanvas/shell/automerge/index";
 import { describe, expect, test } from "vitest";
-import { GroupPlugin } from "../../../src/plugins/Group.plugin";
-import { RenderOrderPlugin } from "../../../src/plugins/RenderOrder.plugin";
-import { SelectPlugin } from "../../../src/plugins/Select.plugin";
-import { Shape2dPlugin } from "../../../src/plugins/Shape2d.plugin";
-import type { IPluginContext } from "../../../src/plugins/interface";
+import { GroupPlugin, RenderOrderPlugin, SelectPlugin, Shape2dPlugin, type IPluginContext } from "../../../src/plugins";
 import { createCanvasTestHarness, createMockDocHandle, exportStageSnapshot, flushCanvasEffects } from "../../test-setup";
 import { initializeScene03TopLevelMixedSelection } from "../../scenarios/03-top-level-mixed-selection";
 
