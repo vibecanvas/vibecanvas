@@ -84,7 +84,7 @@ Use the leaf files for execution history and local context.
 - [x]: [B9](b/B9.md) - hosted/iframe widgets: canvas drag not persisted on reload
 - [x]: [B10](b/B10.md) - style menu: drag then style jumps selection back to old position
 - [x]: [B11] - terminal after resize is not focuable anymore
-- [ ]: [B12](b/B12.md) - terminal: ctrl+c echoes ^C but does not interrupt process
+- [x]: [B12](b/B12.md) - terminal: ctrl+c echoes ^C but does not interrupt process
 
 
 

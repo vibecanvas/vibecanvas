@@ -2,11 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
-## Upcoming (0.2.2)
+## 0.2.2
 
 ### Fixed
 - Fixed hosted terminal and other hosted widgets getting stuck non-interactive after resize, so focus returns normally once the transform completes.
 - Made PTY terminal websocket connections more resilient by switching the canvas terminal transport to PartySocket reconnecting websockets.
+- Fixed hosted terminal Ctrl+C handling by replacing the broken Bun PTY backend with `bun-pty`, so terminal interrupts now reach the foreground process instead of echoing `^C` as literal input.
 
 ## 0.2.1
 

@@ -18,6 +18,7 @@
     "@automerge/automerge-repo-network-websocket": "catalog:",
     "@orpc/server": "catalog:",
     "@vibecanvas/core": "workspace:*",
+    "bun-pty": "^0.4.8",
     "drizzle-orm": "catalog:",
     "drizzle-zod": "catalog:",
     "zod": "catalog:"

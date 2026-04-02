@@ -1,3 +1,5 @@
+import { spawn, type IDisposable, type IPty } from "bun-pty";
+
 export type TPtyStatus = "running" | "exited" | "error";
 
 export type TPty = {
@@ -50,8 +52,10 @@ type TPtyClient = {
 
 type TPtySession = {
   pty: TPty;
-  terminal: Bun.Terminal;
-  process: Bun.Subprocess<any, any, any>;
+  terminal: IPty;
+  onDataSubscription: IDisposable;
+  onExitSubscription: IDisposable;
+  exited: Promise<void>;
   chunks: TPtyChunk[];
   cursor: number;
   clients: Map<string, TPtyClient>;
@@ -82,7 +86,8 @@ function normalizeSize(size?: { rows: number; cols: number }) {
   };
 }
 
-function toUint8Array(data: Uint8Array<ArrayBuffer>): Uint8Array {
+function toUint8Array(data: Uint8Array<ArrayBuffer> | string): Uint8Array {
+  if (typeof data === "string") return new TextEncoder().encode(data);
   return new Uint8Array(data.buffer.slice(data.byteOffset, data.byteOffset + data.byteLength));
 }
 
@@ -94,6 +99,28 @@ function toWritableBytes(payload: ArrayBuffer | ArrayBufferView): Uint8Array {
   if (payload instanceof Uint8Array) return payload;
   if (payload instanceof ArrayBuffer) return new Uint8Array(payload);
   return new Uint8Array(payload.buffer, payload.byteOffset, payload.byteLength);
+}
+
+function toWritableText(payload: string | ArrayBuffer | ArrayBufferView): string {
+  if (typeof payload === "string") return payload;
+  return new TextDecoder().decode(toWritableBytes(payload));
+}
+
+function toSpawnEnv(overrides?: Record<string, string>): Record<string, string> {
+  const env: Record<string, string> = {};
+
+  for (const [key, value] of Object.entries(process.env)) {
+    if (typeof value !== "string") continue;
+    env[key] = value;
+  }
+
+  if (!overrides) return env;
+
+  for (const [key, value] of Object.entries(overrides)) {
+    env[key] = value;
+  }
+
+  return env;
 }
 
 export class PtyService {
@@ -136,33 +163,41 @@ export class PtyService {
     const size = normalizeSize(body?.size);
     const id = crypto.randomUUID();
     const createdAt = Date.now();
+    const env = toSpawnEnv(body?.env);
 
-    const terminal = new Bun.Terminal({
-      rows: size.rows,
+    const terminal = spawn(command, args, {
+      name: env.TERM || "xterm-256color",
       cols: size.cols,
-      data: (_terminal, data) => {
-        const session = this.#sessions.get(id);
-        if (!session) return;
-        this.#appendOutput(session, toUint8Array(data));
-      },
-      exit: () => {
-        const session = this.#sessions.get(id);
-        if (!session) return;
-        if (session.pty.status === "running") {
-          session.pty.status = "error";
-          session.pty.updatedAt = Date.now();
-        }
-        this.#closeClients(session, 1000, "PTY closed");
-      },
+      rows: size.rows,
+      cwd,
+      env,
     });
 
-    const proc = Bun.spawn([command, ...args], {
-      cwd,
-      env: {
-        ...process.env,
-        ...(body?.env ?? {}),
-      },
-      terminal,
+    let resolveExited!: () => void;
+    const exited = new Promise<void>((resolve) => {
+      resolveExited = resolve;
+    });
+
+    const onDataSubscription = terminal.onData((data) => {
+      const session = this.#sessions.get(id);
+      if (!session) return;
+      this.#appendOutput(session, toUint8Array(data));
+    });
+
+    const onExitSubscription = terminal.onExit((event) => {
+      const session = this.#sessions.get(id);
+      resolveExited();
+      if (!session) return;
+
+      session.pty.status = "exited";
+      session.pty.exitCode = typeof event.exitCode === "number" ? event.exitCode : null;
+      session.pty.signalCode = typeof event.signal === "string"
+        ? event.signal
+        : typeof event.signal === "number"
+          ? `${event.signal}`
+          : null;
+      session.pty.updatedAt = Date.now();
+      this.#closeClients(session, 1000, "PTY exited");
     });
 
     const pty: TPty = {
@@ -172,7 +207,7 @@ export class PtyService {
       args,
       cwd,
       status: "running",
-      pid: proc.pid,
+      pid: terminal.pid,
       rows: size.rows,
       cols: size.cols,
       exitCode: null,
@@ -184,29 +219,15 @@ export class PtyService {
     const session: TPtySession = {
       pty,
       terminal,
-      process: proc,
+      onDataSubscription,
+      onExitSubscription,
+      exited,
       chunks: [],
       cursor: 0,
       clients: new Map(),
     };
 
     this.#sessions.set(id, session);
-
-    void proc.exited.then(() => {
-      const activeSession = this.#sessions.get(id);
-      if (!activeSession) return;
-      activeSession.pty.status = "exited";
-      activeSession.pty.exitCode = activeSession.process.exitCode ?? null;
-      activeSession.pty.signalCode = activeSession.process.signalCode ?? null;
-      activeSession.pty.updatedAt = Date.now();
-      this.#closeClients(activeSession, 1000, "PTY exited");
-    }).catch(() => {
-      const activeSession = this.#sessions.get(id);
-      if (!activeSession) return;
-      activeSession.pty.status = "error";
-      activeSession.pty.updatedAt = Date.now();
-      this.#closeClients(activeSession, 1011, "PTY failed");
-    });
 
     return { ...pty };
   }
@@ -265,14 +286,7 @@ export class PtyService {
         const activeSession = this.#sessions.get(args.ptyID);
         if (!activeSession) return;
         if (activeSession.pty.status !== "running") return;
-
-        if (typeof payload === "string") {
-          activeSession.terminal.write(payload);
-          return;
-        }
-
-        const bytes = toWritableBytes(payload);
-        activeSession.terminal.write(bytes);
+        activeSession.terminal.write(toWritableText(payload));
       },
       detach: () => {
         const activeSession = this.#sessions.get(args.ptyID);
@@ -343,26 +357,27 @@ export class PtyService {
     this.#closeClients(session, 1000, reason);
 
     try {
-      session.process.kill("SIGTERM");
+      session.terminal.kill("SIGTERM");
     } catch {
       // ignore
     }
 
     await Promise.race([
-      session.process.exited.catch(() => undefined),
+      session.exited.catch(() => undefined),
       new Promise((resolve) => setTimeout(resolve, 150)),
     ]);
 
     try {
       if (session.pty.status === "running") {
-        session.process.kill("SIGKILL");
+        session.terminal.kill("SIGKILL");
       }
     } catch {
       // ignore
     }
 
     try {
-      session.terminal.close();
+      session.onDataSubscription.dispose();
+      session.onExitSubscription.dispose();
     } catch {
       // ignore
     }

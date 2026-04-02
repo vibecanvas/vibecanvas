@@ -93,6 +93,38 @@ describe("PtyService", () => {
     expect(decodeChunks(chunks)).toContain("hello-from-pty");
   });
 
+  test("ctrl+c sent through the PTY interrupts the foreground process", async () => {
+    const workingDirectory = process.cwd();
+    const created = await service.create(workingDirectory, {
+      command: "/bin/sh",
+      title: "Signal Terminal",
+    });
+
+    const chunks: Uint8Array[] = [];
+    const attachment = service.attach({
+      workingDirectory,
+      ptyID: created.id,
+      cursor: 0,
+      send: (data) => {
+        chunks.push(new Uint8Array(data));
+      },
+    });
+
+    expect(attachment).not.toBeNull();
+
+    attachment!.send("trap 'echo SIGINT_RECEIVED; exit 0' INT\n");
+    attachment!.send("echo READY\n");
+    attachment!.send("sleep 30\n");
+    await waitFor(() => decodeChunks(chunks).includes("READY"));
+
+    attachment!.send("\x03");
+
+    await waitFor(() => decodeChunks(chunks).includes("SIGINT_RECEIVED"), 5000);
+
+    attachment!.detach();
+    expect(decodeChunks(chunks)).toContain("SIGINT_RECEIVED");
+  });
+
   test("replays buffered output on reconnect from cursor zero", async () => {
     const workingDirectory = process.cwd();
     const created = await service.create(workingDirectory, {
