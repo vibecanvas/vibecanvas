@@ -179,7 +179,7 @@ export function createGroup(args: Partial<TGroup> = {}): TGroup {
 }
 
 export function expectExitCode(result: TProcessResult, expectedExitCode: number): void {
-  expect(result.exitCode).toBe(expectedExitCode);
+  expect(result.exitCode, `stdout:\n${result.stdout || "<empty>"}\n\nstderr:\n${result.stderr || "<empty>"}`).toBe(expectedExitCode);
 }
 
 export function expectNoStderr(result: TProcessResult): void {
