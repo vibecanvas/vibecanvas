@@ -1,7 +1,7 @@
 import { parseArgs } from "node:util";
 import type { TCanvasDoc } from "@vibecanvas/shell/automerge/index";
 import { openOfflineCanvasState } from "./offline-state";
-import { getTargetBounds, loadCanvasDoc, loadCanvasHandle, normalizeCanvas, resolveCanvasSelection, runSilently, sortIds, waitForLiveCanvasDoc, waitForPersistedCanvasDoc, type TCanvasRow, type TCanvasSelectionError, type TCanvasSummary, type TSceneTarget } from "./scene-shared";
+import { getTargetBounds, loadCanvasHandle, normalizeCanvas, resolveCanvasSelection, runSilently, sortIds, waitForLiveCanvasDoc, waitForPersistedCanvasDoc, type TCanvasRow, type TCanvasSelectionError, type TCanvasSummary, type TSceneTarget } from "./scene-shared";
 
 type TMoveMode = "relative" | "absolute";
 
@@ -291,7 +291,12 @@ export async function runCanvasMove(argv: readonly string[]): Promise<never> {
       actionLabel: "Move",
       fail: (error) => exitMoveError(wantsJson, error as TMoveJsonError),
     });
-    const doc = await runSilently(() => loadCanvasDoc(selectedCanvas));
+    const resolvedHandle = await runSilently(() => loadCanvasHandle(selectedCanvas));
+    const currentDoc = resolvedHandle.handle.doc();
+    if (!currentDoc) {
+      throw new Error(`Canvas doc '${selectedCanvas.automerge_url}' is unavailable.`);
+    }
+    const doc = structuredClone(currentDoc);
     const matchedTargets = resolveTargetsByIds({ doc, ids, wantsJson, canvasId: selectedCanvas.id, canvasNameQuery });
 
     if (move.mode === "absolute" && matchedTargets.length !== 1) {
@@ -311,7 +316,6 @@ export async function runCanvasMove(argv: readonly string[]): Promise<never> {
 
     const matchedIds = ids;
     const changedIds = collectChangedElementIds(doc, matchedTargets);
-    const resolvedHandle = await runSilently(() => loadCanvasHandle(selectedCanvas));
     const handle = resolvedHandle.handle;
     const now = Date.now();
 
