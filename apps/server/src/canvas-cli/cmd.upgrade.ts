@@ -1,7 +1,7 @@
 import { parseArgs } from 'util';
-import checkForUpgrade from './update';
-import type { TInstallMethod, TUpgradeProgressEvent } from './update/types';
-import { getServerVersion } from './runtime';
+import checkForUpgrade from '../update';
+import type { TInstallMethod, TUpgradeProgressEvent } from '../update/types';
+import { getServerVersion } from '../runtime';
 
 const ANSI_RESET = '\x1b[0m';
 

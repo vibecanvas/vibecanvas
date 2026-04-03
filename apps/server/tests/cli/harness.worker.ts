@@ -1,6 +1,6 @@
 import { Database } from "bun:sqlite";
 import { Repo, type PeerId } from "@automerge/automerge-repo";
-import { BunSqliteStorageAdapter, type TCanvasDoc } from "../../../imperative-shell/src/automerge/index";
+import { BunSqliteStorageAdapter, type TCanvasDoc } from "@vibecanvas/shell/automerge/index";
 
 type TCanvasRow = {
   id: string;
@@ -26,10 +26,7 @@ type TWorkerPayloads = {
 
 function readPayload<TKey extends keyof TWorkerPayloads>(command: TKey): TWorkerPayloads[TKey] {
   const encoded = Bun.argv[3];
-  if (!encoded) {
-    throw new Error(`Missing payload for ${command}`);
-  }
-
+  if (!encoded) throw new Error(`Missing payload for ${command}`);
   return JSON.parse(Buffer.from(encoded, "base64url").toString("utf8")) as TWorkerPayloads[TKey];
 }
 
@@ -44,38 +41,14 @@ function applySqlitePragmas(sqlite: Database): void {
 }
 
 function createRepo(databasePath: string): Repo {
-  return new Repo({
-    storage: new BunSqliteStorageAdapter(databasePath),
-    peerId: `cli-test-worker-${crypto.randomUUID()}` as PeerId,
-  });
+  return new Repo({ storage: new BunSqliteStorageAdapter(databasePath), peerId: `cli-test-worker-${crypto.randomUUID()}` as PeerId });
 }
 
-function createCanvasRow(args: {
-  sqlite: Database;
-  repo: Repo;
-  name: string;
-}): TCanvasRow {
-  const handle = args.repo.create<TCanvasDoc>({
-    id: crypto.randomUUID(),
-    name: args.name,
-    elements: {},
-    groups: {},
-  });
-
-  const canvas = {
-    id: crypto.randomUUID(),
-    name: args.name,
-    created_at: new Date(),
-    automerge_url: handle.url,
-  };
-
-  args.sqlite
-    .prepare("INSERT INTO canvas (id, name, automerge_url, created_at) VALUES (?, ?, ?, ?)")
-    .run(canvas.id, canvas.name, canvas.automerge_url, Math.floor(Date.now() / 1000));
-
-  return args.sqlite
-    .query("SELECT id, name, automerge_url, created_at FROM canvas WHERE id = ? LIMIT 1")
-    .get(canvas.id) as TCanvasRow;
+function createCanvasRow(args: { sqlite: Database; repo: Repo; name: string }): TCanvasRow {
+  const handle = args.repo.create<TCanvasDoc>({ id: crypto.randomUUID(), name: args.name, elements: {}, groups: {} });
+  const canvas = { id: crypto.randomUUID(), name: args.name, created_at: new Date(), automerge_url: handle.url };
+  args.sqlite.prepare("INSERT INTO canvas (id, name, automerge_url, created_at) VALUES (?, ?, ?, ?)").run(canvas.id, canvas.name, canvas.automerge_url, Math.floor(Date.now() / 1000));
+  return args.sqlite.query("SELECT id, name, automerge_url, created_at FROM canvas WHERE id = ? LIMIT 1").get(canvas.id) as TCanvasRow;
 }
 
 async function readCanvasDocFromDb(databasePath: string, automergeUrl: string): Promise<TCanvasDoc> {
@@ -83,52 +56,34 @@ async function readCanvasDocFromDb(databasePath: string, automergeUrl: string): 
   const handle = await repo.find<TCanvasDoc>(automergeUrl as never);
   await handle.whenReady();
   const doc = handle.doc();
-
-  if (!doc) {
-    throw new Error(`Canvas doc ${automergeUrl} not found in ${databasePath}`);
-  }
-
+  if (!doc) throw new Error(`Canvas doc ${automergeUrl} not found in ${databasePath}`);
   return structuredClone(doc);
 }
 
-async function waitForCanvasDoc(args: {
-  databasePath: string;
-  automergeUrl: string;
-  expectedElementCount: number;
-  expectedGroupCount: number;
-}): Promise<TCanvasDoc> {
+async function waitForCanvasDoc(args: { databasePath: string; automergeUrl: string; expectedElementCount: number; expectedGroupCount: number }): Promise<TCanvasDoc> {
   const startedAt = Date.now();
   let lastError: unknown = null;
-
   while (Date.now() - startedAt < 2000) {
     try {
       const doc = await readCanvasDocFromDb(args.databasePath, args.automergeUrl);
-      if (Object.keys(doc.elements).length === args.expectedElementCount && Object.keys(doc.groups).length === args.expectedGroupCount) {
-        return doc;
-      }
+      if (Object.keys(doc.elements).length === args.expectedElementCount && Object.keys(doc.groups).length === args.expectedGroupCount) return doc;
     } catch (error) {
       lastError = error;
     }
-
     await Bun.sleep(25);
   }
-
   throw new Error(`Timed out waiting for persisted canvas doc ${args.automergeUrl}: ${String(lastError)}`);
 }
 
 async function run(): Promise<void> {
   const command = Bun.argv[2] as keyof TWorkerPayloads | undefined;
-  if (!command) {
-    throw new Error("Missing worker command");
-  }
+  if (!command) throw new Error("Missing worker command");
 
   if (command === "list-canvases") {
     const payload = readPayload("list-canvases");
     const sqlite = new Database(payload.dbPath);
     applySqlitePragmas(sqlite);
-    const rows = sqlite
-      .query("SELECT id, name, automerge_url, created_at FROM canvas ORDER BY created_at ASC, name ASC")
-      .all() as TCanvasRow[];
+    const rows = sqlite.query("SELECT id, name, automerge_url, created_at FROM canvas ORDER BY created_at ASC, name ASC").all() as TCanvasRow[];
     sqlite.close();
     console.log(JSON.stringify(rows));
     return;
@@ -139,12 +94,7 @@ async function run(): Promise<void> {
     const sqlite = new Database(payload.dbPath);
     applySqlitePragmas(sqlite);
     const repo = createRepo(payload.dbPath);
-    const canvas = createCanvasRow({
-      sqlite,
-      repo,
-      name: payload.args.name ?? `cli-canvas-${crypto.randomUUID().slice(0, 8)}`,
-    });
-
+    const canvas = createCanvasRow({ sqlite, repo, name: payload.args.name ?? `cli-canvas-${crypto.randomUUID().slice(0, 8)}` });
     const handle = await repo.find<TCanvasDoc>(canvas.automerge_url as never);
     await handle.whenReady();
     handle.change((doc) => {
@@ -153,16 +103,9 @@ async function run(): Promise<void> {
       doc.elements = structuredClone(payload.args.elements ?? {});
       doc.groups = structuredClone(payload.args.groups ?? {});
     });
-
-    await waitForCanvasDoc({
-      databasePath: payload.dbPath,
-      automergeUrl: canvas.automerge_url,
-      expectedElementCount: Object.keys(payload.args.elements ?? {}).length,
-      expectedGroupCount: Object.keys(payload.args.groups ?? {}).length,
-    });
-
+    await waitForCanvasDoc({ databasePath: payload.dbPath, automergeUrl: canvas.automerge_url, expectedElementCount: Object.keys(payload.args.elements ?? {}).length, expectedGroupCount: Object.keys(payload.args.groups ?? {}).length });
     sqlite.close();
-    console.log(JSON.stringify({ canvas: canvas as TCanvasRow, automergeUrl: canvas.automerge_url }));
+    console.log(JSON.stringify({ canvas, automergeUrl: canvas.automerge_url }));
     return;
   }
 

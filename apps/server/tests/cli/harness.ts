@@ -3,15 +3,15 @@ import { mkdir, mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import {
-  type TCanvasDoc,
-  type TElement,
-  type TElementStyle,
-  type TGroup,
-  type TRectData,
+import { expect } from "bun:test";
+import type {
+  TCanvasDoc,
+  TElement,
+  TElementStyle,
+  TGroup,
+  TRectData,
 } from "@vibecanvas/shell/automerge/index";
 import * as schema from "@vibecanvas/shell/database/schema";
-import { expect } from "vitest";
 
 const TEST_DIR = dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = resolve(TEST_DIR, "../../../..");
@@ -33,7 +33,6 @@ export type TSeedCanvasArgs = {
   docName?: string;
   elements?: Record<string, TElement>;
   groups?: Record<string, TGroup>;
-  mutateDoc?: (doc: TCanvasDoc) => void;
 };
 
 export type TSeededCanvas = {
@@ -80,10 +79,7 @@ export async function createCliTestContext(): Promise<TCliTestContext> {
   let cleanedUp = false;
 
   const cleanup = async () => {
-    if (cleanedUp) {
-      return;
-    }
-
+    if (cleanedUp) return;
     cleanedUp = true;
     await rm(tempRoot, { recursive: true, force: true });
   };
@@ -107,23 +103,10 @@ export async function createCliTestContext(): Promise<TCliTestContext> {
         stderr += chunk.toString();
       });
 
-      proc.on("error", (error) => {
-        rejectPromise(error);
-      });
-
+      proc.on("error", rejectPromise);
       proc.on("close", (code, signal) => {
-        if (signal) {
-          rejectPromise(new Error(`Process ${args.cmd.join(" ")} exited via signal ${signal}`));
-          return;
-        }
-
-        resolvePromise({
-          cmd: [...args.cmd],
-          cwd: args.cwd ?? REPO_ROOT,
-          exitCode: code ?? 0,
-          stdout,
-          stderr,
-        });
+        if (signal) return rejectPromise(new Error(`Process ${args.cmd.join(" ")} exited via signal ${signal}`));
+        resolvePromise({ cmd: [...args.cmd], cwd: args.cwd ?? REPO_ROOT, exitCode: code ?? 0, stdout, stderr });
       });
 
       if (args.stdinText !== undefined) {
@@ -134,67 +117,27 @@ export async function createCliTestContext(): Promise<TCliTestContext> {
     });
   };
 
-  const runVibecanvasCli = (args: readonly string[]) => {
-    return runProcess({
-      cmd: ["bun", "run", "apps/server/src/main.ts", ...args],
-      cwd: REPO_ROOT,
-      env: {
-        ...process.env,
-        VIBECANVAS_CONFIG: configDir,
-      },
-    });
-  };
+  const runVibecanvasCli = (args: readonly string[]) => runProcess({ cmd: ["bun", "run", "apps/server/src/main.ts", ...args], cwd: REPO_ROOT, env: { ...process.env, VIBECANVAS_CONFIG: configDir } });
 
   const runCanvasCli = (args: readonly string[]) => {
-    if (args.includes("--db")) {
-      throw new Error("runCanvasCli() appends --db automatically; tests must not pass it twice.");
-    }
-
+    if (args.includes("--db")) throw new Error("runCanvasCli() appends --db automatically; tests must not pass it twice.");
     return runVibecanvasCli(["canvas", ...args, "--db", dbPath]);
   };
 
   const runHarnessWorker = async <TResult>(command: string, payload: unknown): Promise<TResult> => {
-    const result = await runProcess({
-      cmd: ["bun", "run", "packages/canvas/tests/cli/harness.worker.ts", command, encodePayload(payload)],
-      cwd: REPO_ROOT,
-      env: {
-        ...process.env,
-        VIBECANVAS_CONFIG: configDir,
-      },
-    });
-
-    if (result.exitCode !== 0) {
-      throw new Error(`Harness worker failed for ${command}: ${result.stderr || result.stdout}`);
-    }
-
-    return result.stdout.trim() ? parseJsonStdout<TResult>(result) : (undefined as TResult);
+    const result = await runProcess({ cmd: ["bun", "run", "apps/server/tests/cli/harness.worker.ts", command, encodePayload(payload)], cwd: REPO_ROOT, env: { ...process.env, VIBECANVAS_CONFIG: configDir } });
+    if (result.exitCode !== 0) throw new Error(`Harness worker failed for ${command}: ${result.stderr || result.stdout}`);
+    return result.stdout.trim() ? JSON.parse(result.stdout) as TResult : (undefined as TResult);
   };
 
   const migrateResult = await runProcess({
     cmd: ["bun", "run", "packages/imperative-shell/src/database/migrate.ts"],
     cwd: REPO_ROOT,
-    env: {
-      ...process.env,
-      VIBECANVAS_DB: dbPath,
-      VIBECANVAS_CONFIG: configDir,
-    },
+    env: { ...process.env, VIBECANVAS_DB: dbPath, VIBECANVAS_CONFIG: configDir },
   });
 
-  if (migrateResult.exitCode !== 0) {
-    throw new Error(`Failed to initialize CLI test database: ${migrateResult.stderr || migrateResult.stdout}`);
-  }
-
-  if (!migrateResult.stdout.includes(`[DB] Applying migrations from ${EXPECTED_MIGRATIONS_DIR}`)) {
-    throw new Error(`CLI test harness must bootstrap from ${EXPECTED_MIGRATIONS_DIR}. Received stdout: ${migrateResult.stdout}`);
-  }
-
-  const listCanvases = async () => {
-    return runHarnessWorker<TCanvasRow[]>("list-canvases", { dbPath });
-  };
-
-  const seedCanvasFixture = async (args: TSeedCanvasArgs = {}): Promise<TSeededCanvas> => {
-    return runHarnessWorker<TSeededCanvas>("seed-canvas", { dbPath, args });
-  };
+  if (migrateResult.exitCode !== 0) throw new Error(`Failed to initialize CLI test database: ${migrateResult.stderr || migrateResult.stdout}`);
+  if (!migrateResult.stdout.includes(`[DB] Applying migrations from ${EXPECTED_MIGRATIONS_DIR}`)) throw new Error(`CLI test harness must bootstrap from ${EXPECTED_MIGRATIONS_DIR}. Received stdout: ${migrateResult.stdout}`);
 
   return {
     tempRoot,
@@ -203,8 +146,8 @@ export async function createCliTestContext(): Promise<TCliTestContext> {
     configDir,
     dbPath,
     cleanup,
-    listCanvases,
-    seedCanvasFixture,
+    listCanvases: () => runHarnessWorker<TCanvasRow[]>("list-canvases", { dbPath }),
+    seedCanvasFixture: (args: TSeedCanvasArgs = {}) => runHarnessWorker<TSeededCanvas>("seed-canvas", { dbPath, args }),
     readCanvasDoc: (automergeUrl: string) => runHarnessWorker<TCanvasDoc>("read-canvas-doc", { dbPath, automergeUrl }),
     runProcess,
     runVibecanvasCli,
@@ -214,7 +157,6 @@ export async function createCliTestContext(): Promise<TCliTestContext> {
 
 export function createRectElement(args: Partial<TElement> & { data?: Partial<TRectData>; style?: TElementStyle } = {}): TElement {
   const now = Date.now();
-
   return {
     id: args.id ?? crypto.randomUUID(),
     x: args.x ?? 0,
@@ -226,30 +168,13 @@ export function createRectElement(args: Partial<TElement> & { data?: Partial<TRe
     locked: args.locked ?? false,
     createdAt: args.createdAt ?? now,
     updatedAt: args.updatedAt ?? now,
-    data: {
-      type: "rect",
-      w: 120,
-      h: 80,
-      ...args.data,
-    },
-    style: {
-      backgroundColor: "#ffffff",
-      strokeColor: "#111111",
-      strokeWidth: 1,
-      opacity: 1,
-      ...args.style,
-    },
+    data: { type: "rect", w: 120, h: 80, ...args.data },
+    style: { backgroundColor: "#ffffff", strokeColor: "#111111", strokeWidth: 1, opacity: 1, ...args.style },
   };
 }
 
 export function createGroup(args: Partial<TGroup> = {}): TGroup {
-  return {
-    id: args.id ?? crypto.randomUUID(),
-    parentGroupId: args.parentGroupId ?? null,
-    zIndex: args.zIndex ?? "a0",
-    locked: args.locked ?? false,
-    createdAt: args.createdAt ?? Date.now(),
-  };
+  return { id: args.id ?? crypto.randomUUID(), parentGroupId: args.parentGroupId ?? null, zIndex: args.zIndex ?? "a0", locked: args.locked ?? false, createdAt: args.createdAt ?? Date.now() };
 }
 
 export function expectExitCode(result: TProcessResult, expectedExitCode: number): void {

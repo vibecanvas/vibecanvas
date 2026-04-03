@@ -1,17 +1,13 @@
-// @vitest-environment node
-
 import { mkdtemp, mkdir, rm, stat } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { spawn } from "node:child_process";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { afterEach, describe, expect, test } from "vitest";
+import { afterEach, describe, expect, test } from "bun:test";
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../../..");
 const serverEntrypoint = path.join(repoRoot, "apps/server/src/main.ts");
-
 const DEFINE_ARGS = ["--define", "VIBECANVAS_COMPILED=false"] as const;
-
 const cleanupPaths: string[] = [];
 
 afterEach(async () => {
@@ -30,14 +26,9 @@ async function createTempDir(prefix: string): Promise<string> {
 
 async function runCli(args: string[], env: NodeJS.ProcessEnv = {}) {
   return await new Promise<{ stdout: string; stderr: string; exitCode: number | null }>((resolve, reject) => {
-    const proc = spawn("bun", ["run", ...DEFINE_ARGS, serverEntrypoint, ...args], {
-      cwd: repoRoot,
-      env: { ...process.env, ...env },
-    });
-
+    const proc = spawn("bun", ["run", ...DEFINE_ARGS, serverEntrypoint, ...args], { cwd: repoRoot, env: { ...process.env, ...env } });
     let stdout = "";
     let stderr = "";
-
     proc.stdout.on("data", (chunk) => {
       stdout += String(chunk);
     });
@@ -60,23 +51,15 @@ describe("canvas CLI --db bootstrap", () => {
 
     await mkdir(configDir, { recursive: true });
 
-    const result = await runCli(["canvas", "list", "--db", explicitDbPath, "--json"], {
-      VIBECANVAS_CONFIG: configDir,
-    });
+    const result = await runCli(["canvas", "list", "--db", explicitDbPath, "--json"], { VIBECANVAS_CONFIG: configDir });
 
     expect(result.exitCode).toBe(1);
     const parsed = JSON.parse(result.stderr.trim());
-    expect(parsed).toMatchObject({
-      ok: false,
-      command: "canvas",
-      code: "CANVAS_COMMAND_NOT_IMPLEMENTED",
-      dbPath: explicitDbPath,
-    });
+    expect(parsed).toMatchObject({ ok: false, command: "canvas", code: "CANVAS_COMMAND_NOT_IMPLEMENTED", dbPath: explicitDbPath });
 
     const explicitStat = await stat(explicitDbPath);
     expect(explicitStat.isFile()).toBe(true);
-
-    await expect(stat(path.join(configDir, "vibecanvas.sqlite"))).rejects.toThrow();
+    expect(stat(path.join(configDir, "vibecanvas.sqlite"))).rejects.toThrow();
   });
 
   test("missing --db value fails before stateful imports and returns json error", async () => {
@@ -84,20 +67,13 @@ describe("canvas CLI --db bootstrap", () => {
     const configDir = path.join(sandbox, "fallback-config");
     await mkdir(configDir, { recursive: true });
 
-    const result = await runCli(["canvas", "list", "--db", "--json"], {
-      VIBECANVAS_CONFIG: configDir,
-    });
+    const result = await runCli(["canvas", "list", "--db", "--json"], { VIBECANVAS_CONFIG: configDir });
 
     expect(result.exitCode).toBe(1);
     expect(result.stdout.trim()).toBe("");
 
     const parsed = JSON.parse(result.stderr.trim());
-    expect(parsed).toMatchObject({
-      ok: false,
-      command: "canvas",
-      code: "DB_FLAG_MISSING_VALUE",
-    });
-
-    await expect(stat(path.join(configDir, "vibecanvas.sqlite"))).rejects.toThrow();
+    expect(parsed).toMatchObject({ ok: false, command: "canvas", code: "DB_FLAG_MISSING_VALUE" });
+    expect(stat(path.join(configDir, "vibecanvas.sqlite"))).rejects.toThrow();
   });
 });
