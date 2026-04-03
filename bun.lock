@@ -66,6 +66,7 @@
         "@vibecanvas/core": "workspace:*",
         "@vibecanvas/core-contract": "workspace:*",
         "@vibecanvas/shell": "workspace:*",
+        "@vibecanvas/tapable": "workspace:*",
         "drizzle-orm": "catalog:",
         "drizzle-zod": "catalog:",
         "typescript": "catalog:",
@@ -196,6 +197,10 @@
       "devDependencies": {
         "drizzle-kit": "catalog:",
       },
+    },
+    "packages/tapable": {
+      "name": "@vibecanvas/tapable",
+      "version": "0.0.1",
     },
   },
   "catalog": {
@@ -808,6 +813,8 @@
     "@vibecanvas/server": ["@vibecanvas/server@workspace:apps/server"],
 
     "@vibecanvas/shell": ["@vibecanvas/shell@workspace:packages/imperative-shell"],
+
+    "@vibecanvas/tapable": ["@vibecanvas/tapable@workspace:packages/tapable"],
 
     "@vibecanvas/web": ["@vibecanvas/web@workspace:apps/web"],
 

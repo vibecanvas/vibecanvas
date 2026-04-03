@@ -18,6 +18,7 @@
     "@orpc/server": "catalog:",
     "@orpc/contract": "catalog:",
     "@vibecanvas/core": "workspace:*",
+    "@vibecanvas/tapable": "workspace:*",
     "@vibecanvas/shell": "workspace:*",
     "@vibecanvas/core-contract": "workspace:*",
     "drizzle-orm": "catalog:",

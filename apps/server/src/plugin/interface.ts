@@ -1,7 +1,4 @@
-import type { SyncHook } from './SyncHook';
-import type { SyncExitHook } from './SyncExitHook';
-import type { AsyncSeriesHook } from './AsyncSeriesHook';
-import type { AsyncWaterfallHook } from './AsyncWaterfallHook';
+import type { SyncHook, SyncExitHook, AsyncSeriesHook, AsyncWaterfallHook } from '@vibecanvas/tapable';
 
 // ---------------------------------------------------------------------------
 // Service Registry

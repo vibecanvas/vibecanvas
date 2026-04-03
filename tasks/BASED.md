@@ -123,6 +123,7 @@ Use the leaf files for execution history and local context.
 - [x]: [S14](s/S14.md) - canvas: keep recorder plugin in development only
 - [ ]: [S15] - inline text support -> fix position (use pretext lib?)
 - [x]: [S16](s/S16.md) - canvas: fix broken TypeScript typings in packages/canvas
+- [ ]: [S17](s/S17.md) - extract apps/server into apps/cli + shared packages
 
 ## E xplorations
 - [ ]: [E1](e/E1.md) - Tauri Research

@@ -1,7 +1,10 @@
-export { SyncHook } from './SyncHook';
-export { SyncExitHook } from './SyncExitHook';
-export { AsyncSeriesHook } from './AsyncSeriesHook';
-export { AsyncWaterfallHook } from './AsyncWaterfallHook';
+export {
+  SyncHook,
+  SyncExitHook,
+  AsyncParallelHook,
+  AsyncSeriesHook,
+  AsyncWaterfallHook,
+} from '@vibecanvas/tapable';
 export type {
   IPlugin,
   IPluginContext,
