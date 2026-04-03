@@ -93,6 +93,18 @@ Use the leaf files for execution history and local context.
 - [ ]: [A2] - add inline text support to diamond and ellipse
 - [ ]: [A3] - copy paste elements/groups
 - [x]: [A4](a/A4.md) - terminal: use PartySocket for resilient PTY connection
+- [x]: [A5](a/A5.md) - canvas CLI: explicit --db path override
+- [ ]: [A6](a/A6.md) - canvas CLI: end-to-end test harness
+- [ ]: [A7](a/A7.md) - canvas CLI: `list` command
+- [ ]: [A8](a/A8.md) - canvas CLI: `inspect` command
+- [ ]: [A9](a/A9.md) - canvas CLI: `query` command
+- [ ]: [A10](a/A10.md) - canvas CLI: `patch` command
+- [ ]: [A11](a/A11.md) - canvas CLI: `move` command
+- [ ]: [A12](a/A12.md) - canvas CLI: `group` command
+- [ ]: [A13](a/A13.md) - canvas CLI: `ungroup` command
+- [ ]: [A14](a/A14.md) - canvas CLI: `delete` command
+- [ ]: [A15](a/A15.md) - canvas CLI: `reorder` command
+- [ ]: [A16](a/A16.md) - canvas CLI: `render` command
 
 ## S ubtractions
 - [ ]: [S1](s/S1.md) - double bun run dev -> find new port
@@ -115,7 +127,7 @@ Use the leaf files for execution history and local context.
 - [ ]: [E5](e/E5.md) - how to implement state machine system?
 - [ ]: [E6](e/E6.md) - should we include a task management
 - [ ]: [E7](e/E7.md) - should we include agent
-- [ ]: [E8](e/E8.md) - canvas CLI: query/edit surface exploration
+- [x]: [E8](e/E8.md) - canvas CLI: query/edit surface exploration
 - [ ]: [E9] - tmux for persistant pty sessions
 - [ ]: [E10] - headless chrome to stream to canvas
 - [ ]: [E11] - https://github.com/cr0hn/dockerscan

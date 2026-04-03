@@ -9,7 +9,39 @@ const findRoot = () => FAKE_MONOREPO;
 const findRootNull = () => null;
 
 describe("fnXdgPaths", () => {
-  describe("VIBECANVAS_CONFIG override (priority 1)", () => {
+  describe("VIBECANVAS_DB override (priority 1)", () => {
+    test("uses the explicit database file and collapses dirs to its parent", () => {
+      const [paths, err] = fnXdgPaths({
+        env: { VIBECANVAS_DB: "/custom/dbs/isolated.sqlite" },
+        isCompiled: true,
+        homedir: FAKE_HOME,
+      });
+
+      expect(err).toBeNull();
+      expect(paths!.dataDir).toBe("/custom/dbs");
+      expect(paths!.configDir).toBe("/custom/dbs");
+      expect(paths!.stateDir).toBe("/custom/dbs");
+      expect(paths!.cacheDir).toBe("/custom/dbs");
+      expect(paths!.databasePath).toBe("/custom/dbs/isolated.sqlite");
+    });
+
+    test("wins over VIBECANVAS_CONFIG", () => {
+      const [paths, err] = fnXdgPaths({
+        env: {
+          VIBECANVAS_DB: "/custom/dbs/isolated.sqlite",
+          VIBECANVAS_CONFIG: "/custom/config",
+        },
+        isCompiled: true,
+        homedir: FAKE_HOME,
+      });
+
+      expect(err).toBeNull();
+      expect(paths!.databasePath).toBe("/custom/dbs/isolated.sqlite");
+      expect(paths!.dataDir).toBe("/custom/dbs");
+    });
+  });
+
+  describe("VIBECANVAS_CONFIG override (priority 2)", () => {
     test("all dirs point to the override path", () => {
       const [paths, err] = fnXdgPaths({
         env: { VIBECANVAS_CONFIG: "/custom/path" },
@@ -39,7 +71,7 @@ describe("fnXdgPaths", () => {
     });
   });
 
-  describe("dev mode (priority 2)", () => {
+  describe("dev mode (priority 3)", () => {
     test("uses local-volume subdirectories under monorepo root", () => {
       const [paths, err] = fnXdgPaths({
         env: {},
@@ -73,7 +105,7 @@ describe("fnXdgPaths", () => {
     });
   });
 
-  describe("production mode - XDG defaults (priority 3)", () => {
+  describe("production mode - XDG defaults (priority 4)", () => {
     test("uses XDG defaults when no env vars set", () => {
       const [paths, err] = fnXdgPaths({
         env: {},

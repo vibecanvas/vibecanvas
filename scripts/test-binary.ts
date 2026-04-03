@@ -10,6 +10,16 @@ type TArgs = {
   requestTimeoutMs: number
 }
 
+type TBinaryScenario = {
+  name: string
+  port: number
+  cmd: string[]
+  env: NodeJS.ProcessEnv
+  expectedDbPath?: string
+  expectedAbsentPaths?: string[]
+  cleanupPaths: string[]
+}
+
 function parseArgs(): TArgs {
   const args = Bun.argv.slice(2)
   const getArg = (name: string): string | undefined => {
@@ -154,22 +164,29 @@ async function assertApiWebSocket(baseUrl: string, timeoutMs: number): Promise<v
   rpcWs.close(1000, "test done")
 }
 
-async function main() {
-  const args = parseArgs()
-  const binaryPath = await resolveBinaryPath(args.binaryPath)
-  const baseUrl = `http://127.0.0.1:${args.port}`
-  const tempConfigDir = path.join(process.cwd(), `.tmp-binary-test-${Date.now()}`)
+async function assertPathExists(targetPath: string, label: string): Promise<void> {
+  if (!(await Bun.file(targetPath).exists())) {
+    throw new Error(`${label} was not created: ${targetPath}`)
+  }
+}
 
-  console.log(`[test-binary] Using binary: ${binaryPath}`)
-  console.log(`[test-binary] Base URL: ${baseUrl}`)
+async function assertPathMissing(targetPath: string, label: string): Promise<void> {
+  if (await Bun.file(targetPath).exists()) {
+    throw new Error(`${label} unexpectedly exists: ${targetPath}`)
+  }
+}
+
+async function runBinaryScenario(binaryPath: string, args: TArgs, scenario: TBinaryScenario): Promise<void> {
+  const baseUrl = `http://127.0.0.1:${scenario.port}`
+  console.log(`[test-binary] Scenario '${scenario.name}' using ${baseUrl}`)
 
   const proc = Bun.spawn({
-    cmd: [binaryPath, "serve", "--port", String(args.port)],
+    cmd: [binaryPath, ...scenario.cmd],
     stdout: "pipe",
     stderr: "pipe",
     env: {
       ...process.env,
-      VIBECANVAS_CONFIG: tempConfigDir,
+      ...scenario.env,
     },
   })
 
@@ -178,9 +195,9 @@ async function main() {
 
   try {
     await waitForHttpReady(baseUrl, args.startupTimeoutMs)
-    console.log("[test-binary] PASS server startup")
+    console.log(`[test-binary] PASS ${scenario.name} server startup`)
 
-    const rootResponse = await withTimeout(fetch(`${baseUrl}/`), args.requestTimeoutMs, "fetch /")
+    const rootResponse = await withTimeout(fetch(`${baseUrl}/`), args.requestTimeoutMs, `fetch / (${scenario.name})`)
     if (!rootResponse.ok) {
       throw new Error(`GET / failed with ${rootResponse.status}`)
     }
@@ -193,7 +210,7 @@ async function main() {
     if (!rootHtml.includes("<div id=\"root\">")) {
       throw new Error("GET / html does not include root mount node")
     }
-    console.log("[test-binary] PASS GET /")
+    console.log(`[test-binary] PASS ${scenario.name} GET /`)
 
     const assetUrls = extractAssetUrls(rootHtml)
     if (assetUrls.length === 0) {
@@ -202,18 +219,28 @@ async function main() {
 
     for (const assetUrl of assetUrls) {
       await assertHttpAsset(baseUrl, assetUrl, args.requestTimeoutMs)
-      console.log(`[test-binary] PASS asset ${assetUrl}`)
+      console.log(`[test-binary] PASS ${scenario.name} asset ${assetUrl}`)
     }
 
     await assertApiWebSocket(baseUrl, args.requestTimeoutMs)
-    console.log("[test-binary] PASS ws /api")
+    console.log(`[test-binary] PASS ${scenario.name} ws /api`)
 
-    const automergeWs = await assertWsOpen(`ws://127.0.0.1:${args.port}/automerge`, args.requestTimeoutMs)
+    const automergeWs = await assertWsOpen(`ws://127.0.0.1:${scenario.port}/automerge`, args.requestTimeoutMs)
     await Bun.sleep(250)
     automergeWs.close(1000, "test done")
-    console.log("[test-binary] PASS ws /automerge")
+    console.log(`[test-binary] PASS ${scenario.name} ws /automerge`)
 
-    console.log("[test-binary] All checks passed")
+    if (scenario.expectedDbPath) {
+      await assertPathExists(scenario.expectedDbPath, `${scenario.name} db path`)
+      console.log(`[test-binary] PASS ${scenario.name} db path ${scenario.expectedDbPath}`)
+    }
+
+    for (const missingPath of scenario.expectedAbsentPaths ?? []) {
+      await assertPathMissing(missingPath, `${scenario.name} fallback path`)
+      console.log(`[test-binary] PASS ${scenario.name} did not touch ${missingPath}`)
+    }
+
+    console.log(`[test-binary] Scenario '${scenario.name}' passed`)
   } finally {
     proc.kill()
 
@@ -227,20 +254,63 @@ async function main() {
       await proc.exited
     }
 
-    await Bun.$`rm -rf ${tempConfigDir}`.quiet()
+    for (const cleanupPath of scenario.cleanupPaths) {
+      await Bun.$`rm -rf ${cleanupPath}`.quiet()
+    }
 
     const [stdout, stderr] = await Promise.allSettled([stdoutPromise, stderrPromise])
     const stdoutText = stdout.status === "fulfilled" ? stdout.value : ""
     const stderrText = stderr.status === "fulfilled" ? stderr.value : ""
     if (stdoutText.trim()) {
-      console.log("[test-binary] server stdout:")
+      console.log(`[test-binary] ${scenario.name} server stdout:`)
       console.log(stdoutText)
     }
     if (stderrText.trim()) {
-      console.log("[test-binary] server stderr:")
+      console.log(`[test-binary] ${scenario.name} server stderr:`)
       console.log(stderrText)
     }
   }
+}
+
+async function main() {
+  const args = parseArgs()
+  const binaryPath = await resolveBinaryPath(args.binaryPath)
+  const tempRoot = path.join(process.cwd(), `.tmp-binary-test-${Date.now()}`)
+  const tempConfigDir = path.join(tempRoot, "config-mode")
+  const tempDbDir = path.join(tempRoot, "db-mode")
+  const explicitDbPath = path.join(tempDbDir, "nested", "binary-test.sqlite")
+  const xdgRoot = path.join(tempRoot, "xdg-root")
+
+  console.log(`[test-binary] Using binary: ${binaryPath}`)
+  console.log(`[test-binary] Temp root: ${tempRoot}`)
+
+  await runBinaryScenario(binaryPath, args, {
+    name: "config-env",
+    port: args.port,
+    cmd: ["serve", "--port", String(args.port)],
+    env: {
+      VIBECANVAS_CONFIG: tempConfigDir,
+    },
+    expectedDbPath: path.join(tempConfigDir, "vibecanvas.sqlite"),
+    cleanupPaths: [tempConfigDir],
+  })
+
+  await runBinaryScenario(binaryPath, args, {
+    name: "explicit-db-flag",
+    port: args.port + 1,
+    cmd: ["serve", "--port", String(args.port + 1), "--db", explicitDbPath],
+    env: {
+      XDG_DATA_HOME: path.join(xdgRoot, "data"),
+      XDG_CONFIG_HOME: path.join(xdgRoot, "config"),
+      XDG_STATE_HOME: path.join(xdgRoot, "state"),
+      XDG_CACHE_HOME: path.join(xdgRoot, "cache"),
+    },
+    expectedDbPath: explicitDbPath,
+    expectedAbsentPaths: [path.join(xdgRoot, "data", "vibecanvas", "vibecanvas.sqlite")],
+    cleanupPaths: [tempDbDir, xdgRoot],
+  })
+
+  console.log("[test-binary] All checks passed")
 }
 
 main().catch((error) => {

@@ -4,6 +4,7 @@
 // Supports subcommands: serve (default), upgrade
 import './preload/patch-negative-timeout';
 import { parseArgs } from 'util';
+import { resolveCanvasCliBootstrap } from './canvas-cli/bootstrap';
 import { getServerVersion } from './runtime';
 
 function printHelp(): void {
@@ -15,9 +16,11 @@ Usage:
 Commands:
   serve     Start the vibecanvas server (default when no command given)
   upgrade   Check for and install updates
+  canvas    Offline canvas CLI surface
 
 Options:
   --port <number>      Port for server (default: 3000 dev, 7496 compiled)
+  --db <path>          Explicit SQLite file path override
   --upgrade <version>  Upgrade to a specific version (e.g. 0.2.0-beta.3 or v0.2.0-beta.3)
   --version, -v        Print version and exit
   --help, -h           Show this help message
@@ -25,6 +28,9 @@ Options:
 Examples:
   vibecanvas                      Start server on default port
   vibecanvas serve --port 3001    Start server on port 3001
+  vibecanvas serve --db ./tmp/dev.sqlite
+                                  Start server with an explicit SQLite file
+  vibecanvas canvas --help        Show offline canvas CLI help
   vibecanvas upgrade              Check for and install updates
   vibecanvas upgrade --check      Check for updates without installing
   vibecanvas --upgrade 0.2.0-beta.3
@@ -56,6 +62,21 @@ function rewriteArgvForUpgrade(argv: readonly string[], targetVersion: string): 
 
 async function main() {
   const argv = Bun.argv;
+  const bootstrap = resolveCanvasCliBootstrap(argv);
+
+  if (!bootstrap.ok) {
+    if (bootstrap.json) {
+      console.error(JSON.stringify({
+        ok: false,
+        command: 'canvas',
+        code: bootstrap.code,
+        message: bootstrap.message,
+      }));
+    } else {
+      console.error(bootstrap.message);
+    }
+    process.exit(1);
+  }
 
   // Top-level parse for --version and --help
   const { values, positionals } = parseArgs({
@@ -76,6 +97,9 @@ async function main() {
       port: {
         type: 'string',
       },
+      db: {
+        type: 'string',
+      },
       upgrade: {
         type: 'string',
       },
@@ -87,13 +111,21 @@ async function main() {
 
   // If a subcommand is provided, let it handle its own --help
   if (subcommand === 'upgrade') {
-    const { runUpgrade } = await import('./cmd.upgrade');
+    const { runUpgrade } = await import('./canvas-cli/cmd.upgrade');
     await runUpgrade(argv);
+    return;
+  }
+
+  if (subcommand === 'canvas') {
+    const { runCanvas } = await import('./canvas-cli/cmd.canvas');
+    await runCanvas(argv);
+    return;
   }
 
   if (typeof values.upgrade === 'string') {
-    const { runUpgrade } = await import('./cmd.upgrade');
+    const { runUpgrade } = await import('./canvas-cli/cmd.upgrade');
     await runUpgrade(rewriteArgvForUpgrade(argv, values.upgrade));
+    return;
   }
 
   // Top-level --help and --version (only when no subcommand or 'serve')

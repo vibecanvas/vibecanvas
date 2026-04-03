@@ -1,5 +1,5 @@
 import { homedir } from "os";
-import { join, dirname } from "path";
+import { join, dirname, resolve } from "path";
 import { ConfigErr } from "./err.codes";
 
 declare const VIBECANVAS_COMPILED: boolean;
@@ -52,7 +52,21 @@ function fnXdgPaths(args: TXdgPathsArgs = {}): TErrTuple<TVibecanvasPaths> {
   const cwd = args.cwd ?? process.cwd();
   const findRoot = args.findMonorepoRoot ?? defaultFindMonorepoRoot;
 
-  // Priority 1: VIBECANVAS_CONFIG env override → all dirs point here (legacy compat)
+  // Priority 1: VIBECANVAS_DB env override → explicit database file path
+  const dbOverride = env.VIBECANVAS_DB;
+  if (dbOverride) {
+    const databasePath = resolve(cwd, dbOverride);
+    const baseDir = dirname(databasePath);
+    return [{
+      dataDir: baseDir,
+      configDir: baseDir,
+      stateDir: baseDir,
+      cacheDir: baseDir,
+      databasePath,
+    }, null];
+  }
+
+  // Priority 2: VIBECANVAS_CONFIG env override → all dirs point here (legacy compat)
   const envOverride = env.VIBECANVAS_CONFIG;
   if (envOverride) {
     return [{
@@ -64,7 +78,7 @@ function fnXdgPaths(args: TXdgPathsArgs = {}): TErrTuple<TVibecanvasPaths> {
     }, null];
   }
 
-  // Priority 2: Dev mode → local-volume/ with subdirectories
+  // Priority 3: Dev mode → local-volume/ with subdirectories
   if (!isCompiled) {
     const monorepoRoot = findRoot(cwd);
     if (!monorepoRoot) {
@@ -86,7 +100,7 @@ function fnXdgPaths(args: TXdgPathsArgs = {}): TErrTuple<TVibecanvasPaths> {
     }, null];
   }
 
-  // Priority 3: Production → XDG Base Directory spec
+  // Priority 4: Production → XDG Base Directory spec
   const dataDir = join(
     env.XDG_DATA_HOME || join(home, ".local", "share"),
     APP_NAME,

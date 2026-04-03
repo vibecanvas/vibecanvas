@@ -8,6 +8,7 @@ type TServerEnv = {
   VIBECANVAS_CHANNEL?: string;
   VIBECANVAS_DISABLE_AUTOUPDATE?: string;
   VIBECANVAS_CONFIG?: string;
+  VIBECANVAS_DB?: string;
 };
 
 // Build-time constants - replaced by Bun's --define at compile time
