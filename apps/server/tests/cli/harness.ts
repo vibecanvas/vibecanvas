@@ -156,7 +156,7 @@ export async function createCliTestContext(): Promise<TCliTestContext> {
   };
 }
 
-export function createRectElement(args: Partial<TElement> & { data?: Partial<TRectData>; style?: TElementStyle } = {}): TElement {
+export function createRectElement(args: Omit<Partial<TElement>, "data" | "style"> & { data?: Partial<TRectData>; style?: TElementStyle } = {}): TElement {
   const now = Date.now();
   return {
     id: args.id ?? crypto.randomUUID(),

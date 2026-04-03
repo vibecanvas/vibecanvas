@@ -73,6 +73,8 @@ describe("canvas CLI test harness", () => {
     expectNoStderr(result);
     expect(result.stdout).toContain("Usage:");
     expect(result.stdout).toContain("Commands:");
+    expect(result.stdout).toContain("Any subcommand accepts --help for command-specific usage.");
+    expect(result.stdout).toContain("vibecanvas query --help");
   });
 
   test("shows command-specific help when a canvas subcommand is present", async () => {
@@ -84,12 +86,43 @@ describe("canvas CLI test harness", () => {
     expect(listHelp.stdout).toContain("Usage: vibecanvas canvas list [options]");
     expect(listHelp.stdout).toContain("Ordering:");
 
-    const inspectHelp = await context.runVibecanvasCli(["canvas", "inspect", "--help"]);
-    expectExitCode(inspectHelp, 0);
-    expectNoStderr(inspectHelp);
-    expect(inspectHelp.stdout).toContain("Usage: vibecanvas canvas inspect <id> [options]");
-    expect(inspectHelp.stdout).toContain("Required canvas selector (choose exactly one):");
-    expect(inspectHelp.stdout).toContain("Examples:");
+    const queryHelp = await context.runVibecanvasCli(["canvas", "query", "--help"]);
+    expectExitCode(queryHelp, 0);
+    expectNoStderr(queryHelp);
+    expect(queryHelp.stdout).toContain("Usage: vibecanvas canvas query [options]");
+    expect(queryHelp.stdout).toContain("Selector inputs (choose at most one style):");
+    expect(queryHelp.stdout).toContain("--style <key=value>");
+    expect(queryHelp.stdout).toContain("--omitdata");
+    expect(queryHelp.stdout).toContain("--omitstyle");
+    expect(queryHelp.stdout).toContain("query never performs natural-language parsing.");
+
+    const moveHelp = await context.runVibecanvasCli(["canvas", "move", "--help"]);
+    expectExitCode(moveHelp, 0);
+    expectNoStderr(moveHelp);
+    expect(moveHelp.stdout).toContain("Usage: vibecanvas canvas move [options]");
+    expect(moveHelp.stdout).toContain("--relative");
+    expect(moveHelp.stdout).toContain("--absolute");
+    expect(moveHelp.stdout).toContain("group ids move their descendant elements");
+  });
+
+  test("shows canvas subcommand help even when the canvas prefix is omitted", async () => {
+    const context = await createContext();
+
+    const queryHelp = await context.runVibecanvasCli(["query", "--help"]);
+    expectExitCode(queryHelp, 0);
+    expectNoStderr(queryHelp);
+    expect(queryHelp.stdout).toContain("Usage: vibecanvas canvas query [options]");
+    expect(queryHelp.stdout).toContain("--style <key=value>");
+
+    const moveHelp = await context.runVibecanvasCli(["move", "--help"]);
+    expectExitCode(moveHelp, 0);
+    expectNoStderr(moveHelp);
+    expect(moveHelp.stdout).toContain("Usage: vibecanvas canvas move [options]");
+
+    const listHelp = await context.runVibecanvasCli(["list", "--help"]);
+    expectExitCode(listHelp, 0);
+    expectNoStderr(listHelp);
+    expect(listHelp.stdout).toContain("Usage: vibecanvas canvas list [options]");
   });
 
   test("makes subcommand arguments visible in the top-level canvas help menu", async () => {
@@ -98,7 +131,7 @@ describe("canvas CLI test harness", () => {
 
     expectExitCode(result, 0);
     expectNoStderr(result);
-    expect(result.stdout).toContain("inspect <id> (--canvas <id> | --canvas-name <query>)");
+    expect(result.stdout).toContain("query (--canvas <id> | --canvas-name <query>) [selectors]");
     expect(result.stdout).toContain("Use 'vibecanvas canvas <subcommand> --help' for command-specific arguments and examples.");
   });
 

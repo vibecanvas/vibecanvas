@@ -96,8 +96,8 @@ Use the leaf files for execution history and local context.
 - [x]: [A5](a/A5.md) - canvas CLI: explicit --db path override
 - [x]: [A6](a/A6.md) - canvas CLI: end-to-end test harness
 - [x]: [A7](a/A7.md) - canvas CLI: `list` command
-- [x]: [A8](a/A8.md) - canvas CLI: `inspect` command
-- [ ]: [A9](a/A9.md) - canvas CLI: `query` command
+- [x]: [A8](a/A8.md) - canvas CLI: `inspect` command (removed; use `query --id`)
+- [x]: [A9](a/A9.md) - canvas CLI: `query` command
 - [ ]: [A10](a/A10.md) - canvas CLI: `patch` command
 - [ ]: [A11](a/A11.md) - canvas CLI: `move` command
 - [ ]: [A12](a/A12.md) - canvas CLI: `group` command
@@ -105,6 +105,8 @@ Use the leaf files for execution history and local context.
 - [ ]: [A14](a/A14.md) - canvas CLI: `delete` command
 - [ ]: [A15](a/A15.md) - canvas CLI: `reorder` command
 - [ ]: [A16](a/A16.md) - canvas CLI: `render` command
+- [ ]: [A17] - rect dbl click -> enter edit mode (inline text)
+- [ ]: [A18] - lift cmds to be api to allow live changes via crdt
 
 ## S ubtractions
 - [ ]: [S1](s/S1.md) - double bun run dev -> find new port
@@ -132,7 +134,7 @@ Use the leaf files for execution history and local context.
 - [ ]: [E10] - headless chrome to stream to canvas
 - [ ]: [E11] - https://github.com/cr0hn/dockerscan
 - [ ]: [E12] - https://github.com/superradcompany/microsandbox
-- [ ]: [E13] - Research Pluginsystem for server
+- [ ]: [E13](e/E13.md) - Research Pluginsystem for server
 - [ ]: [E14] - do we need packages/functional-core
 
 ## D irections

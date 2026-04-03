@@ -116,7 +116,7 @@ Offline canvas commands (planned):
   query (--canvas <id> | --canvas-name <query>) [selectors]
                                                 Run a structured readonly canvas query
   patch ...                                    Apply a structured mutation
-  move ...                                     Move matching elements deterministically
+  move ...                                     Move explicit element/group ids deterministically
   group ...                                    Group matching elements
   ungroup ...                                  Ungroup a group
   delete ...                                   Delete matching elements
@@ -198,6 +198,12 @@ export async function runCanvas(argv: readonly string[]): Promise<never> {
       throw new Error("runCanvasQuery() must exit the process.");
     }
 
+    if (subcommand === "move") {
+      const { runCanvasMove } = await import("./cmd.move");
+      await runCanvasMove(argv);
+      throw new Error("runCanvasMove() must exit the process.");
+    }
+
     printCanvasHelp();
     process.exit(0);
   }
@@ -206,6 +212,12 @@ export async function runCanvas(argv: readonly string[]): Promise<never> {
     const { runCanvasQuery } = await import("./cmd.query");
     await runCanvasQuery(argv);
     throw new Error("runCanvasQuery() must exit the process.");
+  }
+
+  if (subcommand === "move") {
+    const { runCanvasMove } = await import("./cmd.move");
+    await runCanvasMove(argv);
+    throw new Error("runCanvasMove() must exit the process.");
   }
 
   try {

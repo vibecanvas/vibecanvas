@@ -7,6 +7,18 @@ import { parseArgs } from 'util';
 import { resolveCanvasCliBootstrap } from './canvas-cli/bootstrap';
 import { getServerVersion } from './runtime';
 
+const CANVAS_SUBCOMMAND_ALIASES = ["list", "query", "patch", "move", "group", "ungroup", "delete", "reorder", "render"] as const;
+
+function isCanvasSubcommandAlias(value: string | undefined): value is (typeof CANVAS_SUBCOMMAND_ALIASES)[number] {
+  return CANVAS_SUBCOMMAND_ALIASES.includes(value as (typeof CANVAS_SUBCOMMAND_ALIASES)[number]);
+}
+
+function rewriteArgvForCanvasAlias(argv: readonly string[]): string[] {
+  const subcommand = argv[2];
+  if (!isCanvasSubcommandAlias(subcommand)) return [...argv];
+  return [argv[0] ?? 'bun', argv[1] ?? 'vibecanvas', 'canvas', subcommand, ...argv.slice(3)];
+}
+
 function printHelp(): void {
   console.log(`vibecanvas - Run your agents in an infinite canvas
 
@@ -29,13 +41,20 @@ Examples:
   vibecanvas                      Start server on default port
   vibecanvas serve --port 3001    Start server on port 3001
   vibecanvas serve --db ./tmp/dev.sqlite
-                                  Start server with an explicit SQLite file
+                                   Start server with an explicit SQLite file
   vibecanvas canvas --help        Show offline canvas CLI help
+  vibecanvas query --help         Show help for the canvas query subcommand alias
   vibecanvas upgrade              Check for and install updates
   vibecanvas upgrade --check      Check for updates without installing
   vibecanvas --upgrade 0.2.0-beta.3
-                                  Upgrade to a specific version
+                                   Upgrade to a specific version
   vibecanvas --version            Print version
+
+Subcommand help:
+  Any subcommand accepts --help for command-specific usage.
+  Canvas subcommands also work as top-level aliases, so both
+  'vibecanvas canvas query --help' and 'vibecanvas query --help'
+  show the same command help.
 `);
 }
 
@@ -61,7 +80,7 @@ function rewriteArgvForUpgrade(argv: readonly string[], targetVersion: string): 
 }
 
 async function main() {
-  const argv = Bun.argv;
+  const argv = rewriteArgvForCanvasAlias(Bun.argv);
   const bootstrap = resolveCanvasCliBootstrap(argv);
 
   if (!bootstrap.ok) {
