@@ -1,7 +1,7 @@
 import { parseArgs } from "node:util";
 import { openOfflineCanvasState } from "./offline-state";
 
-const CANVAS_SUBCOMMANDS = ["list", "inspect", "query", "patch", "move", "group", "ungroup", "delete", "reorder", "render"] as const;
+const CANVAS_SUBCOMMANDS = ["list", "query", "patch", "move", "group", "ungroup", "delete", "reorder", "render"] as const;
 
 type TCanvasJsonError = {
   ok: false;
@@ -113,9 +113,8 @@ function printCanvasHelp(): void {
 
 Offline canvas commands (planned):
   list                                         List canvases in the local database
-  inspect <id> (--canvas <id> | --canvas-name <query>)
-                                               Inspect one exact element/group id inside one canvas
-  query ...                                    Run a structured readonly canvas query
+  query (--canvas <id> | --canvas-name <query>) [selectors]
+                                                Run a structured readonly canvas query
   patch ...                                    Apply a structured mutation
   move ...                                     Move matching elements deterministically
   group ...                                    Group matching elements
@@ -193,20 +192,20 @@ export async function runCanvas(argv: readonly string[]): Promise<never> {
       process.exit(0);
     }
 
-    if (subcommand === "inspect") {
-      const { runCanvasInspect } = await import("./cmd.inspect");
-      await runCanvasInspect(argv);
-      throw new Error("runCanvasInspect() must exit the process.");
+    if (subcommand === "query") {
+      const { runCanvasQuery } = await import("./cmd.query");
+      await runCanvasQuery(argv);
+      throw new Error("runCanvasQuery() must exit the process.");
     }
 
     printCanvasHelp();
     process.exit(0);
   }
 
-  if (subcommand === "inspect") {
-    const { runCanvasInspect } = await import("./cmd.inspect");
-    await runCanvasInspect(argv);
-    throw new Error("runCanvasInspect() must exit the process.");
+  if (subcommand === "query") {
+    const { runCanvasQuery } = await import("./cmd.query");
+    await runCanvasQuery(argv);
+    throw new Error("runCanvasQuery() must exit the process.");
   }
 
   try {
