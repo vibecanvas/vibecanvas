@@ -75,18 +75,46 @@ describe("canvas CLI test harness", () => {
     expect(result.stdout).toContain("Commands:");
   });
 
+  test("shows command-specific help when a canvas subcommand is present", async () => {
+    const context = await createContext();
+
+    const listHelp = await context.runVibecanvasCli(["canvas", "list", "--help"]);
+    expectExitCode(listHelp, 0);
+    expectNoStderr(listHelp);
+    expect(listHelp.stdout).toContain("Usage: vibecanvas canvas list [options]");
+    expect(listHelp.stdout).toContain("Ordering:");
+
+    const inspectHelp = await context.runVibecanvasCli(["canvas", "inspect", "--help"]);
+    expectExitCode(inspectHelp, 0);
+    expectNoStderr(inspectHelp);
+    expect(inspectHelp.stdout).toContain("Usage: vibecanvas canvas inspect <id> [options]");
+    expect(inspectHelp.stdout).toContain("Required canvas selector (choose exactly one):");
+    expect(inspectHelp.stdout).toContain("Examples:");
+  });
+
+  test("makes subcommand arguments visible in the top-level canvas help menu", async () => {
+    const context = await createContext();
+    const result = await context.runVibecanvasCli(["canvas", "--help"]);
+
+    expectExitCode(result, 0);
+    expectNoStderr(result);
+    expect(result.stdout).toContain("inspect <id> (--canvas <id> | --canvas-name <query>)");
+    expect(result.stdout).toContain("Use 'vibecanvas canvas <subcommand> --help' for command-specific arguments and examples.");
+  });
+
   test("runs the real canvas CLI path with explicit isolated --db wiring", async () => {
     const context = await createContext();
     const result = await context.runCanvasCli(["list", "--json"]);
 
-    expectExitCode(result, 1);
-    expect(result.stdout).toContain("[DB] Applying migrations from");
+    expectExitCode(result, 0);
+    expectNoStderr(result);
 
-    const payload = JSON.parse(result.stderr) as { ok: boolean; command: string; code: string; dbPath: string; message: string };
-    expect(payload.ok).toBe(false);
+    const payload = parseJsonStdout<{ ok: boolean; command: string; subcommand: string; dbPath: string; count: number; canvases: unknown[] }>(result);
+    expect(payload.ok).toBe(true);
     expect(payload.command).toBe("canvas");
-    expect(payload.code).toBe("CANVAS_COMMAND_NOT_IMPLEMENTED");
+    expect(payload.subcommand).toBe("list");
     expect(payload.dbPath).toBe(context.dbPath);
-    expect(payload.message).toContain("not implemented");
+    expect(payload.count).toBe(0);
+    expect(payload.canvases).toEqual([]);
   });
 });

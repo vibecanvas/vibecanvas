@@ -53,9 +53,11 @@ describe("canvas CLI --db bootstrap", () => {
 
     const result = await runCli(["canvas", "list", "--db", explicitDbPath, "--json"], { VIBECANVAS_CONFIG: configDir });
 
-    expect(result.exitCode).toBe(1);
-    const parsed = JSON.parse(result.stderr.trim());
-    expect(parsed).toMatchObject({ ok: false, command: "canvas", code: "CANVAS_COMMAND_NOT_IMPLEMENTED", dbPath: explicitDbPath });
+    expect(result.exitCode).toBe(0);
+    expect(result.stderr.trim()).toBe("");
+
+    const parsed = JSON.parse(result.stdout.trim());
+    expect(parsed).toMatchObject({ ok: true, command: "canvas", subcommand: "list", dbPath: explicitDbPath, count: 0, canvases: [] });
 
     const explicitStat = await stat(explicitDbPath);
     expect(explicitStat.isFile()).toBe(true);

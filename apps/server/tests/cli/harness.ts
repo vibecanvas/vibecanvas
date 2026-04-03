@@ -31,6 +31,7 @@ export type TSeedCanvasArgs = {
   name?: string;
   docId?: string;
   docName?: string;
+  createdAtUnixSeconds?: number;
   elements?: Record<string, TElement>;
   groups?: Record<string, TGroup>;
 };

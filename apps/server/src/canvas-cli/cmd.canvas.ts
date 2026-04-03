@@ -11,23 +11,121 @@ type TCanvasJsonError = {
   dbPath?: string;
 };
 
+type TCanvasInventoryEntry = {
+  id: string;
+  name: string;
+  createdAt: string;
+  automergeUrl: string;
+};
+
+type TCanvasListJsonSuccess = {
+  ok: true;
+  command: "canvas";
+  subcommand: "list";
+  dbPath: string;
+  count: number;
+  canvases: TCanvasInventoryEntry[];
+};
+
+function toIsoString(value: Date | string | number): string {
+  if (value instanceof Date) return value.toISOString();
+  if (typeof value === "number") return new Date(value * 1000).toISOString();
+  return new Date(value).toISOString();
+}
+
+function formatCanvasInventoryEntry(entry: TCanvasInventoryEntry): string {
+  return `- id=${entry.id} name=${JSON.stringify(entry.name)} createdAt=${entry.createdAt} automergeUrl=${entry.automergeUrl}`;
+}
+
+function printCanvasListText(args: { dbPath: string; canvases: TCanvasInventoryEntry[] }): never {
+  if (args.canvases.length === 0) {
+    console.log(`Canvas inventory: 0 canvases in ${args.dbPath}`);
+    process.exit(0);
+  }
+
+  console.log(`Canvas inventory: ${args.canvases.length} canvases in ${args.dbPath}`);
+  for (const canvas of args.canvases) {
+    console.log(formatCanvasInventoryEntry(canvas));
+  }
+  process.exit(0);
+}
+
+function printCanvasListJson(result: TCanvasListJsonSuccess): never {
+  console.log(JSON.stringify(result));
+  process.exit(0);
+}
+
+function printCanvasListHelp(): void {
+  console.log(`Usage: vibecanvas canvas list [options]
+
+List every canvas row in the opened local database.
+
+Options:
+  --db <path>   Optional explicit SQLite file override; otherwise falls back to configured/default storage
+  --json        Emit machine-readable success output
+  --help, -h    Show this help message
+
+Output:
+  Text mode prints one inventory line per canvas.
+  JSON mode prints { ok, command, subcommand, dbPath, count, canvases[] }.
+
+Ordering:
+  Canvases are ordered deterministically by createdAt, then name, then id.
+
+Notes:
+  - list never depends on a selected/default canvas.
+  - when --db is omitted, the command falls back to VIBECANVAS_DB, VIBECANVAS_CONFIG, then default dev/prod storage resolution.
+`);
+}
+
+async function runCanvasList(args: { wantsJson: boolean }): Promise<never> {
+  process.env.VIBECANVAS_SILENT_DB_MIGRATIONS = "1";
+  process.env.VIBECANVAS_SILENT_AUTOMERGE_LOGS = "1";
+
+  const { db, dbPath } = await openOfflineCanvasState();
+  const rows = db.query.canvas.findMany({
+    orderBy: (canvas, { asc }) => [asc(canvas.created_at), asc(canvas.name), asc(canvas.id)],
+  }).sync();
+
+  const canvases = rows.map((row) => ({
+    id: row.id,
+    name: row.name,
+    createdAt: toIsoString(row.created_at),
+    automergeUrl: row.automerge_url,
+  } satisfies TCanvasInventoryEntry));
+
+  if (args.wantsJson) {
+    printCanvasListJson({
+      ok: true,
+      command: "canvas",
+      subcommand: "list",
+      dbPath,
+      count: canvases.length,
+      canvases,
+    });
+  }
+
+  printCanvasListText({ dbPath, canvases });
+}
+
 function printCanvasHelp(): void {
   console.log(`Usage: vibecanvas canvas <command> [options]
 
 Offline canvas commands (planned):
-  list       List canvases in the local database
-  inspect    Inspect a canvas element by id
-  query      Run a structured readonly canvas query
-  patch      Apply a structured mutation
-  move       Move matching elements deterministically
-  group      Group matching elements
-  ungroup    Ungroup a group
-  delete     Delete matching elements
-  reorder    Change stacking order
-  render     Render the persisted canvas state
+  list                                         List canvases in the local database
+  inspect <id> (--canvas <id> | --canvas-name <query>)
+                                               Inspect one exact element/group id inside one canvas
+  query ...                                    Run a structured readonly canvas query
+  patch ...                                    Apply a structured mutation
+  move ...                                     Move matching elements deterministically
+  group ...                                    Group matching elements
+  ungroup ...                                  Ungroup a group
+  delete ...                                   Delete matching elements
+  reorder ...                                  Change stacking order
+  render ...                                   Render the persisted canvas state
 
 Shared options:
-  --db <path>   Explicit SQLite file to open before any stateful imports
+  --db <path>   Optional explicit SQLite file override; otherwise falls back to configured/default storage
   --json        Emit machine-readable errors/output
   --help, -h    Show this help message
 
@@ -38,8 +136,11 @@ Database path precedence:
   4. default dev/prod storage resolution
 
 Notes:
+  - --db is optional; when omitted the CLI falls back to VIBECANVAS_DB, VIBECANVAS_CONFIG, then default dev/prod storage resolution.
   - --db must point to a single SQLite file.
   - Missing or duplicate --db flags fail before the CLI imports SQLite or Automerge state.
+  - list never depends on a selected/default canvas; it always enumerates every canvas in the opened db.
+  - Use 'vibecanvas canvas <subcommand> --help' for command-specific arguments and examples.
   - Offline canvas commands are being added incrementally; unimplemented commands still honor --db resolution.
 `);
 }
@@ -69,7 +170,7 @@ export async function runCanvas(argv: readonly string[]): Promise<never> {
   const subcommand = positionals[3];
   const wantsJson = Boolean(values.json);
 
-  if (values.help || !subcommand) {
+  if (!subcommand) {
     printCanvasHelp();
     process.exit(0);
   }
@@ -86,7 +187,35 @@ export async function runCanvas(argv: readonly string[]): Promise<never> {
     exitWithCanvasTextError(`Unknown canvas command: ${subcommand}`);
   }
 
+  if (values.help) {
+    if (subcommand === "list") {
+      printCanvasListHelp();
+      process.exit(0);
+    }
+
+    if (subcommand === "inspect") {
+      const { runCanvasInspect } = await import("./cmd.inspect");
+      await runCanvasInspect(argv);
+      throw new Error("runCanvasInspect() must exit the process.");
+    }
+
+    printCanvasHelp();
+    process.exit(0);
+  }
+
+  if (subcommand === "inspect") {
+    const { runCanvasInspect } = await import("./cmd.inspect");
+    await runCanvasInspect(argv);
+    throw new Error("runCanvasInspect() must exit the process.");
+  }
+
   try {
+    if (subcommand === "list") {
+      await runCanvasList({ wantsJson });
+    }
+
+    process.env.VIBECANVAS_SILENT_DB_MIGRATIONS = "1";
+    process.env.VIBECANVAS_SILENT_AUTOMERGE_LOGS = "1";
     const { dbPath } = await openOfflineCanvasState();
     if (wantsJson) {
       exitWithCanvasJsonError({

@@ -5,6 +5,10 @@ import { BunSqliteStorageAdapter } from "./adapters/sqlite.adapter"
 let serverRepo: Repo | null = null
 let wsAdapter: BunWSServerAdapter | null = null
 
+function shouldLogAutomergeMessages(): boolean {
+  return process.env.VIBECANVAS_SILENT_AUTOMERGE_LOGS !== "1"
+}
+
 export interface AutomergeServerInstance {
   repo: Repo
   wsAdapter: BunWSServerAdapter
@@ -17,7 +21,9 @@ export function setupAutomergeServer(databasePath: string): AutomergeServerInsta
   if (serverRepo && wsAdapter) {
     // In dev mode, ensure adapter is properly connected before returning
     if (!wsAdapter.isReady()) {
-      console.log("[Automerge] Existing adapter not ready, reconnecting...")
+      if (shouldLogAutomergeMessages()) {
+        console.log("[Automerge] Existing adapter not ready, reconnecting...")
+      }
       wsAdapter.disconnect()
       wsAdapter.connect(serverRepo.peerId!)
     }
@@ -32,7 +38,9 @@ export function setupAutomergeServer(databasePath: string): AutomergeServerInsta
     peerId: `server-${Date.now()}` as PeerId,
   })
 
-  console.log(`[Automerge:${Date.now()}] Repo initialized with SQLite storage: ${databasePath}`)
+  if (shouldLogAutomergeMessages()) {
+    console.log(`[Automerge:${Date.now()}] Repo initialized with SQLite storage: ${databasePath}`)
+  }
 
   return { repo: serverRepo, wsAdapter }
 }

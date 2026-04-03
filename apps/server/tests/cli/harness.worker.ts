@@ -17,6 +17,7 @@ type TWorkerPayloads = {
       name?: string;
       docId?: string;
       docName?: string;
+      createdAtUnixSeconds?: number;
       elements?: TCanvasDoc["elements"];
       groups?: TCanvasDoc["groups"];
     };
@@ -44,10 +45,11 @@ function createRepo(databasePath: string): Repo {
   return new Repo({ storage: new BunSqliteStorageAdapter(databasePath), peerId: `cli-test-worker-${crypto.randomUUID()}` as PeerId });
 }
 
-function createCanvasRow(args: { sqlite: Database; repo: Repo; name: string }): TCanvasRow {
+function createCanvasRow(args: { sqlite: Database; repo: Repo; name: string; createdAtUnixSeconds?: number }): TCanvasRow {
   const handle = args.repo.create<TCanvasDoc>({ id: crypto.randomUUID(), name: args.name, elements: {}, groups: {} });
-  const canvas = { id: crypto.randomUUID(), name: args.name, created_at: new Date(), automerge_url: handle.url };
-  args.sqlite.prepare("INSERT INTO canvas (id, name, automerge_url, created_at) VALUES (?, ?, ?, ?)").run(canvas.id, canvas.name, canvas.automerge_url, Math.floor(Date.now() / 1000));
+  const createdAtUnixSeconds = args.createdAtUnixSeconds ?? Math.floor(Date.now() / 1000);
+  const canvas = { id: crypto.randomUUID(), name: args.name, created_at: createdAtUnixSeconds, automerge_url: handle.url };
+  args.sqlite.prepare("INSERT INTO canvas (id, name, automerge_url, created_at) VALUES (?, ?, ?, ?)").run(canvas.id, canvas.name, canvas.automerge_url, createdAtUnixSeconds);
   return args.sqlite.query("SELECT id, name, automerge_url, created_at FROM canvas WHERE id = ? LIMIT 1").get(canvas.id) as TCanvasRow;
 }
 
@@ -94,7 +96,7 @@ async function run(): Promise<void> {
     const sqlite = new Database(payload.dbPath);
     applySqlitePragmas(sqlite);
     const repo = createRepo(payload.dbPath);
-    const canvas = createCanvasRow({ sqlite, repo, name: payload.args.name ?? `cli-canvas-${crypto.randomUUID().slice(0, 8)}` });
+    const canvas = createCanvasRow({ sqlite, repo, name: payload.args.name ?? `cli-canvas-${crypto.randomUUID().slice(0, 8)}`, createdAtUnixSeconds: payload.args.createdAtUnixSeconds });
     const handle = await repo.find<TCanvasDoc>(canvas.automerge_url as never);
     await handle.whenReady();
     handle.change((doc) => {

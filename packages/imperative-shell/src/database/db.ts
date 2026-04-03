@@ -27,6 +27,7 @@ fxRunDatabaseMigrations({
   cacheDir: config!.paths.cacheDir,
   db,
   sqlite,
+  silent: process.env.VIBECANVAS_SILENT_DB_MIGRATIONS === '1',
 });
 
 export default db;

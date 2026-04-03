@@ -39,6 +39,7 @@ function toArrayBuffer(bytes: Uint8Array): ArrayBuffer {
 
 function log(...data: unknown[]) {
   if (process.env.NODE_ENV === "production") return
+  if (process.env.VIBECANVAS_SILENT_AUTOMERGE_LOGS === "1") return
   console.log(`[Automerge:${Date.now()}]`, ...data)
 }
 
