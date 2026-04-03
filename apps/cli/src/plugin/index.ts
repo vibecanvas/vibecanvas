@@ -1,10 +1,14 @@
-export { createRuntime } from './create-runtime';
-export type { IRuntime } from './create-runtime';
+export {
+  createRuntime,
+  createServiceRegistry,
+} from '@vibecanvas/runtime';
+export { bootCliRuntime, createCliHooks, shutdownCliRuntime } from './hooks';
 export type {
+  IConfig,
   IPlugin,
   IPluginContext,
-  IHooks,
+  IRuntime,
   IServiceMap,
   IServiceRegistry,
-  IConfig,
-} from './interface';
+} from '@vibecanvas/runtime';
+export type { ICliHooks } from './hooks';

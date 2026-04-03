@@ -1,10 +1,16 @@
 #!/usr/bin/env bun
-import { createRuntime } from './plugin';
+import { bootCliRuntime, createCliHooks, createRuntime, shutdownCliRuntime } from './plugin';
 
-const runtime = createRuntime([], {
-  port: 3000,
-  cwd: process.cwd(),
-  dev: true,
+const runtime = createRuntime({
+  plugins: [],
+  hooks: createCliHooks(),
+  config: {
+    port: 3000,
+    cwd: process.cwd(),
+    dev: true,
+  },
+  boot: bootCliRuntime,
+  shutdown: shutdownCliRuntime,
 });
 
 await runtime.boot();

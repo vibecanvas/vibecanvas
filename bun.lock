@@ -18,6 +18,7 @@
       "name": "@vibecanvas/cli",
       "version": "0.0.1",
       "dependencies": {
+        "@vibecanvas/runtime": "workspace:*",
         "@vibecanvas/tapable": "workspace:*",
       },
     },
@@ -203,6 +204,13 @@
       },
       "devDependencies": {
         "drizzle-kit": "catalog:",
+      },
+    },
+    "packages/runtime": {
+      "name": "@vibecanvas/runtime",
+      "version": "0.0.1",
+      "dependencies": {
+        "@vibecanvas/tapable": "workspace:*",
       },
     },
     "packages/tapable": {
@@ -818,6 +826,8 @@
     "@vibecanvas/core-contract": ["@vibecanvas/core-contract@workspace:packages/core-contract"],
 
     "@vibecanvas/frontend": ["@vibecanvas/frontend@workspace:apps/frontend"],
+
+    "@vibecanvas/runtime": ["@vibecanvas/runtime@workspace:packages/runtime"],
 
     "@vibecanvas/server": ["@vibecanvas/server@workspace:apps/server"],
 
