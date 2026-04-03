@@ -14,6 +14,13 @@
         "bun-types": "^1.3.11",
       },
     },
+    "apps/cli": {
+      "name": "@vibecanvas/cli",
+      "version": "0.0.1",
+      "dependencies": {
+        "@vibecanvas/tapable": "workspace:*",
+      },
+    },
     "apps/frontend": {
       "name": "@vibecanvas/frontend",
       "version": "0.2.2",
@@ -803,6 +810,8 @@
     "@ungap/structured-clone": ["@ungap/structured-clone@1.3.0", "", {}, "sha512-WmoN8qaIAo7WTYWbAZuG8PYEhn5fkz7dZrqTBZ7dtt//lL2Gwms1IcnQ5yHqjDfX8Ft5j4YzDM23f87zBfDe9g=="],
 
     "@vibecanvas/canvas": ["@vibecanvas/canvas@workspace:packages/canvas"],
+
+    "@vibecanvas/cli": ["@vibecanvas/cli@workspace:apps/cli"],
 
     "@vibecanvas/core": ["@vibecanvas/core@workspace:packages/functional-core"],
 

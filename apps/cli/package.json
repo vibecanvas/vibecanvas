@@ -1,0 +1,16 @@
+{
+  "name": "@vibecanvas/cli",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./*": "./src/*"
+  },
+  "scripts": {
+    "dev": "bun run --watch ./src/main.ts",
+    "test": "bun test"
+  },
+  "dependencies": {
+    "@vibecanvas/tapable": "workspace:*"
+  }
+}
