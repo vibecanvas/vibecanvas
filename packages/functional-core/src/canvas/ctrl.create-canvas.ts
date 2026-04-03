@@ -9,7 +9,7 @@ export type TPortal = {
   repo: Repo
 };
 
-export type TArgs = { name: string; automerge_url: string };
+export type TArgs = { name: string };
 
 export type TCanvas = typeof schema.canvas.$inferSelect;
 

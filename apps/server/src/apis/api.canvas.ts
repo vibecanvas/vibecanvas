@@ -24,7 +24,6 @@ const get = baseOs.api.canvas.get.handler(async ({ input, context: { db } }) => 
 const create = baseOs.api.canvas.create.handler(async ({ input, context: { db, repo } }) => {
   const [result, error] = ctrlCreateCanvas({ db, repo }, {
     name: input.name,
-    automerge_url: input.automerge_url,
   })
 
   if (error) {
