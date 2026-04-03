@@ -114,16 +114,17 @@ Use the leaf files for execution history and local context.
 - [ ]: [E1](e/E1.md) - Tauri Research
 - [ ]: [E5](e/E5.md) - how to implement state machine system?
 - [ ]: [E6](e/E6.md) - should we include a task management
-- [ ]: [E7](e/E7.md) - should we include heartbeat
+- [ ]: [E7](e/E7.md) - should we include agent
 - [ ]: [E8](e/E8.md) - canvas CLI: query/edit surface exploration
 - [ ]: [E9] - tmux for persistant pty sessions
 - [ ]: [E10] - headless chrome to stream to canvas
 - [ ]: [E11] - https://github.com/cr0hn/dockerscan
 - [ ]: [E12] - https://github.com/superradcompany/microsandbox
-- [ ]: [E13] - Add Pluginsystem for server
+- [ ]: [E13] - Research Pluginsystem for server
 
 ## D irections
-- [ ]: [D1](d/D1.md) - AI can edit the canvas directly
+- [ ]: [D1] - AI can edit the canvas directly
+- [ ]: [D2] - Server plugin system
 
 ## Pragmatic Code Style
 

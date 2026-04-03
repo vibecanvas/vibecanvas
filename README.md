@@ -4,6 +4,8 @@ Run your agents in an infinite drawing canvas.
 
 Runs completly local. Reuses your llm subscriptions.
 
+![Vibecanvas screenshot](./apps/web/public/seo.png)
+
 The project is organized as a monorepo and follows a **Functional Core / Imperative Shell** architecture.
 
 ## Features
