@@ -425,10 +425,14 @@ async function tryLoadHandle(repo: Repo, automergeUrl: string, timeoutMs: number
 
 export async function loadCanvasHandle(row: TCanvasRow): Promise<TCanvasDocHandle> {
   const { repo, liveRepo, hasExplicitDbPath } = await openOfflineCanvasState();
-  const offlineHandle = await tryLoadHandle(repo, row.automerge_url, 1000);
+  const offlineHandle = await tryLoadHandle(repo, row.automerge_url, hasExplicitDbPath ? 3000 : 1000);
   if (offlineHandle?.doc()) return { handle: offlineHandle, source: "offline" };
-  if (hasExplicitDbPath && offlineHandle) return { handle: offlineHandle, source: "offline" };
+  if (hasExplicitDbPath) {
+    if (offlineHandle) return { handle: offlineHandle, source: "offline" };
+    throw new Error(`Document ${row.automerge_url} is unavailable`);
+  }
 
+  if (!liveRepo) throw new Error(`Document ${row.automerge_url} is unavailable`);
   const liveHandle = await tryLoadHandle(liveRepo, row.automerge_url, 2000);
   if (liveHandle?.doc()) return { handle: liveHandle, source: "live" };
 
@@ -487,10 +491,14 @@ export async function waitForPersistedCanvasDoc(args: {
   const startedAt = Date.now();
   let lastError: unknown = null;
 
-  while (Date.now() - startedAt < (args.timeoutMs ?? 2000)) {
+  while (Date.now() - startedAt < (args.timeoutMs ?? 5000)) {
     try {
       const doc = await loadPersistedCanvasDoc(args.databasePath, args.automergeUrl);
-      if (args.predicate(doc)) return doc;
+      if (args.predicate(doc)) {
+        await Bun.sleep(100);
+        const confirmedDoc = await loadPersistedCanvasDoc(args.databasePath, args.automergeUrl);
+        if (args.predicate(confirmedDoc)) return confirmedDoc;
+      }
     } catch (error) {
       lastError = error;
     }

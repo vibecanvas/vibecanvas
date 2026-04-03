@@ -45,13 +45,14 @@ async function openOfflineCanvasState() {
   const [{ default: db }] = await Promise.all([
     import("@vibecanvas/shell/database/db"),
   ]);
+  const hasExplicitDbPath = Boolean(process.env.VIBECANVAS_DB);
 
   return {
     db,
     repo: getOfflineRepo(config.databasePath),
-    liveRepo: getLiveRepo(),
+    liveRepo: hasExplicitDbPath ? null : getLiveRepo(),
     dbPath: config.databasePath,
-    hasExplicitDbPath: Boolean(process.env.VIBECANVAS_DB),
+    hasExplicitDbPath,
   };
 }
 
