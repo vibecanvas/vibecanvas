@@ -103,6 +103,13 @@ describe("canvas CLI test harness", () => {
     expect(moveHelp.stdout).toContain("--relative");
     expect(moveHelp.stdout).toContain("--absolute");
     expect(moveHelp.stdout).toContain("group ids move their descendant elements");
+
+    const groupHelp = await context.runVibecanvasCli(["canvas", "group", "--help"]);
+    expectExitCode(groupHelp, 0);
+    expectNoStderr(groupHelp);
+    expect(groupHelp.stdout).toContain("Usage: vibecanvas canvas group [options]");
+    expect(groupHelp.stdout).toContain("--id <id>");
+    expect(groupHelp.stdout).toContain("grouping currently supports explicit element ids only");
   });
 
   test("shows canvas subcommand help even when the canvas prefix is omitted", async () => {
@@ -119,6 +126,11 @@ describe("canvas CLI test harness", () => {
     expectNoStderr(moveHelp);
     expect(moveHelp.stdout).toContain("Usage: vibecanvas canvas move [options]");
 
+    const groupHelp = await context.runVibecanvasCli(["group", "--help"]);
+    expectExitCode(groupHelp, 0);
+    expectNoStderr(groupHelp);
+    expect(groupHelp.stdout).toContain("Usage: vibecanvas canvas group [options]");
+
     const listHelp = await context.runVibecanvasCli(["list", "--help"]);
     expectExitCode(listHelp, 0);
     expectNoStderr(listHelp);
@@ -132,6 +144,7 @@ describe("canvas CLI test harness", () => {
     expectExitCode(result, 0);
     expectNoStderr(result);
     expect(result.stdout).toContain("query (--canvas <id> | --canvas-name <query>) [selectors]");
+    expect(result.stdout).toContain("group ...                                    Group explicit element ids deterministically");
     expect(result.stdout).toContain("Use 'vibecanvas canvas <subcommand> --help' for command-specific arguments and examples.");
   });
 

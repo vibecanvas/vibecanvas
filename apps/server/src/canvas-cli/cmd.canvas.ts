@@ -117,7 +117,7 @@ Offline canvas commands (planned):
                                                 Run a structured readonly canvas query
   patch ...                                    Apply a structured mutation
   move ...                                     Move explicit element/group ids deterministically
-  group ...                                    Group matching elements
+  group ...                                    Group explicit element ids deterministically
   ungroup ...                                  Ungroup a group
   delete ...                                   Delete matching elements
   reorder ...                                  Change stacking order
@@ -204,6 +204,12 @@ export async function runCanvas(argv: readonly string[]): Promise<never> {
       throw new Error("runCanvasMove() must exit the process.");
     }
 
+    if (subcommand === "group") {
+      const { runCanvasGroup } = await import("./cmd.group");
+      await runCanvasGroup(argv);
+      throw new Error("runCanvasGroup() must exit the process.");
+    }
+
     printCanvasHelp();
     process.exit(0);
   }
@@ -218,6 +224,12 @@ export async function runCanvas(argv: readonly string[]): Promise<never> {
     const { runCanvasMove } = await import("./cmd.move");
     await runCanvasMove(argv);
     throw new Error("runCanvasMove() must exit the process.");
+  }
+
+  if (subcommand === "group") {
+    const { runCanvasGroup } = await import("./cmd.group");
+    await runCanvasGroup(argv);
+    throw new Error("runCanvasGroup() must exit the process.");
   }
 
   try {
