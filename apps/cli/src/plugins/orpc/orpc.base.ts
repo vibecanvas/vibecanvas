@@ -1,6 +1,7 @@
 import { oc, populateContractRouterPaths } from '@orpc/contract';
 import { implement, onError } from '@orpc/server';
 import { canvasContract } from '@vibecanvas/api-canvas/contract';
+import { dbContract } from '@vibecanvas/api-db/contract';
 import { fileContract } from '@vibecanvas/api-file/contract';
 import { filesystemContract } from '@vibecanvas/api-filesystem/contract';
 import { filetreeContract } from '@vibecanvas/api-filetree/contract';
@@ -14,6 +15,7 @@ import type { IPtyService } from '@vibecanvas/pty-service/IPtyService';
 
 const contract = oc.router({
   canvas: canvasContract,
+  db: dbContract,
   file: fileContract,
   filesystem: filesystemContract,
   filetree: filetreeContract,

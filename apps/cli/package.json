@@ -15,6 +15,7 @@
     "@orpc/server": "catalog:",
     "@vibecanvas/automerge-service": "workspace:*",
     "@vibecanvas/api-canvas": "workspace:*",
+    "@vibecanvas/api-db": "workspace:*",
     "@vibecanvas/api-file": "workspace:*",
     "@vibecanvas/api-filesystem": "workspace:*",
     "@vibecanvas/api-filetree": "workspace:*",

@@ -1,0 +1,15 @@
+{
+  "name": "@vibecanvas/api-db",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./*": "./src/*.ts"
+  },
+  "dependencies": {
+    "@orpc/contract": "catalog:",
+    "@orpc/server": "catalog:",
+    "@vibecanvas/event-publisher-service": "workspace:*",
+    "zod": "catalog:"
+  }
+}

@@ -21,6 +21,7 @@
         "@orpc/contract": "catalog:",
         "@orpc/server": "catalog:",
         "@vibecanvas/api-canvas": "workspace:*",
+        "@vibecanvas/api-db": "workspace:*",
         "@vibecanvas/api-file": "workspace:*",
         "@vibecanvas/api-filesystem": "workspace:*",
         "@vibecanvas/api-filetree": "workspace:*",
@@ -139,6 +140,16 @@
         "@vibecanvas/db": "workspace:*",
         "@vibecanvas/event-publisher-service": "workspace:*",
         "@vibecanvas/shell": "workspace:*",
+        "zod": "catalog:",
+      },
+    },
+    "packages/api-db": {
+      "name": "@vibecanvas/api-db",
+      "version": "0.0.1",
+      "dependencies": {
+        "@orpc/contract": "catalog:",
+        "@orpc/server": "catalog:",
+        "@vibecanvas/event-publisher-service": "workspace:*",
         "zod": "catalog:",
       },
     },
@@ -961,6 +972,8 @@
     "@ungap/structured-clone": ["@ungap/structured-clone@1.3.0", "", {}, "sha512-WmoN8qaIAo7WTYWbAZuG8PYEhn5fkz7dZrqTBZ7dtt//lL2Gwms1IcnQ5yHqjDfX8Ft5j4YzDM23f87zBfDe9g=="],
 
     "@vibecanvas/api-canvas": ["@vibecanvas/api-canvas@workspace:packages/api-canvas"],
+
+    "@vibecanvas/api-db": ["@vibecanvas/api-db@workspace:packages/api-db"],
 
     "@vibecanvas/api-file": ["@vibecanvas/api-file@workspace:packages/api-file"],
 
