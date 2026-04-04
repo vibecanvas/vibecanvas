@@ -8,6 +8,7 @@ import type {
   IDbService,
   TCanvasRecord,
   TCreateFileArgs,
+  TCreateFileTreeArgs,
   TFileRecord,
   TFileTreeRecord,
   TGetFileArgs,
@@ -88,6 +89,25 @@ export class DbServiceBunSqlite implements IDbService {
     return this.drizzle.query.filetrees.findFirst({
       where: eq(schema.filetrees.id, id),
     }).sync() ?? null;
+  }
+
+  createFileTree(args: TCreateFileTreeArgs): TFileTreeRecord {
+    const now = new Date();
+    const filetree = this.drizzle
+      .insert(schema.filetrees)
+      .values({
+        id: crypto.randomUUID(),
+        canvas_id: args.canvas_id,
+        title: args.title,
+        path: args.path,
+        locked: args.locked ?? false,
+        glob_pattern: args.glob_pattern ?? null,
+        created_at: now,
+        updated_at: now,
+      })
+      .returning()
+      .all();
+    return filetree[0]!;
   }
 
   updateFileTree(args: TUpdateFileTreeArgs): TFileTreeRecord | null {

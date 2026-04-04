@@ -1,5 +1,6 @@
 import { onError } from '@orpc/server';
 import { RPCHandler } from '@orpc/server/bun-ws';
+import type { IAutomergeService } from '@vibecanvas/automerge-service/IAutomergeService';
 import type { IDbService } from '@vibecanvas/db/IDbService';
 import type { IEventPublisherService } from '@vibecanvas/event-publisher/IEventPublisherService';
 import type { IFilesystemService } from '@vibecanvas/filesystem-service/IFilesystemService';
@@ -16,7 +17,7 @@ type TOrpcWebSocketData = {
   requestId: string;
 };
 
-function createOrpcPlugin(): IPlugin<{ db: IDbService; eventPublisher: IEventPublisherService; filesystem: IFilesystemService; pty: IPtyService }, ICliHooks, ICliConfig> {
+function createOrpcPlugin(): IPlugin<{ automerge: IAutomergeService; db: IDbService; eventPublisher: IEventPublisherService; filesystem: IFilesystemService; pty: IPtyService }, ICliHooks, ICliConfig> {
   return {
     name: 'orpc',
     apply(ctx) {
@@ -24,6 +25,7 @@ function createOrpcPlugin(): IPlugin<{ db: IDbService; eventPublisher: IEventPub
         return;
       }
 
+      const automerge = ctx.services.require('automerge');
       const db = ctx.services.require('db');
       const eventPublisher = ctx.services.require('eventPublisher');
       const filesystem = ctx.services.require('filesystem');
@@ -47,6 +49,7 @@ function createOrpcPlugin(): IPlugin<{ db: IDbService; eventPublisher: IEventPub
 
         void handler.message(ws as never, message, {
           context: {
+            automerge,
             db,
             eventPublisher,
             filesystem,

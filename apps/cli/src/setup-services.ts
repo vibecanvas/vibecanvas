@@ -1,4 +1,6 @@
 import type { Database } from 'bun:sqlite';
+import { setupAutomergeServer } from '@vibecanvas/automerge-service/setupAutomergeServer';
+import type { IAutomergeService } from '@vibecanvas/automerge-service/IAutomergeService';
 import { createSqliteDb } from '@vibecanvas/db/DbServiceBunSqlite';
 import type { IDbService } from '@vibecanvas/db/IDbService';
 import { EventPublisherService } from '@vibecanvas/event-publisher/EventPublisherService';
@@ -12,6 +14,7 @@ import type { ICliConfig } from './config';
 
 declare module '@vibecanvas/runtime' {
   interface IServiceMap {
+    automerge: IAutomergeService;
     db: IDbService;
     eventPublisher: IEventPublisherService;
     filesystem: IFilesystemService;
@@ -40,6 +43,9 @@ function setupServices(config: ICliConfig) {
     services.provide('db', dbService);
     services.provide('filesystem', filesystemService);
     services.provide('pty', ptyService);
+
+    const automergeService = setupAutomergeServer(sqlite);
+    services.provide('automerge', automergeService);
   }
 
   return { services, sqlite };

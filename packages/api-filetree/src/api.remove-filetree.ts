@@ -1,12 +1,6 @@
-import type { TFiletreeApiContext } from './types';
+import { baseFiletreeOs } from './orpc';
 
-type TInput = {
-  params: {
-    id: string;
-  };
-};
-
-async function apiRemoveFiletree({ input, context }: { input: TInput; context: TFiletreeApiContext }): Promise<void> {
+const apiRemoveFiletree = baseFiletreeOs.remove.handler(async ({ input, context }) => {
   const filetree = context.db.getFileTree(input.params.id);
   if (!filetree) return;
 
@@ -16,6 +10,6 @@ async function apiRemoveFiletree({ input, context }: { input: TInput; context: T
   context.eventPublisher.publishDbEvent(filetree.canvas_id, {
     data: { change: 'delete', id: filetree.id, table: 'filetrees' },
   });
-}
+});
 
 export { apiRemoveFiletree };

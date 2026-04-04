@@ -26,7 +26,7 @@
         "@vibecanvas/api-filetree": "workspace:*",
         "@vibecanvas/api-notification": "workspace:*",
         "@vibecanvas/api-pty": "workspace:*",
-        "@vibecanvas/automerge": "workspace:*",
+        "@vibecanvas/automerge-service": "workspace:*",
         "@vibecanvas/db": "workspace:*",
         "@vibecanvas/event-publisher": "workspace:*",
         "@vibecanvas/filesystem-service": "workspace:*",
@@ -165,8 +165,10 @@
       "dependencies": {
         "@orpc/contract": "catalog:",
         "@orpc/server": "catalog:",
+        "@vibecanvas/automerge-service": "workspace:*",
         "@vibecanvas/db": "workspace:*",
         "@vibecanvas/event-publisher": "workspace:*",
+        "@vibecanvas/shell": "workspace:*",
         "zod": "catalog:",
       },
     },
@@ -190,12 +192,13 @@
         "zod": "catalog:",
       },
     },
-    "packages/automerge": {
-      "name": "@vibecanvas/automerge",
+    "packages/automerge-service": {
+      "name": "@vibecanvas/automerge-service",
       "version": "0.0.1",
       "dependencies": {
         "@automerge/automerge-repo": "catalog:",
         "@automerge/automerge-repo-network-websocket": "catalog:",
+        "@vibecanvas/runtime": "workspace:*",
         "@vibecanvas/shared-functions": "workspace:*",
       },
     },
@@ -250,6 +253,14 @@
         "vite-plugin-top-level-await": "^1.6.0",
         "vite-plugin-wasm": "^3.5.0",
         "vitest": "^4.0.16",
+      },
+    },
+    "packages/canvas-cmds": {
+      "name": "@vibecanvas/canvas-cmds",
+      "version": "0.0.1",
+      "dependencies": {
+        "@automerge/automerge-repo": "catalog:",
+        "@vibecanvas/shell": "workspace:*",
       },
     },
     "packages/core-contract": {
@@ -957,9 +968,11 @@
 
     "@vibecanvas/api-pty": ["@vibecanvas/api-pty@workspace:packages/api-pty"],
 
-    "@vibecanvas/automerge": ["@vibecanvas/automerge@workspace:packages/automerge"],
+    "@vibecanvas/automerge-service": ["@vibecanvas/automerge-service@workspace:packages/automerge-service"],
 
     "@vibecanvas/canvas": ["@vibecanvas/canvas@workspace:packages/canvas"],
+
+    "@vibecanvas/canvas-cmds": ["@vibecanvas/canvas-cmds@workspace:packages/canvas-cmds"],
 
     "@vibecanvas/cli": ["@vibecanvas/cli@workspace:apps/cli"],
 

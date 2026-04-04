@@ -1,19 +1,7 @@
 import { ORPCError } from '@orpc/server';
-import type { TFiletreeApiContext } from './types';
+import { baseFiletreeOs } from './orpc';
 
-type TInput = {
-  params: {
-    id: string;
-  };
-  body: {
-    title?: string;
-    path?: string;
-    locked?: boolean;
-    glob_pattern?: string | null;
-  };
-};
-
-async function apiUpdateFiletree({ input, context }: { input: TInput; context: TFiletreeApiContext }) {
+const apiUpdateFiletree = baseFiletreeOs.update.handler(async ({ input, context }) => {
   const filetree = context.db.updateFileTree({ id: input.params.id, ...input.body });
 
   if (!filetree) {
@@ -25,6 +13,6 @@ async function apiUpdateFiletree({ input, context }: { input: TInput; context: T
   });
 
   return filetree;
-}
+});
 
 export { apiUpdateFiletree };

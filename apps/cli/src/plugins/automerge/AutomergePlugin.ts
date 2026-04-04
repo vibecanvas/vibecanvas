@@ -1,6 +1,5 @@
-import type { Database } from 'bun:sqlite';
-import { setupAutomergeServer } from '@vibecanvas/automerge/setupAutomergeServer';
-import type { WebSocketWithIsAlive } from '@vibecanvas/automerge/adapters/websocket.adapter';
+import type { IAutomergeService } from '@vibecanvas/automerge-service/IAutomergeService';
+import type { WebSocketWithIsAlive } from '@vibecanvas/automerge-service/adapters/websocket.adapter';
 import type { IPlugin } from '@vibecanvas/runtime';
 import type { ICliConfig } from '../../config';
 import type { ICliHooks } from '../../hooks';
@@ -17,18 +16,16 @@ type TBunAutomergeSocket = WebSocket & {
   terminate(): void;
 };
 
-function createAutomergePlugin(sqlite: Database | null): IPlugin<{}, ICliHooks, ICliConfig> {
+function createAutomergePlugin(): IPlugin<{ automerge: IAutomergeService }, ICliHooks, ICliConfig> {
   return {
     name: 'automerge',
     apply(ctx) {
-      let instance: ReturnType<typeof setupAutomergeServer> | null = null;
-      const automergeConnections = new Map<unknown, WebSocketWithIsAlive>();
+      if (ctx.config.command !== 'serve' || ctx.config.helpRequested || ctx.config.versionRequested) {
+        return;
+      }
 
-      ctx.hooks.boot.tapPromise(async () => {
-        if (ctx.config.command !== 'serve') return;
-        if (!sqlite) return;
-        instance = setupAutomergeServer(sqlite);
-      });
+      const instance = ctx.services.require('automerge');
+      const automergeConnections = new Map<unknown, WebSocketWithIsAlive>();
 
       ctx.hooks.wsUpgrade.tap((req) => {
         const url = new URL(req.url);
@@ -114,9 +111,6 @@ function createAutomergePlugin(sqlite: Database | null): IPlugin<{}, ICliHooks, 
       });
 
       ctx.hooks.shutdown.tapPromise(async () => {
-        if (!instance) return;
-        instance.wsAdapter.disconnect();
-        instance = null;
         automergeConnections.clear();
       });
     },

@@ -6,6 +6,7 @@ import { filesystemContract } from '@vibecanvas/api-filesystem/contract';
 import { filetreeContract } from '@vibecanvas/api-filetree/contract';
 import { notificationContract } from '@vibecanvas/api-notification/contract';
 import { ptyContract } from '@vibecanvas/api-pty/contract';
+import type { IAutomergeService } from '@vibecanvas/automerge-service/IAutomergeService';
 import type { IDbService } from '@vibecanvas/db/IDbService';
 import type { IEventPublisherService } from '@vibecanvas/event-publisher/IEventPublisherService';
 import type { IFilesystemService } from '@vibecanvas/filesystem-service/IFilesystemService';
@@ -25,7 +26,7 @@ const apiContract = populateContractRouterPaths(
 );
 
 const baseOs = implement(apiContract)
-  .$context<{ db: IDbService; eventPublisher: IEventPublisherService; filesystem: IFilesystemService; pty: IPtyService; requestId?: string }>()
+  .$context<{ automerge: IAutomergeService; db: IDbService; eventPublisher: IEventPublisherService; filesystem: IFilesystemService; pty: IPtyService; requestId?: string }>()
   .use(onError((error) => {
     console.error(error);
   }));

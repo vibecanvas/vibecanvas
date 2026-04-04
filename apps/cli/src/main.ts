@@ -19,10 +19,10 @@ function isStoppableService(service: IService): service is IService & IStoppable
 
 const parsedArgv = parseCliArgv();
 const config = buildCliConfig(parsedArgv);
-const { services, sqlite } = setupServices(config);
+const { services } = setupServices(config);
 
 const runtime = createRuntime<any, ICliConfig>({
-  plugins: [createCliPlugin(), createOrpcPlugin(), createPtyPlugin(), createAutomergePlugin(sqlite), createServerPlugin()],
+  plugins: [createCliPlugin(), createOrpcPlugin(), createPtyPlugin(), createAutomergePlugin(), createServerPlugin()],
   services,
   hooks: createCliHooks(),
   config,

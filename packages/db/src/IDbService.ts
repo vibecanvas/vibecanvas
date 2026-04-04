@@ -17,6 +17,14 @@ type TUpdateCanvasArgs = {
   path?: string;
 };
 
+type TCreateFileTreeArgs = {
+  canvas_id: string;
+  title: string;
+  path: string;
+  locked?: boolean;
+  glob_pattern?: string | null;
+};
+
 type TUpdateFileTreeArgs = {
   id: string;
   title?: string;
@@ -49,6 +57,7 @@ export interface IDbService extends IService, IStoppableService {
   getFullCanvas(id: string): TGetFullCanvasResult | null;
   updateCanvas(args: TUpdateCanvasArgs): TCanvasRecord | null;
   getFileTree(id: string): TFileTreeRecord | null;
+  createFileTree(args: TCreateFileTreeArgs): TFileTreeRecord;
   updateFileTree(args: TUpdateFileTreeArgs): TFileTreeRecord | null;
   deleteFileTree(id: string): boolean;
   createFile(args: TCreateFileArgs): TFileRecord;
@@ -59,6 +68,7 @@ export interface IDbService extends IService, IStoppableService {
 export type {
   TCanvasRecord,
   TCreateFileArgs,
+  TCreateFileTreeArgs,
   TFileFormat,
   TFileRecord,
   TFileTreeRecord,
