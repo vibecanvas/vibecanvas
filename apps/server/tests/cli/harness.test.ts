@@ -110,6 +110,13 @@ describe("canvas CLI test harness", () => {
     expect(groupHelp.stdout).toContain("Usage: vibecanvas canvas group [options]");
     expect(groupHelp.stdout).toContain("--id <id>");
     expect(groupHelp.stdout).toContain("grouping currently supports explicit element ids only");
+
+    const ungroupHelp = await context.runVibecanvasCli(["canvas", "ungroup", "--help"]);
+    expectExitCode(ungroupHelp, 0);
+    expectNoStderr(ungroupHelp);
+    expect(ungroupHelp.stdout).toContain("Usage: vibecanvas canvas ungroup [options]");
+    expect(ungroupHelp.stdout).toContain("--id <id>");
+    expect(ungroupHelp.stdout).toContain("ungrouping currently supports explicit group ids only");
   });
 
   test("shows canvas subcommand help even when the canvas prefix is omitted", async () => {
@@ -130,6 +137,11 @@ describe("canvas CLI test harness", () => {
     expectExitCode(groupHelp, 0);
     expectNoStderr(groupHelp);
     expect(groupHelp.stdout).toContain("Usage: vibecanvas canvas group [options]");
+
+    const ungroupHelp = await context.runVibecanvasCli(["ungroup", "--help"]);
+    expectExitCode(ungroupHelp, 0);
+    expectNoStderr(ungroupHelp);
+    expect(ungroupHelp.stdout).toContain("Usage: vibecanvas canvas ungroup [options]");
 
     const listHelp = await context.runVibecanvasCli(["list", "--help"]);
     expectExitCode(listHelp, 0);

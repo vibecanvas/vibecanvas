@@ -210,6 +210,12 @@ export async function runCanvas(argv: readonly string[]): Promise<never> {
       throw new Error("runCanvasGroup() must exit the process.");
     }
 
+    if (subcommand === "ungroup") {
+      const { runCanvasUngroup } = await import("./cmd.ungroup");
+      await runCanvasUngroup(argv);
+      throw new Error("runCanvasUngroup() must exit the process.");
+    }
+
     printCanvasHelp();
     process.exit(0);
   }
@@ -230,6 +236,12 @@ export async function runCanvas(argv: readonly string[]): Promise<never> {
     const { runCanvasGroup } = await import("./cmd.group");
     await runCanvasGroup(argv);
     throw new Error("runCanvasGroup() must exit the process.");
+  }
+
+  if (subcommand === "ungroup") {
+    const { runCanvasUngroup } = await import("./cmd.ungroup");
+    await runCanvasUngroup(argv);
+    throw new Error("runCanvasUngroup() must exit the process.");
   }
 
   try {
