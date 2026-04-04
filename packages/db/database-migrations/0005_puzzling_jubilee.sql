@@ -1,0 +1,1 @@
+ALTER TABLE `agent_logs` DROP COLUMN `type`;

@@ -177,6 +177,17 @@
         "zod": "catalog:",
       },
     },
+    "packages/db": {
+      "name": "@vibecanvas/db",
+      "version": "0.0.1",
+      "dependencies": {
+        "@vibecanvas/core": "workspace:*",
+        "drizzle-kit": "catalog:",
+        "drizzle-orm": "catalog:",
+        "drizzle-zod": "catalog:",
+        "zod": "catalog:",
+      },
+    },
     "packages/functional-core": {
       "name": "@vibecanvas/core",
       "version": "0.2.2",
@@ -824,6 +835,8 @@
     "@vibecanvas/core": ["@vibecanvas/core@workspace:packages/functional-core"],
 
     "@vibecanvas/core-contract": ["@vibecanvas/core-contract@workspace:packages/core-contract"],
+
+    "@vibecanvas/db": ["@vibecanvas/db@workspace:packages/db"],
 
     "@vibecanvas/frontend": ["@vibecanvas/frontend@workspace:apps/frontend"],
 

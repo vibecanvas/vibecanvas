@@ -1,5 +1,6 @@
 #!/usr/bin/env bun
-import { bootCliRuntime, createCliHooks, createRuntime, shutdownCliRuntime } from './plugin';
+import { createRuntime } from '@vibecanvas/runtime';
+import { bootCliRuntime, createCliHooks, shutdownCliRuntime } from './hooks';
 
 const runtime = createRuntime({
   plugins: [],

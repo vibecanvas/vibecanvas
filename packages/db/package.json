@@ -1,0 +1,17 @@
+{
+  "name": "@vibecanvas/db",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./*": "./src/*"
+  },
+  "dependencies": {
+    "@vibecanvas/core": "workspace:*",
+    "drizzle-orm": "catalog:",
+    "drizzle-zod": "catalog:",
+    "drizzle-kit": "catalog:",
+    "zod": "catalog:"
+  }
+}
