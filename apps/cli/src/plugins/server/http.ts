@@ -1,4 +1,4 @@
-import type { IDbService } from '@vibecanvas/db/IDbService';
+import type { IDbService, TFileFormat } from '@vibecanvas/db/IDbService';
 import type { ICliConfig } from '../../config';
 
 type TEmbeddedAssetsModule = {
@@ -22,7 +22,8 @@ let embeddedAssetsPromise: Promise<TEmbeddedAssetsModule | null> | null = null;
 
 async function loadEmbeddedAssetsModule(): Promise<TEmbeddedAssetsModule | null> {
   if (!embeddedAssetsPromise) {
-    embeddedAssetsPromise = import('../../../embedded-assets')
+    const embeddedAssetsModulePath = '../../../embedded-assets';
+    embeddedAssetsPromise = import(embeddedAssetsModulePath)
       .then((module) => module as TEmbeddedAssetsModule)
       .catch(() => null);
   }
@@ -63,7 +64,7 @@ async function createHttpAssetResolver(importMetaDir: string): Promise<THttpAsse
   };
 }
 
-function fileMetaFromPathname(pathname: string): { id: string; format: string } | null {
+function fileMetaFromPathname(pathname: string): { id: string; format: TFileFormat } | null {
   if (!pathname.startsWith('/files/')) return null;
   const fileName = pathname.slice('/files/'.length);
   const match = fileName.match(/^([a-f0-9-]{36})\.(jpg|jpeg|png|gif|webp)$/i);
