@@ -56,6 +56,12 @@ function createServerPlugin(): IPlugin<{}, ICliHooks, ICliConfig> {
             close(ws) {
               ctx.hooks.wsClose.call(ws as unknown as WebSocket);
             },
+            pong(ws, data) {
+              const pongData = data
+                ? Buffer.from(data.buffer, data.byteOffset, data.byteLength)
+                : Buffer.alloc(0);
+              ctx.hooks.wsPong.call(ws as unknown as WebSocket, pongData);
+            },
           },
         });
       });

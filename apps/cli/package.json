@@ -13,6 +13,7 @@
   "dependencies": {
     "@orpc/contract": "catalog:",
     "@orpc/server": "catalog:",
+    "@vibecanvas/automerge": "workspace:*",
     "@vibecanvas/api-canvas": "workspace:*",
     "@vibecanvas/api-file": "workspace:*",
     "@vibecanvas/db": "workspace:*",

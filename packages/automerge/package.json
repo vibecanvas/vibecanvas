@@ -1,0 +1,14 @@
+{
+  "name": "@vibecanvas/automerge",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./*": "./src/*.ts"
+  },
+  "dependencies": {
+    "@automerge/automerge-repo": "catalog:",
+    "@automerge/automerge-repo-network-websocket": "catalog:",
+    "@vibecanvas/shared-functions": "workspace:*"
+  }
+}

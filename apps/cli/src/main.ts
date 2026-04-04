@@ -5,6 +5,7 @@ import { buildCliConfig } from './build-config';
 import type { ICliConfig } from './config';
 import { bootCliRuntime, createCliHooks, shutdownCliRuntime } from './hooks';
 import { parseCliArgv } from './parse-argv';
+import { createAutomergePlugin } from './plugins/automerge/AutomergePlugin';
 import { createCliPlugin } from './plugins/cli/CliPlugin';
 import { createOrpcPlugin } from './plugins/orpc/OrpcPlugin';
 import { setupServices } from './setup-services';
@@ -17,10 +18,10 @@ function isStoppableService(service: IService): service is IService & IStoppable
 
 const parsedArgv = parseCliArgv();
 const config = buildCliConfig(parsedArgv);
-const { services } = setupServices(config);
+const { services, sqlite } = setupServices(config);
 
 const runtime = createRuntime<any, ICliConfig>({
-  plugins: [createCliPlugin(), createOrpcPlugin(), createServerPlugin()],
+  plugins: [createCliPlugin(), createOrpcPlugin(), createAutomergePlugin(sqlite), createServerPlugin()],
   services,
   hooks: createCliHooks(),
   config,

@@ -13,6 +13,7 @@ export interface ICliHooks {
   wsOpen: SyncHook<[WebSocket]>;
   wsMessage: SyncHook<[WebSocket, string | Buffer]>;
   wsClose: SyncHook<[WebSocket]>;
+  wsPong: SyncHook<[WebSocket, Buffer]>;
 
   registerCommands: SyncHook<[]>;
 }
@@ -29,6 +30,7 @@ export function createCliHooks(): ICliHooks {
     wsOpen: new SyncHook<[WebSocket]>(),
     wsMessage: new SyncHook<[WebSocket, string | Buffer]>(),
     wsClose: new SyncHook<[WebSocket]>(),
+    wsPong: new SyncHook<[WebSocket, Buffer]>(),
 
     registerCommands: new SyncHook<[]>(),
   };
