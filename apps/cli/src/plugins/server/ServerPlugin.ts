@@ -64,7 +64,7 @@ function createServerPlugin(): IPlugin<{ eventPublisher: IEventPublisherService 
               return new Response('Database service not available', { status: 500 });
             }
 
-            return handleHttpRequest(req, { compiled: ctx.config.compiled }, db, import.meta.dir);
+            return handleHttpRequest(req, { compiled: ctx.config.compiled, version: ctx.config.version }, db, import.meta.dir);
           },
           websocket: {
             data: {} as TOrpcWebSocketData,

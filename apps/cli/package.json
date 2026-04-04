@@ -12,11 +12,13 @@
   },
   "dependencies": {
     "@automerge/automerge-repo": "catalog:",
+    "@orpc/client": "catalog:",
     "@orpc/contract": "catalog:",
     "@orpc/server": "catalog:",
     "@vibecanvas/automerge-service": "workspace:*",
     "@vibecanvas/api-canvas": "workspace:*",
     "@vibecanvas/canvas-cmds": "workspace:*",
+    "@vibecanvas/core-contract": "workspace:*",
     "@vibecanvas/api-db": "workspace:*",
     "@vibecanvas/api-file": "workspace:*",
     "@vibecanvas/api-filesystem": "workspace:*",

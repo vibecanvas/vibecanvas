@@ -88,7 +88,9 @@ Use the leaf files for execution history and local context.
 - [x]: [B11] - terminal after resize is not focuable anymore
 - [x]: [B12](b/B12.md) - terminal: ctrl+c echoes ^C but does not interrupt process
 - [ ]: [B13](b/B13.md) - canvas CLI: real dev db can list canvases that query/move/patch cannot open
-
+- [ ]: [B14](b/B14.md) - canvas CLI: `group` and `ungroup` still return not implemented and fall back to generic help in `apps/cli/src/main.ts`
+- [ ]: [B15](b/B15.md) - canvas query subtree-not-found error prints canvas name as `undefined`
+- [ ]: [B16](b/B16.md) - canvas CLI eagerly imports missing websocket adapter and crashes before any canvas command/help runs
 
 ## A dditions
 - [x]: [A1] - file: support common CodeMirror languages
@@ -103,7 +105,7 @@ Use the leaf files for execution history and local context.
 - [x]: [A10](a/A10.md) - canvas CLI: `patch` command
 - [x]: [A11](a/A11.md) - canvas CLI: `move` command
 - [x]: [A12](a/A12.md) - canvas CLI: `group` command
-- [ ]: [A13](a/A13.md) - canvas CLI: `ungroup` command
+- [x]: [A13](a/A13.md) - canvas CLI: `ungroup` command
 - [x]: [A14](a/A14.md) - canvas CLI: `delete` command
 - [x]: [A15](a/A15.md) - canvas CLI: `reorder` command
 - [ ]: [A16](a/A16.md) - canvas CLI: `render` command

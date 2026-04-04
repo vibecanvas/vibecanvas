@@ -1,6 +1,6 @@
 import { parseArgs } from 'node:util';
 import { CanvasCmdError, executeCanvasQuery, renderCanvasQueryText, resolveOutputMode, resolveSelectorEnvelope } from '@vibecanvas/canvas-cmds';
-import { createLocalCanvasState } from './local-state';
+import { createOfflineCanvasState, createOnlineCanvasSafeClient, discoverLocalCanvasServer } from '../plugins/cli/canvas.shared';
 
 type TQueryJsonError = {
   ok: false;
@@ -131,7 +131,41 @@ export async function runCanvasQuery(argv: readonly string[]): Promise<never> {
     fail: (error) => exitQueryError(wantsJson, error as TQueryJsonError),
   });
 
-  const state = createLocalCanvasState(argv);
+  const hasExplicitDbPath = typeof values.db === 'string';
+
+  const discoveredServer = hasExplicitDbPath ? null : await discoverLocalCanvasServer(argv);
+
+  if (discoveredServer) {
+    const safeClient = await createOnlineCanvasSafeClient(discoveredServer.port);
+    const [clientError, result] = await safeClient.api.canvas.cmd.query({
+      selector,
+      output: outputMode,
+      omitData: Boolean(values.omitdata),
+      omitStyle: Boolean(values.omitstyle),
+    });
+
+    if (clientError || !result) {
+      const message = clientError instanceof Error ? clientError.message : String(clientError ?? 'canvas query failed');
+      exitQueryError(wantsJson, {
+        ok: false,
+        command: 'canvas.query',
+        code: 'CANVAS_QUERY_FAILED',
+        message,
+        canvasId,
+        canvasNameQuery,
+      });
+    }
+
+    if (wantsJson) {
+      console.log(JSON.stringify(result));
+      process.exit(0);
+    }
+
+    process.stdout.write(renderCanvasQueryText(result));
+    process.exit(0);
+  }
+
+  const state = await createOfflineCanvasState(argv);
 
   try {
     const result = await executeCanvasQuery(state.context, {

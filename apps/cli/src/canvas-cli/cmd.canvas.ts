@@ -1,6 +1,7 @@
 import { parseArgs } from 'node:util';
 import { executeCanvasList } from '@vibecanvas/canvas-cmds';
-import { createLocalCanvasState } from './local-state';
+import { buildCliConfig } from '../build-config';
+import { parseCliArgv } from '../parse-argv';
 
 const CANVAS_SUBCOMMANDS = ['list', 'query', 'patch', 'move', 'group', 'ungroup', 'delete', 'reorder', 'render'] as const;
 
@@ -122,7 +123,12 @@ function exitWithCanvasTextError(message: string): never {
 }
 
 async function runCanvasList(argv: readonly string[], wantsJson: boolean): Promise<never> {
-  const state = createLocalCanvasState(argv);
+  const parsed = parseCliArgv(argv);
+  const config = buildCliConfig(parsed);
+  const [{ createLocalCanvasState }] = await Promise.all([
+    import('../plugins/cli/canvas.local-state'),
+  ]);
+  const state = createLocalCanvasState(config);
 
   try {
     const result = await executeCanvasList(state.context);
@@ -252,9 +258,9 @@ export async function runCanvas(argv: readonly string[]): Promise<never> {
       await runCanvasList(argv, wantsJson);
     }
 
-    const state = createLocalCanvasState(argv);
-    const dbPath = state.dbPath;
-    state.dispose();
+    const parsed = parseCliArgv(argv);
+    const config = buildCliConfig(parsed);
+    const dbPath = config.dbPath;
 
     if (wantsJson) {
       exitWithCanvasJsonError({

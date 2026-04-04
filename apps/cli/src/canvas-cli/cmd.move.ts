@@ -1,6 +1,6 @@
 import { parseArgs } from 'node:util';
 import { CanvasCmdError, executeCanvasMove, renderCanvasMoveText } from '@vibecanvas/canvas-cmds';
-import { createLocalCanvasState } from './local-state';
+import { createOfflineCanvasState, createOnlineCanvasSafeClient, discoverLocalCanvasServer } from '../plugins/cli/canvas.shared';
 
 type TMoveJsonError = {
   ok: false;
@@ -91,17 +91,48 @@ export async function runCanvasMove(argv: readonly string[]): Promise<never> {
     process.exit(0);
   }
 
-  const state = createLocalCanvasState(argv);
+  const ids = (Array.isArray(values.id) ? values.id : values.id === undefined ? [] : [values.id]).flatMap((value) => typeof value === 'string' ? value.split(',') : []);
+  const input = {
+    canvasId,
+    canvasNameQuery,
+    ids,
+    mode: Boolean(values.relative) ? 'relative' as const : 'absolute' as const,
+    x: typeof values.x === 'string' ? Number(values.x) : Number.NaN,
+    y: typeof values.y === 'string' ? Number(values.y) : Number.NaN,
+  };
+  const hasExplicitDbPath = typeof values.db === 'string';
+
+  const discoveredServer = hasExplicitDbPath ? null : await discoverLocalCanvasServer(argv);
+
+  if (discoveredServer) {
+    const safeClient = await createOnlineCanvasSafeClient(discoveredServer.port);
+    const [clientError, result] = await safeClient.api.canvas.cmd.move(input);
+
+    if (clientError || !result) {
+      const message = clientError instanceof Error ? clientError.message : String(clientError ?? 'canvas move failed');
+      exitMoveError(wantsJson, {
+        ok: false,
+        command: 'canvas.move',
+        code: 'CANVAS_MOVE_FAILED',
+        message,
+        canvasId,
+        canvasNameQuery,
+      });
+    }
+
+    if (wantsJson) {
+      console.log(JSON.stringify(result));
+      process.exit(0);
+    }
+
+    process.stdout.write(renderCanvasMoveText(result));
+    process.exit(0);
+  }
+
+  const state = await createOfflineCanvasState(argv);
 
   try {
-    const result = await executeCanvasMove(state.context, {
-      canvasId,
-      canvasNameQuery,
-      ids: (Array.isArray(values.id) ? values.id : values.id === undefined ? [] : [values.id]).flatMap((value) => typeof value === 'string' ? value.split(',') : []),
-      mode: Boolean(values.relative) ? 'relative' : 'absolute',
-      x: typeof values.x === 'string' ? Number(values.x) : Number.NaN,
-      y: typeof values.y === 'string' ? Number(values.y) : Number.NaN,
-    });
+    const result = await executeCanvasMove(state.context, input);
 
     if (wantsJson) {
       console.log(JSON.stringify(result));

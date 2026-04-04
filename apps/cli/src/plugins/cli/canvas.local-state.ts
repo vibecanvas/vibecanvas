@@ -4,8 +4,7 @@ import { BunSqliteStorageAdapter } from '@vibecanvas/automerge-service/adapters/
 import { setupAutomergeServer } from '@vibecanvas/automerge-service/setupAutomergeServer';
 import type { TCanvasCmdContext } from '@vibecanvas/canvas-cmds';
 import { createSqliteDb } from '@vibecanvas/db/DbServiceBunSqlite';
-import { buildCliConfig } from '../build-config';
-import { parseCliArgv } from '../parse-argv';
+import type { ICliConfig } from '../../config';
 
 type TLocalCanvasState = {
   dbPath: string;
@@ -49,13 +48,11 @@ async function waitForPersistedCanvasDoc(args: {
   throw new Error(`Timed out waiting for persisted canvas doc '${args.automergeUrl}': ${String(lastError)}`);
 }
 
-function createLocalCanvasState(argv: readonly string[]): TLocalCanvasState {
+function createLocalCanvasState(config: ICliConfig): TLocalCanvasState {
   process.env.VIBECANVAS_SILENT_DB_MIGRATIONS = '1';
   process.env.VIBECANVAS_SILENT_AUTOMERGE_LOGS = '1';
 
-  const parsed = parseCliArgv(argv);
-  const config = buildCliConfig(parsed);
-  const dbPath = process.env.VIBECANVAS_DB ?? config.dbPath;
+  const dbPath = config.dbPath;
   const db = createSqliteDb({
     databasePath: dbPath,
     dataDir: config.dataPath,

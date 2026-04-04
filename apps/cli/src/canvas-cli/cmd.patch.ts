@@ -1,7 +1,7 @@
 import { readFile } from 'node:fs/promises';
 import { parseArgs } from 'node:util';
 import { CanvasCmdError, executeCanvasPatch, renderCanvasPatchText, type TCanvasPatchEnvelope } from '@vibecanvas/canvas-cmds';
-import { createLocalCanvasState } from './local-state';
+import { createOfflineCanvasState, createOnlineCanvasSafeClient, discoverLocalCanvasServer } from '../plugins/cli/canvas.shared';
 
 type TPatchJsonError = {
   ok: false;
@@ -168,13 +168,48 @@ export async function runCanvasPatch(argv: readonly string[]): Promise<never> {
   }
 
   const patch = await resolvePatchPayload({ values: values as Record<string, unknown>, wantsJson, canvasId, canvasNameQuery });
-  const state = createLocalCanvasState(argv);
+  const ids = (Array.isArray(values.id) ? values.id : values.id === undefined ? [] : [values.id]).flatMap((value) => typeof value === 'string' ? value.split(',') : []);
+  const hasExplicitDbPath = typeof values.db === 'string';
+
+  const discoveredServer = hasExplicitDbPath ? null : await discoverLocalCanvasServer(argv);
+
+  if (discoveredServer) {
+    const safeClient = await createOnlineCanvasSafeClient(discoveredServer.port);
+    const [clientError, result] = await safeClient.api.canvas.cmd.patch({
+      canvasId,
+      canvasNameQuery,
+      ids,
+      patch,
+    });
+
+    if (clientError || !result) {
+      const message = clientError instanceof Error ? clientError.message : String(clientError ?? 'canvas patch failed');
+      exitPatchError(wantsJson, {
+        ok: false,
+        command: 'canvas.patch',
+        code: 'CANVAS_PATCH_FAILED',
+        message,
+        canvasId,
+        canvasNameQuery,
+      });
+    }
+
+    if (wantsJson) {
+      console.log(JSON.stringify(result));
+      process.exit(0);
+    }
+
+    process.stdout.write(renderCanvasPatchText(result));
+    process.exit(0);
+  }
+
+  const state = await createOfflineCanvasState(argv);
 
   try {
     const result = await executeCanvasPatch(state.context, {
       canvasId,
       canvasNameQuery,
-      ids: (Array.isArray(values.id) ? values.id : values.id === undefined ? [] : [values.id]).flatMap((value) => typeof value === 'string' ? value.split(',') : []),
+      ids,
       patch,
     });
 

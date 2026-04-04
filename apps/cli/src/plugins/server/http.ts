@@ -111,8 +111,17 @@ function createFileResponse(req: Request, db: IDbService): Response {
   });
 }
 
-async function handleHttpRequest(req: Request, config: Pick<ICliConfig, 'compiled'>, db: IDbService, importMetaDir: string): Promise<Response> {
+async function handleHttpRequest(req: Request, config: Pick<ICliConfig, 'compiled' | 'version'>, db: IDbService, importMetaDir: string): Promise<Response> {
   const url = new URL(req.url);
+
+  if (req.method === 'GET' && url.pathname === '/health') {
+    return Response.json({
+      ok: true,
+      service: 'vibecanvas',
+      version: config.version,
+      compiled: config.compiled,
+    });
+  }
 
   if (req.method === 'GET' && url.pathname.startsWith('/files/')) {
     return createFileResponse(req, db);

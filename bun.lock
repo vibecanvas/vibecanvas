@@ -19,6 +19,7 @@
       "version": "0.0.1",
       "dependencies": {
         "@automerge/automerge-repo": "catalog:",
+        "@orpc/client": "catalog:",
         "@orpc/contract": "catalog:",
         "@orpc/server": "catalog:",
         "@vibecanvas/api-canvas": "workspace:*",
@@ -30,6 +31,7 @@
         "@vibecanvas/api-pty": "workspace:*",
         "@vibecanvas/automerge-service": "workspace:*",
         "@vibecanvas/canvas-cmds": "workspace:*",
+        "@vibecanvas/core-contract": "workspace:*",
         "@vibecanvas/db": "workspace:*",
         "@vibecanvas/event-publisher-service": "workspace:*",
         "@vibecanvas/filesystem-service": "workspace:*",
