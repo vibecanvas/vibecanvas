@@ -1,6 +1,24 @@
 // eslint-disable-next-line @typescript-eslint/no-empty-object-type
 export interface IServiceMap {}
 
+export interface IService {
+  readonly name: string;
+}
+
+export interface IStartableService {
+  start(): void | Promise<void>;
+}
+
+export interface IStoppableService {
+  stop(): void | Promise<void>;
+}
+
+export interface IManagedService extends IService, IStartableService, IStoppableService {}
+
+export interface IEventSource<TEvent = unknown> {
+  subscribe(listener: (event: TEvent) => void): () => void;
+}
+
 export interface IServiceRegistry {
   provide<K extends keyof IServiceMap>(name: K, impl: IServiceMap[K]): void;
   get<K extends keyof IServiceMap>(name: K): IServiceMap[K] | undefined;

@@ -182,6 +182,7 @@
       "version": "0.0.1",
       "dependencies": {
         "@vibecanvas/core": "workspace:*",
+        "@vibecanvas/runtime": "workspace:*",
         "drizzle-kit": "catalog:",
         "drizzle-orm": "catalog:",
         "drizzle-zod": "catalog:",

@@ -9,6 +9,7 @@
   },
   "dependencies": {
     "@vibecanvas/core": "workspace:*",
+    "@vibecanvas/runtime": "workspace:*",
     "drizzle-orm": "catalog:",
     "drizzle-zod": "catalog:",
     "drizzle-kit": "catalog:",

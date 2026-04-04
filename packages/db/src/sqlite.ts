@@ -18,7 +18,14 @@ export function createSqliteDb(config: IDbConfig): IDbHandle {
   const sqlite = new Database(config.databasePath);
   configureSqlite(sqlite);
 
-  const db = drizzle({ client: sqlite, schema }) as IDbService;
+  const drizzleDb = drizzle({ client: sqlite, schema });
+  const db = Object.assign(drizzleDb, {
+    name: 'db' as const,
+    sqlite,
+    stop() {
+      sqlite.close();
+    },
+  }) as IDbService;
 
   fxRunDatabaseMigrations({
     dataDir: config.dataDir,
@@ -31,8 +38,8 @@ export function createSqliteDb(config: IDbConfig): IDbHandle {
   return {
     db,
     sqlite,
-    close() {
-      sqlite.close();
+    stop() {
+      db.stop();
     },
   };
 }
