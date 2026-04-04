@@ -359,7 +359,7 @@ export function resolveOutputMode(args: {
     ok: false,
     command: args.command,
     code: 'CANVAS_OUTPUT_INVALID',
-    message: `Invalid output mode '${mode}'. Expected one of: ${SCENE_OUTPUT_MODES.join(', ')}.`,
+    message: `Invalid --output '${mode}'. Expected one of: ${SCENE_OUTPUT_MODES.join(', ')}.`,
   });
 }
 

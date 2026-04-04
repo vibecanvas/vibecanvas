@@ -50,7 +50,7 @@ function ensureFiniteCoordinate(args: {
     ok: false,
     command: 'canvas.move',
     code: 'CANVAS_MOVE_COORDINATE_INVALID',
-    message: `Invalid ${args.flag} coordinate. Expected a finite number.`,
+    message: `Invalid --${args.flag} value '${String(args.value)}'. Expected a finite number.`,
     canvasId: args.canvasId,
     canvasNameQuery: args.canvasNameQuery,
   });
@@ -68,7 +68,7 @@ function normalizeMoveIds(args: {
     ok: false,
     command: 'canvas.move',
     code: 'CANVAS_MOVE_ID_REQUIRED',
-    message: 'Move requires at least one target id.',
+    message: 'Move requires at least one --id <id> target.',
     canvasId: args.canvasId,
     canvasNameQuery: args.canvasNameQuery,
   });
@@ -181,7 +181,7 @@ export async function executeCanvasMove(ctx: TCanvasCmdContext, input: TCanvasMo
       ok: false,
       command: 'canvas.move',
       code: 'CANVAS_MOVE_MODE_REQUIRED',
-      message: 'Move mode must be either relative or absolute.',
+      message: 'Pass exactly one move mode: --relative or --absolute.',
       canvasId,
       canvasNameQuery,
     });

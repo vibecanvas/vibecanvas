@@ -11,10 +11,12 @@
     "test": "bun test"
   },
   "dependencies": {
+    "@automerge/automerge-repo": "catalog:",
     "@orpc/contract": "catalog:",
     "@orpc/server": "catalog:",
     "@vibecanvas/automerge-service": "workspace:*",
     "@vibecanvas/api-canvas": "workspace:*",
+    "@vibecanvas/canvas-cmds": "workspace:*",
     "@vibecanvas/api-db": "workspace:*",
     "@vibecanvas/api-file": "workspace:*",
     "@vibecanvas/api-filesystem": "workspace:*",
@@ -27,6 +29,7 @@
     "@vibecanvas/pty-service": "workspace:*",
     "@vibecanvas/runtime": "workspace:*",
     "@vibecanvas/shared-functions": "workspace:*",
+    "@vibecanvas/shell": "workspace:*",
     "@vibecanvas/tapable": "workspace:*"
   }
 }

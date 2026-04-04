@@ -88,14 +88,14 @@ function parseBounds(raw: unknown, context: TSceneSelectorContext): TSceneBounds
 function parseBoundsMode(raw: unknown, context: TSceneSelectorContext): 'intersects' | 'contains' {
   const mode = typeof raw === 'string' ? raw : 'intersects';
   if (VALID_BOUNDS_MODES.has(mode)) return mode as 'intersects' | 'contains';
-  failSceneSelector(context, 'BOUNDS_MODE_INVALID', `Invalid bounds mode '${String(raw)}'. Expected one of: intersects, contains.`);
+  failSceneSelector(context, 'BOUNDS_MODE_INVALID', `Invalid --bounds-mode '${String(raw)}'. Expected one of: intersects, contains.`);
 }
 
 function parseKinds(raw: unknown, context: TSceneSelectorContext): Array<'element' | 'group'> {
   const kinds = normalizeStringList(raw);
   for (const kind of kinds) {
     if (VALID_QUERY_KINDS.has(kind)) continue;
-    failSceneSelector(context, 'KIND_INVALID', `Invalid kind '${kind}'. Expected one of: element, group.`);
+    failSceneSelector(context, 'KIND_INVALID', `Invalid --kind '${kind}'. Expected one of: element, group.`);
   }
   return kinds as Array<'element' | 'group'>;
 }
@@ -117,7 +117,7 @@ function parseStyleAssignment(raw: string, context: TSceneSelectorContext): [str
   const separatorIndex = raw.indexOf('=');
   const key = separatorIndex >= 0 ? raw.slice(0, separatorIndex).trim() : '';
   const value = separatorIndex >= 0 ? raw.slice(separatorIndex + 1) : '';
-  if (!key) failSceneSelector(context, 'STYLE_INVALID', 'Invalid style selector. Expected key=value.');
+  if (!key) failSceneSelector(context, 'STYLE_INVALID', 'Invalid --style selector. Expected key=value.');
   return [key, parseScalarString(value)];
 }
 
@@ -126,7 +126,7 @@ function parseStyleFilter(raw: unknown, context: TSceneSelectorContext): TSceneS
 
   if (Array.isArray(raw)) {
     return normalizeStyleFilterEntries(raw.map((entry) => {
-      if (typeof entry !== 'string') failSceneSelector(context, 'STYLE_INVALID', 'Invalid style selector. Expected key=value.');
+      if (typeof entry !== 'string') failSceneSelector(context, 'STYLE_INVALID', 'Invalid --style selector. Expected key=value.');
       return parseStyleAssignment(entry, context);
     }));
   }
@@ -182,11 +182,11 @@ function parseQuerySelector(raw: string, context: TSceneSelectorContext): TScene
   try {
     parsed = JSON.parse(raw);
   } catch {
-    failSceneSelector(context, 'JSON_INVALID', 'Invalid query JSON payload.');
+    failSceneSelector(context, 'JSON_INVALID', 'Invalid --query JSON payload.');
   }
 
   if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) {
-    failSceneSelector(context, 'JSON_INVALID', 'Invalid query JSON payload.');
+    failSceneSelector(context, 'JSON_INVALID', 'Invalid --query JSON payload.');
   }
 
   const candidate = parsed as Record<string, unknown>;
@@ -221,7 +221,7 @@ export function resolveSelectorEnvelope(args: {
   const selectorInputCount = [hasFlags, hasWhere, hasQuery].filter(Boolean).length;
 
   if (selectorInputCount > 1) {
-    failSceneSelector(context, 'SELECTOR_CONFLICT', 'Pass at most one selector input style: structured flags, where, or query.');
+    failSceneSelector(context, 'SELECTOR_CONFLICT', 'Pass at most one selector input style: structured flags, --where, or --query.');
   }
 
   if (hasWhere) {
