@@ -1,5 +1,5 @@
 {
-  "name": "@vibecanvas/automerge",
+  "name": "@vibecanvas/automerge-service",
   "version": "0.0.1",
   "private": true,
   "type": "module",
@@ -9,6 +9,7 @@
   "dependencies": {
     "@automerge/automerge-repo": "catalog:",
     "@automerge/automerge-repo-network-websocket": "catalog:",
+    "@vibecanvas/runtime": "workspace:*",
     "@vibecanvas/shared-functions": "workspace:*"
   }
 }
