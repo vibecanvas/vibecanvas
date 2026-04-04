@@ -5,5 +5,8 @@
   "type": "module",
   "exports": {
     "./*": "./src/*.ts"
+  },
+  "scripts": {
+    "test": "bun test"
   }
 }
