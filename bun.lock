@@ -18,6 +18,7 @@
       "name": "@vibecanvas/cli",
       "version": "0.0.1",
       "dependencies": {
+        "@vibecanvas/db": "workspace:*",
         "@vibecanvas/runtime": "workspace:*",
         "@vibecanvas/tapable": "workspace:*",
       },
@@ -181,8 +182,8 @@
       "name": "@vibecanvas/db",
       "version": "0.0.1",
       "dependencies": {
-        "@vibecanvas/core": "workspace:*",
         "@vibecanvas/runtime": "workspace:*",
+        "@vibecanvas/shared-functions": "workspace:*",
         "drizzle-kit": "catalog:",
         "drizzle-orm": "catalog:",
         "drizzle-zod": "catalog:",
@@ -224,6 +225,10 @@
       "dependencies": {
         "@vibecanvas/tapable": "workspace:*",
       },
+    },
+    "packages/shared-functions": {
+      "name": "@vibecanvas/shared-functions",
+      "version": "0.0.1",
     },
     "packages/tapable": {
       "name": "@vibecanvas/tapable",
@@ -844,6 +849,8 @@
     "@vibecanvas/runtime": ["@vibecanvas/runtime@workspace:packages/runtime"],
 
     "@vibecanvas/server": ["@vibecanvas/server@workspace:apps/server"],
+
+    "@vibecanvas/shared-functions": ["@vibecanvas/shared-functions@workspace:packages/shared-functions"],
 
     "@vibecanvas/shell": ["@vibecanvas/shell@workspace:packages/imperative-shell"],
 

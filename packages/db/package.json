@@ -4,11 +4,11 @@
   "private": true,
   "type": "module",
   "exports": {
-    "./*": "./src/*"
+    "./*": "./src/*.ts"
   },
   "dependencies": {
-    "@vibecanvas/core": "workspace:*",
     "@vibecanvas/runtime": "workspace:*",
+    "@vibecanvas/shared-functions": "workspace:*",
     "drizzle-orm": "catalog:",
     "drizzle-zod": "catalog:",
     "drizzle-kit": "catalog:",

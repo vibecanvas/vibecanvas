@@ -1,5 +1,5 @@
 import { existsSync, mkdirSync } from 'fs';
-import { txConfigPath } from '@vibecanvas/core/vibecanvas-config/tx.config-path';
+import { txConfigPath } from '@vibecanvas/shared-functions/vibecanvas-config/tx.config-path';
 import type { IDbConfig } from '../interface';
 
 function fxResolveConfiguredDb(): IDbConfig {

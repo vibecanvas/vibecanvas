@@ -1,4 +1,4 @@
-import type { IConfig, IPlugin, IPluginContext, IServiceMap, IServiceRegistry } from './interface';
+import type { IConfig, IPlugin, IPluginContext, IService, IServiceMap, IServiceRegistry } from './interface';
 
 type TSortable = { name: string; after?: string[] };
 
@@ -36,11 +36,14 @@ export function topoSort<T extends TSortable>(items: T[]): T[] {
 }
 
 export function createServiceRegistry(): IServiceRegistry {
-  const store = new Map<string, unknown>();
+  const store = new Map<string, IService>();
 
   return {
+    getStore() {
+      return store;
+    },
     provide<K extends keyof IServiceMap>(name: K, impl: IServiceMap[K]) {
-      store.set(name as string, impl);
+      store.set(name as string, impl as IService);
     },
     get<K extends keyof IServiceMap>(name: K): IServiceMap[K] | undefined {
       return store.get(name as string) as IServiceMap[K] | undefined;
