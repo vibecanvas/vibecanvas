@@ -120,6 +120,46 @@ const canvasCommandMoveOutputSchema = z.object({
   changedIds: z.string().array(),
 });
 
+const canvasCommandElementPatchSchema = z.object({
+  x: z.number().optional(),
+  y: z.number().optional(),
+  rotation: z.number().optional(),
+  zIndex: z.string().optional(),
+  parentGroupId: z.string().nullable().optional(),
+  locked: z.boolean().optional(),
+  data: z.record(z.string(), z.any()).optional(),
+  style: z.record(z.string(), z.any()).optional(),
+}).strict();
+
+const canvasCommandGroupPatchSchema = z.object({
+  parentGroupId: z.string().nullable().optional(),
+  zIndex: z.string().optional(),
+  locked: z.boolean().optional(),
+}).strict();
+
+const canvasCommandPatchEnvelopeSchema = z.object({
+  element: canvasCommandElementPatchSchema.optional(),
+  group: canvasCommandGroupPatchSchema.optional(),
+}).strict();
+
+const canvasCommandPatchInputSchema = z.object({
+  canvasId: z.string().nullable(),
+  canvasNameQuery: z.string().nullable(),
+  ids: z.string().array(),
+  patch: canvasCommandPatchEnvelopeSchema,
+});
+
+const canvasCommandPatchOutputSchema = z.object({
+  ok: z.literal(true),
+  command: z.literal('canvas.patch'),
+  patch: canvasCommandPatchEnvelopeSchema,
+  canvas: canvasSummarySchema,
+  matchedCount: z.number().int(),
+  matchedIds: z.string().array(),
+  changedCount: z.number().int(),
+  changedIds: z.string().array(),
+});
+
 const canvasContract = oc.router({
   list: oc.output(ZCanvasSelect.array()),
 
@@ -147,6 +187,9 @@ const canvasContract = oc.router({
     move: oc
       .input(canvasCommandMoveInputSchema)
       .output(canvasCommandMoveOutputSchema),
+    patch: oc
+      .input(canvasCommandPatchInputSchema)
+      .output(canvasCommandPatchOutputSchema),
   }),
 });
 

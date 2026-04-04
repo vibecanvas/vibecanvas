@@ -1,5 +1,6 @@
 import type { TCanvasListSuccess } from './cmd.list';
 import type { TCanvasMoveSuccess } from './cmd.move';
+import type { TCanvasPatchSuccess } from './cmd.patch';
 import type { TCanvasQuerySuccess } from './cmd.query';
 import type { TSceneBounds } from './scene-shared';
 
@@ -48,4 +49,10 @@ export function renderCanvasMoveText(result: TCanvasMoveSuccess): string {
   const changedLabel = result.changedCount === 1 ? 'element' : 'elements';
   const matchedLabel = result.matchedCount === 1 ? 'target' : 'targets';
   return `Moved ${result.changedCount} ${changedLabel} from ${result.matchedCount} matched ${matchedLabel} in canvas=${result.canvas.id} name=${JSON.stringify(result.canvas.name)} mode=${result.mode} x=${result.input.x} y=${result.input.y} delta=${JSON.stringify(result.delta)} changedIds=${JSON.stringify(result.changedIds)}\n`;
+}
+
+export function renderCanvasPatchText(result: TCanvasPatchSuccess): string {
+  const changedLabel = result.changedCount === 1 ? 'target' : 'targets';
+  const matchedLabel = result.matchedCount === 1 ? 'target' : 'targets';
+  return `Patched ${result.changedCount} ${changedLabel} from ${result.matchedCount} matched ${matchedLabel} in canvas=${result.canvas.id} name=${JSON.stringify(result.canvas.name)} patch=${JSON.stringify(result.patch)} changedIds=${JSON.stringify(result.changedIds)}\n`;
 }

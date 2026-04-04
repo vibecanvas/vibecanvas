@@ -17,6 +17,15 @@ export { executeCanvasList } from './cmd.list';
 export type { TCanvasMoveInput, TCanvasMoveSuccess, TMoveMode } from './cmd.move';
 export { executeCanvasMove } from './cmd.move';
 
+export type {
+  TCanvasElementPatch,
+  TCanvasGroupPatch,
+  TCanvasPatchEnvelope,
+  TCanvasPatchInput,
+  TCanvasPatchSuccess,
+} from './cmd.patch';
+export { executeCanvasPatch } from './cmd.patch';
+
 export type { TCanvasQueryInput, TCanvasQuerySuccess, TQueryMatch } from './cmd.query';
 export { executeCanvasQuery } from './cmd.query';
 
@@ -24,6 +33,7 @@ export {
   formatCanvasInventoryEntry,
   renderCanvasListText,
   renderCanvasMoveText,
+  renderCanvasPatchText,
   renderCanvasQueryText,
 } from './formatters';
 

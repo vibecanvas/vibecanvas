@@ -63,7 +63,7 @@ Canvas subcommands:
   list      List canvases in the local database
   query     Run structured readonly canvas queries
   move      Move explicit element/group ids deterministically
-  patch     Apply a structured mutation (planned)
+  patch     Patch explicit element/group ids with structured field updates
   group     Group matching elements (planned)
   ungroup   Ungroup a group (planned)
   delete    Delete matching elements (planned)

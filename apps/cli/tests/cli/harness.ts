@@ -172,6 +172,39 @@ export function createRectElement(args: Omit<Partial<TElement>, 'data' | 'style'
   };
 }
 
+export function createTextElement(args: Omit<Partial<TElement>, 'data' | 'style'> & { data?: Partial<Extract<TCanvasDoc['elements'][string]['data'], { type: 'text' }>>; style?: TElementStyle } = {}): TElement {
+  const now = Date.now();
+  return {
+    id: args.id ?? crypto.randomUUID(),
+    x: args.x ?? 0,
+    y: args.y ?? 0,
+    rotation: args.rotation ?? 0,
+    zIndex: args.zIndex ?? 'a0',
+    parentGroupId: args.parentGroupId ?? null,
+    bindings: structuredClone(args.bindings ?? []),
+    locked: args.locked ?? false,
+    createdAt: args.createdAt ?? now,
+    updatedAt: args.updatedAt ?? now,
+    data: {
+      type: 'text',
+      w: 120,
+      h: 40,
+      text: 'hello',
+      originalText: 'hello',
+      fontSize: 16,
+      fontFamily: 'Inter',
+      textAlign: 'left',
+      verticalAlign: 'top',
+      lineHeight: 1.2,
+      link: null,
+      containerId: null,
+      autoResize: false,
+      ...args.data,
+    },
+    style: { backgroundColor: '#ffffff', strokeColor: '#111111', strokeWidth: 1, opacity: 1, ...args.style },
+  };
+}
+
 export function createGroup(args: Partial<TGroup> = {}): TGroup {
   return { id: args.id ?? crypto.randomUUID(), parentGroupId: args.parentGroupId ?? null, zIndex: args.zIndex ?? 'a0', locked: args.locked ?? false, createdAt: args.createdAt ?? Date.now() };
 }

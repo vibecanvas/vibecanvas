@@ -80,7 +80,7 @@ Offline canvas commands (planned):
   list                                         List canvases in the local database
   query (--canvas <id> | --canvas-name <query>) [selectors]
                                                 Run a structured readonly canvas query
-  patch ...                                    Apply a structured mutation
+  patch ...                                    Patch explicit element/group ids with structured field updates
   move ...                                     Move explicit element/group ids deterministically
   group ...                                    Group matching elements
   ungroup ...                                  Ungroup a group
@@ -193,6 +193,12 @@ export async function runCanvas(argv: readonly string[]): Promise<never> {
       throw new Error('runCanvasMove() must exit the process.');
     }
 
+    if (subcommand === 'patch') {
+      const { runCanvasPatch } = await import('./cmd.patch');
+      await runCanvasPatch(argv);
+      throw new Error('runCanvasPatch() must exit the process.');
+    }
+
     printCanvasHelp();
     process.exit(0);
   }
@@ -207,6 +213,12 @@ export async function runCanvas(argv: readonly string[]): Promise<never> {
     const { runCanvasMove } = await import('./cmd.move');
     await runCanvasMove(argv);
     throw new Error('runCanvasMove() must exit the process.');
+  }
+
+  if (subcommand === 'patch') {
+    const { runCanvasPatch } = await import('./cmd.patch');
+    await runCanvasPatch(argv);
+    throw new Error('runCanvasPatch() must exit the process.');
   }
 
   try {

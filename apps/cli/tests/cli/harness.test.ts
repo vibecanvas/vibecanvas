@@ -69,6 +69,7 @@ describe('canvas CLI test harness', () => {
     expect(result.stdout).toContain('list      List canvases in the local database');
     expect(result.stdout).toContain('query     Run structured readonly canvas queries');
     expect(result.stdout).toContain('move      Move explicit element/group ids deterministically');
+    expect(result.stdout).toContain('patch     Patch explicit element/group ids with structured field updates');
     expect(result.stdout).toContain('Any subcommand accepts --help for command-specific usage.');
     expect(result.stdout).toContain('vibecanvas query --help');
   });
@@ -99,6 +100,14 @@ describe('canvas CLI test harness', () => {
     expect(moveHelp.stdout).toContain('--relative');
     expect(moveHelp.stdout).toContain('--absolute');
     expect(moveHelp.stdout).toContain('group ids move their descendant elements');
+
+    const patchHelp = await context.runVibecanvasCli(['canvas', 'patch', '--help']);
+    expectExitCode(patchHelp, 0);
+    expectNoStderr(patchHelp);
+    expect(patchHelp.stdout).toContain('Usage: vibecanvas canvas patch [options]');
+    expect(patchHelp.stdout).toContain('--patch <json>');
+    expect(patchHelp.stdout).toContain('--patch-file <path>');
+    expect(patchHelp.stdout).toContain('--patch-stdin');
   });
 
   test('shows canvas subcommand help even when the canvas prefix is omitted', async () => {
@@ -114,6 +123,11 @@ describe('canvas CLI test harness', () => {
     expectExitCode(moveHelp, 0);
     expectNoStderr(moveHelp);
     expect(moveHelp.stdout).toContain('Usage: vibecanvas canvas move [options]');
+
+    const patchHelp = await context.runVibecanvasCli(['patch', '--help']);
+    expectExitCode(patchHelp, 0);
+    expectNoStderr(patchHelp);
+    expect(patchHelp.stdout).toContain('Usage: vibecanvas canvas patch [options]');
 
     const listHelp = await context.runVibecanvasCli(['list', '--help']);
     expectExitCode(listHelp, 0);
