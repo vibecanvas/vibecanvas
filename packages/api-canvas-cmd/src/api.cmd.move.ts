@@ -1,9 +1,9 @@
 import { executeCanvasMove } from '@vibecanvas/canvas-cmds';
 import { createCanvasCmdContext } from './cmd.context';
 import { rethrowCanvasCmdAsOrpcError } from './cmd.error';
-import { baseCanvasOs } from './orpc';
+import { baseCanvasCmdOs } from './orpc';
 
-const apiCmdMoveCanvas = baseCanvasOs.cmd.move.handler(async ({ input, context }) => {
+const apiCmdMoveCanvas = baseCanvasCmdOs.api.canvasCmd.move.handler(async ({ input, context }) => {
   try {
     return await executeCanvasMove(createCanvasCmdContext(context), input);
   } catch (error) {

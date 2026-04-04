@@ -106,7 +106,7 @@ export async function runCanvasMove(argv: readonly string[]): Promise<never> {
 
   if (discoveredServer) {
     const safeClient = await createOnlineCanvasSafeClient(discoveredServer.port);
-    const [clientError, result] = await safeClient.api.canvas.cmd.move(input);
+    const [clientError, result] = await safeClient.api.canvasCmd.move(input);
 
     if (clientError || !result) {
       const message = clientError instanceof Error ? clientError.message : String(clientError ?? 'canvas move failed');

@@ -212,7 +212,7 @@ It does this in order:
    - `vibecanvas move` -> `vibecanvas canvas move`
 2. run canvas `--db` bootstrap validation early
 3. parse top-level flags
-4. if command is `canvas`, dispatch into `src/canvas-cli/*`
+4. if command is `canvas`, dispatch into `src/plugins/cli/cmd.canvas.ts` + `src/plugins/cli/canvas/*`
 5. otherwise boot the runtime for normal app/server behavior
 
 So:
@@ -236,13 +236,18 @@ This is the long-lived app path.
 Canvas CLI code lives under:
 
 ```text
-src/canvas-cli/
+src/plugins/cli/
   bootstrap.ts
-  local-state.ts
+  canvas.local-state.ts
   cmd.canvas.ts
-  cmd.query.ts
-  cmd.move.ts
-  cmd.patch.ts
+  canvas/
+    cmd.query.ts
+    cmd.move.ts
+    cmd.patch.ts
+    cmd.delete.ts
+    cmd.reorder.ts
+    cmd.group.ts
+    cmd.ungroup.ts
 ```
 
 ### Responsibilities
@@ -255,7 +260,7 @@ Important rule:
 
 This keeps tests deterministic and avoids accidental side effects.
 
-#### `local-state.ts`
+#### `canvas.local-state.ts`
 Builds local, short-lived command state for offline canvas commands.
 
 It creates:
@@ -266,15 +271,15 @@ It creates:
 This file is the local adapter from app CLI -> shared command package.
 
 #### `cmd.canvas.ts`
-Canvas command router.
+Canvas command gateway/router.
 
 It:
 - parses `vibecanvas canvas ...`
 - prints canvas top-level help
-- routes to `list`, `query`, `move`, `patch`
-- prints not-implemented errors for the remaining planned commands
+- routes into `src/plugins/cli/canvas/cmd.*.ts`
+- keeps top-level canvas dispatch centralized
 
-#### `cmd.query.ts`
+#### `canvas/cmd.query.ts`
 Query-specific argv parsing + help + output.
 
 It should:
@@ -284,7 +289,7 @@ It should:
 - print json/text
 - convert thrown command errors into CLI stderr + exit code
 
-#### `cmd.move.ts`
+#### `canvas/cmd.move.ts`
 Move-specific argv parsing + help + output.
 
 It should:
@@ -294,7 +299,7 @@ It should:
 - print json/text
 - convert thrown command errors into CLI stderr + exit code
 
-#### `cmd.patch.ts`
+#### `canvas/cmd.patch.ts`
 Patch-specific argv parsing + help + output.
 
 It should:
@@ -311,7 +316,7 @@ It should:
 Shared behavior belongs in:
 - `@vibecanvas/canvas-cmds`
 
-`apps/cli/src/canvas-cli/*` should only own:
+`apps/cli/src/plugins/cli/cmd.canvas.ts` and `apps/cli/src/plugins/cli/canvas/*` should only own:
 - argv parsing
 - help text
 - stdout/stderr rendering
@@ -398,9 +403,9 @@ Example: `patch`, `group`, `delete`, etc.
 Follow this order:
 
 1. add shared execution to `packages/canvas-cmds`
-2. add/extend local adapter needs in `src/canvas-cli/local-state.ts` only if necessary
-3. add `src/canvas-cli/cmd.<name>.ts`
-4. route it from `src/canvas-cli/cmd.canvas.ts`
+2. add/extend local adapter needs in `src/plugins/cli/canvas.local-state.ts` only if necessary
+3. add `src/plugins/cli/canvas/cmd.<name>.ts`
+4. route it from `src/plugins/cli/cmd.canvas.ts`
 5. add end-to-end tests in `apps/cli/tests/cli/<name>/`
 6. keep help text and error shape stable
 
@@ -408,7 +413,7 @@ Follow this order:
 
 ### Good
 - `main.ts` decides command path
-- `canvas-cli/*` parses args and prints
+- `plugins/cli/cmd.canvas.ts` + `plugins/cli/canvas/*` parse args and print
 - `canvas-cmds` executes shared logic
 - tests spawn the real CLI entrypoint
 

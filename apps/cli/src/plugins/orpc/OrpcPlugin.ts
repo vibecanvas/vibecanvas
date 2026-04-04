@@ -1,4 +1,5 @@
 import { onError } from '@orpc/server';
+import { RPCHandler as FetchRPCHandler } from '@orpc/server/fetch';
 import { RPCHandler } from '@orpc/server/bun-ws';
 import type { IAutomergeService } from '@vibecanvas/automerge-service/IAutomergeService';
 import type { IDbService } from '@vibecanvas/db/IDbService';
@@ -6,6 +7,7 @@ import type { IEventPublisherService } from '@vibecanvas/event-publisher-service
 import type { IFilesystemService } from '@vibecanvas/filesystem-service/IFilesystemService';
 import type { IPtyService } from '@vibecanvas/pty-service/IPtyService';
 import type { IPlugin } from '@vibecanvas/runtime';
+import { baseCanvasCmdOs, canvasCmdHandlers } from '@vibecanvas/api-canvas-cmd/handlers';
 import type { ICliConfig } from '../../config';
 import type { ICliHooks } from '../../hooks';
 import { baseOs } from './orpc.base';
@@ -37,10 +39,42 @@ function createOrpcPlugin(): IPlugin<{ automerge: IAutomergeService; db: IDbServ
           }),
         ],
       });
+      const httpHandler = new FetchRPCHandler(baseCanvasCmdOs.router(canvasCmdHandlers), {
+        interceptors: [
+          onError((error) => {
+            console.error(error);
+          }),
+        ],
+      });
 
       ctx.hooks.wsUpgrade.tap((req) => {
         const url = new URL(req.url);
-        return url.pathname === '/api';
+        const wantsWebSocket = req.headers.get('upgrade')?.toLowerCase() === 'websocket';
+        return wantsWebSocket && url.pathname === '/api';
+      });
+
+      ctx.hooks.httpRequest.tapPromise(async (payload) => {
+        if (payload.response) return payload;
+
+        const url = new URL(payload.request.url);
+        if (!url.pathname.startsWith('/rpc/')) return payload;
+
+        const forwardedUrl = new URL(payload.request.url);
+        forwardedUrl.pathname = url.pathname.slice('/rpc'.length) || '/';
+        const request = new Request(forwardedUrl, payload.request);
+        const result = await httpHandler.handle(request, {
+          context: {
+            automerge,
+            db,
+            eventPublisher,
+            filesystem,
+            pty,
+            requestId: crypto.randomUUID(),
+          },
+        });
+
+        if (!result.matched) return payload;
+        return { request: payload.request, response: result.response };
       });
 
       ctx.hooks.wsMessage.tap((ws, message) => {

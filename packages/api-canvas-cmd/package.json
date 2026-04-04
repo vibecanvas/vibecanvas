@@ -1,5 +1,5 @@
 {
-  "name": "@vibecanvas/api-canvas",
+  "name": "@vibecanvas/api-canvas-cmd",
   "version": "0.0.1",
   "private": true,
   "type": "module",
@@ -9,7 +9,11 @@
   "dependencies": {
     "@orpc/contract": "catalog:",
     "@orpc/server": "catalog:",
+    "@vibecanvas/automerge-service": "workspace:*",
+    "@vibecanvas/canvas-cmds": "workspace:*",
     "@vibecanvas/db": "workspace:*",
+    "@vibecanvas/event-publisher-service": "workspace:*",
+    "@vibecanvas/shell": "workspace:*",
     "zod": "catalog:"
   }
 }

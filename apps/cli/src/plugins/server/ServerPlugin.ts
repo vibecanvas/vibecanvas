@@ -39,7 +39,7 @@ function createServerPlugin(): IPlugin<{ eventPublisher: IEventPublisherService 
 
         bunServer = serveWithPortFallback<TOrpcWebSocketData>((port) => Bun.serve<TOrpcWebSocketData>({
           port,
-          fetch(req, server) {
+          async fetch(req, server) {
             const url = new URL(req.url);
             const upgraded = ctx.hooks.wsUpgrade.call(req);
 
@@ -57,7 +57,10 @@ function createServerPlugin(): IPlugin<{ eventPublisher: IEventPublisherService 
               return new Response('Upgrade failed', { status: 500 });
             }
 
-            void ctx.hooks.httpRequest.promise(req);
+            const httpHookResult = await ctx.hooks.httpRequest.promise({ request: req, response: null });
+            if (httpHookResult.response) {
+              return httpHookResult.response;
+            }
 
             const db = ctx.services.get('db');
             if (!db) {

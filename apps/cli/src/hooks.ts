@@ -2,12 +2,17 @@ import { AsyncSeriesHook, AsyncWaterfallHook, SyncExitHook, SyncHook } from '@vi
 import type { IPluginContext, IServiceMap } from '@vibecanvas/runtime';
 import type { ICliConfig } from './config';
 
+export type THttpRequestHookPayload = {
+  request: Request;
+  response: Response | null;
+};
+
 export interface ICliHooks {
   boot: AsyncSeriesHook<[]>;
   ready: SyncHook<[]>;
   shutdown: AsyncSeriesHook<[]>;
 
-  httpRequest: AsyncWaterfallHook<Request>;
+  httpRequest: AsyncWaterfallHook<THttpRequestHookPayload>;
 
   wsUpgrade: SyncExitHook<[Request]>;
   wsOpen: SyncHook<[WebSocket]>;
@@ -24,7 +29,7 @@ export function createCliHooks(): ICliHooks {
     ready: new SyncHook<[]>(),
     shutdown: new AsyncSeriesHook<[]>(),
 
-    httpRequest: new AsyncWaterfallHook<Request>(),
+    httpRequest: new AsyncWaterfallHook<THttpRequestHookPayload>(),
 
     wsUpgrade: new SyncExitHook<[Request]>(),
     wsOpen: new SyncHook<[WebSocket]>(),

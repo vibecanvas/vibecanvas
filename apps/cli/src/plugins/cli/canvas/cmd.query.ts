@@ -137,7 +137,7 @@ export async function runCanvasQuery(argv: readonly string[]): Promise<never> {
 
   if (discoveredServer) {
     const safeClient = await createOnlineCanvasSafeClient(discoveredServer.port);
-    const [clientError, result] = await safeClient.api.canvas.cmd.query({
+    const [clientError, result] = await safeClient.api.canvasCmd.query({
       selector,
       output: outputMode,
       omitData: Boolean(values.omitdata),

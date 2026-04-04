@@ -175,7 +175,7 @@ export async function runCanvasPatch(argv: readonly string[]): Promise<never> {
 
   if (discoveredServer) {
     const safeClient = await createOnlineCanvasSafeClient(discoveredServer.port);
-    const [clientError, result] = await safeClient.api.canvas.cmd.patch({
+    const [clientError, result] = await safeClient.api.canvasCmd.patch({
       canvasId,
       canvasNameQuery,
       ids,

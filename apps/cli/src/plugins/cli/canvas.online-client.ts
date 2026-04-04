@@ -1,16 +1,19 @@
-import { createORPCClient, createSafeClient } from '@orpc/client';
-import { RPCLink } from '@orpc/client/websocket';
-import { apiContract } from '@vibecanvas/core-contract';
+import { createORPCClient, createSafeClient, type SafeClient } from '@orpc/client';
+import { RPCLink } from '@orpc/client/fetch';
+import type { ContractRouterClient } from '@orpc/contract';
+import { canvasCmdApiContract } from '@vibecanvas/api-canvas-cmd/contract';
 
-function resolveRpcWebsocketUrl(port: number): string {
-  return `ws://127.0.0.1:${port}/api`;
+type TCanvasCmdClient = ContractRouterClient<typeof canvasCmdApiContract>;
+type TSafeCanvasCmdClient = SafeClient<TCanvasCmdClient>;
+
+function resolveCanvasCmdRpcUrl(port: number): string {
+  return `http://127.0.0.1:${port}/rpc`;
 }
 
-function createCanvasSafeClient(port: number) {
-  const websocket = new WebSocket(resolveRpcWebsocketUrl(port));
-  const link = new RPCLink({ websocket });
-  const client = createORPCClient<typeof apiContract>(link);
-  return createSafeClient(client);
+function createCanvasSafeClient(port: number): TSafeCanvasCmdClient {
+  const link = new RPCLink({ url: resolveCanvasCmdRpcUrl(port) });
+  const client = createORPCClient<typeof canvasCmdApiContract>(link);
+  return createSafeClient(client) as TSafeCanvasCmdClient;
 }
 
-export { createCanvasSafeClient, resolveRpcWebsocketUrl };
+export { createCanvasSafeClient, resolveCanvasCmdRpcUrl };

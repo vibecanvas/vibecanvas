@@ -145,6 +145,7 @@ Use the leaf files for execution history and local context.
 - [ ]: [E12] - https://github.com/superradcompany/microsandbox
 - [ ]: [E13](e/E13.md) - Research Pluginsystem for server
 - [ ]: [E14] - do we need packages/functional-core
+- [ ]: [E15](e/E15.md) - canvas UI extensions: sideloadable community widgets and ArrowJS exploration
 
 ## D irections
 - [ ]: [D1] - AI can edit the canvas directly

@@ -1,6 +1,6 @@
 import type { TCanvasDoc } from '@vibecanvas/shell/automerge/index';
 import type { TCanvasCmdContext } from '@vibecanvas/canvas-cmds';
-import type { TCanvasApiContext } from './types';
+import type { TCanvasCmdApiContext } from './types';
 
 async function waitForCanvasHandleDoc(args: {
   automergeUrl: string;
@@ -26,7 +26,7 @@ async function waitForCanvasHandleDoc(args: {
   throw new Error(`Timed out waiting for canvas doc '${args.automergeUrl}': ${String(lastError)}`);
 }
 
-function createCanvasCmdContext(context: TCanvasApiContext): TCanvasCmdContext {
+function createCanvasCmdContext(context: TCanvasCmdApiContext): TCanvasCmdContext {
   return {
     async listCanvasRows() {
       return context.db.listCanvas();
