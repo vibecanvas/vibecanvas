@@ -6,6 +6,7 @@ import type { ICliConfig } from './config';
 import { bootCliRuntime, createCliHooks, shutdownCliRuntime } from './hooks';
 import { parseCliArgv } from './parse-argv';
 import { createCliPlugin } from './plugins/cli/CliPlugin';
+import { createOrpcPlugin } from './plugins/orpc/OrpcPlugin';
 import { setupServices } from './setup-services';
 import { setupSignals } from './setup-signals';
 import { createServerPlugin } from './plugins/server/ServerPlugin';
@@ -19,7 +20,7 @@ const config = buildCliConfig(parsedArgv);
 const { services } = setupServices(config);
 
 const runtime = createRuntime<any, ICliConfig>({
-  plugins: [createCliPlugin(), createServerPlugin()],
+  plugins: [createCliPlugin(), createOrpcPlugin(), createServerPlugin()],
   services,
   hooks: createCliHooks(),
   config,

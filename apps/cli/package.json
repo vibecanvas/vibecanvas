@@ -7,10 +7,14 @@
     "./*": "./src/*"
   },
   "scripts": {
-    "dev-server": "NODE_ENV=development bun run --define VIBECANVAS_VERSION='\"0.0.0\"' --define VIBECANVAS_COMPILED=false --VIBECANVAS_CHANNEL='\"dev\"' --watch ./src/main.ts",
+    "dev": "NODE_ENV=development bun run --define VIBECANVAS_VERSION='\"0.0.0\"' --define VIBECANVAS_COMPILED=false --VIBECANVAS_CHANNEL='\"dev\"' --watch ./src/main.ts",
     "test": "bun test"
   },
   "dependencies": {
+    "@orpc/contract": "catalog:",
+    "@orpc/server": "catalog:",
+    "@vibecanvas/api-canvas": "workspace:*",
+    "@vibecanvas/api-file": "workspace:*",
     "@vibecanvas/db": "workspace:*",
     "@vibecanvas/runtime": "workspace:*",
     "@vibecanvas/shared-functions": "workspace:*",

@@ -14,7 +14,6 @@ export interface ICliHooks {
   wsMessage: SyncHook<[WebSocket, string | Buffer]>;
   wsClose: SyncHook<[WebSocket]>;
 
-  registerRoutes: SyncHook<[]>;
   registerCommands: SyncHook<[]>;
 }
 
@@ -31,14 +30,12 @@ export function createCliHooks(): ICliHooks {
     wsMessage: new SyncHook<[WebSocket, string | Buffer]>(),
     wsClose: new SyncHook<[WebSocket]>(),
 
-    registerRoutes: new SyncHook<[]>(),
     registerCommands: new SyncHook<[]>(),
   };
 }
 
 export async function bootCliRuntime(ctx: IPluginContext<IServiceMap, ICliHooks, ICliConfig>) {
   await ctx.hooks.boot.promise();
-  ctx.hooks.registerRoutes.call();
   ctx.hooks.registerCommands.call();
   ctx.hooks.ready.call();
 }
