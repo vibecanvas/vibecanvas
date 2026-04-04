@@ -1,9 +1,8 @@
 import { existsSync, mkdirSync } from 'fs';
 import { txConfigPath } from '@vibecanvas/core/vibecanvas-config/tx.config-path';
-import type { IDbHandle, IResolvedDbConfig } from './interface';
-import { createSqliteDb } from './sqlite';
+import type { IDbConfig } from '../interface';
 
-export function resolveConfiguredDb(): IResolvedDbConfig {
+function fxResolveConfiguredDb(): IDbConfig {
   const [config, configError] = txConfigPath({ fs: { existsSync, mkdirSync } });
   if (configError || !config) {
     console.error(configError);
@@ -18,6 +17,4 @@ export function resolveConfiguredDb(): IResolvedDbConfig {
   };
 }
 
-export function openConfiguredDb(): IDbHandle {
-  return createSqliteDb(resolveConfiguredDb());
-}
+export { fxResolveConfiguredDb };

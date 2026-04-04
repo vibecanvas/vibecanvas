@@ -2,7 +2,7 @@ import { dirname, join, resolve } from 'path';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'fs';
 import type { Database } from 'bun:sqlite';
 import { migrate } from 'drizzle-orm/bun-sqlite/migrator';
-import { getEmbeddedMigrationPath, listEmbeddedMigrationFiles } from './embedded-migrations';
+import { getEmbeddedMigrationPath, listEmbeddedMigrationFiles } from '../embedded-migrations';
 
 const MIGRATIONS_TABLE = '__drizzle_migrations';
 const legacyBootstrapTables = ['automerge_repo_data', 'canvas', 'files', 'filetrees'] as const;
@@ -158,10 +158,4 @@ function fxRunDatabaseMigrations(args: TArgs): void {
   if (!args.silent) console.log('[DB] Migrations complete');
 }
 
-export default fxRunDatabaseMigrations;
-export {
-  buildMigrationsFolderCandidates,
-  readMigrationJournalEntries,
-  resolveMigrationsFolder,
-  shouldBootstrapLegacyMigrationState,
-};
+export { buildMigrationsFolderCandidates, fxRunDatabaseMigrations, readMigrationJournalEntries, resolveMigrationsFolder, shouldBootstrapLegacyMigrationState };
