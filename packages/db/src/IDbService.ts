@@ -48,6 +48,9 @@ export interface IDbService extends IService, IStoppableService {
   listCanvas(): TCanvasRecord[];
   getFullCanvas(id: string): TGetFullCanvasResult | null;
   updateCanvas(args: TUpdateCanvasArgs): TCanvasRecord | null;
+  getFileTree(id: string): TFileTreeRecord | null;
+  updateFileTree(args: TUpdateFileTreeArgs): TFileTreeRecord | null;
+  deleteFileTree(id: string): boolean;
   createFile(args: TCreateFileArgs): TFileRecord;
   getFile(args: TGetFileArgs): TFileRecord | null;
   deleteFile(id: string): void;
@@ -62,4 +65,5 @@ export type {
   TGetFileArgs,
   TGetFullCanvasResult,
   TUpdateCanvasArgs,
+  TUpdateFileTreeArgs,
 };

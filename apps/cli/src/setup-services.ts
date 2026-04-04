@@ -3,6 +3,8 @@ import { createSqliteDb } from '@vibecanvas/db/DbServiceBunSqlite';
 import type { IDbService } from '@vibecanvas/db/IDbService';
 import { EventPublisherService } from '@vibecanvas/event-publisher/EventPublisherService';
 import type { IEventPublisherService } from '@vibecanvas/event-publisher/IEventPublisherService';
+import { FilesystemServiceNode } from '@vibecanvas/filesystem-service/FilesystemServiceNode';
+import type { IFilesystemService } from '@vibecanvas/filesystem-service/IFilesystemService';
 import { PtyServiceBunPty } from '@vibecanvas/pty-service/PtyServiceBunPty';
 import type { IPtyService } from '@vibecanvas/pty-service/IPtyService';
 import { createServiceRegistry } from '@vibecanvas/runtime';
@@ -12,6 +14,7 @@ declare module '@vibecanvas/runtime' {
   interface IServiceMap {
     db: IDbService;
     eventPublisher: IEventPublisherService;
+    filesystem: IFilesystemService;
     pty: IPtyService;
   }
 }
@@ -30,10 +33,12 @@ function setupServices(config: ICliConfig) {
       cacheDir: config.cachePath,
       silentMigrations: process.env.VIBECANVAS_SILENT_DB_MIGRATIONS === '1',
     });
+    const filesystemService = new FilesystemServiceNode(eventPublisher);
     const ptyService = new PtyServiceBunPty();
 
     sqlite = dbService.sqlite;
     services.provide('db', dbService);
+    services.provide('filesystem', filesystemService);
     services.provide('pty', ptyService);
   }
 

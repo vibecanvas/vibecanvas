@@ -1,0 +1,16 @@
+{
+  "name": "@vibecanvas/api-filesystem",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/contract.ts",
+    "./*": "./src/*.ts"
+  },
+  "dependencies": {
+    "@orpc/contract": "catalog:",
+    "@orpc/server": "catalog:",
+    "@vibecanvas/filesystem-service": "workspace:*",
+    "zod": "catalog:"
+  }
+}

@@ -9,9 +9,11 @@ import type {
   TCanvasRecord,
   TCreateFileArgs,
   TFileRecord,
+  TFileTreeRecord,
   TGetFileArgs,
   TGetFullCanvasResult,
   TUpdateCanvasArgs,
+  TUpdateFileTreeArgs,
 } from './IDbService';
 import * as schema from './schema';
 
@@ -80,6 +82,39 @@ export class DbServiceBunSqlite implements IDbService {
       .all();
 
     return result[0] ?? null;
+  }
+
+  getFileTree(id: string): TFileTreeRecord | null {
+    return this.drizzle.query.filetrees.findFirst({
+      where: eq(schema.filetrees.id, id),
+    }).sync() ?? null;
+  }
+
+  updateFileTree(args: TUpdateFileTreeArgs): TFileTreeRecord | null {
+    const updateData: Partial<typeof schema.filetrees.$inferInsert> = {};
+    if (args.title !== undefined) updateData.title = args.title;
+    if (args.path !== undefined) updateData.path = args.path;
+    if (args.locked !== undefined) updateData.locked = args.locked;
+    if (args.glob_pattern !== undefined) updateData.glob_pattern = args.glob_pattern;
+    updateData.updated_at = new Date();
+
+    const result = this.drizzle
+      .update(schema.filetrees)
+      .set(updateData)
+      .where(eq(schema.filetrees.id, args.id))
+      .returning()
+      .all();
+
+    return result[0] ?? null;
+  }
+
+  deleteFileTree(id: string): boolean {
+    const result = this.drizzle
+      .delete(schema.filetrees)
+      .where(eq(schema.filetrees.id, id))
+      .returning({ id: schema.filetrees.id })
+      .all();
+    return result.length > 0;
   }
 
   createFile(args: TCreateFileArgs): TFileRecord {

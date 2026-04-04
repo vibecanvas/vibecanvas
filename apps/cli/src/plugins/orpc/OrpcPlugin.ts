@@ -2,6 +2,7 @@ import { onError } from '@orpc/server';
 import { RPCHandler } from '@orpc/server/bun-ws';
 import type { IDbService } from '@vibecanvas/db/IDbService';
 import type { IEventPublisherService } from '@vibecanvas/event-publisher/IEventPublisherService';
+import type { IFilesystemService } from '@vibecanvas/filesystem-service/IFilesystemService';
 import type { IPtyService } from '@vibecanvas/pty-service/IPtyService';
 import type { IPlugin } from '@vibecanvas/runtime';
 import type { ICliConfig } from '../../config';
@@ -15,7 +16,7 @@ type TOrpcWebSocketData = {
   requestId: string;
 };
 
-function createOrpcPlugin(): IPlugin<{ db: IDbService; eventPublisher: IEventPublisherService; pty: IPtyService }, ICliHooks, ICliConfig> {
+function createOrpcPlugin(): IPlugin<{ db: IDbService; eventPublisher: IEventPublisherService; filesystem: IFilesystemService; pty: IPtyService }, ICliHooks, ICliConfig> {
   return {
     name: 'orpc',
     apply(ctx) {
@@ -25,6 +26,7 @@ function createOrpcPlugin(): IPlugin<{ db: IDbService; eventPublisher: IEventPub
 
       const db = ctx.services.require('db');
       const eventPublisher = ctx.services.require('eventPublisher');
+      const filesystem = ctx.services.require('filesystem');
       const pty = ctx.services.require('pty');
       const handler = new RPCHandler(baseOs.router(router), {
         interceptors: [
@@ -47,6 +49,7 @@ function createOrpcPlugin(): IPlugin<{ db: IDbService; eventPublisher: IEventPub
           context: {
             db,
             eventPublisher,
+            filesystem,
             pty,
             requestId: socket.data.requestId,
           },

@@ -22,11 +22,14 @@
         "@orpc/server": "catalog:",
         "@vibecanvas/api-canvas": "workspace:*",
         "@vibecanvas/api-file": "workspace:*",
+        "@vibecanvas/api-filesystem": "workspace:*",
+        "@vibecanvas/api-filetree": "workspace:*",
         "@vibecanvas/api-notification": "workspace:*",
         "@vibecanvas/api-pty": "workspace:*",
         "@vibecanvas/automerge": "workspace:*",
         "@vibecanvas/db": "workspace:*",
         "@vibecanvas/event-publisher": "workspace:*",
+        "@vibecanvas/filesystem-service": "workspace:*",
         "@vibecanvas/pty-service": "workspace:*",
         "@vibecanvas/runtime": "workspace:*",
         "@vibecanvas/shared-functions": "workspace:*",
@@ -143,6 +146,27 @@
         "@orpc/server": "catalog:",
         "@vibecanvas/core": "workspace:*",
         "@vibecanvas/db": "workspace:*",
+        "zod": "catalog:",
+      },
+    },
+    "packages/api-filesystem": {
+      "name": "@vibecanvas/api-filesystem",
+      "version": "0.0.1",
+      "dependencies": {
+        "@orpc/contract": "catalog:",
+        "@orpc/server": "catalog:",
+        "@vibecanvas/filesystem-service": "workspace:*",
+        "zod": "catalog:",
+      },
+    },
+    "packages/api-filetree": {
+      "name": "@vibecanvas/api-filetree",
+      "version": "0.0.1",
+      "dependencies": {
+        "@orpc/contract": "catalog:",
+        "@orpc/server": "catalog:",
+        "@vibecanvas/db": "workspace:*",
+        "@vibecanvas/event-publisher": "workspace:*",
         "zod": "catalog:",
       },
     },
@@ -924,6 +948,10 @@
     "@vibecanvas/api-canvas": ["@vibecanvas/api-canvas@workspace:packages/api-canvas"],
 
     "@vibecanvas/api-file": ["@vibecanvas/api-file@workspace:packages/api-file"],
+
+    "@vibecanvas/api-filesystem": ["@vibecanvas/api-filesystem@workspace:packages/api-filesystem"],
+
+    "@vibecanvas/api-filetree": ["@vibecanvas/api-filetree@workspace:packages/api-filetree"],
 
     "@vibecanvas/api-notification": ["@vibecanvas/api-notification@workspace:packages/api-notification"],
 
