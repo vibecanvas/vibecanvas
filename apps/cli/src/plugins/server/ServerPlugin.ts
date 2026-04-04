@@ -1,9 +1,11 @@
+import type { IEventPublisherService } from '@vibecanvas/event-publisher/IEventPublisherService';
 import type { IPlugin } from '@vibecanvas/runtime';
 import type { ICliConfig } from '../../config';
 import type { ICliHooks } from '../../hooks';
+import { checkForUpdateOnBoot } from './check-update';
 import type { TOrpcWebSocketData } from '../orpc/OrpcPlugin';
 
-function createServerPlugin(): IPlugin<{}, ICliHooks, ICliConfig> {
+function createServerPlugin(): IPlugin<{ eventPublisher: IEventPublisherService }, ICliHooks, ICliConfig> {
   return {
     name: 'server',
     apply(ctx) {
@@ -71,6 +73,9 @@ function createServerPlugin(): IPlugin<{}, ICliHooks, ICliConfig> {
         if (!bunServer) return;
 
         console.log(`Server listening on http://localhost:${bunServer.port}`);
+
+        const eventPublisher = ctx.services.require('eventPublisher');
+        checkForUpdateOnBoot(ctx.config, eventPublisher);
       });
 
       ctx.hooks.shutdown.tapPromise(async () => {

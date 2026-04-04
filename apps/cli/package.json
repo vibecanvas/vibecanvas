@@ -16,6 +16,7 @@
     "@vibecanvas/automerge": "workspace:*",
     "@vibecanvas/api-canvas": "workspace:*",
     "@vibecanvas/api-file": "workspace:*",
+    "@vibecanvas/api-notification": "workspace:*",
     "@vibecanvas/api-pty": "workspace:*",
     "@vibecanvas/db": "workspace:*",
     "@vibecanvas/event-publisher": "workspace:*",

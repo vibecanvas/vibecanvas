@@ -22,6 +22,7 @@
         "@orpc/server": "catalog:",
         "@vibecanvas/api-canvas": "workspace:*",
         "@vibecanvas/api-file": "workspace:*",
+        "@vibecanvas/api-notification": "workspace:*",
         "@vibecanvas/api-pty": "workspace:*",
         "@vibecanvas/automerge": "workspace:*",
         "@vibecanvas/db": "workspace:*",
@@ -142,6 +143,16 @@
         "@orpc/server": "catalog:",
         "@vibecanvas/core": "workspace:*",
         "@vibecanvas/db": "workspace:*",
+        "zod": "catalog:",
+      },
+    },
+    "packages/api-notification": {
+      "name": "@vibecanvas/api-notification",
+      "version": "0.0.1",
+      "dependencies": {
+        "@orpc/contract": "catalog:",
+        "@orpc/server": "catalog:",
+        "@vibecanvas/event-publisher": "workspace:*",
         "zod": "catalog:",
       },
     },
@@ -904,6 +915,8 @@
     "@vibecanvas/api-canvas": ["@vibecanvas/api-canvas@workspace:packages/api-canvas"],
 
     "@vibecanvas/api-file": ["@vibecanvas/api-file@workspace:packages/api-file"],
+
+    "@vibecanvas/api-notification": ["@vibecanvas/api-notification@workspace:packages/api-notification"],
 
     "@vibecanvas/api-pty": ["@vibecanvas/api-pty@workspace:packages/api-pty"],
 

@@ -503,4 +503,4 @@ async function txCmdUpgrade(args: TRunUpgradeArgs): Promise<never> {
   process.exit(1);
 }
 
-export { txCmdUpgrade };
+export { checkForUpgrade, txCmdUpgrade };
