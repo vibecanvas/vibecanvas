@@ -9,5 +9,5 @@
     },
     "types": ["bun-types"]
   },
-  "include": ["src", "../../global.d.ts"]
+  "include": ["src", "tests", "../../global.d.ts"]
 }
