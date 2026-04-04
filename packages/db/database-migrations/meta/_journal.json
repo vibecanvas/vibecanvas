@@ -67,9 +67,9 @@
     },
     {
       "idx": 9,
-      "version": "7",
-      "when": 1774900000000,
-      "tag": "0009_remove_chats",
+      "version": "6",
+      "when": 1775301905121,
+      "tag": "0009_graceful_the_phantom",
       "breakpoints": true
     }
   ]

@@ -6,6 +6,10 @@
   "exports": {
     "./*": "./src/*.ts"
   },
+  "scripts": {
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "bun src/database/migrate.ts"
+  },
   "dependencies": {
     "@vibecanvas/runtime": "workspace:*",
     "@vibecanvas/shared-functions": "workspace:*",

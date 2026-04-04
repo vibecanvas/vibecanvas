@@ -2,7 +2,6 @@ import { Database } from 'bun:sqlite';
 import { drizzle } from 'drizzle-orm/bun-sqlite';
 import type { BunSQLiteDatabase } from 'drizzle-orm/bun-sqlite';
 import { fxRunDatabaseMigrations } from './core/fx.migrations';
-import { fxResolveConfiguredDb } from './core/fx.resolve-config';
 import type { IDbConfig } from './interface';
 import type { IDbService } from './IDbService';
 import * as schema from './schema';
@@ -47,8 +46,4 @@ export class DbServiceBunSqlite implements IDbService {
 
 export function createSqliteDb(config: IDbConfig): DbServiceBunSqlite {
   return new DbServiceBunSqlite(config);
-}
-
-export function createConfiguredSqliteDb(): DbServiceBunSqlite {
-  return new DbServiceBunSqlite(fxResolveConfiguredDb());
 }

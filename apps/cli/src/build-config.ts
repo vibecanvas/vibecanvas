@@ -15,6 +15,7 @@ function buildCliConfig(parsed: TCliParsedArgv): IConfig {
     compiled,
     version: process.env.VIBECANVAS_VERSION ?? '0.0.0',
     command: parsed.command,
+    subcommand: parsed.subcommand,
     rawArgv: parsed.rawArgv,
     argv: parsed.argv,
     port: parsed.port ?? getDefaultPort(compiled),

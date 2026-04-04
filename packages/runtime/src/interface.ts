@@ -31,7 +31,8 @@ export interface IConfig {
   dev: boolean;
   compiled: boolean;
   version: string;
-  command: 'serve' | 'canvas' | 'upgrade';
+  command: 'serve' | 'canvas' | 'upgrade' | 'unknown';
+  subcommand?: string;
   rawArgv: string[];
   argv: string[];
   port?: number;

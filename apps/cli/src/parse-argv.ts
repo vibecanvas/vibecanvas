@@ -1,6 +1,6 @@
 import { parseArgs } from 'util';
 
-type TCliCommand = 'serve' | 'canvas' | 'upgrade';
+type TCliCommand = 'serve' | 'canvas' | 'upgrade' | 'unknown';
 
 type TCliParsedArgv = {
   rawArgv: string[];
@@ -17,7 +17,10 @@ type TCliParsedArgv = {
 function getDefaultCommand(subcommand: string | undefined): TCliCommand {
   if (subcommand === 'canvas') return 'canvas';
   if (subcommand === 'upgrade') return 'upgrade';
-  return 'serve';
+  if (subcommand === undefined || /^\d+$/.test(subcommand)) return 'serve';
+  if (subcommand === 'serve') return 'serve';
+  if (subcommand.startsWith('-')) return 'serve';
+  return 'unknown';
 }
 
 function parsePort(value: string | undefined): number | undefined {
