@@ -1,6 +1,8 @@
 import { parseArgs } from 'node:util';
 import { CanvasCmdError, REORDER_ACTIONS, executeCanvasReorder, renderCanvasReorderText, type TReorderAction } from '@vibecanvas/canvas-cmds';
-import { createLocalCanvasState } from '../plugins/cli/canvas.local-state';
+import { buildCliConfig } from '../../../build-config';
+import { parseCliArgv } from '../../../parse-argv';
+import { createLocalCanvasState } from '../canvas.local-state';
 
 type TReorderJsonError = {
   ok: false;
@@ -83,7 +85,9 @@ export async function runCanvasReorder(argv: readonly string[]): Promise<never> 
     process.exit(0);
   }
 
-  const state = createLocalCanvasState(argv);
+  const parsed = parseCliArgv(argv);
+  const config = buildCliConfig(parsed);
+  const state = createLocalCanvasState(config);
 
   try {
     const result = await executeCanvasReorder(state.context, {

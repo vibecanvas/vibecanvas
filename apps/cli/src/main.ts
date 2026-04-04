@@ -3,7 +3,7 @@ import { parseArgs } from 'node:util';
 import { createRuntime } from '@vibecanvas/runtime';
 import type { IService, IStoppableService } from '@vibecanvas/runtime';
 import { buildCliConfig } from './build-config';
-import { resolveCanvasCliBootstrap } from './canvas-cli/bootstrap';
+import { resolveCanvasCliBootstrap } from './plugins/cli/bootstrap';
 import type { ICliConfig } from './config';
 import { bootCliRuntime, createCliHooks, shutdownCliRuntime } from './hooks';
 import { parseCliArgv } from './parse-argv';
@@ -141,7 +141,7 @@ async function main(): Promise<void> {
   const subcommand = positionals[2];
 
   if (subcommand === 'canvas') {
-    const { runCanvas } = await import('./canvas-cli/cmd.canvas');
+    const { runCanvas } = await import('./plugins/cli/cmd.canvas');
     await runCanvas(argv);
     return;
   }

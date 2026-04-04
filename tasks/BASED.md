@@ -108,7 +108,6 @@ Use the leaf files for execution history and local context.
 - [x]: [A13](a/A13.md) - canvas CLI: `ungroup` command
 - [x]: [A14](a/A14.md) - canvas CLI: `delete` command
 - [x]: [A15](a/A15.md) - canvas CLI: `reorder` command
-- [ ]: [A16](a/A16.md) - canvas CLI: `render` command
 - [ ]: [A17] - rect dbl click -> enter edit mode (inline text)
 - [x]: [A18] - lift cmds to be api to allow live changes via crdt
 
@@ -131,6 +130,8 @@ Use the leaf files for execution history and local context.
 - [x]: [S18](s/S18.md) - cli server: migrate http file/static/spa serving from apps/server
 - [x]: [S19](s/S19.md) - cli orpc: expose db events stream and remove apps/server api.db
 - [x]: [S20](s/S20.md) - cli server: restore compiled-mode port fallback when preferred port is busy
+- [ ]: [S21] remove apps/server and packages/functional-core and shell
+- [ ]: [S22] fix build and ci tests to use new apps/cli
 
 ## E xplorations
 - [ ]: [E1](e/E1.md) - Tauri Research
