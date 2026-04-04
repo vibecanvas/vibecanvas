@@ -87,8 +87,8 @@ Use the leaf files for execution history and local context.
 - [x]: [B10](b/B10.md) - style menu: drag then style jumps selection back to old position
 - [x]: [B11] - terminal after resize is not focuable anymore
 - [x]: [B12](b/B12.md) - terminal: ctrl+c echoes ^C but does not interrupt process
-- [ ]: [B13](b/B13.md) - canvas CLI: real dev db can list canvases that query/move/patch cannot open
-- [ ]: [B14](b/B14.md) - canvas CLI: `group` and `ungroup` still return not implemented and fall back to generic help in `apps/cli/src/main.ts`
+- [x]: [B13](b/B13.md) - canvas CLI: real dev db can list canvases that query/move/patch cannot open
+- [x]: [B14](b/B14.md) - canvas CLI: `group` and `ungroup` still return not implemented and fall back to generic help in `apps/cli/src/main.ts`
 - [ ]: [B15](b/B15.md) - canvas query subtree-not-found error prints canvas name as `undefined`
 - [ ]: [B16](b/B16.md) - canvas CLI eagerly imports missing websocket adapter and crashes before any canvas command/help runs
 

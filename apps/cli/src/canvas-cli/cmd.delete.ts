@@ -1,6 +1,6 @@
 import { parseArgs } from 'node:util';
 import { CanvasCmdError, executeCanvasDelete, renderCanvasDeleteText, type TDeleteEffectsMode } from '@vibecanvas/canvas-cmds';
-import { createLocalCanvasState } from './local-state';
+import { createLocalCanvasState } from '../plugins/cli/canvas.local-state';
 
 type TDeleteJsonError = {
   ok: false;
