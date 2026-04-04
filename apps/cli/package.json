@@ -17,6 +17,7 @@
     "@vibecanvas/api-canvas": "workspace:*",
     "@vibecanvas/api-file": "workspace:*",
     "@vibecanvas/db": "workspace:*",
+    "@vibecanvas/event-publisher": "workspace:*",
     "@vibecanvas/runtime": "workspace:*",
     "@vibecanvas/shared-functions": "workspace:*",
     "@vibecanvas/tapable": "workspace:*"

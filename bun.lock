@@ -24,6 +24,7 @@
         "@vibecanvas/api-file": "workspace:*",
         "@vibecanvas/automerge": "workspace:*",
         "@vibecanvas/db": "workspace:*",
+        "@vibecanvas/event-publisher": "workspace:*",
         "@vibecanvas/runtime": "workspace:*",
         "@vibecanvas/shared-functions": "workspace:*",
         "@vibecanvas/tapable": "workspace:*",
@@ -223,6 +224,16 @@
         "drizzle-kit": "catalog:",
         "drizzle-orm": "catalog:",
         "drizzle-zod": "catalog:",
+        "zod": "catalog:",
+      },
+    },
+    "packages/event-publisher": {
+      "name": "@vibecanvas/event-publisher",
+      "version": "0.0.1",
+      "dependencies": {
+        "@orpc/server": "catalog:",
+        "@vibecanvas/core-contract": "workspace:*",
+        "@vibecanvas/runtime": "workspace:*",
         "zod": "catalog:",
       },
     },
@@ -885,6 +896,8 @@
     "@vibecanvas/core-contract": ["@vibecanvas/core-contract@workspace:packages/core-contract"],
 
     "@vibecanvas/db": ["@vibecanvas/db@workspace:packages/db"],
+
+    "@vibecanvas/event-publisher": ["@vibecanvas/event-publisher@workspace:packages/event-publisher"],
 
     "@vibecanvas/frontend": ["@vibecanvas/frontend@workspace:apps/frontend"],
 
