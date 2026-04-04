@@ -66,7 +66,7 @@ function buildMigrationsFolderCandidates(dataDir: string, cacheDir: string, args
   const isCompiled = args.isCompiled ?? process.env.VIBECANVAS_COMPILED === 'true';
   const embeddedFolder = args.embeddedFolder ?? fxExtractEmbeddedMigrations(cacheDir);
   const execPath = args.execPath ?? process.execPath;
-  const sourceDir = args.sourceDir ?? resolve(import.meta.dir, '..', '..', '..', 'imperative-shell', 'database-migrations');
+  const sourceDir = args.sourceDir ?? resolve(import.meta.dir, '..', '..', 'database-migrations');
   const sourceTreeFolder = isCompiled ? null : sourceDir;
 
   return [
