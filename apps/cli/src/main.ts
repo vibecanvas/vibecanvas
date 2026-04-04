@@ -2,6 +2,7 @@
 import { createRuntime } from '@vibecanvas/runtime';
 import type { IService, IStoppableService } from '@vibecanvas/runtime';
 import { buildCliConfig } from './build-config';
+import type { ICliConfig } from './config';
 import { bootCliRuntime, createCliHooks, shutdownCliRuntime } from './hooks';
 import { parseCliArgv } from './parse-argv';
 import { createCliPlugin } from './plugins/cli/CliPlugin';
@@ -17,7 +18,7 @@ const parsedArgv = parseCliArgv();
 const config = buildCliConfig(parsedArgv);
 const { services } = setupServices(config);
 
-const runtime = createRuntime({
+const runtime = createRuntime<any, ICliConfig>({
   plugins: [createCliPlugin(), createServerPlugin()],
   services,
   hooks: createCliHooks(),

@@ -1,8 +1,7 @@
 import { createSqliteDb } from '@vibecanvas/db/DbServiceBunSqlite';
 import type { IDbService } from '@vibecanvas/db/IDbService';
-import type { IConfig } from '@vibecanvas/runtime';
 import { createServiceRegistry } from '@vibecanvas/runtime';
-import { resolveCliPaths } from './resolve-paths';
+import type { ICliConfig } from './config';
 
 declare module '@vibecanvas/runtime' {
   interface IServiceMap {
@@ -10,15 +9,14 @@ declare module '@vibecanvas/runtime' {
   }
 }
 
-function setupServices(config: IConfig) {
+function setupServices(config: ICliConfig) {
   const services = createServiceRegistry();
 
   if (config.command === 'serve' && !config.helpRequested && !config.versionRequested) {
-    const paths = resolveCliPaths(config);
     const dbService = createSqliteDb({
-      databasePath: paths.databasePath,
-      dataDir: paths.dataDir,
-      cacheDir: paths.cacheDir,
+      databasePath: config.dbPath,
+      dataDir: config.dataPath,
+      cacheDir: config.cachePath,
       silentMigrations: process.env.VIBECANVAS_SILENT_DB_MIGRATIONS === '1',
     });
     services.provide('db', dbService);

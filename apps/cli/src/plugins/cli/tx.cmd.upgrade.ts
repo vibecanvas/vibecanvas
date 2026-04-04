@@ -1,7 +1,7 @@
 import { existsSync, readFileSync } from 'fs';
 import { join } from 'path';
 import { parseArgs } from 'util';
-import type { IConfig } from '@vibecanvas/runtime';
+import type { ICliConfig } from '../../config';
 import fnCliUpdateResolvePolicy from './cli-update/fn.resolve-policy';
 import fnCliUpdateShouldUpgrade from './cli-update/fn.should-upgrade';
 import { resolveCliPaths } from '../../resolve-paths';
@@ -35,11 +35,11 @@ type TConfigFile = {
 };
 
 type TRunUpgradeArgs = {
-  config: IConfig;
+  config: ICliConfig;
 };
 
 type TCheckForUpgradeArgs = {
-  config: IConfig;
+  config: ICliConfig;
   checkOnly?: boolean;
   methodOverride?: TInstallMethod;
   targetVersionOverride?: string;
@@ -76,7 +76,7 @@ Options:
 `);
 }
 
-function getServerVersion(config: IConfig): string {
+function getServerVersion(config: ICliConfig): string {
   return config.version;
 }
 
@@ -106,7 +106,7 @@ function detectInstallMethod(): TInstallMethod {
   return 'unknown';
 }
 
-function readConfigAutoupdate(config: IConfig): boolean | 'notify' | undefined {
+function readConfigAutoupdate(config: ICliConfig): boolean | 'notify' | undefined {
   const { configDir } = resolveCliPaths(config);
   const configFilePath = join(configDir, 'config.json');
   if (!existsSync(configFilePath)) return undefined;
@@ -120,7 +120,7 @@ function readConfigAutoupdate(config: IConfig): boolean | 'notify' | undefined {
   }
 }
 
-function resolveUpdatePolicy(config: IConfig, method: TInstallMethod): TUpdatePolicy {
+function resolveUpdatePolicy(config: ICliConfig, method: TInstallMethod): TUpdatePolicy {
   const [policy] = fnCliUpdateResolvePolicy({
     method,
     configAutoupdate: readConfigAutoupdate(config),

@@ -1,5 +1,6 @@
 import { AsyncSeriesHook, AsyncWaterfallHook, SyncExitHook, SyncHook } from '@vibecanvas/tapable';
 import type { IPluginContext, IServiceMap } from '@vibecanvas/runtime';
+import type { ICliConfig } from './config';
 
 export interface ICliHooks {
   boot: AsyncSeriesHook<[]>;
@@ -35,13 +36,13 @@ export function createCliHooks(): ICliHooks {
   };
 }
 
-export async function bootCliRuntime(ctx: IPluginContext<IServiceMap, ICliHooks>) {
+export async function bootCliRuntime(ctx: IPluginContext<IServiceMap, ICliHooks, ICliConfig>) {
   await ctx.hooks.boot.promise();
   ctx.hooks.registerRoutes.call();
   ctx.hooks.registerCommands.call();
   ctx.hooks.ready.call();
 }
 
-export async function shutdownCliRuntime(ctx: IPluginContext<IServiceMap, ICliHooks>) {
+export async function shutdownCliRuntime(ctx: IPluginContext<IServiceMap, ICliHooks, ICliConfig>) {
   await ctx.hooks.shutdown.promise();
 }

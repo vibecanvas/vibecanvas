@@ -1,6 +1,7 @@
 import type { IPlugin } from '@vibecanvas/runtime';
 import type { ICliHooks } from '../../hooks';
 import type { IDbService } from '@vibecanvas/db/IDbService';
+import type { ICliConfig } from '../../config';
 import { txCmdUpgrade } from './tx.cmd.upgrade';
 
 function printHelp(): void {
@@ -32,7 +33,7 @@ Examples:
 `);
 }
 
-function createCliPlugin(): IPlugin<{ db: IDbService }, ICliHooks> {
+function createCliPlugin(): IPlugin<{ db: IDbService }, ICliHooks, ICliConfig> {
   return {
     name: 'cli',
     apply(ctx) {

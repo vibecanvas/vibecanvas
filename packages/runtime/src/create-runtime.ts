@@ -1,4 +1,4 @@
-import type { IConfig, IPlugin, IPluginContext, IService, IServiceMap, IServiceRegistry } from './interface';
+import type { IPlugin, IPluginContext, IService, IServiceMap, IServiceRegistry } from './interface';
 
 type TSortable = { name: string; after?: string[] };
 
@@ -63,25 +63,25 @@ export type IRuntime<THooks extends object = object> = {
   hooks: THooks;
 };
 
-type TRuntimeOptions<THooks extends object> = {
-  plugins: IPlugin<any, THooks>[];
-  config: IConfig;
+type TRuntimeOptions<THooks extends object, TConfig extends object> = {
+  plugins: IPlugin<any, THooks, TConfig>[];
+  config: TConfig;
   hooks: THooks;
   services?: IServiceRegistry;
-  boot?: (ctx: IPluginContext<IServiceMap, THooks>) => Promise<void>;
-  shutdown?: (ctx: IPluginContext<IServiceMap, THooks>) => Promise<void>;
+  boot?: (ctx: IPluginContext<IServiceMap, THooks, TConfig>) => Promise<void>;
+  shutdown?: (ctx: IPluginContext<IServiceMap, THooks, TConfig>) => Promise<void>;
 };
 
-export function createRuntime<THooks extends object>({
+export function createRuntime<THooks extends object, TConfig extends object>({
   plugins,
   config,
   hooks,
   services = createServiceRegistry(),
   boot,
   shutdown,
-}: TRuntimeOptions<THooks>): IRuntime<THooks> {
+}: TRuntimeOptions<THooks, TConfig>): IRuntime<THooks> {
   const sorted = topoSort(plugins);
-  const ctx: IPluginContext<IServiceMap, THooks> = { hooks, services, config };
+  const ctx: IPluginContext<IServiceMap, THooks, TConfig> = { hooks, services, config };
 
   return {
     async boot() {

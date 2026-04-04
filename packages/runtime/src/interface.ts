@@ -26,39 +26,25 @@ export interface IServiceRegistry {
   require<K extends keyof IServiceMap>(name: K): IServiceMap[K];
 }
 
-export interface IConfig {
-  cwd: string;
-  dev: boolean;
-  compiled: boolean;
-  version: string;
-  command: 'serve' | 'canvas' | 'upgrade' | 'unknown';
-  subcommand?: string;
-  rawArgv: string[];
-  argv: string[];
-  port?: number;
-  dbPath?: string;
-  helpRequested?: boolean;
-  versionRequested?: boolean;
-  upgradeTarget?: string;
-}
-
 export interface IPluginContext<
   TRequiredServices extends Partial<IServiceMap> = IServiceMap,
   THooks extends object = object,
+  TConfig extends object = object,
 > {
   hooks: THooks;
-  services: Omit<IServiceRegistry, 'get' | 'require'> & {
-    get<K extends keyof TRequiredServices>(name: K): TRequiredServices[K] | undefined;
+  services: Omit<IServiceRegistry, 'require'> & {
+    get<K extends keyof IServiceMap>(name: K): IServiceMap[K] | undefined;
     require<K extends keyof TRequiredServices>(name: K): TRequiredServices[K];
   };
-  config: IConfig;
+  config: TConfig;
 }
 
 export interface IPlugin<
   TRequiredServices extends Partial<IServiceMap> = {},
   THooks extends object = object,
+  TConfig extends object = object,
 > {
   name: string;
   after?: string[];
-  apply(ctx: IPluginContext<TRequiredServices, THooks>): void | Promise<void>;
+  apply(ctx: IPluginContext<TRequiredServices, THooks, TConfig>): void | Promise<void>;
 }
