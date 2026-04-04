@@ -33,7 +33,6 @@ export type TWaitForCanvasMutationArgs = {
 };
 
 export type TCanvasCmdContext = {
-  dbPath: string;
   listCanvasRows(): Promise<TCanvasRow[]>;
   loadCanvasHandle(row: TCanvasRow): Promise<TCanvasDocHandle>;
   waitForMutation(args: TWaitForCanvasMutationArgs): Promise<TCanvasDoc>;

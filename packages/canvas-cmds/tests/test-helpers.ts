@@ -87,7 +87,6 @@ export function createCanvasDoc(overrides: Partial<TCanvasDoc> = {}): TCanvasDoc
 }
 
 type TCreateContextArgs = {
-  dbPath?: string;
   rows: TCanvasRow[];
   docs: Record<string, TCanvasDoc>;
   source?: 'offline' | 'live';
@@ -99,7 +98,6 @@ export function createMockContext(args: TCreateContextArgs): TCanvasCmdContext &
   const waitCalls: TWaitForCanvasMutationArgs[] = [];
 
   return {
-    dbPath: args.dbPath ?? '/tmp/test.sqlite',
     async listCanvasRows() {
       return args.rows;
     },

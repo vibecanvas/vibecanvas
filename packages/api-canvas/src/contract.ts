@@ -55,7 +55,6 @@ const canvasCommandListOutputSchema = z.object({
   ok: z.literal(true),
   command: z.literal('canvas'),
   subcommand: z.literal('list'),
-  dbPath: z.string(),
   count: z.number().int(),
   canvases: z.object({
     id: z.string(),

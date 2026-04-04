@@ -9,10 +9,10 @@ export function formatCanvasInventoryEntry(entry: TCanvasListSuccess['canvases']
 
 export function renderCanvasListText(result: TCanvasListSuccess): string {
   if (result.canvases.length === 0) {
-    return `Canvas inventory: 0 canvases in ${result.dbPath}\n`;
+    return 'Canvas inventory: 0 canvases\n';
   }
 
-  const lines = [`Canvas inventory: ${result.canvases.length} canvases in ${result.dbPath}`];
+  const lines = [`Canvas inventory: ${result.canvases.length} canvases`];
   for (const canvas of result.canvases) {
     lines.push(formatCanvasInventoryEntry(canvas));
   }

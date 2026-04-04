@@ -6,7 +6,6 @@ type TCanvasApiContext = {
   db: IDbService;
   eventPublisher: IEventPublisherService;
   automerge: IAutomergeService;
-  dbPath: string;
   requestId?: string;
 };
 

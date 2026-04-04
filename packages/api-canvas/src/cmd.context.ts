@@ -28,7 +28,6 @@ async function waitForCanvasHandleDoc(args: {
 
 function createCanvasCmdContext(context: TCanvasApiContext): TCanvasCmdContext {
   return {
-    dbPath: context.dbPath,
     async listCanvasRows() {
       return context.db.listCanvas();
     },

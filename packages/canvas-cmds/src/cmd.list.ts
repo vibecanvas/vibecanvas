@@ -13,7 +13,6 @@ export type TCanvasListSuccess = {
   ok: true;
   command: 'canvas';
   subcommand: 'list';
-  dbPath: string;
   count: number;
   canvases: TCanvasInventoryEntry[];
 };
@@ -41,7 +40,6 @@ export async function executeCanvasList(ctx: TCanvasCmdContext): Promise<TCanvas
       ok: true,
       command: 'canvas',
       subcommand: 'list',
-      dbPath: ctx.dbPath,
       count: canvases.length,
       canvases,
     };
@@ -50,7 +48,6 @@ export async function executeCanvasList(ctx: TCanvasCmdContext): Promise<TCanvas
       command: 'canvas',
       code: 'CANVAS_LIST_FAILED',
       message: error instanceof Error ? error.message : String(error),
-      dbPath: ctx.dbPath,
     });
   }
 }

@@ -5,7 +5,6 @@ export type TCanvasCmdErrorDetails = {
   message: string;
   canvasId?: string | null;
   canvasNameQuery?: string | null;
-  dbPath?: string;
   matches?: Array<{ id: string; name: string }>;
 };
 
@@ -33,7 +32,6 @@ function toCanvasCmdError(args: {
   message: string;
   canvasId?: string | null;
   canvasNameQuery?: string | null;
-  dbPath?: string;
   matches?: Array<{ id: string; name: string }>;
 }): CanvasCmdError {
   return new CanvasCmdError({
@@ -43,7 +41,6 @@ function toCanvasCmdError(args: {
     message: args.message,
     canvasId: args.canvasId,
     canvasNameQuery: args.canvasNameQuery,
-    dbPath: args.dbPath,
     matches: args.matches,
   });
 }
