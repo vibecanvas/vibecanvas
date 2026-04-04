@@ -17,6 +17,14 @@ type TUpdateCanvasArgs = {
   path?: string;
 };
 
+type TUpdateFileTreeArgs = {
+  id: string;
+  title?: string;
+  path?: string;
+  locked?: boolean;
+  glob_pattern?: string | null;
+};
+
 type TCreateFileArgs = {
   id: string;
   hash: string;

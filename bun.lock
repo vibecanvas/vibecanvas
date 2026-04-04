@@ -260,6 +260,15 @@
         "zod": "catalog:",
       },
     },
+    "packages/filesystem-service": {
+      "name": "@vibecanvas/filesystem-service",
+      "version": "0.0.1",
+      "dependencies": {
+        "@vibecanvas/core": "workspace:*",
+        "@vibecanvas/event-publisher": "workspace:*",
+        "@vibecanvas/runtime": "workspace:*",
+      },
+    },
     "packages/functional-core": {
       "name": "@vibecanvas/core",
       "version": "0.2.2",
@@ -933,6 +942,8 @@
     "@vibecanvas/db": ["@vibecanvas/db@workspace:packages/db"],
 
     "@vibecanvas/event-publisher": ["@vibecanvas/event-publisher@workspace:packages/event-publisher"],
+
+    "@vibecanvas/filesystem-service": ["@vibecanvas/filesystem-service@workspace:packages/filesystem-service"],
 
     "@vibecanvas/frontend": ["@vibecanvas/frontend@workspace:apps/frontend"],
 
