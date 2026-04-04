@@ -33,14 +33,14 @@ Remember to keep the codebase small. Small is clean, small is fast. Delete often
 
 ## Structure
 
-Based now lives at the repository root in `based/`.
+Based now lives at the repository root in `tasks/`.
 
-- `based/BASED.md`: overview, active index, and conventions.
-- `based/b/`: bug files.
-- `based/a/`: addition files.
-- `based/s/`: subtraction files.
-- `based/e/`: exploration files.
-- `based/d/`: direction files.
+- `tasks/BASED.md`: overview, active index, and conventions.
+- `tasks/b/`: bug files.
+- `tasks/a/`: addition files.
+- `tasks/s/`: subtraction files.
+- `tasks/e/`: exploration files.
+- `tasks/d/`: direction files.
 
 Each line in the overview stays short and links to one dedicated file.
 Each dedicated file stores the task context, TODOs, notes, and logs.
@@ -50,6 +50,8 @@ Each dedicated file stores the task context, TODOs, notes, and logs.
 Overview entries use this format:
 
 `- [x]: [B1](b/B1.md) - text: edit jumping`
+
+Humans usually don't create leaf files. But agents do.
 
 Leaf files use this format:
 
@@ -124,6 +126,9 @@ Use the leaf files for execution history and local context.
 - [ ]: [S15] - inline text support -> fix position (use pretext lib?)
 - [x]: [S16](s/S16.md) - canvas: fix broken TypeScript typings in packages/canvas
 - [ ]: [S17](s/S17.md) - extract apps/server into apps/cli + shared packages
+- [ ]: [S18](s/S18.md) - cli server: migrate http file/static/spa serving from apps/server
+- [ ]: [S19](s/S19.md) - cli orpc: expose db events stream and remove apps/server api.db
+- [ ]: [S20](s/S20.md) - cli server: restore compiled-mode port fallback when preferred port is busy
 
 ## E xplorations
 - [ ]: [E1](e/E1.md) - Tauri Research
