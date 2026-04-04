@@ -8,6 +8,7 @@ import { parseCliArgv } from './parse-argv';
 import { createAutomergePlugin } from './plugins/automerge/AutomergePlugin';
 import { createCliPlugin } from './plugins/cli/CliPlugin';
 import { createOrpcPlugin } from './plugins/orpc/OrpcPlugin';
+import { createPtyPlugin } from './plugins/pty/PtyPlugin';
 import { setupServices } from './setup-services';
 import { setupSignals } from './setup-signals';
 import { createServerPlugin } from './plugins/server/ServerPlugin';
@@ -21,7 +22,7 @@ const config = buildCliConfig(parsedArgv);
 const { services, sqlite } = setupServices(config);
 
 const runtime = createRuntime<any, ICliConfig>({
-  plugins: [createCliPlugin(), createOrpcPlugin(), createAutomergePlugin(sqlite), createServerPlugin()],
+  plugins: [createCliPlugin(), createOrpcPlugin(), createPtyPlugin(), createAutomergePlugin(sqlite), createServerPlugin()],
   services,
   hooks: createCliHooks(),
   config,

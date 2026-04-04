@@ -3,6 +3,8 @@ import { createSqliteDb } from '@vibecanvas/db/DbServiceBunSqlite';
 import type { IDbService } from '@vibecanvas/db/IDbService';
 import { EventPublisherService } from '@vibecanvas/event-publisher/EventPublisherService';
 import type { IEventPublisherService } from '@vibecanvas/event-publisher/IEventPublisherService';
+import { PtyServiceBunPty } from '@vibecanvas/pty-service/PtyServiceBunPty';
+import type { IPtyService } from '@vibecanvas/pty-service/IPtyService';
 import { createServiceRegistry } from '@vibecanvas/runtime';
 import type { ICliConfig } from './config';
 
@@ -10,6 +12,7 @@ declare module '@vibecanvas/runtime' {
   interface IServiceMap {
     db: IDbService;
     eventPublisher: IEventPublisherService;
+    pty: IPtyService;
   }
 }
 
@@ -27,8 +30,11 @@ function setupServices(config: ICliConfig) {
       cacheDir: config.cachePath,
       silentMigrations: process.env.VIBECANVAS_SILENT_DB_MIGRATIONS === '1',
     });
+    const ptyService = new PtyServiceBunPty();
+
     sqlite = dbService.sqlite;
     services.provide('db', dbService);
+    services.provide('pty', ptyService);
   }
 
   return { services, sqlite };

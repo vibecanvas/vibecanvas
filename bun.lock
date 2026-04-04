@@ -22,9 +22,11 @@
         "@orpc/server": "catalog:",
         "@vibecanvas/api-canvas": "workspace:*",
         "@vibecanvas/api-file": "workspace:*",
+        "@vibecanvas/api-pty": "workspace:*",
         "@vibecanvas/automerge": "workspace:*",
         "@vibecanvas/db": "workspace:*",
         "@vibecanvas/event-publisher": "workspace:*",
+        "@vibecanvas/pty-service": "workspace:*",
         "@vibecanvas/runtime": "workspace:*",
         "@vibecanvas/shared-functions": "workspace:*",
         "@vibecanvas/tapable": "workspace:*",
@@ -140,6 +142,16 @@
         "@orpc/server": "catalog:",
         "@vibecanvas/core": "workspace:*",
         "@vibecanvas/db": "workspace:*",
+        "zod": "catalog:",
+      },
+    },
+    "packages/api-pty": {
+      "name": "@vibecanvas/api-pty",
+      "version": "0.0.1",
+      "dependencies": {
+        "@orpc/contract": "catalog:",
+        "@orpc/server": "catalog:",
+        "@vibecanvas/pty-service": "workspace:*",
         "zod": "catalog:",
       },
     },
@@ -264,6 +276,14 @@
       },
       "devDependencies": {
         "drizzle-kit": "catalog:",
+      },
+    },
+    "packages/pty-service": {
+      "name": "@vibecanvas/pty-service",
+      "version": "0.0.1",
+      "dependencies": {
+        "@vibecanvas/runtime": "workspace:*",
+        "bun-pty": "^0.4.8",
       },
     },
     "packages/runtime": {
@@ -885,6 +905,8 @@
 
     "@vibecanvas/api-file": ["@vibecanvas/api-file@workspace:packages/api-file"],
 
+    "@vibecanvas/api-pty": ["@vibecanvas/api-pty@workspace:packages/api-pty"],
+
     "@vibecanvas/automerge": ["@vibecanvas/automerge@workspace:packages/automerge"],
 
     "@vibecanvas/canvas": ["@vibecanvas/canvas@workspace:packages/canvas"],
@@ -900,6 +922,8 @@
     "@vibecanvas/event-publisher": ["@vibecanvas/event-publisher@workspace:packages/event-publisher"],
 
     "@vibecanvas/frontend": ["@vibecanvas/frontend@workspace:apps/frontend"],
+
+    "@vibecanvas/pty-service": ["@vibecanvas/pty-service@workspace:packages/pty-service"],
 
     "@vibecanvas/runtime": ["@vibecanvas/runtime@workspace:packages/runtime"],
 

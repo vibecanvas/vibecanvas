@@ -16,8 +16,10 @@
     "@vibecanvas/automerge": "workspace:*",
     "@vibecanvas/api-canvas": "workspace:*",
     "@vibecanvas/api-file": "workspace:*",
+    "@vibecanvas/api-pty": "workspace:*",
     "@vibecanvas/db": "workspace:*",
     "@vibecanvas/event-publisher": "workspace:*",
+    "@vibecanvas/pty-service": "workspace:*",
     "@vibecanvas/runtime": "workspace:*",
     "@vibecanvas/shared-functions": "workspace:*",
     "@vibecanvas/tapable": "workspace:*"

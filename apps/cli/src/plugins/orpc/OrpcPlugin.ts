@@ -1,6 +1,7 @@
 import { onError } from '@orpc/server';
 import { RPCHandler } from '@orpc/server/bun-ws';
 import type { IDbService } from '@vibecanvas/db/IDbService';
+import type { IPtyService } from '@vibecanvas/pty-service/IPtyService';
 import type { IPlugin } from '@vibecanvas/runtime';
 import type { ICliConfig } from '../../config';
 import type { ICliHooks } from '../../hooks';
@@ -13,11 +14,16 @@ type TOrpcWebSocketData = {
   requestId: string;
 };
 
-function createOrpcPlugin(): IPlugin<{ db: IDbService }, ICliHooks, ICliConfig> {
+function createOrpcPlugin(): IPlugin<{ db: IDbService; pty: IPtyService }, ICliHooks, ICliConfig> {
   return {
     name: 'orpc',
     apply(ctx) {
+      if (ctx.config.command !== 'serve' || ctx.config.helpRequested || ctx.config.versionRequested) {
+        return;
+      }
+
       const db = ctx.services.require('db');
+      const pty = ctx.services.require('pty');
       const handler = new RPCHandler(baseOs.router(router), {
         interceptors: [
           onError((error) => {
@@ -38,6 +44,7 @@ function createOrpcPlugin(): IPlugin<{ db: IDbService }, ICliHooks, ICliConfig> 
         void handler.message(ws as never, message, {
           context: {
             db,
+            pty,
             requestId: socket.data.requestId,
           },
         }).catch((error) => {
