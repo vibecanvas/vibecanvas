@@ -3,7 +3,30 @@ import type { IPlugin } from '@vibecanvas/runtime';
 import type { ICliConfig } from '../../config';
 import type { ICliHooks } from '../../hooks';
 import { checkForUpdateOnBoot } from './check-update';
+import { handleHttpRequest } from './http';
 import type { TOrpcWebSocketData } from '../orpc/OrpcPlugin';
+
+function serveWithPortFallback<TSocketData>(serve: (port: number) => ReturnType<typeof Bun.serve<TSocketData>>, startPort: number, compiled: boolean): ReturnType<typeof Bun.serve<TSocketData>> {
+  if (!compiled) {
+    return serve(startPort);
+  }
+
+  const maxAttempts = 100;
+  for (let i = 0; i < maxAttempts; i += 1) {
+    const port = startPort + i;
+    try {
+      const server = serve(port);
+      if (port !== startPort) {
+        console.warn(`[Server] Port ${startPort} is busy, using ${port}`);
+      }
+      return server;
+    } catch {
+      // Port busy, try next.
+    }
+  }
+
+  throw new Error(`[Server] No available port found starting from ${startPort}`);
+}
 
 function createServerPlugin(): IPlugin<{ eventPublisher: IEventPublisherService }, ICliHooks, ICliConfig> {
   return {
@@ -14,8 +37,8 @@ function createServerPlugin(): IPlugin<{ eventPublisher: IEventPublisherService 
       ctx.hooks.boot.tapPromise(async () => {
         if (ctx.config.command !== 'serve') return;
 
-        bunServer = Bun.serve<TOrpcWebSocketData>({
-          port: ctx.config.port,
+        bunServer = serveWithPortFallback<TOrpcWebSocketData>((port) => Bun.serve<TOrpcWebSocketData>({
+          port,
           fetch(req, server) {
             const url = new URL(req.url);
             const upgraded = ctx.hooks.wsUpgrade.call(req);
@@ -36,11 +59,12 @@ function createServerPlugin(): IPlugin<{ eventPublisher: IEventPublisherService 
 
             void ctx.hooks.httpRequest.promise(req);
 
-            return new Response('vibecanvas server plugin WIP', {
-              headers: {
-                'content-type': 'text/plain; charset=utf-8',
-              },
-            });
+            const db = ctx.services.get('db');
+            if (!db) {
+              return new Response('Database service not available', { status: 500 });
+            }
+
+            return handleHttpRequest(req, { compiled: ctx.config.compiled }, db, import.meta.dir);
           },
           websocket: {
             data: {} as TOrpcWebSocketData,
@@ -65,7 +89,7 @@ function createServerPlugin(): IPlugin<{ eventPublisher: IEventPublisherService 
               ctx.hooks.wsPong.call(ws as unknown as WebSocket, pongData);
             },
           },
-        });
+        }), ctx.config.port, ctx.config.compiled);
       });
 
       ctx.hooks.ready.tap(() => {
@@ -88,3 +112,4 @@ function createServerPlugin(): IPlugin<{ eventPublisher: IEventPublisherService 
 }
 
 export { createServerPlugin };
+export { serveWithPortFallback };
