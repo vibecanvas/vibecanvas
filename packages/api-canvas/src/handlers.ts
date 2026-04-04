@@ -1,17 +1,21 @@
 import { implement } from '@orpc/server';
+import { apiCreateCanvas } from './api.create-canvas';
+import { apiGetCanvas } from './api.get-canvas';
+import { apiListCanvas } from './api.list-canvas';
+import { apiRemoveCanvas } from './api.remove-canvas';
+import { apiUpdateCanvas } from './api.update-canvas';
 import { canvasContract } from './contract';
-import { canvasImplementation } from './implementation';
 import type { TCanvasApiContext } from './types';
 
 const baseCanvasOs = implement(canvasContract)
   .$context<TCanvasApiContext>();
 
 const canvasHandlers = {
-  list: baseCanvasOs.list.handler(canvasImplementation.list),
-  get: baseCanvasOs.get.handler(canvasImplementation.get),
-  create: baseCanvasOs.create.handler(canvasImplementation.create),
-  update: baseCanvasOs.update.handler(canvasImplementation.update),
-  remove: baseCanvasOs.remove.handler(canvasImplementation.remove),
+  list: baseCanvasOs.list.handler(apiListCanvas),
+  get: baseCanvasOs.get.handler(apiGetCanvas),
+  create: baseCanvasOs.create.handler(apiCreateCanvas),
+  update: baseCanvasOs.update.handler(apiUpdateCanvas),
+  remove: baseCanvasOs.remove.handler(apiRemoveCanvas),
 };
 
 export { baseCanvasOs, canvasHandlers };

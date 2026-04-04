@@ -1,9 +1,10 @@
 import { Database } from 'bun:sqlite';
 import { drizzle } from 'drizzle-orm/bun-sqlite';
 import type { BunSQLiteDatabase } from 'drizzle-orm/bun-sqlite';
+import { eq } from 'drizzle-orm';
 import { fxRunDatabaseMigrations } from './core/fx.migrations';
 import type { IDbConfig } from './interface';
-import type { IDbService } from './IDbService';
+import type { IDbService, TCanvasRecord, TGetFullCanvasResult, TUpdateCanvasArgs } from './IDbService';
 import * as schema from './schema';
 
 export type TDbSchema = typeof schema;
@@ -41,6 +42,36 @@ export class DbServiceBunSqlite implements IDbService {
 
   stop() {
     this.sqlite.close();
+  }
+
+  listCanvas(): TCanvasRecord[] {
+    return this.drizzle.query.canvas.findMany().sync();
+  }
+
+  getFullCanvas(id: string): TGetFullCanvasResult | null {
+    const canvas = this.drizzle.query.canvas.findFirst({ where: eq(schema.canvas.id, id) }).sync();
+    if (!canvas) return null;
+
+    const fileTrees = this.drizzle.query.filetrees.findMany({ where: eq(schema.filetrees.canvas_id, id) }).sync();
+
+    return {
+      canvas,
+      fileTrees,
+    };
+  }
+
+  updateCanvas(args: TUpdateCanvasArgs): TCanvasRecord | null {
+    const updateData: Partial<typeof schema.canvas.$inferInsert> = {};
+    if (args.name !== undefined) updateData.name = args.name;
+
+    const result = this.drizzle
+      .update(schema.canvas)
+      .set(updateData)
+      .where(eq(schema.canvas.id, args.id))
+      .returning()
+      .all();
+
+    return result[0] ?? null;
   }
 }
 
