@@ -1,0 +1,38 @@
+import { extensionFromFormat, fileMetaFromPathname, toPublicFileUrl } from '@vibecanvas/core/file/fn.file-storage';
+import type { TFileApiContext } from './types';
+
+type TInput = {
+  body: {
+    url: string;
+  };
+};
+
+async function apiCloneFile({ input, context }: { input: TInput; context: TFileApiContext }) {
+  const fileMeta = fileMetaFromPathname(new URL(input.body.url, 'http://localhost').pathname);
+  if (!fileMeta) {
+    throw new Error('Invalid file url');
+  }
+
+  const record = context.db.getFile({
+    id: fileMeta.id,
+    format: fileMeta.format,
+  });
+
+  if (!record) {
+    throw new Error('File not found');
+  }
+
+  const clonedId = crypto.randomUUID();
+  context.db.createFile({
+    id: clonedId,
+    hash: record.hash,
+    format: record.format,
+    base64: record.base64,
+  });
+
+  return {
+    url: toPublicFileUrl(`${clonedId}.${extensionFromFormat(record.format)}`),
+  };
+}
+
+export { apiCloneFile };

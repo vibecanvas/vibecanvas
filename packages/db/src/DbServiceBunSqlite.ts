@@ -1,10 +1,18 @@
 import { Database } from 'bun:sqlite';
 import { drizzle } from 'drizzle-orm/bun-sqlite';
 import type { BunSQLiteDatabase } from 'drizzle-orm/bun-sqlite';
-import { eq } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 import { fxRunDatabaseMigrations } from './core/fx.migrations';
 import type { IDbConfig } from './interface';
-import type { IDbService, TCanvasRecord, TGetFullCanvasResult, TUpdateCanvasArgs } from './IDbService';
+import type {
+  IDbService,
+  TCanvasRecord,
+  TCreateFileArgs,
+  TFileRecord,
+  TGetFileArgs,
+  TGetFullCanvasResult,
+  TUpdateCanvasArgs,
+} from './IDbService';
 import * as schema from './schema';
 
 export type TDbSchema = typeof schema;
@@ -72,6 +80,35 @@ export class DbServiceBunSqlite implements IDbService {
       .all();
 
     return result[0] ?? null;
+  }
+
+  createFile(args: TCreateFileArgs): TFileRecord {
+    this.drizzle.insert(schema.files).values({
+      id: args.id,
+      hash: args.hash,
+      format: args.format,
+      base64: args.base64,
+    }).run();
+
+    const record = this.getFile({ id: args.id, format: args.format });
+    if (!record) {
+      throw new Error('Failed to create file record');
+    }
+
+    return record;
+  }
+
+  getFile(args: TGetFileArgs): TFileRecord | null {
+    return this.drizzle.query.files.findFirst({
+      where: (table) => and(
+        eq(table.id, args.id),
+        eq(table.format, args.format),
+      ),
+    }).sync() ?? null;
+  }
+
+  deleteFile(id: string): void {
+    this.drizzle.delete(schema.files).where(eq(schema.files.id, id)).run();
   }
 }
 
