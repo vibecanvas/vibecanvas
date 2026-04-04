@@ -117,6 +117,13 @@ describe("canvas CLI test harness", () => {
     expect(ungroupHelp.stdout).toContain("Usage: vibecanvas canvas ungroup [options]");
     expect(ungroupHelp.stdout).toContain("--id <id>");
     expect(ungroupHelp.stdout).toContain("ungrouping currently supports explicit group ids only");
+
+    const reorderHelp = await context.runVibecanvasCli(["canvas", "reorder", "--help"]);
+    expectExitCode(reorderHelp, 0);
+    expectNoStderr(reorderHelp);
+    expect(reorderHelp.stdout).toContain("Usage: vibecanvas canvas reorder [options]");
+    expect(reorderHelp.stdout).toContain("--action <name>");
+    expect(reorderHelp.stdout).toContain("front, back, forward, backward");
   });
 
   test("shows canvas subcommand help even when the canvas prefix is omitted", async () => {
@@ -143,6 +150,11 @@ describe("canvas CLI test harness", () => {
     expectNoStderr(ungroupHelp);
     expect(ungroupHelp.stdout).toContain("Usage: vibecanvas canvas ungroup [options]");
 
+    const reorderHelp = await context.runVibecanvasCli(["reorder", "--help"]);
+    expectExitCode(reorderHelp, 0);
+    expectNoStderr(reorderHelp);
+    expect(reorderHelp.stdout).toContain("Usage: vibecanvas canvas reorder [options]");
+
     const listHelp = await context.runVibecanvasCli(["list", "--help"]);
     expectExitCode(listHelp, 0);
     expectNoStderr(listHelp);
@@ -157,6 +169,7 @@ describe("canvas CLI test harness", () => {
     expectNoStderr(result);
     expect(result.stdout).toContain("query (--canvas <id> | --canvas-name <query>) [selectors]");
     expect(result.stdout).toContain("group ...                                    Group explicit element ids deterministically");
+    expect(result.stdout).toContain("reorder ...                                  Change stacking order deterministically");
     expect(result.stdout).toContain("Use 'vibecanvas canvas <subcommand> --help' for command-specific arguments and examples.");
   });
 

@@ -66,7 +66,7 @@ Canvas subcommands:
   patch     Patch explicit element/group ids with structured field updates
   group     Group matching elements (planned)
   ungroup   Ungroup a group (planned)
-  delete    Delete matching elements (planned)
+  delete    Permanently delete element/group ids (cascades groups to descendants)
   reorder   Change stacking order (planned)
   render    Render the persisted canvas state (planned)
 

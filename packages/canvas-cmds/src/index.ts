@@ -18,6 +18,14 @@ export type { TCanvasMoveInput, TCanvasMoveSuccess, TMoveMode } from './cmd.move
 export { executeCanvasMove } from './cmd.move';
 
 export type {
+  TCanvasDeleteInput,
+  TCanvasDeleteSkippedEffect,
+  TCanvasDeleteSuccess,
+  TDeleteEffectsMode,
+} from './cmd.delete';
+export { executeCanvasDelete } from './cmd.delete';
+
+export type {
   TCanvasElementPatch,
   TCanvasGroupPatch,
   TCanvasPatchEnvelope,
@@ -31,6 +39,7 @@ export { executeCanvasQuery } from './cmd.query';
 
 export {
   formatCanvasInventoryEntry,
+  renderCanvasDeleteText,
   renderCanvasListText,
   renderCanvasMoveText,
   renderCanvasPatchText,

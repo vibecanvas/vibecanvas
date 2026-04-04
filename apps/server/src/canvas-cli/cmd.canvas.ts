@@ -118,9 +118,9 @@ Offline canvas commands (planned):
   patch ...                                    Apply a structured mutation
   move ...                                     Move explicit element/group ids deterministically
   group ...                                    Group explicit element ids deterministically
-  ungroup ...                                  Ungroup a group
+  ungroup ...                                  Ungroup explicit group ids deterministically
   delete ...                                   Delete matching elements
-  reorder ...                                  Change stacking order
+  reorder ...                                  Change stacking order deterministically
   render ...                                   Render the persisted canvas state
 
 Shared options:
@@ -216,6 +216,12 @@ export async function runCanvas(argv: readonly string[]): Promise<never> {
       throw new Error("runCanvasUngroup() must exit the process.");
     }
 
+    if (subcommand === "reorder") {
+      const { runCanvasReorder } = await import("./cmd.reorder");
+      await runCanvasReorder(argv);
+      throw new Error("runCanvasReorder() must exit the process.");
+    }
+
     printCanvasHelp();
     process.exit(0);
   }
@@ -242,6 +248,12 @@ export async function runCanvas(argv: readonly string[]): Promise<never> {
     const { runCanvasUngroup } = await import("./cmd.ungroup");
     await runCanvasUngroup(argv);
     throw new Error("runCanvasUngroup() must exit the process.");
+  }
+
+  if (subcommand === "reorder") {
+    const { runCanvasReorder } = await import("./cmd.reorder");
+    await runCanvasReorder(argv);
+    throw new Error("runCanvasReorder() must exit the process.");
   }
 
   try {

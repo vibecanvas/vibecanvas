@@ -84,7 +84,8 @@ Offline canvas commands (planned):
   move ...                                     Move explicit element/group ids deterministically
   group ...                                    Group matching elements
   ungroup ...                                  Ungroup a group
-  delete ...                                   Delete matching elements
+  delete (--canvas <id> | --canvas-name <query>) --id <id>... [--doc-only | --with-effects-if-available]
+                                                Permanently delete elements/groups; deleting a group cascades to descendants
   reorder ...                                  Change stacking order
   render ...                                   Render the persisted canvas state
 
@@ -199,6 +200,12 @@ export async function runCanvas(argv: readonly string[]): Promise<never> {
       throw new Error('runCanvasPatch() must exit the process.');
     }
 
+    if (subcommand === 'delete') {
+      const { runCanvasDelete } = await import('./cmd.delete');
+      await runCanvasDelete(argv);
+      throw new Error('runCanvasDelete() must exit the process.');
+    }
+
     printCanvasHelp();
     process.exit(0);
   }
@@ -219,6 +226,12 @@ export async function runCanvas(argv: readonly string[]): Promise<never> {
     const { runCanvasPatch } = await import('./cmd.patch');
     await runCanvasPatch(argv);
     throw new Error('runCanvasPatch() must exit the process.');
+  }
+
+  if (subcommand === 'delete') {
+    const { runCanvasDelete } = await import('./cmd.delete');
+    await runCanvasDelete(argv);
+    throw new Error('runCanvasDelete() must exit the process.');
   }
 
   try {

@@ -1,3 +1,4 @@
+import type { TCanvasDeleteSuccess } from './cmd.delete';
 import type { TCanvasListSuccess } from './cmd.list';
 import type { TCanvasMoveSuccess } from './cmd.move';
 import type { TCanvasPatchSuccess } from './cmd.patch';
@@ -55,4 +56,16 @@ export function renderCanvasPatchText(result: TCanvasPatchSuccess): string {
   const changedLabel = result.changedCount === 1 ? 'target' : 'targets';
   const matchedLabel = result.matchedCount === 1 ? 'target' : 'targets';
   return `Patched ${result.changedCount} ${changedLabel} from ${result.matchedCount} matched ${matchedLabel} in canvas=${result.canvas.id} name=${JSON.stringify(result.canvas.name)} patch=${JSON.stringify(result.patch)} changedIds=${JSON.stringify(result.changedIds)}\n`;
+}
+
+export function renderCanvasDeleteText(result: TCanvasDeleteSuccess): string {
+  const elementLabel = result.deletedElementIds.length === 1 ? 'element' : 'elements';
+  const groupLabel = result.deletedGroupIds.length === 1 ? 'group' : 'groups';
+  const lines = [
+    `Deleted ${result.deletedElementIds.length} ${elementLabel} and ${result.deletedGroupIds.length} ${groupLabel} in canvas=${result.canvas.id} name=${JSON.stringify(result.canvas.name)} mode=${result.effectsMode} elementIds=${JSON.stringify(result.deletedElementIds)} groupIds=${JSON.stringify(result.deletedGroupIds)}`,
+  ];
+  for (const warning of result.warnings) {
+    lines.push(`warning: ${warning}`);
+  }
+  return `${lines.join('\n')}\n`;
 }

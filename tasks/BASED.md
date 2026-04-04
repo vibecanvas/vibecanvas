@@ -87,7 +87,7 @@ Use the leaf files for execution history and local context.
 - [x]: [B10](b/B10.md) - style menu: drag then style jumps selection back to old position
 - [x]: [B11] - terminal after resize is not focuable anymore
 - [x]: [B12](b/B12.md) - terminal: ctrl+c echoes ^C but does not interrupt process
-
+- [ ]: [B13](b/B13.md) - canvas CLI: real dev db can list canvases that query/move/patch cannot open
 
 
 ## A dditions
@@ -100,15 +100,15 @@ Use the leaf files for execution history and local context.
 - [x]: [A7](a/A7.md) - canvas CLI: `list` command
 - [x]: [A8](a/A8.md) - canvas CLI: `inspect` command (removed; use `query --id`)
 - [x]: [A9](a/A9.md) - canvas CLI: `query` command
-- [ ]: [A10](a/A10.md) - canvas CLI: `patch` command
-- [ ]: [A11](a/A11.md) - canvas CLI: `move` command
-- [ ]: [A12](a/A12.md) - canvas CLI: `group` command
+- [x]: [A10](a/A10.md) - canvas CLI: `patch` command
+- [x]: [A11](a/A11.md) - canvas CLI: `move` command
+- [x]: [A12](a/A12.md) - canvas CLI: `group` command
 - [ ]: [A13](a/A13.md) - canvas CLI: `ungroup` command
-- [ ]: [A14](a/A14.md) - canvas CLI: `delete` command
+- [x]: [A14](a/A14.md) - canvas CLI: `delete` command
 - [ ]: [A15](a/A15.md) - canvas CLI: `reorder` command
 - [ ]: [A16](a/A16.md) - canvas CLI: `render` command
 - [ ]: [A17] - rect dbl click -> enter edit mode (inline text)
-- [ ]: [A18] - lift cmds to be api to allow live changes via crdt
+- [x]: [A18] - lift cmds to be api to allow live changes via crdt
 
 ## S ubtractions
 - [ ]: [S1](s/S1.md) - double bun run dev -> find new port
