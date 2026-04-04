@@ -67,7 +67,7 @@ Canvas subcommands:
   group     Group matching elements (planned)
   ungroup   Ungroup a group (planned)
   delete    Permanently delete element/group ids (cascades groups to descendants)
-  reorder   Change stacking order (planned)
+  reorder   Change stacking order (front/back/forward/backward)
   render    Render the persisted canvas state (planned)
 
 Subcommand help:

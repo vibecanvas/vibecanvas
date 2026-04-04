@@ -86,7 +86,8 @@ Offline canvas commands (planned):
   ungroup ...                                  Ungroup a group
   delete (--canvas <id> | --canvas-name <query>) --id <id>... [--doc-only | --with-effects-if-available]
                                                 Permanently delete elements/groups; deleting a group cascades to descendants
-  reorder ...                                  Change stacking order
+  reorder (--canvas <id> | --canvas-name <query>) --id <id>... --action <front|back|forward|backward>
+                                                Reorder sibling zIndex for explicit element/group ids
   render ...                                   Render the persisted canvas state
 
 Shared options:
@@ -206,6 +207,12 @@ export async function runCanvas(argv: readonly string[]): Promise<never> {
       throw new Error('runCanvasDelete() must exit the process.');
     }
 
+    if (subcommand === 'reorder') {
+      const { runCanvasReorder } = await import('./cmd.reorder');
+      await runCanvasReorder(argv);
+      throw new Error('runCanvasReorder() must exit the process.');
+    }
+
     printCanvasHelp();
     process.exit(0);
   }
@@ -232,6 +239,12 @@ export async function runCanvas(argv: readonly string[]): Promise<never> {
     const { runCanvasDelete } = await import('./cmd.delete');
     await runCanvasDelete(argv);
     throw new Error('runCanvasDelete() must exit the process.');
+  }
+
+  if (subcommand === 'reorder') {
+    const { runCanvasReorder } = await import('./cmd.reorder');
+    await runCanvasReorder(argv);
+    throw new Error('runCanvasReorder() must exit the process.');
   }
 
   try {

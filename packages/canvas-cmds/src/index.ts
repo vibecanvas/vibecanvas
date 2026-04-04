@@ -37,6 +37,14 @@ export { executeCanvasPatch } from './cmd.patch';
 export type { TCanvasQueryInput, TCanvasQuerySuccess, TQueryMatch } from './cmd.query';
 export { executeCanvasQuery } from './cmd.query';
 
+export type {
+  TCanvasReorderInput,
+  TCanvasReorderSuccess,
+  TReorderAction,
+  TReorderOrderEntry,
+} from './cmd.reorder';
+export { REORDER_ACTIONS, executeCanvasReorder } from './cmd.reorder';
+
 export {
   formatCanvasInventoryEntry,
   renderCanvasDeleteText,
@@ -44,6 +52,7 @@ export {
   renderCanvasMoveText,
   renderCanvasPatchText,
   renderCanvasQueryText,
+  renderCanvasReorderText,
 } from './formatters';
 
 export type {

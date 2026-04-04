@@ -105,7 +105,7 @@ Use the leaf files for execution history and local context.
 - [x]: [A12](a/A12.md) - canvas CLI: `group` command
 - [ ]: [A13](a/A13.md) - canvas CLI: `ungroup` command
 - [x]: [A14](a/A14.md) - canvas CLI: `delete` command
-- [ ]: [A15](a/A15.md) - canvas CLI: `reorder` command
+- [x]: [A15](a/A15.md) - canvas CLI: `reorder` command
 - [ ]: [A16](a/A16.md) - canvas CLI: `render` command
 - [ ]: [A17] - rect dbl click -> enter edit mode (inline text)
 - [x]: [A18] - lift cmds to be api to allow live changes via crdt

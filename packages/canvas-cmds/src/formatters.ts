@@ -3,6 +3,7 @@ import type { TCanvasListSuccess } from './cmd.list';
 import type { TCanvasMoveSuccess } from './cmd.move';
 import type { TCanvasPatchSuccess } from './cmd.patch';
 import type { TCanvasQuerySuccess } from './cmd.query';
+import type { TCanvasReorderSuccess } from './cmd.reorder';
 import type { TSceneBounds } from './scene-shared';
 
 export function formatCanvasInventoryEntry(entry: TCanvasListSuccess['canvases'][number]): string {
@@ -56,6 +57,10 @@ export function renderCanvasPatchText(result: TCanvasPatchSuccess): string {
   const changedLabel = result.changedCount === 1 ? 'target' : 'targets';
   const matchedLabel = result.matchedCount === 1 ? 'target' : 'targets';
   return `Patched ${result.changedCount} ${changedLabel} from ${result.matchedCount} matched ${matchedLabel} in canvas=${result.canvas.id} name=${JSON.stringify(result.canvas.name)} patch=${JSON.stringify(result.patch)} changedIds=${JSON.stringify(result.changedIds)}\n`;
+}
+
+export function renderCanvasReorderText(result: TCanvasReorderSuccess): string {
+  return `Reordered ${result.matchedCount} targets in canvas=${result.canvas.id} name=${JSON.stringify(result.canvas.name)} action=${result.action} parentGroupId=${result.parentGroupId ?? 'null'} beforeOrder=${JSON.stringify(result.beforeOrder)} afterOrder=${JSON.stringify(result.afterOrder)}\n`;
 }
 
 export function renderCanvasDeleteText(result: TCanvasDeleteSuccess): string {
