@@ -1,11 +1,7 @@
-import type { TPtyApiContext } from './types';
+import { basePtyOs } from './orpc';
 
-type TInput = {
-  workingDirectory: string;
-};
-
-async function apiListPty({ input, context }: { input: TInput; context: TPtyApiContext }) {
+const apiListPty = basePtyOs.list.handler(async ({ input, context }) => {
   return context.pty.list(input.workingDirectory);
-}
+});
 
 export { apiListPty };

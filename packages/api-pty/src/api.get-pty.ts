@@ -1,14 +1,7 @@
-import type { TPtyApiContext } from './types';
+import { basePtyOs } from './orpc';
 
-type TInput = {
-  workingDirectory: string;
-  path: {
-    ptyID: string;
-  };
-};
-
-async function apiGetPty({ input, context }: { input: TInput; context: TPtyApiContext }) {
+const apiGetPty = basePtyOs.get.handler(async ({ input, context }) => {
   return context.pty.get(input.workingDirectory, input.path.ptyID) ?? null;
-}
+});
 
 export { apiGetPty };

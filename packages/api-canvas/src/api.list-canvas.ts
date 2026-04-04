@@ -1,7 +1,7 @@
-import type { TCanvasApiContext } from './types';
+import { baseCanvasOs } from './orpc';
 
-async function apiListCanvas({ context }: { context: TCanvasApiContext }) {
+const apiListCanvas = baseCanvasOs.list.handler(async ({ context }) => {
   return context.db.listCanvas();
-}
+});
 
 export { apiListCanvas };

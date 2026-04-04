@@ -1,13 +1,7 @@
 import { extensionFromFormat, fileMetaFromPathname, toPublicFileUrl } from '@vibecanvas/core/file/fn.file-storage';
-import type { TFileApiContext } from './types';
+import { baseFileOs } from './orpc';
 
-type TInput = {
-  body: {
-    url: string;
-  };
-};
-
-async function apiCloneFile({ input, context }: { input: TInput; context: TFileApiContext }) {
+const apiCloneFile = baseFileOs.clone.handler(async ({ input, context }) => {
   const fileMeta = fileMetaFromPathname(new URL(input.body.url, 'http://localhost').pathname);
   if (!fileMeta) {
     throw new Error('Invalid file url');
@@ -33,6 +27,6 @@ async function apiCloneFile({ input, context }: { input: TInput; context: TFileA
   return {
     url: toPublicFileUrl(`${clonedId}.${extensionFromFormat(record.format)}`),
   };
-}
+});
 
 export { apiCloneFile };

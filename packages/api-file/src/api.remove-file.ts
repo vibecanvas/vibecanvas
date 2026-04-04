@@ -1,13 +1,7 @@
 import { fileMetaFromPathname } from '@vibecanvas/core/file/fn.file-storage';
-import type { TFileApiContext } from './types';
+import { baseFileOs } from './orpc';
 
-type TInput = {
-  body: {
-    url: string;
-  };
-};
-
-async function apiRemoveFile({ input, context }: { input: TInput; context: TFileApiContext }) {
+const apiRemoveFile = baseFileOs.remove.handler(async ({ input, context }) => {
   const fileMeta = fileMetaFromPathname(new URL(input.body.url, 'http://localhost').pathname);
   if (!fileMeta) {
     throw new Error('Invalid file url');
@@ -25,6 +19,6 @@ async function apiRemoveFile({ input, context }: { input: TInput; context: TFile
   context.db.deleteFile(record.id);
 
   return { ok: true as const };
-}
+});
 
 export { apiRemoveFile };

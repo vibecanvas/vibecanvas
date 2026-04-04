@@ -1,6 +1,6 @@
-import type { TNotificationApiContext } from './types';
+import { baseNotificationOs } from './orpc';
 
-async function* apiNotificationEvents({ context }: { context: TNotificationApiContext }) {
+const apiNotificationEvents = baseNotificationOs.events.handler(async function* ({ context }) {
   const latest = context.eventPublisher.getLatestNotification();
   if (latest) {
     yield latest;
@@ -9,6 +9,6 @@ async function* apiNotificationEvents({ context }: { context: TNotificationApiCo
   for await (const event of context.eventPublisher.subscribeNotifications()) {
     yield event;
   }
-}
+});
 
 export { apiNotificationEvents };

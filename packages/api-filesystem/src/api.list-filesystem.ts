@@ -1,18 +1,11 @@
-import type { TFilesystemApiContext } from './types';
+import { baseFilesystemOs } from './orpc';
 
-type TInput = {
-  query: {
-    path: string;
-    omitFiles?: boolean;
-  };
-};
-
-async function apiListFilesystem({ input, context }: { input: TInput; context: TFilesystemApiContext }) {
+const apiListFilesystem = baseFilesystemOs.list.handler(async ({ input, context }) => {
   const [result, error] = context.filesystem.list(input.query);
   if (error || !result) {
     return { type: error?.code ?? 'ERROR', message: error?.externalMessage?.en ?? 'Failed to list directory' };
   }
   return result;
-}
+});
 
 export { apiListFilesystem };

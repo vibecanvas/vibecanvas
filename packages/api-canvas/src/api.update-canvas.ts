@@ -1,17 +1,7 @@
 import { ORPCError } from '@orpc/server';
-import type { TCanvasApiContext } from './types';
+import { baseCanvasOs } from './orpc';
 
-type TInput = {
-  params: {
-    id: string;
-  };
-  body: {
-    name?: string;
-    path?: string;
-  };
-};
-
-async function apiUpdateCanvas({ input, context }: { input: TInput; context: TCanvasApiContext }) {
+const apiUpdateCanvas = baseCanvasOs.update.handler(async ({ input, context }) => {
   const canvas = context.db.updateCanvas({ id: input.params.id, ...input.body });
 
   if (!canvas) {
@@ -19,6 +9,6 @@ async function apiUpdateCanvas({ input, context }: { input: TInput; context: TCa
   }
 
   return canvas;
-}
+});
 
 export { apiUpdateCanvas };

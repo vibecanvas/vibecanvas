@@ -1,13 +1,6 @@
 import { createHash } from 'crypto';
 import { extensionFromFormat, toPublicFileUrl } from '@vibecanvas/core/file/fn.file-storage';
-import type { TFileApiContext } from './types';
-
-type TInput = {
-  body: {
-    base64: string;
-    format: 'image/jpeg' | 'image/png' | 'image/gif' | 'image/webp';
-  };
-};
+import { baseFileOs } from './orpc';
 
 function getBase64Payload(base64OrDataUrl: string): string {
   const match = base64OrDataUrl.match(/^data:[^;]+;base64,(.+)$/);
@@ -15,7 +8,7 @@ function getBase64Payload(base64OrDataUrl: string): string {
   return base64OrDataUrl;
 }
 
-async function apiPutFile({ input, context }: { input: TInput; context: TFileApiContext }) {
+const apiPutFile = baseFileOs.put.handler(async ({ input, context }) => {
   const base64Payload = getBase64Payload(input.body.base64).trim();
   const bytes = Buffer.from(base64Payload, 'base64');
 
@@ -37,6 +30,6 @@ async function apiPutFile({ input, context }: { input: TInput; context: TFileApi
   return {
     url: toPublicFileUrl(fileName),
   };
-}
+});
 
 export { apiPutFile };

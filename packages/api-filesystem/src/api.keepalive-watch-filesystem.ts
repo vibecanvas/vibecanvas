@@ -1,15 +1,11 @@
 import { ORPCError } from '@orpc/server';
-import type { TFilesystemApiContext } from './types';
+import { baseFilesystemOs } from './orpc';
 
-type TInput = {
-  watchId: string;
-};
-
-async function apiKeepaliveWatchFilesystem({ input, context }: { input: TInput; context: TFilesystemApiContext }) {
+const apiKeepaliveWatchFilesystem = baseFilesystemOs.keepaliveWatch.handler(async ({ input, context }) => {
   if (!context.filesystem.keepalive(input.watchId)) {
     throw new ORPCError('NOT_FOUND', { message: `Watch ${input.watchId} not found` });
   }
   return true;
-}
+});
 
 export { apiKeepaliveWatchFilesystem };

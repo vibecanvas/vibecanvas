@@ -1,15 +1,7 @@
-import type { TCanvasApiContext } from './types';
+import { baseCanvasOs } from './orpc';
 
-type TInput = {
-  params: {
-    id: string;
-  };
-};
-
-async function apiRemoveCanvas({ input, context }: { input: TInput; context: TCanvasApiContext }): Promise<never> {
-  void input;
-  void context;
+const apiRemoveCanvas = baseCanvasOs.remove.handler(async () => {
   throw new Error('api-canvas remove WIP: requires repo service extraction');
-}
+});
 
 export { apiRemoveCanvas };

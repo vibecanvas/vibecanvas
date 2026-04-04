@@ -1,12 +1,6 @@
-import type { TCanvasApiContext } from './types';
+import { baseCanvasOs } from './orpc';
 
-type TInput = {
-  params: {
-    id: string;
-  };
-};
-
-async function apiGetCanvas({ input, context }: { input: TInput; context: TCanvasApiContext }) {
+const apiGetCanvas = baseCanvasOs.get.handler(async ({ input, context }) => {
   const result = context.db.getFullCanvas(input.params.id);
   if (!result) throw new Error('Canvas not found');
 
@@ -14,6 +8,6 @@ async function apiGetCanvas({ input, context }: { input: TInput; context: TCanva
     canvas: [result.canvas],
     fileTrees: result.fileTrees,
   };
-}
+});
 
 export { apiGetCanvas };

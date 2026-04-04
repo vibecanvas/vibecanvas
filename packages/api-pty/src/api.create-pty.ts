@@ -1,13 +1,7 @@
-import type { TPtyCreateBody } from '@vibecanvas/pty-service/types';
-import type { TPtyApiContext } from './types';
+import { basePtyOs } from './orpc';
 
-type TInput = {
-  workingDirectory: string;
-  body?: TPtyCreateBody;
-};
-
-async function apiCreatePty({ input, context }: { input: TInput; context: TPtyApiContext }) {
+const apiCreatePty = basePtyOs.create.handler(async ({ input, context }) => {
   return context.pty.create(input.workingDirectory, input.body);
-}
+});
 
 export { apiCreatePty };

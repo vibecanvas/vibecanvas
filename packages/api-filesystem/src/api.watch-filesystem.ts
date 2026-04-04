@@ -1,12 +1,7 @@
 import { ORPCError } from '@orpc/server';
-import type { TFilesystemApiContext } from './types';
+import { baseFilesystemOs } from './orpc';
 
-type TInput = {
-  path: string;
-  watchId: string;
-};
-
-async function* apiWatchFilesystem({ input, context }: { input: TInput; context: TFilesystemApiContext }) {
+const apiWatchFilesystem = baseFilesystemOs.watch.handler(async function* ({ input, context }) {
   const iterator = context.filesystem.watch(input.path, input.watchId);
   if (!iterator) throw new ORPCError('CONFLICT', { message: `Watch ${input.watchId} already exists` });
 
@@ -17,6 +12,6 @@ async function* apiWatchFilesystem({ input, context }: { input: TInput; context:
   } finally {
     context.filesystem.unwatch(input.watchId);
   }
-}
+});
 
 export { apiWatchFilesystem };

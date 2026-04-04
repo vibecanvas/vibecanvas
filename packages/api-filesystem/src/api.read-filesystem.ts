@@ -1,19 +1,11 @@
-import type { TFilesystemApiContext } from './types';
+import { baseFilesystemOs } from './orpc';
 
-type TInput = {
-  query: {
-    path: string;
-    maxBytes?: number;
-    content?: 'text' | 'base64' | 'binary' | 'none';
-  };
-};
-
-async function apiReadFilesystem({ input, context }: { input: TInput; context: TFilesystemApiContext }) {
+const apiReadFilesystem = baseFilesystemOs.read.handler(async ({ input, context }) => {
   const [result, error] = context.filesystem.read(input.query);
   if (error || !result) {
     return { type: error?.code ?? 'ERROR', message: error?.externalMessage?.en ?? 'Failed to read file' };
   }
   return result;
-}
+});
 
 export { apiReadFilesystem };

@@ -1,12 +1,7 @@
-import type { TFilesystemApiContext } from './types';
+import { baseFilesystemOs } from './orpc';
 
-type TInput = {
-  watchId: string;
-};
-
-async function apiUnwatchFilesystem({ input, context }: { input: TInput; context: TFilesystemApiContext }) {
+const apiUnwatchFilesystem = baseFilesystemOs.unwatch.handler(async ({ input, context }) => {
   context.filesystem.unwatch(input.watchId);
-  return;
-}
+});
 
 export { apiUnwatchFilesystem };

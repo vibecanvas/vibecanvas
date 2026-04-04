@@ -1,18 +1,11 @@
-import type { TFilesystemApiContext } from './types';
+import { baseFilesystemOs } from './orpc';
 
-type TInput = {
-  query: {
-    path: string;
-    content: string;
-  };
-};
-
-async function apiWriteFilesystem({ input, context }: { input: TInput; context: TFilesystemApiContext }) {
+const apiWriteFilesystem = baseFilesystemOs.write.handler(async ({ input, context }) => {
   const [result, error] = context.filesystem.write(input.query);
   if (error || !result) {
     return { type: error?.code ?? 'ERROR', message: error?.externalMessage?.en ?? 'Failed to write file' };
   }
   return result;
-}
+});
 
 export { apiWriteFilesystem };

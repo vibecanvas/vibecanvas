@@ -1,13 +1,7 @@
-import type { TCanvasApiContext } from './types';
+import { baseCanvasOs } from './orpc';
 
-type TInput = {
-  name: string;
-};
-
-async function apiCreateCanvas({ input, context }: { input: TInput; context: TCanvasApiContext }): Promise<never> {
-  void input;
-  void context;
+const apiCreateCanvas = baseCanvasOs.create.handler(async () => {
   throw new Error('api-canvas create WIP: requires repo service extraction');
-}
+});
 
 export { apiCreateCanvas };
