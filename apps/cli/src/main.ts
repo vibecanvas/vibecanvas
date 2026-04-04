@@ -59,6 +59,17 @@ Examples:
   vibecanvas upgrade --check
   vibecanvas --version
 
+Canvas subcommands:
+  list      List canvases in the local database
+  query     Run structured readonly canvas queries
+  move      Move explicit element/group ids deterministically
+  patch     Apply a structured mutation (planned)
+  group     Group matching elements (planned)
+  ungroup   Ungroup a group (planned)
+  delete    Delete matching elements (planned)
+  reorder   Change stacking order (planned)
+  render    Render the persisted canvas state (planned)
+
 Subcommand help:
   Any subcommand accepts --help for command-specific usage.
   Canvas subcommands also work as top-level aliases, so both

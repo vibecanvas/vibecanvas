@@ -65,6 +65,10 @@ describe('canvas CLI test harness', () => {
     expectNoStderr(result);
     expect(result.stdout).toContain('Usage:');
     expect(result.stdout).toContain('Commands:');
+    expect(result.stdout).toContain('Canvas subcommands:');
+    expect(result.stdout).toContain('list      List canvases in the local database');
+    expect(result.stdout).toContain('query     Run structured readonly canvas queries');
+    expect(result.stdout).toContain('move      Move explicit element/group ids deterministically');
     expect(result.stdout).toContain('Any subcommand accepts --help for command-specific usage.');
     expect(result.stdout).toContain('vibecanvas query --help');
   });

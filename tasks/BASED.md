@@ -127,7 +127,7 @@ Use the leaf files for execution history and local context.
 - [x]: [S16](s/S16.md) - canvas: fix broken TypeScript typings in packages/canvas
 - [x]: [S17](s/S17.md) - extract apps/server into apps/cli + shared packages
 - [x]: [S18](s/S18.md) - cli server: migrate http file/static/spa serving from apps/server
-- [ ]: [S19](s/S19.md) - cli orpc: expose db events stream and remove apps/server api.db
+- [x]: [S19](s/S19.md) - cli orpc: expose db events stream and remove apps/server api.db
 - [x]: [S20](s/S20.md) - cli server: restore compiled-mode port fallback when preferred port is busy
 
 ## E xplorations
