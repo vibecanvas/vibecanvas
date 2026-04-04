@@ -1,4 +1,4 @@
-import type { IEventPublisherService } from '@vibecanvas/event-publisher/IEventPublisherService';
+import type { IEventPublisherService } from '@vibecanvas/event-publisher-service/IEventPublisherService';
 
 type TNotificationApiContext = {
   eventPublisher: IEventPublisherService;

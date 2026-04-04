@@ -2,7 +2,7 @@ import { onError } from '@orpc/server';
 import { RPCHandler } from '@orpc/server/bun-ws';
 import type { IAutomergeService } from '@vibecanvas/automerge-service/IAutomergeService';
 import type { IDbService } from '@vibecanvas/db/IDbService';
-import type { IEventPublisherService } from '@vibecanvas/event-publisher/IEventPublisherService';
+import type { IEventPublisherService } from '@vibecanvas/event-publisher-service/IEventPublisherService';
 import type { IFilesystemService } from '@vibecanvas/filesystem-service/IFilesystemService';
 import type { IPtyService } from '@vibecanvas/pty-service/IPtyService';
 import type { IPlugin } from '@vibecanvas/runtime';

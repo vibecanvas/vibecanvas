@@ -28,7 +28,7 @@
         "@vibecanvas/api-pty": "workspace:*",
         "@vibecanvas/automerge-service": "workspace:*",
         "@vibecanvas/db": "workspace:*",
-        "@vibecanvas/event-publisher": "workspace:*",
+        "@vibecanvas/event-publisher-service": "workspace:*",
         "@vibecanvas/filesystem-service": "workspace:*",
         "@vibecanvas/pty-service": "workspace:*",
         "@vibecanvas/runtime": "workspace:*",
@@ -134,7 +134,11 @@
       "dependencies": {
         "@orpc/contract": "catalog:",
         "@orpc/server": "catalog:",
+        "@vibecanvas/automerge-service": "workspace:*",
+        "@vibecanvas/canvas-cmds": "workspace:*",
         "@vibecanvas/db": "workspace:*",
+        "@vibecanvas/event-publisher-service": "workspace:*",
+        "@vibecanvas/shell": "workspace:*",
         "zod": "catalog:",
       },
     },
@@ -167,7 +171,7 @@
         "@orpc/server": "catalog:",
         "@vibecanvas/automerge-service": "workspace:*",
         "@vibecanvas/db": "workspace:*",
-        "@vibecanvas/event-publisher": "workspace:*",
+        "@vibecanvas/event-publisher-service": "workspace:*",
         "@vibecanvas/shell": "workspace:*",
         "zod": "catalog:",
       },
@@ -178,7 +182,7 @@
       "dependencies": {
         "@orpc/contract": "catalog:",
         "@orpc/server": "catalog:",
-        "@vibecanvas/event-publisher": "workspace:*",
+        "@vibecanvas/event-publisher-service": "workspace:*",
         "zod": "catalog:",
       },
     },
@@ -285,8 +289,8 @@
         "zod": "catalog:",
       },
     },
-    "packages/event-publisher": {
-      "name": "@vibecanvas/event-publisher",
+    "packages/event-publisher-service": {
+      "name": "@vibecanvas/event-publisher-service",
       "version": "0.0.1",
       "dependencies": {
         "@orpc/server": "catalog:",
@@ -300,7 +304,7 @@
       "version": "0.0.1",
       "dependencies": {
         "@vibecanvas/core": "workspace:*",
-        "@vibecanvas/event-publisher": "workspace:*",
+        "@vibecanvas/event-publisher-service": "workspace:*",
         "@vibecanvas/runtime": "workspace:*",
       },
     },
@@ -982,7 +986,7 @@
 
     "@vibecanvas/db": ["@vibecanvas/db@workspace:packages/db"],
 
-    "@vibecanvas/event-publisher": ["@vibecanvas/event-publisher@workspace:packages/event-publisher"],
+    "@vibecanvas/event-publisher-service": ["@vibecanvas/event-publisher-service@workspace:packages/event-publisher-service"],
 
     "@vibecanvas/filesystem-service": ["@vibecanvas/filesystem-service@workspace:packages/filesystem-service"],
 

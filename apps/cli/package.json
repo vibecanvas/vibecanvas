@@ -21,7 +21,7 @@
     "@vibecanvas/api-notification": "workspace:*",
     "@vibecanvas/api-pty": "workspace:*",
     "@vibecanvas/db": "workspace:*",
-    "@vibecanvas/event-publisher": "workspace:*",
+    "@vibecanvas/event-publisher-service": "workspace:*",
     "@vibecanvas/filesystem-service": "workspace:*",
     "@vibecanvas/pty-service": "workspace:*",
     "@vibecanvas/runtime": "workspace:*",

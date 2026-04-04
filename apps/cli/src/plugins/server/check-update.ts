@@ -1,4 +1,4 @@
-import type { IEventPublisherService } from '@vibecanvas/event-publisher/IEventPublisherService';
+import type { IEventPublisherService } from '@vibecanvas/event-publisher-service/IEventPublisherService';
 import type { ICliConfig } from '../../config';
 import { checkForUpgrade } from '../cli/tx.cmd.upgrade';
 

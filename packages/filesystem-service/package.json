@@ -9,7 +9,7 @@
   },
   "dependencies": {
     "@vibecanvas/core": "workspace:*",
-    "@vibecanvas/event-publisher": "workspace:*",
+    "@vibecanvas/event-publisher-service": "workspace:*",
     "@vibecanvas/runtime": "workspace:*"
   }
 }

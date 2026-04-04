@@ -4,7 +4,7 @@ import { ctrlDirList } from '@vibecanvas/core/filesystem/ctrl.dir-list';
 import { ctrlFileInspect } from '@vibecanvas/core/filesystem/ctrl.file-inspect';
 import { ctrlFileMove } from '@vibecanvas/core/filesystem/ctrl.file-move';
 import { ctrlFileRead } from '@vibecanvas/core/filesystem/ctrl.file-read';
-import type { IEventPublisherService } from '@vibecanvas/event-publisher/IEventPublisherService';
+import type { IEventPublisherService } from '@vibecanvas/event-publisher-service/IEventPublisherService';
 import { existsSync, readFileSync, readdirSync, renameSync, statSync, watch, writeFileSync, type FSWatcher } from 'fs';
 import { homedir } from 'os';
 import { basename, dirname, extname, join, resolve, sep } from 'path';

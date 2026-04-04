@@ -9,7 +9,7 @@
   "dependencies": {
     "@orpc/contract": "catalog:",
     "@orpc/server": "catalog:",
-    "@vibecanvas/event-publisher": "workspace:*",
+    "@vibecanvas/event-publisher-service": "workspace:*",
     "zod": "catalog:"
   }
 }
