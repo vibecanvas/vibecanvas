@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { executeCanvasQuery, renderCanvasQueryText, resolveSelectorEnvelope } from '../src';
+import { CanvasCmdError, executeCanvasQuery, renderCanvasQueryText, resolveSelectorEnvelope } from '../src';
 import { createCanvasDoc, createGroup, createMockContext, createRectElement, createTextElement } from './test-helpers';
 
 describe('executeCanvasQuery', () => {
@@ -88,5 +88,33 @@ describe('executeCanvasQuery', () => {
     expect(result.matches[0]?.metadata.id).toBe('rect-child');
     expect(result.matches[0]?.payload).not.toHaveProperty('data');
     expect(result.matches[0]?.payload).not.toHaveProperty('style');
+  });
+
+  test('uses the selected canvas row name when subtree validation runs against a malformed doc name', async () => {
+    const doc = {
+      ...createCanvasDoc({ name: 'ignored-doc-name' }),
+      name: undefined,
+    } as unknown as ReturnType<typeof createCanvasDoc>;
+    const ctx = createMockContext({
+      rows: [{ id: 'canvas-1', name: 'hello', created_at: '2024-01-01T00:00:00.000Z', automerge_url: 'automerge:canvas-1' }],
+      docs: { 'automerge:canvas-1': doc },
+    });
+
+    const selector = resolveSelectorEnvelope({
+      values: { subtree: 'missing-group' },
+      canvasId: null,
+      canvasNameQuery: 'hello',
+      command: 'canvas.query',
+      fail: (error) => {
+        throw new Error(error.message);
+      },
+    });
+
+    await expect(executeCanvasQuery(ctx, { selector })).rejects.toMatchObject({
+      details: {
+        code: 'CANVAS_QUERY_SUBTREE_NOT_FOUND',
+        message: "Subtree root 'missing-group' was not found in canvas 'hello'.",
+      },
+    } satisfies Partial<CanvasCmdError>);
   });
 });

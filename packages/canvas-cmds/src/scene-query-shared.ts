@@ -280,6 +280,7 @@ export function validateGroupSelector(args: {
   command: string;
   canvasId: string;
   canvasNameQuery: string | null;
+  canvasName: string;
   fail: (error: TSceneSelectorError) => never;
 }): void {
   const context: TSceneSelectorContext = {
@@ -288,13 +289,14 @@ export function validateGroupSelector(args: {
     canvasNameQuery: args.canvasNameQuery,
     fail: args.fail,
   };
+  const resolvedCanvasName = typeof args.doc.name === 'string' && args.doc.name.trim().length > 0 ? args.doc.name : args.canvasName;
 
   if (args.selector.group && !args.doc.groups[args.selector.group]) {
-    failSceneSelector(context, 'GROUP_NOT_FOUND', `Group '${args.selector.group}' was not found in canvas '${args.doc.name}'.`);
+    failSceneSelector(context, 'GROUP_NOT_FOUND', `Group '${args.selector.group}' was not found in canvas '${resolvedCanvasName}'.`);
   }
 
   if (args.selector.subtree && !args.doc.groups[args.selector.subtree]) {
-    failSceneSelector(context, 'SUBTREE_NOT_FOUND', `Subtree root '${args.selector.subtree}' was not found in canvas '${args.doc.name}'.`);
+    failSceneSelector(context, 'SUBTREE_NOT_FOUND', `Subtree root '${args.selector.subtree}' was not found in canvas '${resolvedCanvasName}'.`);
   }
 }
 

@@ -90,6 +90,7 @@ export async function executeCanvasQuery(ctx: TCanvasCmdContext, input: TCanvasQ
       command: 'canvas.query',
       canvasId: selectedCanvas.id,
       canvasNameQuery,
+      canvasName: selectedCanvas.name,
       fail: (error) => exitQueryError(error),
     });
 
