@@ -50,8 +50,7 @@ export async function runCanvasCommand(services: { db: IDbService, automerge: IA
   }
 
 
-  // const safeClient = serverHealth ? fnBuildRpcLink(serverHealth) : null
-  const safeClient = null
+  const safeClient = serverHealth ? fnBuildRpcLink(serverHealth) : null
 
   if (config.subcommand === 'query') {
     await runCanvasQueryCommand({ ...services, safeClient }, { ...config })
