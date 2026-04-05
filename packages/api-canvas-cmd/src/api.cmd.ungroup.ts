@@ -3,7 +3,7 @@ import { createCanvasCmdContext } from './cmd.context';
 import { rethrowCanvasCmdAsOrpcError } from './cmd.error';
 import { baseCanvasCmdOs } from './orpc';
 
-const apiCmdUngroupCanvas = baseCanvasCmdOs.api.canvasCmd.ungroup.handler(async ({ input, context }) => {
+const apiCmdUngroupCanvas = baseCanvasCmdOs.ungroup.handler(async ({ input, context }) => {
   try {
     return await fxExecuteCanvasUngroup(createCanvasCmdContext(context), input);
   } catch (error) {

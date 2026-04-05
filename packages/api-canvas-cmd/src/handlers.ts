@@ -10,19 +10,15 @@ import { apiCmdUngroupCanvas } from './api.cmd.ungroup';
 import { baseCanvasCmdOs } from './orpc';
 
 const canvasCmdHandlers = {
-  api: {
-    canvasCmd: {
-      list: apiCmdListCanvas,
-      query: apiCmdQueryCanvas,
-      patch: apiCmdPatchCanvas,
-      move: apiCmdMoveCanvas,
-      group: apiCmdGroupCanvas,
-      ungroup: apiCmdUngroupCanvas,
-      delete: apiCmdDeleteCanvas,
-      reorder: apiCmdReorderCanvas,
-      add: apiCmdAddCanvas,
-    },
-  },
+  list: apiCmdListCanvas,
+  query: apiCmdQueryCanvas,
+  patch: apiCmdPatchCanvas,
+  move: apiCmdMoveCanvas,
+  group: apiCmdGroupCanvas,
+  ungroup: apiCmdUngroupCanvas,
+  delete: apiCmdDeleteCanvas,
+  reorder: apiCmdReorderCanvas,
+  add: apiCmdAddCanvas,
 };
 
 export { baseCanvasCmdOs, canvasCmdHandlers };

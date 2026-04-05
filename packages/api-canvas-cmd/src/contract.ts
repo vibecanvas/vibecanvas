@@ -22,7 +22,7 @@ const canvasCmdContract = oc.router({
 });
 
 const canvasCmdApiContract = populateContractRouterPaths(
-  oc.router({ api: oc.router({ canvasCmd: canvasCmdContract }) }),
+  oc.router(canvasCmdContract),
 );
 
 export { canvasCmdContract, canvasCmdApiContract };
