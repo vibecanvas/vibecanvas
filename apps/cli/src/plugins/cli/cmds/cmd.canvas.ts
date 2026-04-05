@@ -1,9 +1,15 @@
 import type { IAutomergeService } from '@vibecanvas/automerge-service/IAutomergeService';
 import type { ICliConfig } from '@vibecanvas/cli/config';
 import type { IDbService } from '@vibecanvas/db/IDbService';
+import { runCanvasGroupCommand } from './cmd.group.canvas';
+import { runCanvasListCommand } from './cmd.list.canvas';
+import { runCanvasMoveCommand } from './cmd.move.canvas';
 import { runCanvasQueryCommand } from './cmd.query.canvas';
+import { runCanvasReorderCommand } from './cmd.reorder.canvas';
+import { runCanvasUngroupCommand } from './cmd.ungroup.canvas';
 import { fxDiscoverLocalCanvasServer } from '../core/fx.canvas.server-discovery';
 import { fnBuildRpcLink } from '../core/fn.build-rpc-link';
+
 function printCanvasHelp(): void {
   console.log(`Usage: vibecanvas canvas <command> [options]
 
@@ -49,10 +55,32 @@ export async function runCanvasCommand(services: { db: IDbService, automerge: IA
     return
   }
 
-
   const safeClient = serverHealth ? fnBuildRpcLink(serverHealth) : null
+
+  if (config.subcommand === 'list') {
+    await runCanvasListCommand({ ...services, safeClient }, { ...config })
+  }
 
   if (config.subcommand === 'query') {
     await runCanvasQueryCommand({ ...services, safeClient }, { ...config })
   }
+
+  if (config.subcommand === 'move') {
+    await runCanvasMoveCommand({ ...services, safeClient }, { ...config })
+  }
+
+  if (config.subcommand === 'group') {
+    await runCanvasGroupCommand({ ...services, safeClient }, { ...config })
+  }
+
+  if (config.subcommand === 'ungroup') {
+    await runCanvasUngroupCommand({ ...services, safeClient }, { ...config })
+  }
+
+  if (config.subcommand === 'reorder') {
+    await runCanvasReorderCommand({ ...services, safeClient }, { ...config })
+  }
+
+  console.error(`Canvas command '${config.subcommand}' is not implemented yet.`)
+  process.exit(1)
 }
