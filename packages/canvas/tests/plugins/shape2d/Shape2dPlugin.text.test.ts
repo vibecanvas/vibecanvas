@@ -24,6 +24,10 @@ function dragShapeInScreenSpace(shape: Konva.Shape, args: { deltaX: number; delt
   shape.fire("dragend", { target: shape, currentTarget: shape, evt: new MouseEvent("dragend", { bubbles: true }) });
 }
 
+function fireDblClick(node: Konva.Node) {
+  node.fire("pointerdblclick", { evt: new PointerEvent("dblclick", { bubbles: true }) }, true);
+}
+
 function altDragRect(shape: Konva.Rect, args: { deltaX: number; deltaY?: number }) {
   const beforeNodeIds = new Set(
     shape.getStage()?.getLayers().flatMap((layer) => layer.getChildren()).map((child) => child._id) ?? [],
@@ -88,6 +92,44 @@ async function createAttachedRectTextHarness() {
   return { harness, ctx, rect, docHandle };
 }
 
+async function createGroupedAttachedRectTextHarness() {
+  let ctx!: IPluginContext;
+  const docHandle = createMockDocHandle() as DocHandle<TCanvasDoc>;
+
+  const harness = await createCanvasTestHarness({
+    docHandle,
+    plugins: [new SelectPlugin(), new TransformPlugin(), new Shape2dPlugin(), new TextPlugin(), new GroupPlugin()],
+    initializeScene: (context) => {
+      ctx = context;
+      const rect = Shape2dPlugin.createRectFromElement({
+        id: "grouped-attached-rect-1",
+        x: 120,
+        y: 100,
+        rotation: 0,
+        bindings: [],
+        createdAt: Date.now(),
+        locked: false,
+        parentGroupId: null,
+        updatedAt: Date.now(),
+        zIndex: "",
+        data: { type: "rect", w: 180, h: 100 },
+        style: { backgroundColor: "red" },
+      });
+
+      Shape2dPlugin.setupShapeListeners(context, rect);
+      rect.setDraggable(true);
+      context.staticForegroundLayer.add(rect);
+      const group = GroupPlugin.group(context, [rect]);
+      context.crdt.patch({ elements: [Shape2dPlugin.toTElement(rect)], groups: [] });
+      context.crdt.patch({ elements: [], groups: [GroupPlugin.toTGroup(group)] });
+    },
+  });
+
+  const rect = harness.staticForegroundLayer.findOne<Konva.Rect>("#grouped-attached-rect-1")!;
+  const group = rect.getParent() as Konva.Group;
+  return { harness, ctx, rect, group, docHandle };
+}
+
 describe("Shape2dPlugin – attached text", () => {
   test("pressing Enter on a selected rect creates attached text and opens edit mode", async () => {
     const { harness, ctx, rect, docHandle } = await createAttachedRectTextHarness();
@@ -116,6 +158,50 @@ describe("Shape2dPlugin – attached text", () => {
     expect((textElement?.data as any).containerId).toBe(rect.id());
     expect((textElement?.data as any).text).toBe("hello rect");
     expect(attachedText.text()).toBe("hello rect");
+
+    harness.destroy();
+  });
+
+  test("dblclick on selected rect creates attached text and opens edit mode", async () => {
+    const { harness, ctx, rect, docHandle } = await createAttachedRectTextHarness();
+
+    ctx.setState("selection", [rect]);
+    await flushCanvasEffects();
+    fireDblClick(rect);
+    await flushCanvasEffects();
+
+    const attachedText = harness.staticForegroundLayer.findOne<Konva.Text>((node: Konva.Node) => node instanceof Konva.Text && TextPlugin.getContainerId(node) === rect.id())!;
+    const textarea = ctx.stage.container().querySelector("textarea") as HTMLTextAreaElement;
+
+    expect(ctx.state.editingTextId).toBe(attachedText.id());
+    expect(textarea).not.toBeNull();
+
+    textarea.value = "hello dblclick";
+    textarea.dispatchEvent(new Event("blur"));
+    await flushCanvasEffects();
+
+    const textElement = docHandle.doc().elements[attachedText.id()];
+    expect((textElement?.data as any).containerId).toBe(rect.id());
+    expect((textElement?.data as any).text).toBe("hello dblclick");
+
+    harness.destroy();
+  });
+
+  test("dblclick on grouped rect drills first, edits on second dblclick", async () => {
+    const { harness, ctx, rect, group } = await createGroupedAttachedRectTextHarness();
+
+    ctx.setState("selection", [group]);
+    await flushCanvasEffects();
+
+    fireDblClick(rect);
+    await flushCanvasEffects();
+    expect(ctx.state.selection.map((node) => node.id())).toEqual([group.id(), rect.id()]);
+    expect(ctx.stage.container().querySelector("textarea")).toBeNull();
+
+    fireDblClick(rect);
+    await flushCanvasEffects();
+    const textarea = ctx.stage.container().querySelector("textarea");
+    expect(textarea).not.toBeNull();
 
     harness.destroy();
   });
