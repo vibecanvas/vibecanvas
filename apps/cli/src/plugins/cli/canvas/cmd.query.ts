@@ -1,6 +1,9 @@
-import { parseArgs } from 'node:util';
-import { CanvasCmdError, executeCanvasQuery, renderCanvasQueryText, resolveOutputMode, resolveSelectorEnvelope } from '@vibecanvas/canvas-cmds';
-import { createOfflineCanvasState, createOnlineCanvasSafeClient, discoverLocalCanvasServer } from '../canvas.shared';
+import { CanvasCmdError, executeCanvasQuery, renderCanvasQueryText, resolveOutputMode, resolveSelectorEnvelope, type TCanvasCmdContext } from '@vibecanvas/canvas-cmds';
+import { createCanvasSafeClient } from '../canvas.online-client';
+import type { ICliConfig } from '@vibecanvas/cli/config';
+import type { IAutomergeService } from '@vibecanvas/automerge-service/IAutomergeService';
+import type { IDbService } from '@vibecanvas/db/IDbService';
+import type { TCanvasDoc } from '@vibecanvas/shell/automerge/index';
 
 type TQueryJsonError = {
   ok: false;
@@ -81,67 +84,59 @@ function exitQueryError(wantsJson: boolean, error: TQueryJsonError): never {
   exitWithQueryTextError(error.message);
 }
 
-export async function runCanvasQuery(argv: readonly string[]): Promise<never> {
-  const { values } = parseArgs({
-    args: argv,
-    strict: false,
-    allowPositionals: true,
-    options: {
-      help: { type: 'boolean', short: 'h', default: false },
-      json: { type: 'boolean', default: false },
-      db: { type: 'string' },
-      canvas: { type: 'string' },
-      'canvas-name': { type: 'string' },
-      output: { type: 'string' },
-      omitdata: { type: 'boolean', default: false },
-      omitstyle: { type: 'boolean', default: false },
-      id: { type: 'string', multiple: true },
-      kind: { type: 'string', multiple: true },
-      type: { type: 'string', multiple: true },
-      style: { type: 'string', multiple: true },
-      group: { type: 'string' },
-      subtree: { type: 'string' },
-      bounds: { type: 'string' },
-      'bounds-mode': { type: 'string' },
-      where: { type: 'string' },
-      query: { type: 'string' },
-    },
-  });
-
-  const wantsJson = Boolean(values.json);
-  const canvasId = typeof values.canvas === 'string' ? values.canvas : null;
-  const canvasNameQuery = typeof values['canvas-name'] === 'string' ? values['canvas-name'] : null;
-
-  if (values.help) {
+export async function runCanvasQuery(services: { db: IDbService, automerge: IAutomergeService }, config: ICliConfig & { localServerPort: number | null }): Promise<never> {
+  if (config.helpRequested) {
     printQueryHelp();
     process.exit(0);
   }
 
+  if (config.command !== 'canvas' || config.subcommand !== 'query') {
+    exitQueryError(Boolean(config.subcommandOptions?.json), {
+      ok: false,
+      command: 'canvas.query',
+      code: 'CANVAS_QUERY_CONFIG_INVALID',
+      message: `runCanvasQuery() received unexpected command routing: command='${config.command}' subcommand='${config.subcommand ?? 'undefined'}'.`,
+    });
+  }
+
+  const options = config.subcommandOptions ?? {};
+  const wantsJson = Boolean(options.json);
+  const canvasId = options.canvasId ?? null;
+  const canvasNameQuery = options.canvasNameQuery ?? null;
+  const selectorValues: Record<string, unknown> = {
+    id: options.ids ?? [],
+    kind: options.kinds ?? [],
+    type: options.types ?? [],
+    style: options.styles ?? [],
+    group: options.groupId,
+    subtree: options.subtree,
+    bounds: options.bounds,
+    'bounds-mode': options.boundsMode,
+    where: options.where,
+    query: options.queryJson,
+  };
+
   const outputMode = resolveOutputMode({
-    output: typeof values.output === 'string' ? values.output : undefined,
+    output: options.output,
     command: 'canvas.query',
     fail: (error) => exitQueryError(wantsJson, error as TQueryJsonError),
   });
 
   const selector = resolveSelectorEnvelope({
-    values,
+    values: selectorValues,
     canvasId,
     canvasNameQuery,
     command: 'canvas.query',
     fail: (error) => exitQueryError(wantsJson, error as TQueryJsonError),
   });
 
-  const hasExplicitDbPath = typeof values.db === 'string';
-
-  const discoveredServer = hasExplicitDbPath ? null : await discoverLocalCanvasServer(argv);
-
-  if (discoveredServer) {
-    const safeClient = await createOnlineCanvasSafeClient(discoveredServer.port);
+  if (config.localServerPort !== null) {
+    const safeClient = createCanvasSafeClient(config.localServerPort);
     const [clientError, result] = await safeClient.api.canvasCmd.query({
       selector,
       output: outputMode,
-      omitData: Boolean(values.omitdata),
-      omitStyle: Boolean(values.omitstyle),
+      omitData: Boolean(options.omitData),
+      omitStyle: Boolean(options.omitStyle),
     });
 
     if (clientError || !result) {
@@ -165,14 +160,44 @@ export async function runCanvasQuery(argv: readonly string[]): Promise<never> {
     process.exit(0);
   }
 
-  const state = await createOfflineCanvasState(argv);
+  const context: TCanvasCmdContext = {
+    async listCanvasRows() {
+      return services.db.listCanvas();
+    },
+    async loadCanvasHandle(row) {
+      const handle = await services.automerge.repo.find<TCanvasDoc>(row.automerge_url as never);
+      await handle.whenReady();
+      return {
+        handle,
+        source: 'live',
+      };
+    },
+    async waitForMutation(args) {
+      const startedAt = Date.now();
+      let lastError: unknown = null;
+
+      while (Date.now() - startedAt < (args.source === 'live' ? 4000 : 2000)) {
+        try {
+          const doc = args.handle.doc();
+          if (!doc) throw new Error(`Canvas doc '${args.automergeUrl}' is unavailable.`);
+          if (args.predicate(doc)) return structuredClone(doc);
+        } catch (error) {
+          lastError = error;
+        }
+
+        await Bun.sleep(25);
+      }
+
+      throw new Error(`Timed out waiting for canvas doc '${args.automergeUrl}': ${String(lastError)}`);
+    },
+  };
 
   try {
-    const result = await executeCanvasQuery(state.context, {
+    const result = await executeCanvasQuery(context, {
       selector,
       output: outputMode,
-      omitData: Boolean(values.omitdata),
-      omitStyle: Boolean(values.omitstyle),
+      omitData: Boolean(options.omitData),
+      omitStyle: Boolean(options.omitStyle),
     });
 
     if (wantsJson) {
@@ -195,7 +220,5 @@ export async function runCanvasQuery(argv: readonly string[]): Promise<never> {
       canvasId,
       canvasNameQuery,
     });
-  } finally {
-    state.dispose();
   }
 }
