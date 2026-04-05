@@ -63,7 +63,7 @@ function createCliPlugin(): IPlugin<{ db: IDbService, automerge: IAutomergeServi
         }
       });
 
-      ctx.hooks.ready.tap(() => {
+      ctx.hooks.ready.tapPromise(async () => {
         if (ctx.config.versionRequested) {
           console.log(ctx.config.version);
           process.exit(0);
@@ -75,7 +75,7 @@ function createCliPlugin(): IPlugin<{ db: IDbService, automerge: IAutomergeServi
         }
 
         if (ctx.config.command === 'canvas') {
-          runCanvasCommand({ db: ctx.services.require('db'), automerge: ctx.services.require('automerge') }, ctx.config);
+          await runCanvasCommand({ db: ctx.services.require('db'), automerge: ctx.services.require('automerge') }, ctx.config);
           process.exit(0);
         }
 

@@ -9,7 +9,7 @@ export type THttpRequestHookPayload = {
 
 export interface ICliHooks {
   boot: AsyncSeriesHook<[]>;
-  ready: SyncHook<[]>;
+  ready: AsyncSeriesHook<[]>;
   shutdown: AsyncSeriesHook<[]>;
 
   httpRequest: AsyncWaterfallHook<THttpRequestHookPayload>;
@@ -26,7 +26,7 @@ export interface ICliHooks {
 export function createCliHooks(): ICliHooks {
   return {
     boot: new AsyncSeriesHook<[]>(),
-    ready: new SyncHook<[]>(),
+    ready: new AsyncSeriesHook<[]>(),
     shutdown: new AsyncSeriesHook<[]>(),
 
     httpRequest: new AsyncWaterfallHook<THttpRequestHookPayload>(),
@@ -44,7 +44,7 @@ export function createCliHooks(): ICliHooks {
 export async function bootCliRuntime(ctx: IPluginContext<IServiceMap, ICliHooks, ICliConfig>) {
   await ctx.hooks.boot.promise();
   ctx.hooks.registerCommands.call();
-  ctx.hooks.ready.call();
+  await ctx.hooks.ready.promise();
 }
 
 export async function shutdownCliRuntime(ctx: IPluginContext<IServiceMap, ICliHooks, ICliConfig>) {

@@ -1,3 +1,5 @@
+import type { TCanvasSubcommandOptions } from './parse-argv';
+
 export interface ICliConfig {
   cwd: string;
   dev: boolean;
@@ -15,4 +17,5 @@ export interface ICliConfig {
   helpRequested: boolean;
   versionRequested: boolean;
   upgradeTarget?: string;
+  subcommandOptions?: TCanvasSubcommandOptions;
 }

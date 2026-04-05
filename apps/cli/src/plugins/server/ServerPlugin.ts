@@ -95,7 +95,7 @@ function createServerPlugin(): IPlugin<{ eventPublisher: IEventPublisherService 
         }), ctx.config.port, ctx.config.compiled);
       });
 
-      ctx.hooks.ready.tap(() => {
+      ctx.hooks.ready.tapPromise(async () => {
         if (ctx.config.command !== 'serve') return;
         if (!bunServer) return;
 
