@@ -4,6 +4,7 @@ import type { IDbService } from '@vibecanvas/db/IDbService';
 import type { ICliConfig } from '../../config';
 import { txCmdUpgrade } from './cmd.upgrade';
 import type { IAutomergeService } from '@vibecanvas/automerge-service/IAutomergeService';
+import { runCanvasCommand } from './cmd.canvas';
 
 function printHelp(): void {
   console.log(`vibecanvas - Run your agents in an infinite canvas
@@ -74,7 +75,7 @@ function createCliPlugin(): IPlugin<{ db: IDbService, automerge: IAutomergeServi
         }
 
         if (ctx.config.command === 'canvas') {
-          console.log('Canvas command is WIP.', ctx.services.require('automerge').repo);
+          runCanvasCommand({ db: ctx.services.require('db'), automerge: ctx.services.require('automerge') }, ctx.config);
           process.exit(0);
         }
 

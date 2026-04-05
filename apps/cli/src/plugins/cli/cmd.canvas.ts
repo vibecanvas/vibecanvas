@@ -309,3 +309,10 @@ export async function runCanvas(argv: readonly string[]): Promise<never> {
 }
 
 import { createLocalCanvasState } from './canvas.local-state';
+import type { ICliConfig } from '@vibecanvas/cli/config';
+import type { IAutomergeService } from '@vibecanvas/automerge-service/IAutomergeService';
+import type { IDbService } from '@vibecanvas/db/IDbService';
+
+export async function runCanvasCommand(services: { db: IDbService, automerge: IAutomergeService }, config: ICliConfig) {
+  console.log(config)
+}
