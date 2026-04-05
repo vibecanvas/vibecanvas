@@ -1,13 +1,9 @@
 import type { IAutomergeService } from '@vibecanvas/automerge-service/IAutomergeService';
 import type { ICliConfig } from '@vibecanvas/cli/config';
 import type { IDbService } from '@vibecanvas/db/IDbService';
-// import { runCanvasQuery } from '../canvas/cmd.query';
+import { runCanvasQueryCommand } from './cmd.query.canvas';
 import { fxDiscoverLocalCanvasServer } from '../core/fx.canvas.server-discovery';
-import { RPCLink } from '@orpc/client/fetch'
-import type { RouterClient } from '@orpc/server'
-import { createORPCClient, createSafeClient, type SafeClient } from '@orpc/client'
-import type { canvasCmdApiContract, canvasCmdContract } from '@vibecanvas/api-canvas-cmd/contract';
-import type { ContractRouterClient } from '@orpc/contract';
+import { fnBuildRpcLink } from '../core/fn.build-rpc-link';
 function printCanvasHelp(): void {
   console.log(`Usage: vibecanvas canvas <command> [options]
 
@@ -54,26 +50,11 @@ export async function runCanvasCommand(services: { db: IDbService, automerge: IA
     return
   }
 
-  const link = new RPCLink({
-    url: `http://localhost:${serverHealth?.port}/rpc`,
-  })
-  type TCanvasCmdClient = ContractRouterClient<typeof canvasCmdApiContract>;
-  type TSafeCanvasCmdClient = SafeClient<TCanvasCmdClient>;
 
-  const client: TCanvasCmdClient = createORPCClient(link);
-  const safeClient: TSafeCanvasCmdClient = createSafeClient(client);
-
+  // const safeClient = serverHealth ? fnBuildRpcLink(serverHealth) : null
+  const safeClient = null
 
   if (config.subcommand === 'query') {
-    const result = await safeClient.query({
-      selector: {
-        canvasId: null,
-        canvasNameQuery: 'ok',
-        filters: { bounds: null, boundsMode: 'contains', group: null, ids: [], kinds: [], style: {}, subtree: null, types: [] },
-        source: 'none'
-      }
-    })
-    console.log('hello', link, result)
-    // await runCanvasQuery(services, { ...config, localServerPort: serverHealth?.port ?? null })
+    await runCanvasQueryCommand({ ...services, safeClient }, { ...config })
   }
 }
