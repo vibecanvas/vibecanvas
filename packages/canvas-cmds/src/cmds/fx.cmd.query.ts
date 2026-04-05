@@ -439,21 +439,29 @@ export async function fxExecuteCanvasQuery(portal: TPortal, input: TCanvasQueryI
 
   try {
     const mode = input.output ?? 'summary';
-    const selectedCanvas = fnResolveCanvasSelection({ rows: portal.dbService.canvas.listAll(), selector, command: 'canvas.query', actionLabel: 'Query' });
+    const omitData = Boolean(input.omitData);
+    const omitStyle = Boolean(input.omitStyle);
+    const canvasRows = portal.dbService.canvas.listAll();
+    const selectedCanvas = fnResolveCanvasSelection({ rows: canvasRows, selector, command: 'canvas.query', actionLabel: 'Query' });
     const { doc: canvasDoc } = await fxLoadCanvasHandleDoc(portal, selectedCanvas);
     validateSelector(canvasDoc, selector);
 
-    const matches = createSceneTargets(canvasDoc)
-      .filter((target) => matchesSceneSelector(target, canvasDoc, selector.filters))
-      .map((target) => ({
+    const targets = createSceneTargets(canvasDoc);
+    const matches: TCanvasQuerySuccess['matches'] = [];
+
+    for (const target of targets) {
+      if (!matchesSceneSelector(target, canvasDoc, selector.filters)) continue;
+
+      matches.push({
         metadata: buildMatchMetadata(target, canvasDoc),
         payload: buildQueryPayload(target, canvasDoc, mode, {
-          omitData: Boolean(input.omitData),
-          omitStyle: Boolean(input.omitStyle),
+          omitData,
+          omitStyle,
         }),
-      }));
+      });
+    }
 
-    return {
+    const response: TCanvasQuerySuccess = {
       ok: true,
       command: 'canvas.query',
       mode,
@@ -462,6 +470,8 @@ export async function fxExecuteCanvasQuery(portal: TPortal, input: TCanvasQueryI
       count: matches.length,
       matches,
     };
+
+    return response;
   } catch (error) {
     if (typeof error === 'object' && error !== null && 'ok' in error && 'code' in error) {
       throw error;

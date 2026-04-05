@@ -25,6 +25,8 @@ export class AutomergeService implements IAutomergeService {
       peerId: `server-${Date.now()}` as PeerId,
     });
 
+    this.wsAdapter.connect(this.repo.peerId!);
+
     if (shouldLogAutomergeMessages()) {
       console.log('[Automerge] Repo initialized with shared SQLite storage');
     }

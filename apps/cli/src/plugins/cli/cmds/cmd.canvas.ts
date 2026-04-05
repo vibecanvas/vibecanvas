@@ -44,7 +44,6 @@ Notes:
 
 export async function runCanvasCommand(services: { db: IDbService, automerge: IAutomergeService }, config: ICliConfig) {
   const serverHealth = await fxDiscoverLocalCanvasServer({ bun: Bun }, { config })
-  console.log(serverHealth)
   if (!config.subcommand) {
     printCanvasHelp()
     return
