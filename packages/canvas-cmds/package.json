@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "@automerge/automerge-repo": "catalog:",
+    "@vibecanvas/automerge-service": "workspace:*",
     "@vibecanvas/db": "workspace:*"
   }
 }

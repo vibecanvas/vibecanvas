@@ -8,7 +8,7 @@ function shouldLogAutomergeMessages(): boolean {
   return process.env.VIBECANVAS_SILENT_AUTOMERGE_LOGS !== '1';
 }
 
-class AutomergeService implements IAutomergeService {
+export class AutomergeService implements IAutomergeService {
   readonly name = 'automerge' as const;
   readonly repo: Repo;
   readonly wsAdapter: BunWSServerAdapter;
@@ -33,8 +33,4 @@ class AutomergeService implements IAutomergeService {
   stop(): void {
     this.wsAdapter.disconnect();
   }
-}
-
-export function setupAutomergeServer(database: Database | string): IAutomergeService {
-  return new AutomergeService(database);
 }
