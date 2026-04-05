@@ -1,7 +1,7 @@
 import type { Database } from 'bun:sqlite';
 import { setupAutomergeServer } from '@vibecanvas/automerge-service/setupAutomergeServer';
 import type { IAutomergeService } from '@vibecanvas/automerge-service/IAutomergeService';
-import { createSqliteDb } from '@vibecanvas/db/DbServiceBunSqlite';
+import { createSqliteDb } from '@vibecanvas/db/DbServiceBunSqlite/index';
 import type { IDbService } from '@vibecanvas/db/IDbService';
 import { EventPublisherService } from '@vibecanvas/event-publisher-service/EventPublisherService';
 import type { IEventPublisherService } from '@vibecanvas/event-publisher-service/IEventPublisherService';

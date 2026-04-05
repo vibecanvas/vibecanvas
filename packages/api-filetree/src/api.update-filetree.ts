@@ -2,7 +2,7 @@ import { ORPCError } from '@orpc/server';
 import { baseFiletreeOs } from './orpc';
 
 const apiUpdateFiletree = baseFiletreeOs.update.handler(async ({ input, context }) => {
-  const filetree = context.db.updateFileTree({ id: input.params.id, ...input.body });
+  const filetree = context.db.fileTree.update({ id: input.params.id, ...input.body });
 
   if (!filetree) {
     throw new ORPCError('NOT_FOUND', { message: 'Filetree not found' });

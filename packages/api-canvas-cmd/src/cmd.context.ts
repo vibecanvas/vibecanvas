@@ -29,7 +29,7 @@ async function waitForCanvasHandleDoc(args: {
 function createCanvasCmdContext(context: TCanvasCmdApiContext): TCanvasCmdContext {
   return {
     async listCanvasRows() {
-      return context.db.listCanvas();
+      return context.db.canvas.listAll();
     },
     async loadCanvasHandle(row) {
       const handle = await context.automerge.repo.find<TCanvasDoc>(row.automerge_url as never);

@@ -7,7 +7,7 @@ const apiRemoveFile = baseFileOs.remove.handler(async ({ input, context }) => {
     throw new Error('Invalid file url');
   }
 
-  const record = context.db.getFile({
+  const record = context.db.file.get({
     id: fileMeta.id,
     format: fileMeta.format,
   });
@@ -16,7 +16,7 @@ const apiRemoveFile = baseFileOs.remove.handler(async ({ input, context }) => {
     return { ok: true as const };
   }
 
-  context.db.deleteFile(record.id);
+  context.db.file.deleteById({ id: record.id });
 
   return { ok: true as const };
 });

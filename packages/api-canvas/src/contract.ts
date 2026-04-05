@@ -13,7 +13,6 @@ const createCanvasInputSchema = z.object({
 
 const updateCanvasInputSchema = z.object({
   name: z.string().optional(),
-  path: z.string().optional(),
 });
 
 const canvasContract = oc.router({

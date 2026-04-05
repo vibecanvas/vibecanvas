@@ -37,7 +37,7 @@ const apiCreateFiletree = baseFiletreeOs.create.handler(async ({ input, context 
     throw new ORPCError('NOT_FOUND', { message: 'Canvas not found' });
   }
 
-  const filetree = context.db.createFileTree({
+  const filetree = context.db.fileTree.create({
     canvas_id: input.canvas_id,
     title: 'File Tree',
     path: input.path ?? '',
@@ -51,7 +51,7 @@ const apiCreateFiletree = baseFiletreeOs.create.handler(async ({ input, context 
       doc.elements[filetree.id] = createFileTreeElement(filetree.id, input.x, input.y);
     });
   } catch (error) {
-    context.db.deleteFileTree(filetree.id);
+    context.db.fileTree.deleteById({ id: filetree.id });
     throw new ORPCError('INTERNAL_SERVER_ERROR', { message: 'Failed to create filetree', cause: error });
   }
 

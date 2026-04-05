@@ -7,7 +7,7 @@ const apiCloneFile = baseFileOs.clone.handler(async ({ input, context }) => {
     throw new Error('Invalid file url');
   }
 
-  const record = context.db.getFile({
+  const record = context.db.file.get({
     id: fileMeta.id,
     format: fileMeta.format,
   });
@@ -17,7 +17,7 @@ const apiCloneFile = baseFileOs.clone.handler(async ({ input, context }) => {
   }
 
   const clonedId = crypto.randomUUID();
-  context.db.createFile({
+  context.db.file.create({
     id: clonedId,
     hash: record.hash,
     format: record.format,

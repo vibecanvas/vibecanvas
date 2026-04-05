@@ -20,7 +20,7 @@ const apiPutFile = baseFileOs.put.handler(async ({ input, context }) => {
   const id = crypto.randomUUID();
   const fileName = `${id}.${extensionFromFormat(input.body.format)}`;
 
-  context.db.createFile({
+  context.db.file.create({
     id,
     hash,
     format: input.body.format,
