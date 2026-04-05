@@ -87,12 +87,6 @@ Use the leaf files for execution history and local context.
 - [x]: [B10](b/B10.md) - style menu: drag then style jumps selection back to old position
 - [x]: [B11] - terminal after resize is not focuable anymore
 - [x]: [B12](b/B12.md) - terminal: ctrl+c echoes ^C but does not interrupt process
-- [ ]: [B13](b/B13.md) - canvas CLI: real dev db can list canvases that query/move/patch cannot open
-- [x]: [B14](b/B14.md) - canvas CLI: `group` and `ungroup` still return not implemented and fall back to generic help in `apps/cli/src/main.ts`
-- [x]: [B15](b/B15.md) - canvas query subtree-not-found error prints canvas name as `undefined`
-- [x]: [B16](b/B16.md) - canvas CLI eagerly imports missing websocket adapter and crashes before any canvas command/help runs
-- [ ]: [B17](b/B17.md) - canvas query `--json` prints fatal stack trace instead of JSON on document-unavailable failures
-- [ ]: [B18](b/B18.md) - canvas delete unreadable-canvas errors are inconsistent and can print canvas name as `undefined`
 
 ## A dditions
 - [x]: [A1] - file: support common CodeMirror languages
@@ -112,7 +106,7 @@ Use the leaf files for execution history and local context.
 - [x]: [A15](a/A15.md) - canvas CLI: `reorder` command
 - [ ]: [A17] - rect dbl click -> enter edit mode (inline text)
 - [x]: [A18] - lift cmds to be api to allow live changes via crdt
-- [ ]: [A19](a/A19.md) - canvas CLI: `add` command
+- [x]: [A19](a/A19.md) - canvas CLI: `add` command
 
 ## S ubtractions
 - [ ]: [S1](s/S1.md) - double bun run dev -> find new port
