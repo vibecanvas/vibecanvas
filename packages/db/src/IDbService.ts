@@ -2,6 +2,7 @@ import type { IService, IStoppableService } from '@vibecanvas/runtime';
 import type * as schema from './schema';
 
 type TCanvasRecord = typeof schema.canvas.$inferSelect;
+type TCanvasInsertArgs = typeof schema.canvas.$inferInsert;
 type TFileTreeRecord = typeof schema.filetrees.$inferSelect;
 type TFileRecord = typeof schema.files.$inferSelect;
 type TFileFormat = typeof schema.files.$inferSelect['format'];
@@ -14,7 +15,6 @@ type TGetFullCanvasResult = {
 type TUpdateCanvasArgs = {
   id: string;
   name?: string;
-  path?: string;
 };
 
 type TCreateFileTreeArgs = {
@@ -53,16 +53,26 @@ type TGetFileArgs = {
  * on concrete classes like `DbServiceBunSqlite`.
  */
 export interface IDbService extends IService, IStoppableService {
-  listCanvas(): TCanvasRecord[];
+  canvas: {
+    listAll(): TCanvasRecord[];
+    create(args: TCanvasInsertArgs): TCanvasRecord;
+    renameById(args: { id: string, name: string }): TCanvasRecord;
+    deleteById(args: { id: string }): TCanvasRecord;
+  };
+  fileTree: {
+    listAll(): TFileTreeRecord[];
+    listByCanvasId(canvas_id: string): TFileTreeRecord[];
+    create(args: TCreateFileTreeArgs): TFileTreeRecord;
+    update(args: TUpdateFileTreeArgs): TFileTreeRecord | null;
+    deleteById(args: { id: string }): boolean;
+  };
+  file: {
+    listAll(): TFileRecord[];
+    create(args: TCreateFileArgs): TFileRecord;
+    get(args: TGetFileArgs): TFileRecord | null;
+    deleteById(args: { id: string }): void;
+  };
   getFullCanvas(id: string): TGetFullCanvasResult | null;
-  updateCanvas(args: TUpdateCanvasArgs): TCanvasRecord | null;
-  getFileTree(id: string): TFileTreeRecord | null;
-  createFileTree(args: TCreateFileTreeArgs): TFileTreeRecord;
-  updateFileTree(args: TUpdateFileTreeArgs): TFileTreeRecord | null;
-  deleteFileTree(id: string): boolean;
-  createFile(args: TCreateFileArgs): TFileRecord;
-  getFile(args: TGetFileArgs): TFileRecord | null;
-  deleteFile(id: string): void;
 }
 
 export type {
@@ -76,4 +86,5 @@ export type {
   TGetFullCanvasResult,
   TUpdateCanvasArgs,
   TUpdateFileTreeArgs,
+  TCanvasInsertArgs
 };
