@@ -46,7 +46,7 @@ function createGroup(overrides?: Partial<TGroup>): TGroup {
 
 describe('query canvas command', () => {
   let dbService!: DbServiceBunSqlite;
-  let automergeService!: ReturnType<typeof setupAutomergeServer>;
+  let automergeService!: AutomergeService;
   let databasePath!: string;
 
   beforeEach(() => {
@@ -57,7 +57,7 @@ describe('query canvas command', () => {
       dataDir: tmpdir(),
       silentMigrations: true,
     });
-    automergeService = setupAutomergeServer(dbService.sqlite);
+    automergeService = new AutomergeService(databasePath);
   });
 
   afterEach(() => {
