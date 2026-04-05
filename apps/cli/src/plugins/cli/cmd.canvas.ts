@@ -315,7 +315,7 @@ import type { IDbService } from '@vibecanvas/db/IDbService';
 import { fxDiscoverLocalCanvasServer } from './core/fx.canvas.server-discovery';
 
 export async function runCanvasCommand(services: { db: IDbService, automerge: IAutomergeService }, config: ICliConfig) {
-  console.log(config, '=======')
-  const serverHealth = await fxDiscoverLocalCanvasServer({}, { config })
-  console.log('serverHealth', serverHealth)
+  const serverHealth = await fxDiscoverLocalCanvasServer({ bun: Bun }, { config })
+
+  console.log(serverHealth)
 }

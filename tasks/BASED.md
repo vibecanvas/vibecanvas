@@ -135,6 +135,7 @@ Use the leaf files for execution history and local context.
 - [x]: [S20](s/S20.md) - cli server: restore compiled-mode port fallback when preferred port is busy
 - [ ]: [S21] remove apps/server and packages/functional-core and shell
 - [ ]: [S22] fix build and ci tests to use new apps/cli
+- [ ]: [S23] Use global costs for dev and prod ports
 
 ## E xplorations
 - [ ]: [E1](e/E1.md) - Tauri Research

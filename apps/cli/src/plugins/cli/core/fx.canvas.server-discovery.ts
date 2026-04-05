@@ -25,15 +25,13 @@ function getPortCandidates(preferredPort: number, compiled: boolean): number[] {
   return [...ports];
 }
 
-async function readHealth(port: number): Promise<TCanvasServerHealth | null> {
-  console.log('reading health')
+async function readHealth(portal: { fetch: typeof fetch }, port: number): Promise<TCanvasServerHealth | null> {
   try {
-    const response = await fetch(`http://127.0.0.1:${port}/health`, {
+    const response = await portal.fetch(`http://127.0.0.1:${port}/health`, {
       method: 'GET',
       headers: { accept: 'application/json' },
       signal: AbortSignal.timeout(250),
     });
-    console.log('5', response)
     if (!response.ok) return null;
     const payload = await response.json() as Partial<TCanvasServerHealth>;
     if (payload.ok !== true) return null;
@@ -47,21 +45,16 @@ async function readHealth(port: number): Promise<TCanvasServerHealth | null> {
       compiled: payload.compiled,
       port,
     };
-  } catch (error) {
-    console.log('error', error)
+  } catch {
     return null;
   }
 }
 
-export async function fxDiscoverLocalCanvasServer(portal: {}, args: { config: ICliConfig }): Promise<TCanvasServerHealth | null> {
-  console.log('1')
+export async function fxDiscoverLocalCanvasServer(portal: { bun: typeof Bun }, args: { config: ICliConfig }): Promise<TCanvasServerHealth | null> {
   const candidates = getPortCandidates(args.config.port, args.config.compiled);
-  console.log('2')
 
   for (const port of candidates) {
-    console.log('3', port)
-    const health = await readHealth(port);
-    console.log('4', health)
+    const health = await readHealth({ fetch: portal.bun.fetch }, port);
     if (health) return health;
   }
 
