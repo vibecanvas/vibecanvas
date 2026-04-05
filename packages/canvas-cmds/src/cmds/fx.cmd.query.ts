@@ -1,7 +1,8 @@
 import type { IAutomergeService } from '@vibecanvas/automerge-service/IAutomergeService';
 import type { TCanvasDoc, TElement, TElementType, TGroup } from '@vibecanvas/automerge-service/types/canvas-doc';
-import type { IDbService, TCanvasRecord } from '@vibecanvas/db/IDbService';
-import { toIsoString } from '../core/fn.conversion';
+import type { IDbService } from '@vibecanvas/db/IDbService';
+import { fnNormalizeCanvas, fnResolveCanvasSelection, fnSortIds, type TCanvasSummary } from '../core/fn.canvas';
+import { fxLoadCanvasHandleDoc } from '../core/fx.canvas';
 import type { TCanvasCmdErrorDetails } from '../types';
 
 export type TSceneSelectorSource = 'none' | 'flags' | 'where' | 'query';
@@ -35,12 +36,6 @@ export type TSceneSelectorEnvelope = {
 
 export type TSceneOutputMode = 'summary' | 'focused' | 'full';
 
-export type TCanvasSummary = {
-  id: string;
-  name: string;
-  automergeUrl: string;
-  createdAt: string;
-};
 
 export type TSceneMatchMetadata = {
   kind: 'element' | 'group';
@@ -81,83 +76,6 @@ export type TPortal = {
   automergeService: IAutomergeService;
 };
 
-function normalizeCanvas(row: TCanvasRecord): TCanvasSummary {
-  return {
-    id: row.id,
-    name: row.name,
-    automergeUrl: row.automerge_url,
-    createdAt: toIsoString(row.created_at),
-  };
-}
-
-function sortIds(values: readonly string[]): string[] {
-  return [...values].sort((left, right) => left.localeCompare(right));
-}
-
-function resolveCanvasSelection(rows: TCanvasRecord[], selector: TSceneSelectorEnvelope): TCanvasRecord {
-  if (selector.canvasId && selector.canvasNameQuery) {
-    throw {
-      ok: false,
-      command: 'canvas.query',
-      code: 'CANVAS_SELECTOR_CONFLICT',
-      message: 'Pass exactly one canvas selector: use either canvasId or canvasNameQuery.',
-      canvasId: selector.canvasId,
-      canvasNameQuery: selector.canvasNameQuery,
-    } satisfies TCanvasCmdErrorDetails;
-  }
-
-  if (!selector.canvasId && !selector.canvasNameQuery) {
-    throw {
-      ok: false,
-      command: 'canvas.query',
-      code: 'CANVAS_SELECTOR_REQUIRED',
-      message: 'Query requires one canvas selector. Pass canvasId or canvasNameQuery.',
-      canvasId: null,
-      canvasNameQuery: null,
-    } satisfies TCanvasCmdErrorDetails;
-  }
-
-  if (selector.canvasId) {
-    const match = rows.find((row) => row.id === selector.canvasId);
-    if (match) return match;
-    throw {
-      ok: false,
-      command: 'canvas.query',
-      code: 'CANVAS_SELECTOR_NOT_FOUND',
-      message: `Canvas '${selector.canvasId}' was not found.`,
-      canvasId: selector.canvasId,
-      canvasNameQuery: null,
-    } satisfies TCanvasCmdErrorDetails;
-  }
-
-  const query = selector.canvasNameQuery?.trim() ?? '';
-  const matches = rows.filter((row) => row.name.toLocaleLowerCase().includes(query.toLocaleLowerCase()));
-
-  if (matches.length === 1) return matches[0]!;
-  if (matches.length === 0) {
-    throw {
-      ok: false,
-      command: 'canvas.query',
-      code: 'CANVAS_SELECTOR_NOT_FOUND',
-      message: `Canvas name query '${query}' did not match any canvas.`,
-      canvasId: null,
-      canvasNameQuery: query,
-    } satisfies TCanvasCmdErrorDetails;
-  }
-
-  throw {
-    ok: false,
-    command: 'canvas.query',
-    code: 'CANVAS_SELECTOR_AMBIGUOUS',
-    message: `Canvas name query '${query}' matched ${matches.length} canvases. Pass canvasId instead.`,
-    canvasId: null,
-    canvasNameQuery: query,
-    matches: sortIds(matches.map((row) => row.name)).map((name) => {
-      const row = matches.find((candidate) => candidate.name === name)!;
-      return { id: row.id, name: row.name };
-    }),
-  } satisfies TCanvasCmdErrorDetails;
-}
 
 function createBounds(x: number, y: number, w: number, h: number): TSceneBounds {
   return { x, y, w: Math.max(0, w), h: Math.max(0, h) };
@@ -370,8 +288,8 @@ function buildGroupRelations(doc: TCanvasDoc, groupId: string): {
   descendantElementCount: number;
   descendantGroupCount: number;
 } {
-  const directChildElementIds = sortIds(Object.values(doc.elements).filter((element) => element.parentGroupId === groupId).map((element) => element.id));
-  const directChildGroupIds = sortIds(Object.values(doc.groups).filter((group) => group.parentGroupId === groupId).map((group) => group.id));
+  const directChildElementIds = fnSortIds(Object.values(doc.elements).filter((element) => element.parentGroupId === groupId).map((element) => element.id));
+  const directChildGroupIds = fnSortIds(Object.values(doc.groups).filter((group) => group.parentGroupId === groupId).map((group) => group.id));
   const pending = [...directChildGroupIds];
   const visited = new Set<string>();
   let descendantElementCount = directChildElementIds.length;
@@ -483,16 +401,8 @@ function buildQueryPayload(target: TSceneTarget, doc: TCanvasDoc, mode: TSceneOu
 export async function fxExecuteCanvasQuery(portal: TPortal, input: TCanvasQueryInput): Promise<TCanvasQuerySuccess> {
   try {
     const mode = input.output ?? 'summary';
-    const selectedCanvas = resolveCanvasSelection(portal.dbService.canvas.listAll(), input.selector);
-    const handle = await portal.automergeService.repo.find<TCanvasDoc>(selectedCanvas.automerge_url as never);
-    await handle.whenReady();
-    const doc = handle.doc();
-
-    if (!doc) {
-      throw new Error(`Canvas doc '${selectedCanvas.automerge_url}' is unavailable.`);
-    }
-
-    const canvasDoc = structuredClone(doc);
+    const selectedCanvas = fnResolveCanvasSelection({ rows: portal.dbService.canvas.listAll(), selector: input.selector, command: 'canvas.query', actionLabel: 'Query' });
+    const { doc: canvasDoc } = await fxLoadCanvasHandleDoc(portal, selectedCanvas);
     validateSelector(canvasDoc, input.selector);
 
     const matches = createSceneTargets(canvasDoc)
@@ -510,7 +420,7 @@ export async function fxExecuteCanvasQuery(portal: TPortal, input: TCanvasQueryI
       command: 'canvas.query',
       mode,
       selector: input.selector,
-      canvas: normalizeCanvas(selectedCanvas),
+      canvas: fnNormalizeCanvas(selectedCanvas),
       count: matches.length,
       matches,
     };

@@ -1,5 +1,5 @@
 import { DbServiceBunSqlite } from "@vibecanvas/db/DbServiceBunSqlite/index";
-import { beforeEach, describe, expect, test } from "bun:test";
+import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { tmpdir } from "node:os";
 import { fxExecuteCanvasList } from "packages/canvas-cmds/src/cmds/fx.cmd.list";
 
@@ -14,10 +14,16 @@ describe('list canvas command', () => {
       silentMigrations: true
     })
   })
+
+  afterEach(() => {
+    dbService.stop();
+  });
+
   test("should be empty", async () => {
     const result = await fxExecuteCanvasList({ dbService })
     expect(result).toEqual({ ok: true, command: 'canvas', subcommand: 'list', count: 0, canvases: [] })
   })
+
   test("should find 2 canvases", async () => {
     // setup data
     dbService.canvas.create({ id: '1', automerge_url: '', name: 'test' })
