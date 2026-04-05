@@ -4,10 +4,6 @@ import { BunSqliteStorageAdapter } from './adapters/sqlite.adapter';
 import { BunWSServerAdapter } from './adapters/websocket.adapter';
 import type { IAutomergeService } from './IAutomergeService';
 
-function shouldLogAutomergeMessages(): boolean {
-  return process.env.VIBECANVAS_SILENT_AUTOMERGE_LOGS !== '1';
-}
-
 export class AutomergeService implements IAutomergeService {
   readonly name = 'automerge' as const;
   readonly repo: Repo;
@@ -26,10 +22,6 @@ export class AutomergeService implements IAutomergeService {
     });
 
     this.wsAdapter.connect(this.repo.peerId!);
-
-    if (shouldLogAutomergeMessages()) {
-      console.log('[Automerge] Repo initialized with shared SQLite storage');
-    }
   }
 
   stop(): void {

@@ -36,12 +36,6 @@ function toArrayBuffer(bytes: Uint8Array): ArrayBuffer {
   return buffer.slice(byteOffset, byteOffset + byteLength) as ArrayBuffer;
 }
 
-function log(...data: unknown[]) {
-  if (process.env.NODE_ENV === 'production') return;
-  if (process.env.VIBECANVAS_SILENT_AUTOMERGE_LOGS === '1') return;
-  console.log(`[Automerge:${Date.now()}]`, ...data);
-}
-
 export class BunWSServerAdapter extends NetworkAdapter {
   private sockets: Record<PeerId, WebSocketWithIsAlive | undefined> = {};
   private keepAliveInterval = 5000;
@@ -89,7 +83,6 @@ export class BunWSServerAdapter extends NetworkAdapter {
         }
       });
     }, this.keepAliveInterval);
-    log('Adapter connected with peerId:', peerId);
   }
 
   disconnect(): void {
@@ -98,12 +91,10 @@ export class BunWSServerAdapter extends NetworkAdapter {
       if (!socket) return;
       this.#terminate(socket);
     });
-    log('Adapter disconnected');
   }
 
   send(message: FromServerMessage): void {
     if (!('targetId' in message) || message.targetId === undefined) {
-      log('Cannot send message without targetId');
       return;
     }
     if ('data' in message && message.data?.byteLength === 0) {
@@ -112,13 +103,11 @@ export class BunWSServerAdapter extends NetworkAdapter {
 
     const senderId = this.peerId;
     if (!senderId) {
-      log('No peerId set for the websocket server network adapter.');
       return;
     }
 
     const socket = this.sockets[message.targetId];
     if (!socket) {
-      log(`Tried to send to disconnected peer: ${message.targetId}`);
       return;
     }
 
@@ -133,14 +122,8 @@ export class BunWSServerAdapter extends NetworkAdapter {
     const myPeerId = this.peerId;
 
     if (!myPeerId) {
-      console.error('[Adapter:receiveMessage] ERROR: No peerId set');
-      log('No peerId set');
       return;
     }
-
-    const documentId = 'documentId' in message ? '@' + message.documentId : '';
-    const { byteLength } = messageBytes;
-    log(`[${senderId}->${myPeerId}${documentId}] ${type} | ${byteLength} bytes`);
 
     if (isJoinMessage(message)) {
       const { peerMetadata, supportedProtocolVersions } = message as FromClientMessage & {
@@ -150,7 +133,6 @@ export class BunWSServerAdapter extends NetworkAdapter {
 
       const existingSocket = this.sockets[senderId];
       if (existingSocket) {
-        log(`Disconnecting existing socket for peer ${senderId}`);
         if (existingSocket.readyState === WebSocket.OPEN) {
           existingSocket.close();
         }
@@ -163,7 +145,6 @@ export class BunWSServerAdapter extends NetworkAdapter {
       const selectedProtocolVersion = this.#selectProtocol(supportedProtocolVersions);
 
       if (selectedProtocolVersion === null) {
-        console.error('[Adapter] Protocol version mismatch');
         this.send({
           type: 'error',
           senderId: this.peerId!,
@@ -184,7 +165,6 @@ export class BunWSServerAdapter extends NetworkAdapter {
     } else if (isLeaveMessage(message)) {
       const existingSocket = this.sockets[senderId];
       if (!existingSocket) {
-        log(`No socket found for leaving peer ${senderId}`);
         return;
       }
       this.#terminate(existingSocket);
@@ -223,13 +203,11 @@ export class BunWSServerAdapter extends NetworkAdapter {
       this._isReady = true;
       this._resolveReady();
     }
-    log('Client connected');
   }
 
-  close(ws: WebSocketWithIsAlive, code: number, reason: string): void {
+  close(ws: WebSocketWithIsAlive, _code: number, _reason: string): void {
     ws.data.isAlive = false;
     this.#removeSocket(ws);
-    log('Client disconnected', { code, reason: reason || '(none)' });
   }
 
   pong(ws: WebSocketWithIsAlive, _data: Buffer): void {
@@ -240,7 +218,6 @@ export class BunWSServerAdapter extends NetworkAdapter {
     ws.data.isAlive = true;
 
     if (typeof message === 'string') {
-      log(`Ignoring string message: ${message.slice(0, 50)}`);
       return;
     }
 

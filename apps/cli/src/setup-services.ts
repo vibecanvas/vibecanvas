@@ -43,8 +43,7 @@ function setupServices(config: ICliConfig) {
   services.provide('filesystem', filesystemService);
   services.provide('pty', ptyService);
 
-  const automergeService = new AutomergeService(config.dbPath);
-  // const automergeService = new AutomergeService(config.dbPath);
+  const automergeService = new AutomergeService(sqlite);
   services.provide('automerge', automergeService);
 
   return { services, automergeService, dbService, eventPublisher, filesystemService, ptyService };

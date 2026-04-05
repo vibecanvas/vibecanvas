@@ -6,6 +6,9 @@
   "exports": {
     "./*": "./src/*.ts"
   },
+  "scripts": {
+    "test": "bun test"
+  },
   "dependencies": {
     "@automerge/automerge-repo": "catalog:",
     "@automerge/automerge-repo-network-websocket": "catalog:",
