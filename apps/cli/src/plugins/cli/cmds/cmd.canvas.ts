@@ -1,7 +1,7 @@
 import type { IAutomergeService } from '@vibecanvas/automerge-service/IAutomergeService';
 import type { ICliConfig } from '@vibecanvas/cli/config';
 import type { IDbService } from '@vibecanvas/db/IDbService';
-import { runCanvasQuery } from '../canvas/cmd.query';
+// import { runCanvasQuery } from '../canvas/cmd.query';
 import { fxDiscoverLocalCanvasServer } from '../core/fx.canvas.server-discovery';
 
 function printCanvasHelp(): void {
@@ -51,6 +51,6 @@ export async function runCanvasCommand(services: { db: IDbService, automerge: IA
   }
 
   if (config.subcommand === 'query') {
-    await runCanvasQuery(services, { ...config, localServerPort: serverHealth?.port ?? null })
+    // await runCanvasQuery(services, { ...config, localServerPort: serverHealth?.port ?? null })
   }
 }

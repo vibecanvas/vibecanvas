@@ -7,7 +7,7 @@ import type { IEventPublisherService } from '@vibecanvas/event-publisher-service
 import type { IFilesystemService } from '@vibecanvas/filesystem-service/IFilesystemService';
 import type { IPtyService } from '@vibecanvas/pty-service/IPtyService';
 import type { IPlugin } from '@vibecanvas/runtime';
-import { baseCanvasCmdOs, canvasCmdHandlers } from '@vibecanvas/api-canvas-cmd/handlers';
+// import { baseCanvasCmdOs, canvasCmdHandlers } from '@vibecanvas/api-canvas-cmd/handlers';
 import type { ICliConfig } from '../../config';
 import type { ICliHooks } from '../../hooks';
 import { baseOs } from './orpc.base';
@@ -39,13 +39,13 @@ function createOrpcPlugin(): IPlugin<{ automerge: IAutomergeService; db: IDbServ
           }),
         ],
       });
-      const httpHandler = new FetchRPCHandler(baseCanvasCmdOs.router(canvasCmdHandlers), {
-        interceptors: [
-          onError((error) => {
-            console.error(error);
-          }),
-        ],
-      });
+      // const httpHandler = new FetchRPCHandler(baseCanvasCmdOs.router(canvasCmdHandlers), {
+      //   interceptors: [
+      //     onError((error) => {
+      //       console.error(error);
+      //     }),
+      //   ],
+      // });
 
       ctx.hooks.wsUpgrade.tap((req) => {
         const url = new URL(req.url);
@@ -53,29 +53,28 @@ function createOrpcPlugin(): IPlugin<{ automerge: IAutomergeService; db: IDbServ
         return wantsWebSocket && url.pathname === '/api';
       });
 
-      ctx.hooks.httpRequest.tapPromise(async (payload) => {
-        if (payload.response) return payload;
+      // TODO: add back
+      // ctx.hooks.httpRequest.tapPromise(async (payload) => {
+      //   if (payload.response) return payload;
 
-        const url = new URL(payload.request.url);
-        if (!url.pathname.startsWith('/rpc/')) return payload;
+      //   const url = new URL(payload.request.url);
+      //   if (!url.pathname.startsWith('/rpc/')) return payload;
 
-        const forwardedUrl = new URL(payload.request.url);
-        forwardedUrl.pathname = url.pathname.slice('/rpc'.length) || '/';
-        const request = new Request(forwardedUrl, payload.request);
-        const result = await httpHandler.handle(request, {
-          context: {
-            automerge,
-            db,
-            eventPublisher,
-            filesystem,
-            pty,
-            requestId: crypto.randomUUID(),
-          },
-        });
+      //   const forwardedUrl = new URL(payload.request.url);
+      //   forwardedUrl.pathname = url.pathname.slice('/rpc'.length) || '/';
+      //   const request = new Request(forwardedUrl, payload.request);
+      //   const result = await httpHandler.handle(request, {
+      //     context: {
+      //       automerge,
+      //       db,
+      //       eventPublisher,
+      //       requestId: crypto.randomUUID(),
+      //     },
+      //   });
 
-        if (!result.matched) return payload;
-        return { request: payload.request, response: result.response };
-      });
+      //   if (!result.matched) return payload;
+      //   return { request: payload.request, response: result.response };
+      // });
 
       ctx.hooks.wsMessage.tap((ws, message) => {
         const socket = ws as WebSocket & { data?: TOrpcWebSocketData };
