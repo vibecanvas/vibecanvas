@@ -1,5 +1,9 @@
-import { CanvasCmdError, isCanvasCmdError } from '@vibecanvas/canvas-cmds';
+import type { TCanvasCmdErrorDetails } from '@vibecanvas/canvas-cmds/types';
 import { ORPCError } from '@orpc/server';
+
+function isCanvasCmdErrorDetails(error: unknown): error is TCanvasCmdErrorDetails {
+  return typeof error === 'object' && error !== null && 'ok' in error && 'code' in error && 'message' in error && (error as { ok?: unknown }).ok === false;
+}
 
 function resolveCanvasCmdErrorCode(code: string): 'BAD_REQUEST' | 'NOT_FOUND' | 'INTERNAL_SERVER_ERROR' {
   if (code.includes('NOT_FOUND')) return 'NOT_FOUND';
@@ -8,16 +12,9 @@ function resolveCanvasCmdErrorCode(code: string): 'BAD_REQUEST' | 'NOT_FOUND' | 
 }
 
 function rethrowCanvasCmdAsOrpcError(error: unknown): never {
-  if (isCanvasCmdError(error)) {
-    throw new ORPCError(resolveCanvasCmdErrorCode(error.details.code), {
-      message: error.details.message,
-      cause: error,
-    });
-  }
-
-  if (error instanceof CanvasCmdError) {
-    throw new ORPCError(resolveCanvasCmdErrorCode(error.details.code), {
-      message: error.details.message,
+  if (isCanvasCmdErrorDetails(error)) {
+    throw new ORPCError(resolveCanvasCmdErrorCode(error.code), {
+      message: error.message,
       cause: error,
     });
   }

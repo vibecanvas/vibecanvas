@@ -1,53 +1,31 @@
-import type { TCanvasDoc } from '@vibecanvas/shell/automerge/index';
-import type { TCanvasCmdContext } from '@vibecanvas/canvas-cmds';
+import type { TPortal as TCanvasAddPortal } from '@vibecanvas/canvas-cmds/cmds/fx.cmd.add';
+import type { TPortal as TCanvasDeletePortal } from '@vibecanvas/canvas-cmds/cmds/fx.cmd.delete';
+import type { TPortal as TCanvasGroupPortal } from '@vibecanvas/canvas-cmds/cmds/fx.cmd.group';
+import type { TPortal as TCanvasListPortal } from '@vibecanvas/canvas-cmds/cmds/fx.cmd.list';
+import type { TPortal as TCanvasMovePortal } from '@vibecanvas/canvas-cmds/cmds/fx.cmd.move';
+import type { TPortal as TCanvasPatchPortal } from '@vibecanvas/canvas-cmds/cmds/fx.cmd.patch';
+import type { TPortal as TCanvasQueryPortal } from '@vibecanvas/canvas-cmds/cmds/fx.cmd.query';
+import type { TPortal as TCanvasReorderPortal } from '@vibecanvas/canvas-cmds/cmds/fx.cmd.reorder';
+import type { TPortal as TCanvasUngroupPortal } from '@vibecanvas/canvas-cmds/cmds/fx.cmd.ungroup';
 import type { TCanvasCmdApiContext } from './types';
 
-async function waitForCanvasHandleDoc(args: {
-  automergeUrl: string;
-  predicate: (doc: TCanvasDoc) => boolean;
-  doc: () => TCanvasDoc | undefined;
-  timeoutMs?: number;
-}): Promise<TCanvasDoc> {
-  const startedAt = Date.now();
-  let lastError: unknown = null;
+type TCanvasCmdPortal =
+  & TCanvasListPortal
+  & TCanvasQueryPortal
+  & TCanvasPatchPortal
+  & TCanvasMovePortal
+  & TCanvasGroupPortal
+  & TCanvasUngroupPortal
+  & TCanvasDeletePortal
+  & TCanvasReorderPortal
+  & TCanvasAddPortal;
 
-  while (Date.now() - startedAt < (args.timeoutMs ?? 2000)) {
-    try {
-      const doc = args.doc();
-      if (!doc) throw new Error(`Canvas doc '${args.automergeUrl}' is unavailable.`);
-      if (args.predicate(doc)) return structuredClone(doc);
-    } catch (error) {
-      lastError = error;
-    }
-
-    await Bun.sleep(25);
-  }
-
-  throw new Error(`Timed out waiting for canvas doc '${args.automergeUrl}': ${String(lastError)}`);
-}
-
-function createCanvasCmdContext(context: TCanvasCmdApiContext): TCanvasCmdContext {
+function createCanvasCmdContext(context: TCanvasCmdApiContext): TCanvasCmdPortal {
   return {
-    async listCanvasRows() {
-      return context.db.canvas.listAll();
-    },
-    async loadCanvasHandle(row) {
-      const handle = await context.automerge.repo.find<TCanvasDoc>(row.automerge_url as never);
-      await handle.whenReady();
-      return {
-        handle,
-        source: 'live',
-      };
-    },
-    async waitForMutation(args) {
-      return waitForCanvasHandleDoc({
-        automergeUrl: args.automergeUrl,
-        predicate: args.predicate,
-        doc: () => args.handle.doc() ?? undefined,
-        timeoutMs: args.source === 'live' ? 4000 : 2000,
-      });
-    },
+    dbService: context.db,
+    automergeService: context.automerge,
   };
 }
 
 export { createCanvasCmdContext };
+export type { TCanvasCmdPortal };

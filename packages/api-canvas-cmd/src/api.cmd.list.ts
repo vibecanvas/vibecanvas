@@ -1,11 +1,11 @@
-import { executeCanvasList } from '@vibecanvas/canvas-cmds';
+import { fxExecuteCanvasList } from '@vibecanvas/canvas-cmds/cmds/fx.cmd.list';
 import { createCanvasCmdContext } from './cmd.context';
 import { rethrowCanvasCmdAsOrpcError } from './cmd.error';
 import { baseCanvasCmdOs } from './orpc';
 
 const apiCmdListCanvas = baseCanvasCmdOs.api.canvasCmd.list.handler(async ({ context }) => {
   try {
-    return await executeCanvasList(createCanvasCmdContext(context));
+    return await fxExecuteCanvasList(createCanvasCmdContext(context));
   } catch (error) {
     rethrowCanvasCmdAsOrpcError(error);
   }
