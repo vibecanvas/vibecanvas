@@ -1,6 +1,6 @@
 import type { IEventPublisherService } from '@vibecanvas/event-publisher-service/IEventPublisherService';
 import type { ICliConfig } from '../../config';
-import { checkForUpgrade } from '../cli/tx.cmd.upgrade';
+import { checkForUpgrade } from '../cli/cmd.upgrade';
 
 function checkForUpdateOnBoot(config: ICliConfig, eventPublisher: IEventPublisherService): void {
   checkForUpgrade({ config, checkOnly: true })
@@ -13,7 +13,7 @@ function checkForUpdateOnBoot(config: ICliConfig, eventPublisher: IEventPublishe
         });
       }
     })
-    .catch(() => {});
+    .catch(() => { });
 }
 
 export { checkForUpdateOnBoot };

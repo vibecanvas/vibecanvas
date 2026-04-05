@@ -222,7 +222,6 @@ So:
 ### 2. Runtime/plugin path
 
 If the command is not a direct canvas CLI command, `main.ts` boots runtime with:
-- `setup-services.ts`
 - `createCliPlugin()`
 - `createOrpcPlugin()`
 - `createPtyPlugin()`

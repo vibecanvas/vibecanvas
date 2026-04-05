@@ -2,7 +2,8 @@ import type { IPlugin } from '@vibecanvas/runtime';
 import type { ICliHooks } from '../../hooks';
 import type { IDbService } from '@vibecanvas/db/IDbService';
 import type { ICliConfig } from '../../config';
-import { txCmdUpgrade } from './tx.cmd.upgrade';
+import { txCmdUpgrade } from './cmd.upgrade';
+import type { IAutomergeService } from '@vibecanvas/automerge-service/IAutomergeService';
 
 function printHelp(): void {
   console.log(`vibecanvas - Run your agents in an infinite canvas
@@ -13,7 +14,7 @@ Usage:
 Commands:
   serve     Start the vibecanvas runtime (default when no command given)
   upgrade   Check for and install updates
-  canvas    Offline canvas CLI surface (WIP)
+  canvas    Offline canvas CLI surface
 
 Options:
   --port <number>      Port for server/runtime (default: 3000 dev, 7496 compiled)
@@ -27,13 +28,31 @@ Examples:
   vibecanvas serve --port 3001
   vibecanvas serve --db ./tmp/dev.sqlite
   vibecanvas canvas --help
+  vibecanvas query --help
   vibecanvas upgrade
   vibecanvas upgrade --check
   vibecanvas --version
+
+Canvas subcommands:
+  list      List canvases in the local database
+  query     Run structured readonly canvas queries
+  move      Move explicit element/group ids deterministically
+  patch     Patch explicit element/group ids with structured field updates
+  group     Group matching elements (planned)
+  ungroup   Ungroup a group (planned)
+  delete    Permanently delete element/group ids (cascades groups to descendants)
+  reorder   Change stacking order (front/back/forward/backward)
+  render    Render the persisted canvas state (planned)
+
+Subcommand help:
+  Any subcommand accepts --help for command-specific usage.
+  Canvas subcommands also work as top-level aliases, so both
+  'vibecanvas canvas query --help' and 'vibecanvas query --help'
+  show the same command help.
 `);
 }
 
-function createCliPlugin(): IPlugin<{ db: IDbService }, ICliHooks, ICliConfig> {
+function createCliPlugin(): IPlugin<{ db: IDbService, automerge: IAutomergeService }, ICliHooks, ICliConfig> {
   return {
     name: 'cli',
     apply(ctx) {
@@ -55,7 +74,7 @@ function createCliPlugin(): IPlugin<{ db: IDbService }, ICliHooks, ICliConfig> {
         }
 
         if (ctx.config.command === 'canvas') {
-          console.log('Canvas command is WIP.');
+          console.log('Canvas command is WIP.', ctx.services.require('automerge').repo);
           process.exit(0);
         }
 
@@ -64,10 +83,6 @@ function createCliPlugin(): IPlugin<{ db: IDbService }, ICliHooks, ICliConfig> {
           printHelp();
           process.exit(1);
         }
-
-        const hasDb = ctx.services.getStore().has('db');
-        const db = ctx.services.require('db')
-        console.log(`vibecanvas ready (serve${hasDb ? ', db service wired' : ''})`);
       });
     },
   };

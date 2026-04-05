@@ -29,26 +29,24 @@ function setupServices(config: ICliConfig) {
   const eventPublisher = new EventPublisherService();
   services.provide('eventPublisher', eventPublisher);
 
-  if (config.command === 'serve' && !config.helpRequested && !config.versionRequested) {
-    const dbService = createSqliteDb({
-      databasePath: config.dbPath,
-      dataDir: config.dataPath,
-      cacheDir: config.cachePath,
-      silentMigrations: process.env.VIBECANVAS_SILENT_DB_MIGRATIONS === '1',
-    });
-    const filesystemService = new FilesystemServiceNode(eventPublisher);
-    const ptyService = new PtyServiceBunPty();
+  const dbService = createSqliteDb({
+    databasePath: config.dbPath,
+    dataDir: config.dataPath,
+    cacheDir: config.cachePath,
+    silentMigrations: process.env.VIBECANVAS_SILENT_DB_MIGRATIONS === '1',
+  });
+  const filesystemService = new FilesystemServiceNode(eventPublisher);
+  const ptyService = new PtyServiceBunPty();
 
-    sqlite = dbService.sqlite;
-    services.provide('db', dbService);
-    services.provide('filesystem', filesystemService);
-    services.provide('pty', ptyService);
+  sqlite = dbService.sqlite;
+  services.provide('db', dbService);
+  services.provide('filesystem', filesystemService);
+  services.provide('pty', ptyService);
 
-    const automergeService = setupAutomergeServer(sqlite);
-    services.provide('automerge', automergeService);
-  }
+  const automergeService = setupAutomergeServer(sqlite);
+  services.provide('automerge', automergeService);
 
-  return { services, sqlite };
+  return { services, sqlite, automergeService, dbService, eventPublisher, filesystemService, ptyService };
 }
 
 export { setupServices };
