@@ -9,8 +9,8 @@ export type TCanvasSummary = {
 };
 
 export type TCanvasSelectorInput = {
-  canvasId: string | null;
-  canvasNameQuery: string | null;
+  canvasId?: string | null;
+  canvasNameQuery?: string | null;
 };
 
 export function fnSortIds(values: readonly string[]): string[] {
@@ -33,19 +33,21 @@ export function fnResolveCanvasSelection(args: {
   actionLabel: string;
 }): TCanvasRecord {
   const { rows, selector, command, actionLabel } = args;
+  const canvasId = selector.canvasId ?? null;
+  const canvasNameQuery = selector.canvasNameQuery ?? null;
 
-  if (selector.canvasId && selector.canvasNameQuery) {
+  if (canvasId && canvasNameQuery) {
     throw {
       ok: false,
       command,
       code: 'CANVAS_SELECTOR_CONFLICT',
       message: 'Pass exactly one canvas selector: use either canvasId or canvasNameQuery.',
-      canvasId: selector.canvasId,
-      canvasNameQuery: selector.canvasNameQuery,
+      canvasId,
+      canvasNameQuery,
     };
   }
 
-  if (!selector.canvasId && !selector.canvasNameQuery) {
+  if (!canvasId && !canvasNameQuery) {
     throw {
       ok: false,
       command,
@@ -56,20 +58,20 @@ export function fnResolveCanvasSelection(args: {
     };
   }
 
-  if (selector.canvasId) {
-    const match = rows.find((row) => row.id === selector.canvasId);
+  if (canvasId) {
+    const match = rows.find((row) => row.id === canvasId);
     if (match) return match;
     throw {
       ok: false,
       command,
       code: 'CANVAS_SELECTOR_NOT_FOUND',
-      message: `Canvas '${selector.canvasId}' was not found.`,
-      canvasId: selector.canvasId,
+      message: `Canvas '${canvasId}' was not found.`,
+      canvasId,
       canvasNameQuery: null,
     };
   }
 
-  const query = selector.canvasNameQuery?.trim() ?? '';
+  const query = canvasNameQuery?.trim() ?? '';
   const matches = rows.filter((row) => row.name.toLocaleLowerCase().includes(query.toLocaleLowerCase()));
 
   if (matches.length === 1) return matches[0]!;

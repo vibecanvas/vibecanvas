@@ -9,9 +9,9 @@ import type { TCanvasCmdErrorDetails } from '../types';
 export type TDeleteEffectsMode = 'doc-only' | 'with-effects-if-available';
 
 export type TCanvasDeleteInput = {
-  canvasId: string | null;
-  canvasNameQuery: string | null;
-  ids: string[];
+  canvasId?: string | null;
+  canvasNameQuery?: string | null;
+  ids?: string[];
   effectsMode?: TDeleteEffectsMode;
 };
 
@@ -34,9 +34,9 @@ export type TPortal = {
 };
 
 function parseDeleteIds(input: TCanvasDeleteInput): string[] {
-  const ids = fnSortIds([...new Set(input.ids.map((value) => value.trim()).filter(Boolean))]);
+  const ids = fnSortIds([...new Set((input.ids ?? []).map((value) => value.trim()).filter(Boolean))]);
   if (ids.length > 0) return ids;
-  throw { ok: false, command: 'canvas.delete', code: 'CANVAS_DELETE_ID_REQUIRED', message: 'Delete requires at least one id.', canvasId: input.canvasId, canvasNameQuery: input.canvasNameQuery } satisfies TCanvasCmdErrorDetails;
+  throw { ok: false, command: 'canvas.delete', code: 'CANVAS_DELETE_ID_REQUIRED', message: 'Delete requires at least one id.', canvasId: input.canvasId ?? null, canvasNameQuery: input.canvasNameQuery ?? null } satisfies TCanvasCmdErrorDetails;
 }
 
 function resolveEffectsMode(input: TCanvasDeleteInput): TDeleteEffectsMode {
@@ -86,13 +86,13 @@ function buildEffectsResult(args: { effectsMode: TDeleteEffectsMode; deletedElem
   return { skippedEffects, warnings };
 }
 
-export async function fxExecuteCanvasDelete(portal: TPortal, input: TCanvasDeleteInput): Promise<TCanvasDeleteSuccess> {
+export async function txExecuteCanvasDelete(portal: TPortal, input: TCanvasDeleteInput): Promise<TCanvasDeleteSuccess> {
   try {
     const ids = parseDeleteIds(input);
     const effectsMode = resolveEffectsMode(input);
     const selectedCanvas = fnResolveCanvasSelection({ rows: portal.dbService.canvas.listAll(), selector: input, command: 'canvas.delete', actionLabel: 'Delete' });
     const { handle, doc } = await fxLoadCanvasHandleDoc(portal, selectedCanvas);
-    const plan = resolveDeletionPlan(doc, ids, selectedCanvas.id, input.canvasNameQuery);
+    const plan = resolveDeletionPlan(doc, ids, selectedCanvas.id, input.canvasNameQuery ?? null);
     const effects = buildEffectsResult({ effectsMode, deletedElementIds: plan.deletedElementIds });
 
     handle.change((nextDoc) => {
@@ -120,7 +120,7 @@ export async function fxExecuteCanvasDelete(portal: TPortal, input: TCanvasDelet
       code: 'CANVAS_DELETE_FAILED',
       message: error instanceof Error ? error.message : String(error),
       canvasId: input.canvasId,
-      canvasNameQuery: input.canvasNameQuery,
+      canvasNameQuery: input.canvasNameQuery ?? null,
     } satisfies TCanvasCmdErrorDetails;
   }
 }

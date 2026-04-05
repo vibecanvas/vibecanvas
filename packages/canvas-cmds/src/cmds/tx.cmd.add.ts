@@ -21,9 +21,9 @@ export type TCanvasAddElementInput = {
 };
 
 export type TCanvasAddInput = {
-  canvasId: string | null;
-  canvasNameQuery: string | null;
-  elements: TCanvasAddElementInput[];
+  canvasId?: string | null;
+  canvasNameQuery?: string | null;
+  elements?: TCanvasAddElementInput[];
 };
 
 export type TCanvasAddSuccess = {
@@ -50,8 +50,9 @@ function fnExtractZIndexNumber(zIndex: string): number {
 }
 
 function fnValidateInput(input: TCanvasAddInput): TCanvasAddElementInput[] {
-  if (input.elements.length === 0) throw { ok: false, command: 'canvas.add', code: 'CANVAS_ADD_ELEMENT_REQUIRED', message: 'Add requires at least one element payload.', canvasId: input.canvasId, canvasNameQuery: input.canvasNameQuery } satisfies TCanvasCmdErrorDetails;
-  return input.elements;
+  const elements = input.elements ?? [];
+  if (elements.length === 0) throw { ok: false, command: 'canvas.add', code: 'CANVAS_ADD_ELEMENT_REQUIRED', message: 'Add requires at least one element payload.', canvasId: input.canvasId ?? null, canvasNameQuery: input.canvasNameQuery ?? null } satisfies TCanvasCmdErrorDetails;
+  return elements;
 }
 
 function fnDefaultStyle(): TElementStyle {
@@ -99,7 +100,7 @@ function fnBuildElement(args: { input: TCanvasAddElementInput; zIndex: string })
   };
 }
 
-export async function fxExecuteCanvasAdd(portal: TPortal, input: TCanvasAddInput): Promise<TCanvasAddSuccess> {
+export async function txExecuteCanvasAdd(portal: TPortal, input: TCanvasAddInput): Promise<TCanvasAddSuccess> {
   try {
     const requestedElements = fnValidateInput(input);
     const selectedCanvas = fnResolveCanvasSelection({ rows: portal.dbService.canvas.listAll(), selector: input, command: 'canvas.add', actionLabel: 'Add' });
@@ -135,7 +136,7 @@ export async function fxExecuteCanvasAdd(portal: TPortal, input: TCanvasAddInput
       code: 'CANVAS_ADD_FAILED',
       message: error instanceof Error ? error.message : String(error),
       canvasId: input.canvasId,
-      canvasNameQuery: input.canvasNameQuery,
+      canvasNameQuery: input.canvasNameQuery ?? null,
     } satisfies TCanvasCmdErrorDetails;
   }
 }

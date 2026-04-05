@@ -4,7 +4,7 @@ import type { TCanvasDoc, TGroup } from '@vibecanvas/automerge-service/types/can
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
-import { fxExecuteCanvasAdd } from 'packages/canvas-cmds/src/cmds/fx.cmd.add';
+import { txExecuteCanvasAdd } from 'packages/canvas-cmds/src/cmds/tx.cmd.add';
 
 function createGroup(overrides?: Partial<TGroup>): TGroup {
   return { id: 'group-1', parentGroupId: null, zIndex: 'a0', locked: false, createdAt: 1, ...overrides };
@@ -31,7 +31,7 @@ describe('add canvas command', () => {
     await handle.whenReady();
     const row = dbService.canvas.create({ id: 'canvas-1', automerge_url: handle.url, name: 'add-canvas' });
 
-    const result = await fxExecuteCanvasAdd({ dbService, automergeService }, {
+    const result = await txExecuteCanvasAdd({ dbService, automergeService }, {
       canvasId: row.id,
       canvasNameQuery: null,
       elements: [
@@ -57,7 +57,7 @@ describe('add canvas command', () => {
     await handle.whenReady();
     const row = dbService.canvas.create({ id: 'canvas-2', automerge_url: handle.url, name: 'add-errors-canvas' });
 
-    await expect(fxExecuteCanvasAdd({ dbService, automergeService }, { canvasId: row.id, canvasNameQuery: null, elements: [{ type: 'rect', parentGroupId: 'missing-group' }] })).rejects.toMatchObject({ ok: false, command: 'canvas.add', code: 'CANVAS_ADD_PARENT_GROUP_NOT_FOUND' });
-    await expect(fxExecuteCanvasAdd({ dbService, automergeService }, { canvasId: row.id, canvasNameQuery: null, elements: [{ id: 'rect-1', type: 'rect' }] })).rejects.toMatchObject({ ok: false, command: 'canvas.add', code: 'CANVAS_ADD_ID_CONFLICT' });
+    await expect(txExecuteCanvasAdd({ dbService, automergeService }, { canvasId: row.id, canvasNameQuery: null, elements: [{ type: 'rect', parentGroupId: 'missing-group' }] })).rejects.toMatchObject({ ok: false, command: 'canvas.add', code: 'CANVAS_ADD_PARENT_GROUP_NOT_FOUND' });
+    await expect(txExecuteCanvasAdd({ dbService, automergeService }, { canvasId: row.id, canvasNameQuery: null, elements: [{ id: 'rect-1', type: 'rect' }] })).rejects.toMatchObject({ ok: false, command: 'canvas.add', code: 'CANVAS_ADD_ID_CONFLICT' });
   });
 });

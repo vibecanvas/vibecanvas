@@ -4,7 +4,7 @@ import type { TCanvasDoc, TElement, TGroup } from '@vibecanvas/automerge-service
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
-import { fxExecuteCanvasGroup } from 'packages/canvas-cmds/src/cmds/fx.cmd.group';
+import { txExecuteCanvasGroup } from 'packages/canvas-cmds/src/cmds/tx.cmd.group';
 
 function createRectElement(overrides?: Partial<TElement>): TElement {
   return {
@@ -64,7 +64,7 @@ describe('group canvas command', () => {
     await handle.whenReady();
     const row = dbService.canvas.create({ id: 'canvas-1', automerge_url: handle.url, name: 'group-top-level-canvas' });
 
-    const result = await fxExecuteCanvasGroup({ dbService, automergeService }, { canvasId: row.id, canvasNameQuery: null, ids: [rectB.id, rectA.id] });
+    const result = await txExecuteCanvasGroup({ dbService, automergeService }, { canvasId: row.id, canvasNameQuery: null, ids: [rectB.id, rectA.id] });
 
     expect(result).toMatchObject({
       ok: true,
@@ -104,7 +104,7 @@ describe('group canvas command', () => {
     await handle.whenReady();
     const row = dbService.canvas.create({ id: 'canvas-2', automerge_url: handle.url, name: 'group-nested-canvas' });
 
-    const result = await fxExecuteCanvasGroup({ dbService, automergeService }, { canvasId: row.id, canvasNameQuery: null, ids: [rectB.id, rectA.id] });
+    const result = await txExecuteCanvasGroup({ dbService, automergeService }, { canvasId: row.id, canvasNameQuery: null, ids: [rectB.id, rectA.id] });
 
     expect(result).toMatchObject({
       ok: true,
@@ -142,7 +142,7 @@ describe('group canvas command', () => {
     await handle.whenReady();
     const row = dbService.canvas.create({ id: 'canvas-3', automerge_url: handle.url, name: 'group-invalid-canvas' });
 
-    await expect(fxExecuteCanvasGroup({ dbService, automergeService }, { canvasId: row.id, canvasNameQuery: null, ids: [topLevel.id, 'missing-id'] })).rejects.toMatchObject({
+    await expect(txExecuteCanvasGroup({ dbService, automergeService }, { canvasId: row.id, canvasNameQuery: null, ids: [topLevel.id, 'missing-id'] })).rejects.toMatchObject({
       ok: false,
       command: 'canvas.group',
       code: 'CANVAS_GROUP_TARGET_NOT_FOUND',
@@ -151,7 +151,7 @@ describe('group canvas command', () => {
       canvasNameQuery: null,
     });
 
-    await expect(fxExecuteCanvasGroup({ dbService, automergeService }, { canvasId: row.id, canvasNameQuery: null, ids: [topLevel.id, nested.id] })).rejects.toMatchObject({
+    await expect(txExecuteCanvasGroup({ dbService, automergeService }, { canvasId: row.id, canvasNameQuery: null, ids: [topLevel.id, nested.id] })).rejects.toMatchObject({
       ok: false,
       command: 'canvas.group',
       code: 'CANVAS_GROUP_PARENT_MISMATCH',
@@ -160,7 +160,7 @@ describe('group canvas command', () => {
       canvasNameQuery: null,
     });
 
-    await expect(fxExecuteCanvasGroup({ dbService, automergeService }, { canvasId: row.id, canvasNameQuery: null, ids: [topLevel.id, existingGroup.id] })).rejects.toMatchObject({
+    await expect(txExecuteCanvasGroup({ dbService, automergeService }, { canvasId: row.id, canvasNameQuery: null, ids: [topLevel.id, existingGroup.id] })).rejects.toMatchObject({
       ok: false,
       command: 'canvas.group',
       code: 'CANVAS_GROUP_TARGET_KIND_INVALID',

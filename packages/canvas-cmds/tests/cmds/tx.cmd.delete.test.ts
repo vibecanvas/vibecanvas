@@ -4,7 +4,7 @@ import { DbServiceBunSqlite } from '@vibecanvas/db/DbServiceBunSqlite/index';
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { fxExecuteCanvasDelete } from '../../src/cmds/fx.cmd.delete';
+import { txExecuteCanvasDelete } from '../../src/cmds/tx.cmd.delete';
 
 function createRectElement(overrides?: Partial<TElement>): TElement {
   return {
@@ -58,7 +58,7 @@ describe('delete canvas command', () => {
     await handle.whenReady();
     const row = dbService.canvas.create({ id: 'canvas-1', automerge_url: handle.url, name: 'delete-element-canvas' });
 
-    const result = await fxExecuteCanvasDelete({ dbService, automergeService }, { canvasId: row.id, canvasNameQuery: null, ids: [target.id] });
+    const result = await txExecuteCanvasDelete({ dbService, automergeService }, { canvasId: row.id, canvasNameQuery: null, ids: [target.id] });
 
     expect(result).toMatchObject({
       ok: true,
@@ -92,7 +92,7 @@ describe('delete canvas command', () => {
     await handle.whenReady();
     const row = dbService.canvas.create({ id: 'canvas-2', automerge_url: handle.url, name: 'delete-cascade-canvas' });
 
-    const result = await fxExecuteCanvasDelete({ dbService, automergeService }, { canvasId: row.id, canvasNameQuery: null, ids: [rootGroup.id] });
+    const result = await txExecuteCanvasDelete({ dbService, automergeService }, { canvasId: row.id, canvasNameQuery: null, ids: [rootGroup.id] });
 
     expect(result).toMatchObject({
       ok: true,
@@ -128,7 +128,7 @@ describe('delete canvas command', () => {
     await handle.whenReady();
     const row = dbService.canvas.create({ id: 'canvas-3', automerge_url: handle.url, name: 'delete-mixed-canvas' });
 
-    const result = await fxExecuteCanvasDelete({ dbService, automergeService }, { canvasId: row.id, canvasNameQuery: null, ids: [loose.id, group.id] });
+    const result = await txExecuteCanvasDelete({ dbService, automergeService }, { canvasId: row.id, canvasNameQuery: null, ids: [loose.id, group.id] });
 
     expect(result).toMatchObject({
       ok: true,
@@ -153,7 +153,7 @@ describe('delete canvas command', () => {
     await handle.whenReady();
     const row = dbService.canvas.create({ id: 'canvas-4', automerge_url: handle.url, name: 'delete-effects-canvas' });
 
-    const result = await fxExecuteCanvasDelete({ dbService, automergeService }, { canvasId: row.id, canvasNameQuery: null, ids: [target.id], effectsMode: 'with-effects-if-available' });
+    const result = await txExecuteCanvasDelete({ dbService, automergeService }, { canvasId: row.id, canvasNameQuery: null, ids: [target.id], effectsMode: 'with-effects-if-available' });
 
     expect(result).toMatchObject({
       ok: true,
@@ -175,7 +175,7 @@ describe('delete canvas command', () => {
     await handle.whenReady();
     const row = dbService.canvas.create({ id: 'canvas-5', automerge_url: handle.url, name: 'delete-missing-canvas' });
 
-    await expect(fxExecuteCanvasDelete({ dbService, automergeService }, { canvasId: row.id, canvasNameQuery: null, ids: ['missing-id'] })).rejects.toMatchObject({
+    await expect(txExecuteCanvasDelete({ dbService, automergeService }, { canvasId: row.id, canvasNameQuery: null, ids: ['missing-id'] })).rejects.toMatchObject({
       ok: false,
       command: 'canvas.delete',
       code: 'CANVAS_DELETE_TARGET_NOT_FOUND',
@@ -188,7 +188,7 @@ describe('delete canvas command', () => {
   });
 
   test('fails with CANVAS_SELECTOR_REQUIRED when no canvas selector is provided', async () => {
-    await expect(fxExecuteCanvasDelete({ dbService, automergeService }, { canvasId: null, canvasNameQuery: null, ids: ['anything'] })).rejects.toMatchObject({
+    await expect(txExecuteCanvasDelete({ dbService, automergeService }, { canvasId: null, canvasNameQuery: null, ids: ['anything'] })).rejects.toMatchObject({
       ok: false,
       command: 'canvas.delete',
       code: 'CANVAS_SELECTOR_REQUIRED',
@@ -200,7 +200,7 @@ describe('delete canvas command', () => {
     await handle.whenReady();
     const row = dbService.canvas.create({ id: 'canvas-6', automerge_url: handle.url, name: 'delete-no-ids' });
 
-    await expect(fxExecuteCanvasDelete({ dbService, automergeService }, { canvasId: row.id, canvasNameQuery: null, ids: [] })).rejects.toMatchObject({
+    await expect(txExecuteCanvasDelete({ dbService, automergeService }, { canvasId: row.id, canvasNameQuery: null, ids: [] })).rejects.toMatchObject({
       ok: false,
       command: 'canvas.delete',
       code: 'CANVAS_DELETE_ID_REQUIRED',

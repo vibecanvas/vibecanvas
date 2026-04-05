@@ -4,7 +4,7 @@ import type { TCanvasDoc, TElement, TGroup } from '@vibecanvas/automerge-service
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
-import { fxExecuteCanvasPatch } from 'packages/canvas-cmds/src/cmds/fx.cmd.patch';
+import { txExecuteCanvasPatch } from 'packages/canvas-cmds/src/cmds/tx.cmd.patch';
 
 function createRectElement(overrides?: Partial<TElement>): TElement {
   return {
@@ -105,7 +105,7 @@ describe('patch canvas command', () => {
       name: 'Patch Canvas',
     });
 
-    const result = await fxExecuteCanvasPatch(
+    const result = await txExecuteCanvasPatch(
       { dbService, automergeService },
       {
         canvasId: row.id,
@@ -154,7 +154,7 @@ describe('patch canvas command', () => {
       name: 'Patch Text Canvas',
     });
 
-    const result = await fxExecuteCanvasPatch(
+    const result = await txExecuteCanvasPatch(
       { dbService, automergeService },
       {
         canvasId: row.id,
@@ -204,7 +204,7 @@ describe('patch canvas command', () => {
       name: 'Patch Group Canvas',
     });
 
-    const result = await fxExecuteCanvasPatch(
+    const result = await txExecuteCanvasPatch(
       { dbService, automergeService },
       {
         canvasId: row.id,
@@ -243,7 +243,7 @@ describe('patch canvas command', () => {
       name: 'Patch Noop Canvas',
     });
 
-    const result = await fxExecuteCanvasPatch(
+    const result = await txExecuteCanvasPatch(
       { dbService, automergeService },
       {
         canvasId: row.id,
@@ -282,7 +282,7 @@ describe('patch canvas command', () => {
     });
 
     await expect(
-      fxExecuteCanvasPatch(
+      txExecuteCanvasPatch(
         { dbService, automergeService },
         {
           canvasId: row.id,

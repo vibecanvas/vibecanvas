@@ -4,7 +4,7 @@ import type { TCanvasDoc, TElement, TGroup } from '@vibecanvas/automerge-service
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
-import { fxExecuteCanvasReorder } from 'packages/canvas-cmds/src/cmds/fx.cmd.reorder';
+import { txExecuteCanvasReorder } from 'packages/canvas-cmds/src/cmds/tx.cmd.reorder';
 
 function createRectElement(overrides?: Partial<TElement>): TElement {
   return { id: 'rect-1', x: 0, y: 0, rotation: 0, zIndex: 'a0', parentGroupId: null, bindings: [], locked: false, createdAt: 1, updatedAt: 1, data: { type: 'rect', w: 120, h: 80 }, style: { backgroundColor: '#ffffff', strokeColor: '#111111', strokeWidth: 1, opacity: 1 }, ...overrides };
@@ -37,7 +37,7 @@ describe('reorder canvas command', () => {
     await handle.whenReady();
     const row = dbService.canvas.create({ id: 'canvas-1', automerge_url: handle.url, name: 'reorder-front-canvas' });
 
-    const result = await fxExecuteCanvasReorder({ dbService, automergeService }, { canvasId: row.id, canvasNameQuery: null, ids: ['rect-a'], action: 'front' });
+    const result = await txExecuteCanvasReorder({ dbService, automergeService }, { canvasId: row.id, canvasNameQuery: null, ids: ['rect-a'], action: 'front' });
     expect(result.beforeOrder.map((entry) => entry.id)).toEqual(['rect-a', 'rect-b', 'rect-c']);
     expect(result.afterOrder.map((entry) => entry.id)).toEqual(['rect-b', 'rect-c', 'rect-a']);
     expect(result.afterOrder.map((entry) => entry.zIndex)).toEqual([orderedZIndex(0), orderedZIndex(1), orderedZIndex(2)]);
@@ -57,16 +57,16 @@ describe('reorder canvas command', () => {
     };
 
     const backRow = await createCanvas('canvas-2-back');
-    expect((await fxExecuteCanvasReorder({ dbService, automergeService }, { canvasId: backRow.id, canvasNameQuery: null, ids: ['rect-d'], action: 'back' })).afterOrder.map((entry) => entry.id)).toEqual(['rect-d', 'rect-a', 'rect-b', 'rect-c']);
+    expect((await txExecuteCanvasReorder({ dbService, automergeService }, { canvasId: backRow.id, canvasNameQuery: null, ids: ['rect-d'], action: 'back' })).afterOrder.map((entry) => entry.id)).toEqual(['rect-d', 'rect-a', 'rect-b', 'rect-c']);
 
     const forwardRow = await createCanvas('canvas-2-forward');
-    expect((await fxExecuteCanvasReorder({ dbService, automergeService }, { canvasId: forwardRow.id, canvasNameQuery: null, ids: ['rect-a'], action: 'forward' })).afterOrder.map((entry) => entry.id)).toEqual(['rect-b', 'rect-a', 'rect-c', 'rect-d']);
+    expect((await txExecuteCanvasReorder({ dbService, automergeService }, { canvasId: forwardRow.id, canvasNameQuery: null, ids: ['rect-a'], action: 'forward' })).afterOrder.map((entry) => entry.id)).toEqual(['rect-b', 'rect-a', 'rect-c', 'rect-d']);
 
     const backwardRow = await createCanvas('canvas-2-backward');
-    expect((await fxExecuteCanvasReorder({ dbService, automergeService }, { canvasId: backwardRow.id, canvasNameQuery: null, ids: ['rect-c'], action: 'backward' })).afterOrder.map((entry) => entry.id)).toEqual(['rect-a', 'rect-c', 'rect-b', 'rect-d']);
+    expect((await txExecuteCanvasReorder({ dbService, automergeService }, { canvasId: backwardRow.id, canvasNameQuery: null, ids: ['rect-c'], action: 'backward' })).afterOrder.map((entry) => entry.id)).toEqual(['rect-a', 'rect-c', 'rect-b', 'rect-d']);
 
     const frontRow = await createCanvas('canvas-2-front');
-    expect((await fxExecuteCanvasReorder({ dbService, automergeService }, { canvasId: frontRow.id, canvasNameQuery: null, ids: ['rect-a', 'rect-c'], action: 'front' })).afterOrder.map((entry) => entry.id)).toEqual(['rect-b', 'rect-d', 'rect-a', 'rect-c']);
+    expect((await txExecuteCanvasReorder({ dbService, automergeService }, { canvasId: frontRow.id, canvasNameQuery: null, ids: ['rect-a', 'rect-c'], action: 'front' })).afterOrder.map((entry) => entry.id)).toEqual(['rect-b', 'rect-d', 'rect-a', 'rect-c']);
   });
 
   test('fails clearly on no-op, parent mismatch, invalid action, missing target, missing ids', async () => {
@@ -77,9 +77,9 @@ describe('reorder canvas command', () => {
     await handle.whenReady();
     const row = dbService.canvas.create({ id: 'canvas-3', automerge_url: handle.url, name: 'reorder-errors-canvas' });
 
-    await expect(fxExecuteCanvasReorder({ dbService, automergeService }, { canvasId: row.id, canvasNameQuery: null, ids: ['rect-outside'], action: 'front' })).rejects.toMatchObject({ ok: false, command: 'canvas.reorder', code: 'CANVAS_REORDER_NO_OP' });
-    await expect(fxExecuteCanvasReorder({ dbService, automergeService }, { canvasId: row.id, canvasNameQuery: null, ids: ['rect-inside', 'rect-outside'], action: 'front' })).rejects.toMatchObject({ ok: false, command: 'canvas.reorder', code: 'CANVAS_REORDER_PARENT_MISMATCH' });
-    await expect(fxExecuteCanvasReorder({ dbService, automergeService }, { canvasId: row.id, canvasNameQuery: null, ids: ['does-not-exist'], action: 'front' })).rejects.toMatchObject({ ok: false, command: 'canvas.reorder', code: 'CANVAS_REORDER_TARGET_NOT_FOUND' });
-    await expect(fxExecuteCanvasReorder({ dbService, automergeService }, { canvasId: row.id, canvasNameQuery: null, ids: [], action: 'front' })).rejects.toMatchObject({ ok: false, command: 'canvas.reorder', code: 'CANVAS_REORDER_ID_REQUIRED' });
+    await expect(txExecuteCanvasReorder({ dbService, automergeService }, { canvasId: row.id, canvasNameQuery: null, ids: ['rect-outside'], action: 'front' })).rejects.toMatchObject({ ok: false, command: 'canvas.reorder', code: 'CANVAS_REORDER_NO_OP' });
+    await expect(txExecuteCanvasReorder({ dbService, automergeService }, { canvasId: row.id, canvasNameQuery: null, ids: ['rect-inside', 'rect-outside'], action: 'front' })).rejects.toMatchObject({ ok: false, command: 'canvas.reorder', code: 'CANVAS_REORDER_PARENT_MISMATCH' });
+    await expect(txExecuteCanvasReorder({ dbService, automergeService }, { canvasId: row.id, canvasNameQuery: null, ids: ['does-not-exist'], action: 'front' })).rejects.toMatchObject({ ok: false, command: 'canvas.reorder', code: 'CANVAS_REORDER_TARGET_NOT_FOUND' });
+    await expect(txExecuteCanvasReorder({ dbService, automergeService }, { canvasId: row.id, canvasNameQuery: null, ids: [], action: 'front' })).rejects.toMatchObject({ ok: false, command: 'canvas.reorder', code: 'CANVAS_REORDER_ID_REQUIRED' });
   });
 });

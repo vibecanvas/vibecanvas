@@ -6,9 +6,9 @@ import { fxLoadCanvasHandleDoc } from '../core/fx.canvas';
 import type { TCanvasCmdErrorDetails } from '../types';
 
 export type TCanvasGroupInput = {
-  canvasId: string | null;
-  canvasNameQuery: string | null;
-  ids: string[];
+  canvasId?: string | null;
+  canvasNameQuery?: string | null;
+  ids?: string[];
 };
 
 export type TCanvasGroupSuccess = {
@@ -30,7 +30,7 @@ export type TPortal = {
 };
 
 function parseGroupIds(input: TCanvasGroupInput): string[] {
-  const ids = fnSortIds([...new Set(input.ids.map((value) => value.trim()).filter(Boolean))]);
+  const ids = fnSortIds([...new Set((input.ids ?? []).map((value) => value.trim()).filter(Boolean))]);
   if (ids.length >= 2) return ids;
   throw {
     ok: false,
@@ -38,7 +38,7 @@ function parseGroupIds(input: TCanvasGroupInput): string[] {
     code: 'CANVAS_GROUP_ID_REQUIRED',
     message: 'Group requires at least two ids.',
     canvasId: input.canvasId,
-    canvasNameQuery: input.canvasNameQuery,
+    canvasNameQuery: input.canvasNameQuery ?? null,
   } satisfies TCanvasCmdErrorDetails;
 }
 
@@ -83,13 +83,13 @@ function ensureSameParentGroupId(elements: readonly TElement[], canvasId: string
   } satisfies TCanvasCmdErrorDetails;
 }
 
-export async function fxExecuteCanvasGroup(portal: TPortal, input: TCanvasGroupInput): Promise<TCanvasGroupSuccess> {
+export async function txExecuteCanvasGroup(portal: TPortal, input: TCanvasGroupInput): Promise<TCanvasGroupSuccess> {
   try {
     const ids = parseGroupIds(input);
     const selectedCanvas = fnResolveCanvasSelection({ rows: portal.dbService.canvas.listAll(), selector: input, command: 'canvas.group', actionLabel: 'Group' });
     const { handle, doc } = await fxLoadCanvasHandleDoc(portal, selectedCanvas);
-    const matchedElements = resolveElementsByIds(doc, ids, selectedCanvas.id, input.canvasNameQuery);
-    const parentGroupId = ensureSameParentGroupId(matchedElements, selectedCanvas.id, input.canvasNameQuery);
+    const matchedElements = resolveElementsByIds(doc, ids, selectedCanvas.id, input.canvasNameQuery ?? null);
+    const parentGroupId = ensureSameParentGroupId(matchedElements, selectedCanvas.id, input.canvasNameQuery ?? null);
     const groupId = crypto.randomUUID();
     const childIds = fnSortIds(matchedElements.map((element) => element.id));
     const maxCreatedAt = matchedElements.reduce((max, element) => Math.max(max, element.createdAt ?? 0, element.updatedAt ?? 0), 0);
@@ -128,7 +128,7 @@ export async function fxExecuteCanvasGroup(portal: TPortal, input: TCanvasGroupI
       code: 'CANVAS_GROUP_FAILED',
       message: error instanceof Error ? error.message : String(error),
       canvasId: input.canvasId,
-      canvasNameQuery: input.canvasNameQuery,
+      canvasNameQuery: input.canvasNameQuery ?? null,
     } satisfies TCanvasCmdErrorDetails;
   }
 }

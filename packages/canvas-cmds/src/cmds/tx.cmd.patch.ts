@@ -29,10 +29,10 @@ export type TCanvasPatchEnvelope = {
 };
 
 export type TCanvasPatchInput = {
-  canvasId: string | null;
-  canvasNameQuery: string | null;
-  ids: string[];
-  patch: TCanvasPatchEnvelope;
+  canvasId?: string | null;
+  canvasNameQuery?: string | null;
+  ids?: string[];
+  patch?: TCanvasPatchEnvelope;
 };
 
 export type TCanvasPatchSuccess = {
@@ -51,7 +51,7 @@ export type TPortal = {
   automergeService: IAutomergeService;
 };
 
-function validatePatchEnvelope(patch: TCanvasPatchEnvelope): void {
+function validatePatchEnvelope(patch: TCanvasPatchEnvelope | undefined): asserts patch is TCanvasPatchEnvelope {
   if (!fnIsPlainObject(patch)) {
     throw { ok: false, command: 'canvas.patch', code: 'CANVAS_PATCH_PAYLOAD_INVALID', message: 'Patch payload must be an object.' } satisfies TCanvasCmdErrorDetails;
   }
@@ -88,9 +88,9 @@ function validatePatchEnvelope(patch: TCanvasPatchEnvelope): void {
 }
 
 function assertIds(input: TCanvasPatchInput): string[] {
-  const ids = fnSortIds(input.ids.filter(Boolean));
+  const ids = fnSortIds((input.ids ?? []).filter(Boolean));
   if (ids.length > 0) return ids;
-  throw { ok: false, command: 'canvas.patch', code: 'CANVAS_PATCH_IDS_REQUIRED', message: 'Patch requires at least one id.', canvasId: input.canvasId, canvasNameQuery: input.canvasNameQuery } satisfies TCanvasCmdErrorDetails;
+  throw { ok: false, command: 'canvas.patch', code: 'CANVAS_PATCH_IDS_REQUIRED', message: 'Patch requires at least one id.', canvasId: input.canvasId ?? null, canvasNameQuery: input.canvasNameQuery ?? null } satisfies TCanvasCmdErrorDetails;
 }
 
 function getAllowedDataKeys(element: TElement): Set<string> {
@@ -195,9 +195,11 @@ function applyGroupPatch(next: TGroup, patch: TCanvasGroupPatch): boolean {
   return changed;
 }
 
-export async function fxExecuteCanvasPatch(portal: TPortal, input: TCanvasPatchInput): Promise<TCanvasPatchSuccess> {
+export async function txExecuteCanvasPatch(portal: TPortal, input: TCanvasPatchInput): Promise<TCanvasPatchSuccess> {
+  const patch = input.patch;
+
   try {
-    validatePatchEnvelope(input.patch);
+    validatePatchEnvelope(patch);
     const ids = assertIds(input);
     const selectedCanvas = fnResolveCanvasSelection({ rows: portal.dbService.canvas.listAll(), selector: input, command: 'canvas.patch', actionLabel: 'Patch' });
     const { handle, doc } = await fxLoadCanvasHandleDoc(portal, selectedCanvas);
@@ -211,24 +213,24 @@ export async function fxExecuteCanvasPatch(portal: TPortal, input: TCanvasPatchI
         code: 'CANVAS_PATCH_TARGET_NOT_FOUND',
         message: `Target '${missingId}' was not found in canvas '${selectedCanvas.name}'.`,
         canvasId: selectedCanvas.id,
-        canvasNameQuery: input.canvasNameQuery,
+        canvasNameQuery: input.canvasNameQuery ?? null,
       } satisfies TCanvasCmdErrorDetails;
     }
 
     for (const id of matchedIds) {
       const element = doc.elements[id];
       const group = doc.groups[id];
-      if (element && input.patch.group) throw { ok: false, command: 'canvas.patch', code: 'CANVAS_PATCH_PAYLOAD_INVALID', message: `Patch branch 'group' cannot target element '${id}'.` } satisfies TCanvasCmdErrorDetails;
-      if (group && input.patch.element) throw { ok: false, command: 'canvas.patch', code: 'CANVAS_PATCH_PAYLOAD_INVALID', message: `Patch branch 'element' cannot target group '${id}'.` } satisfies TCanvasCmdErrorDetails;
+      if (element && patch.group) throw { ok: false, command: 'canvas.patch', code: 'CANVAS_PATCH_PAYLOAD_INVALID', message: `Patch branch 'group' cannot target element '${id}'.` } satisfies TCanvasCmdErrorDetails;
+      if (group && patch.element) throw { ok: false, command: 'canvas.patch', code: 'CANVAS_PATCH_PAYLOAD_INVALID', message: `Patch branch 'element' cannot target group '${id}'.` } satisfies TCanvasCmdErrorDetails;
 
-      if (element && input.patch.element) {
-        validateElementPatchForTarget(element, input.patch.element);
-        assertParentGroupExists(doc, input.patch.element.parentGroupId, id, 'element');
+      if (element && patch.element) {
+        validateElementPatchForTarget(element, patch.element);
+        assertParentGroupExists(doc, patch.element.parentGroupId, id, 'element');
       }
 
-      if (group && input.patch.group) {
-        assertParentGroupExists(doc, input.patch.group.parentGroupId, id, 'group');
-        if (input.patch.group.parentGroupId !== undefined && wouldCreateGroupCycle(doc, id, input.patch.group.parentGroupId)) {
+      if (group && patch.group) {
+        assertParentGroupExists(doc, patch.group.parentGroupId, id, 'group');
+        if (patch.group.parentGroupId !== undefined && wouldCreateGroupCycle(doc, id, patch.group.parentGroupId)) {
           throw { ok: false, command: 'canvas.patch', code: 'CANVAS_PATCH_GROUP_CYCLE', message: `Patch would create a group cycle for group '${id}'.` } satisfies TCanvasCmdErrorDetails;
         }
       }
@@ -240,13 +242,13 @@ export async function fxExecuteCanvasPatch(portal: TPortal, input: TCanvasPatchI
     handle.change((nextDoc) => {
       for (const id of matchedIds) {
         const nextElement = nextDoc.elements[id];
-        if (nextElement && input.patch.element) {
-          if (applyElementPatch(nextElement, input.patch.element, now)) changedIds.add(id);
+        if (nextElement && patch.element) {
+          if (applyElementPatch(nextElement, patch.element, now)) changedIds.add(id);
           continue;
         }
         const nextGroup = nextDoc.groups[id];
-        if (nextGroup && input.patch.group) {
-          if (applyGroupPatch(nextGroup, input.patch.group)) changedIds.add(id);
+        if (nextGroup && patch.group) {
+          if (applyGroupPatch(nextGroup, patch.group)) changedIds.add(id);
         }
       }
     });
@@ -254,7 +256,7 @@ export async function fxExecuteCanvasPatch(portal: TPortal, input: TCanvasPatchI
     return {
       ok: true,
       command: 'canvas.patch',
-      patch: input.patch,
+      patch,
       canvas: fnNormalizeCanvas(selectedCanvas),
       matchedCount: matchedIds.length,
       matchedIds,
@@ -269,7 +271,7 @@ export async function fxExecuteCanvasPatch(portal: TPortal, input: TCanvasPatchI
       code: 'CANVAS_PATCH_FAILED',
       message: error instanceof Error ? error.message : String(error),
       canvasId: input.canvasId,
-      canvasNameQuery: input.canvasNameQuery,
+      canvasNameQuery: input.canvasNameQuery ?? null,
     } satisfies TCanvasCmdErrorDetails;
   }
 }

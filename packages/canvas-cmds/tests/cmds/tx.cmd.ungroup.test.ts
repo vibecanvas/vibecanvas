@@ -4,7 +4,7 @@ import type { TCanvasDoc, TElement, TGroup } from '@vibecanvas/automerge-service
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
-import { fxExecuteCanvasUngroup } from 'packages/canvas-cmds/src/cmds/fx.cmd.ungroup';
+import { txExecuteCanvasUngroup } from 'packages/canvas-cmds/src/cmds/tx.cmd.ungroup';
 
 function createRectElement(overrides?: Partial<TElement>): TElement {
   return {
@@ -66,7 +66,7 @@ describe('ungroup canvas command', () => {
     await handle.whenReady();
     const row = dbService.canvas.create({ id: 'canvas-1', automerge_url: handle.url, name: 'ungroup-one-canvas' });
 
-    const result = await fxExecuteCanvasUngroup({ dbService, automergeService }, { canvasId: row.id, canvasNameQuery: null, ids: [group.id] });
+    const result = await txExecuteCanvasUngroup({ dbService, automergeService }, { canvasId: row.id, canvasNameQuery: null, ids: [group.id] });
 
     expect(result).toMatchObject({
       ok: true,
@@ -106,7 +106,7 @@ describe('ungroup canvas command', () => {
     await handle.whenReady();
     const row = dbService.canvas.create({ id: 'canvas-2', automerge_url: handle.url, name: 'ungroup-many-canvas' });
 
-    const result = await fxExecuteCanvasUngroup({ dbService, automergeService }, { canvasId: row.id, canvasNameQuery: null, ids: [groupB.id, groupA.id] });
+    const result = await txExecuteCanvasUngroup({ dbService, automergeService }, { canvasId: row.id, canvasNameQuery: null, ids: [groupB.id, groupA.id] });
 
     expect(result).toMatchObject({
       ok: true,
@@ -142,7 +142,7 @@ describe('ungroup canvas command', () => {
     await handle.whenReady();
     const row = dbService.canvas.create({ id: 'canvas-3', automerge_url: handle.url, name: 'ungroup-invalid-canvas' });
 
-    await expect(fxExecuteCanvasUngroup({ dbService, automergeService }, { canvasId: row.id, canvasNameQuery: null, ids: ['missing-id'] })).rejects.toMatchObject({
+    await expect(txExecuteCanvasUngroup({ dbService, automergeService }, { canvasId: row.id, canvasNameQuery: null, ids: ['missing-id'] })).rejects.toMatchObject({
       ok: false,
       command: 'canvas.ungroup',
       code: 'CANVAS_UNGROUP_TARGET_NOT_FOUND',
@@ -151,7 +151,7 @@ describe('ungroup canvas command', () => {
       canvasNameQuery: null,
     });
 
-    await expect(fxExecuteCanvasUngroup({ dbService, automergeService }, { canvasId: row.id, canvasNameQuery: null, ids: [topLevel.id] })).rejects.toMatchObject({
+    await expect(txExecuteCanvasUngroup({ dbService, automergeService }, { canvasId: row.id, canvasNameQuery: null, ids: [topLevel.id] })).rejects.toMatchObject({
       ok: false,
       command: 'canvas.ungroup',
       code: 'CANVAS_UNGROUP_TARGET_KIND_INVALID',

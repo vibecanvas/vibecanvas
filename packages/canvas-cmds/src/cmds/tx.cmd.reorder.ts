@@ -12,10 +12,10 @@ type TReorderTarget = { kind: 'element'; element: TElement } | { kind: 'group'; 
 export type TOrderEntry = { id: string; zIndex: string; kind: 'element' | 'group' };
 
 export type TCanvasReorderInput = {
-  canvasId: string | null;
-  canvasNameQuery: string | null;
-  ids: string[];
-  action: TReorderAction;
+  canvasId?: string | null;
+  canvasNameQuery?: string | null;
+  ids?: string[];
+  action?: TReorderAction;
 };
 
 export type TCanvasReorderSuccess = {
@@ -41,14 +41,15 @@ function fnCreateOrderedZIndex(index: number): string {
 }
 
 function fnParseReorderIds(input: TCanvasReorderInput): string[] {
-  const ids = fnSortIds([...new Set(input.ids.map((id) => id.trim()).filter(Boolean))]);
+  const ids = fnSortIds([...new Set((input.ids ?? []).map((id) => id.trim()).filter(Boolean))]);
   if (ids.length > 0) return ids;
-  throw { ok: false, command: 'canvas.reorder', code: 'CANVAS_REORDER_ID_REQUIRED', message: 'Reorder requires at least one id.', canvasId: input.canvasId, canvasNameQuery: input.canvasNameQuery } satisfies TCanvasCmdErrorDetails;
+  throw { ok: false, command: 'canvas.reorder', code: 'CANVAS_REORDER_ID_REQUIRED', message: 'Reorder requires at least one id.', canvasId: input.canvasId ?? null, canvasNameQuery: input.canvasNameQuery ?? null } satisfies TCanvasCmdErrorDetails;
 }
 
 function fnParseReorderAction(input: TCanvasReorderInput): TReorderAction {
-  if (REORDER_ACTIONS.includes(input.action)) return input.action;
-  throw { ok: false, command: 'canvas.reorder', code: 'CANVAS_REORDER_ACTION_INVALID', message: `Invalid action '${String(input.action)}'.`, canvasId: input.canvasId, canvasNameQuery: input.canvasNameQuery } satisfies TCanvasCmdErrorDetails;
+  const action = input.action ?? 'front';
+  if (REORDER_ACTIONS.includes(action)) return action;
+  throw { ok: false, command: 'canvas.reorder', code: 'CANVAS_REORDER_ACTION_INVALID', message: `Invalid action '${String(input.action)}'.`, canvasId: input.canvasId, canvasNameQuery: input.canvasNameQuery ?? null } satisfies TCanvasCmdErrorDetails;
 }
 
 function fnResolveTargetsByIds(doc: TCanvasDoc, ids: string[], canvasId: string, canvasNameQuery: string | null): TReorderTarget[] {
@@ -101,19 +102,19 @@ function fnApplyReorderAction(order: readonly TOrderEntry[], selectedIds: readon
   return next.flatMap((unit) => unit.entries);
 }
 
-export async function fxExecuteCanvasReorder(portal: TPortal, input: TCanvasReorderInput): Promise<TCanvasReorderSuccess> {
+export async function txExecuteCanvasReorder(portal: TPortal, input: TCanvasReorderInput): Promise<TCanvasReorderSuccess> {
   try {
     const matchedIds = fnParseReorderIds(input);
     const action = fnParseReorderAction(input);
     const selectedCanvas = fnResolveCanvasSelection({ rows: portal.dbService.canvas.listAll(), selector: input, command: 'canvas.reorder', actionLabel: 'Reorder' });
     const { handle, doc } = await fxLoadCanvasHandleDoc(portal, selectedCanvas);
-    const matchedTargets = fnResolveTargetsByIds(doc, matchedIds, selectedCanvas.id, input.canvasNameQuery);
-    const parentGroupId = fnEnsureSameParentGroupId(matchedTargets, selectedCanvas.id, input.canvasNameQuery);
+    const matchedTargets = fnResolveTargetsByIds(doc, matchedIds, selectedCanvas.id, input.canvasNameQuery ?? null);
+    const parentGroupId = fnEnsureSameParentGroupId(matchedTargets, selectedCanvas.id, input.canvasNameQuery ?? null);
     const beforeOrder = fnGetSiblingOrder(doc, parentGroupId);
     const afterOrderUnindexed = fnApplyReorderAction(beforeOrder, matchedIds, action);
 
     if (beforeOrder.map((entry) => entry.id).join('|') === afterOrderUnindexed.map((entry) => entry.id).join('|')) {
-      throw { ok: false, command: 'canvas.reorder', code: 'CANVAS_REORDER_NO_OP', message: 'Reorder would not change sibling order for the requested action.', canvasId: selectedCanvas.id, canvasNameQuery: input.canvasNameQuery } satisfies TCanvasCmdErrorDetails;
+      throw { ok: false, command: 'canvas.reorder', code: 'CANVAS_REORDER_NO_OP', message: 'Reorder would not change sibling order for the requested action.', canvasId: selectedCanvas.id, canvasNameQuery: input.canvasNameQuery ?? null } satisfies TCanvasCmdErrorDetails;
     }
 
     const afterOrder = afterOrderUnindexed.map((entry, index) => ({ ...entry, zIndex: fnCreateOrderedZIndex(index) }));
@@ -151,7 +152,7 @@ export async function fxExecuteCanvasReorder(portal: TPortal, input: TCanvasReor
       code: 'CANVAS_REORDER_FAILED',
       message: error instanceof Error ? error.message : String(error),
       canvasId: input.canvasId,
-      canvasNameQuery: input.canvasNameQuery,
+      canvasNameQuery: input.canvasNameQuery ?? null,
     } satisfies TCanvasCmdErrorDetails;
   }
 }

@@ -7,9 +7,9 @@ import { fnCollectDirectChildIds } from '../core/fn.group';
 import type { TCanvasCmdErrorDetails } from '../types';
 
 export type TCanvasUngroupInput = {
-  canvasId: string | null;
-  canvasNameQuery: string | null;
-  ids: string[];
+  canvasId?: string | null;
+  canvasNameQuery?: string | null;
+  ids?: string[];
 };
 
 export type TCanvasUngroupSuccess = {
@@ -30,7 +30,7 @@ export type TPortal = {
 };
 
 function parseUngroupIds(input: TCanvasUngroupInput): string[] {
-  const ids = fnSortIds([...new Set(input.ids.map((value) => value.trim()).filter(Boolean))]);
+  const ids = fnSortIds([...new Set((input.ids ?? []).map((value) => value.trim()).filter(Boolean))]);
   if (ids.length > 0) return ids;
   throw {
     ok: false,
@@ -38,7 +38,7 @@ function parseUngroupIds(input: TCanvasUngroupInput): string[] {
     code: 'CANVAS_UNGROUP_ID_REQUIRED',
     message: 'Ungroup requires at least one id.',
     canvasId: input.canvasId,
-    canvasNameQuery: input.canvasNameQuery,
+    canvasNameQuery: input.canvasNameQuery ?? null,
   } satisfies TCanvasCmdErrorDetails;
 }
 
@@ -70,12 +70,12 @@ function resolveGroupsByIds(doc: TCanvasDoc, ids: string[], canvasId: string, ca
   return ids.map((id) => doc.groups[id]!).filter(Boolean);
 }
 
-export async function fxExecuteCanvasUngroup(portal: TPortal, input: TCanvasUngroupInput): Promise<TCanvasUngroupSuccess> {
+export async function txExecuteCanvasUngroup(portal: TPortal, input: TCanvasUngroupInput): Promise<TCanvasUngroupSuccess> {
   try {
     const ids = parseUngroupIds(input);
     const selectedCanvas = fnResolveCanvasSelection({ rows: portal.dbService.canvas.listAll(), selector: input, command: 'canvas.ungroup', actionLabel: 'Ungroup' });
     const { handle, doc } = await fxLoadCanvasHandleDoc(portal, selectedCanvas);
-    const matchedGroups = resolveGroupsByIds(doc, ids, selectedCanvas.id, input.canvasNameQuery);
+    const matchedGroups = resolveGroupsByIds(doc, ids, selectedCanvas.id, input.canvasNameQuery ?? null);
     const removedGroupIds = fnSortIds(matchedGroups.map((group) => group.id));
     const groupParentMap = new Map(matchedGroups.map((group) => [group.id, group.parentGroupId ?? null]));
     const { releasedElementIds } = fnCollectDirectChildIds(doc, removedGroupIds);
@@ -121,7 +121,7 @@ export async function fxExecuteCanvasUngroup(portal: TPortal, input: TCanvasUngr
       code: 'CANVAS_UNGROUP_FAILED',
       message: error instanceof Error ? error.message : String(error),
       canvasId: input.canvasId,
-      canvasNameQuery: input.canvasNameQuery,
+      canvasNameQuery: input.canvasNameQuery ?? null,
     } satisfies TCanvasCmdErrorDetails;
   }
 }

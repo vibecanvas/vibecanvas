@@ -9,12 +9,12 @@ import type { TCanvasCmdErrorDetails } from '../types';
 export type TMoveMode = 'relative' | 'absolute';
 
 export type TCanvasMoveInput = {
-  canvasId: string | null;
-  canvasNameQuery: string | null;
-  ids: string[];
-  mode: TMoveMode;
-  x: number;
-  y: number;
+  canvasId?: string | null;
+  canvasNameQuery?: string | null;
+  ids?: string[];
+  mode?: TMoveMode;
+  x?: number;
+  y?: number;
 };
 
 export type TCanvasMoveSuccess = {
@@ -146,30 +146,33 @@ function resolveAbsoluteDelta(doc: TCanvasDoc, target: TMoveTarget, x: number, y
   } satisfies TCanvasCmdErrorDetails;
 }
 
-export async function fxExecuteCanvasMove(portal: TPortal, input: TCanvasMoveInput): Promise<TCanvasMoveSuccess> {
+export async function txExecuteCanvasMove(portal: TPortal, input: TCanvasMoveInput): Promise<TCanvasMoveSuccess> {
   try {
-    const matchedIds = fnSortIds([...new Set(input.ids.map((id) => id.trim()).filter(Boolean))]);
-    if (matchedIds.length === 0) throw { ok: false, command: 'canvas.move', code: 'CANVAS_MOVE_ID_REQUIRED', message: 'Move requires at least one id.', canvasId: input.canvasId, canvasNameQuery: input.canvasNameQuery } satisfies TCanvasCmdErrorDetails;
-    if (!Number.isFinite(input.x) || !Number.isFinite(input.y)) throw { ok: false, command: 'canvas.move', code: 'CANVAS_MOVE_COORDINATE_INVALID', message: 'Move coordinates must be finite numbers.', canvasId: input.canvasId, canvasNameQuery: input.canvasNameQuery } satisfies TCanvasCmdErrorDetails;
+    const matchedIds = fnSortIds([...new Set((input.ids ?? []).map((id) => id.trim()).filter(Boolean))]);
+    if (matchedIds.length === 0) throw { ok: false, command: 'canvas.move', code: 'CANVAS_MOVE_ID_REQUIRED', message: 'Move requires at least one id.', canvasId: input.canvasId ?? null, canvasNameQuery: input.canvasNameQuery ?? null } satisfies TCanvasCmdErrorDetails;
+    const x = Number(input.x);
+    const y = Number(input.y);
+    if (!Number.isFinite(x) || !Number.isFinite(y)) throw { ok: false, command: 'canvas.move', code: 'CANVAS_MOVE_COORDINATE_INVALID', message: 'Move coordinates must be finite numbers.', canvasId: input.canvasId ?? null, canvasNameQuery: input.canvasNameQuery ?? null } satisfies TCanvasCmdErrorDetails;
+    const mode = input.mode ?? 'relative';
 
     const selectedCanvas = fnResolveCanvasSelection({ rows: portal.dbService.canvas.listAll(), selector: input, command: 'canvas.move', actionLabel: 'Move' });
     const { handle, doc } = await fxLoadCanvasHandleDoc(portal, selectedCanvas);
-    const matchedTargets = resolveTargetsByIds(doc, matchedIds, selectedCanvas.id, input.canvasNameQuery);
+    const matchedTargets = resolveTargetsByIds(doc, matchedIds, selectedCanvas.id, input.canvasNameQuery ?? null);
 
-    if (input.mode === 'absolute' && matchedTargets.length !== 1) {
+    if (mode === 'absolute' && matchedTargets.length !== 1) {
       throw {
         ok: false,
         command: 'canvas.move',
         code: 'CANVAS_MOVE_ABSOLUTE_REQUIRES_SINGLE_TARGET',
         message: 'Absolute move currently requires exactly one target id.',
         canvasId: selectedCanvas.id,
-        canvasNameQuery: input.canvasNameQuery,
+        canvasNameQuery: input.canvasNameQuery ?? null,
       } satisfies TCanvasCmdErrorDetails;
     }
 
-    const delta = input.mode === 'relative'
-      ? { dx: input.x, dy: input.y }
-      : resolveAbsoluteDelta(doc, matchedTargets[0]!, input.x, input.y, selectedCanvas.id, input.canvasNameQuery);
+    const delta = mode === 'relative'
+      ? { dx: x, dy: y }
+      : resolveAbsoluteDelta(doc, matchedTargets[0]!, x, y, selectedCanvas.id, input.canvasNameQuery ?? null);
 
     const changedIds = collectChangedElementIds(doc, matchedTargets);
     const now = Date.now();
@@ -187,8 +190,8 @@ export async function fxExecuteCanvasMove(portal: TPortal, input: TCanvasMoveInp
     return {
       ok: true,
       command: 'canvas.move',
-      mode: input.mode,
-      input: { x: input.x, y: input.y },
+      mode,
+      input: { x, y },
       delta,
       canvas: fnNormalizeCanvas(selectedCanvas),
       matchedCount: matchedIds.length,
@@ -204,7 +207,7 @@ export async function fxExecuteCanvasMove(portal: TPortal, input: TCanvasMoveInp
       code: 'CANVAS_MOVE_FAILED',
       message: error instanceof Error ? error.message : String(error),
       canvasId: input.canvasId,
-      canvasNameQuery: input.canvasNameQuery,
+      canvasNameQuery: input.canvasNameQuery ?? null,
     } satisfies TCanvasCmdErrorDetails;
   }
 }

@@ -17,21 +17,21 @@ export type TSceneBounds = {
 };
 
 export type TSceneSelector = {
-  ids: string[];
-  kinds: Array<'element' | 'group'>;
-  types: string[];
-  style: TSceneStyleFilter;
-  group: string | null;
-  subtree: string | null;
-  bounds: TSceneBounds | null;
-  boundsMode: 'intersects' | 'contains';
+  ids?: string[];
+  kinds?: Array<'element' | 'group'>;
+  types?: string[];
+  style?: TSceneStyleFilter;
+  group?: string | null;
+  subtree?: string | null;
+  bounds?: TSceneBounds | null;
+  boundsMode?: 'intersects' | 'contains';
 };
 
 export type TSceneSelectorEnvelope = {
-  source: TSceneSelectorSource;
-  canvasId: string | null;
-  canvasNameQuery: string | null;
-  filters: TSceneSelector;
+  source?: TSceneSelectorSource;
+  canvasId?: string | null;
+  canvasNameQuery?: string | null;
+  filters?: TSceneSelector;
 };
 
 export type TSceneOutputMode = 'summary' | 'focused' | 'full';
@@ -65,7 +65,7 @@ export type TCanvasQuerySuccess = {
 };
 
 export type TCanvasQueryInput = {
-  selector: TSceneSelectorEnvelope;
+  selector?: TSceneSelectorEnvelope;
   output?: TSceneOutputMode;
   omitData?: boolean;
   omitStyle?: boolean;
@@ -76,6 +76,42 @@ export type TPortal = {
   automergeService: IAutomergeService;
 };
 
+type TResolvedSceneSelector = {
+  ids: string[];
+  kinds: Array<'element' | 'group'>;
+  types: string[];
+  style: TSceneStyleFilter;
+  group: string | null;
+  subtree: string | null;
+  bounds: TSceneBounds | null;
+  boundsMode: 'intersects' | 'contains';
+};
+
+type TResolvedSceneSelectorEnvelope = {
+  source: TSceneSelectorSource;
+  canvasId: string | null;
+  canvasNameQuery: string | null;
+  filters: TResolvedSceneSelector;
+};
+
+function normalizeSceneSelector(input?: TSceneSelectorEnvelope): TResolvedSceneSelectorEnvelope {
+  const filters = input?.filters;
+  return {
+    source: input?.source ?? 'query',
+    canvasId: input?.canvasId ?? null,
+    canvasNameQuery: input?.canvasNameQuery ?? null,
+    filters: {
+      ids: filters?.ids ?? [],
+      kinds: filters?.kinds ?? [],
+      types: filters?.types ?? [],
+      style: filters?.style ?? {},
+      group: filters?.group ?? null,
+      subtree: filters?.subtree ?? null,
+      bounds: filters?.bounds ?? null,
+      boundsMode: filters?.boundsMode ?? 'intersects',
+    },
+  };
+}
 
 function createBounds(x: number, y: number, w: number, h: number): TSceneBounds {
   return { x, y, w: Math.max(0, w), h: Math.max(0, h) };
@@ -213,7 +249,7 @@ function createSceneTargets(doc: TCanvasDoc): TSceneTarget[] {
   ]);
 }
 
-function validateSelector(doc: TCanvasDoc, selector: TSceneSelectorEnvelope): void {
+function validateSelector(doc: TCanvasDoc, selector: TResolvedSceneSelectorEnvelope): void {
   if (selector.filters.group && !doc.groups[selector.filters.group]) {
     throw {
       ok: false,
@@ -252,7 +288,7 @@ function matchesStyleSelector(target: TSceneTarget, styleFilter: TSceneStyleFilt
   return styleEntries.every(([key, value]) => target.element.style[key as keyof typeof target.element.style] === value);
 }
 
-function matchesSceneSelector(target: TSceneTarget, doc: TCanvasDoc, selector: TSceneSelector): boolean {
+function matchesSceneSelector(target: TSceneTarget, doc: TCanvasDoc, selector: TResolvedSceneSelector): boolean {
   const id = target.kind === 'element' ? target.element.id : target.group.id;
   const kind = target.kind;
   const type = target.kind === 'element' ? target.element.data.type : null;
@@ -399,14 +435,16 @@ function buildQueryPayload(target: TSceneTarget, doc: TCanvasDoc, mode: TSceneOu
 }
 
 export async function fxExecuteCanvasQuery(portal: TPortal, input: TCanvasQueryInput): Promise<TCanvasQuerySuccess> {
+  const selector = normalizeSceneSelector(input.selector);
+
   try {
     const mode = input.output ?? 'summary';
-    const selectedCanvas = fnResolveCanvasSelection({ rows: portal.dbService.canvas.listAll(), selector: input.selector, command: 'canvas.query', actionLabel: 'Query' });
+    const selectedCanvas = fnResolveCanvasSelection({ rows: portal.dbService.canvas.listAll(), selector, command: 'canvas.query', actionLabel: 'Query' });
     const { doc: canvasDoc } = await fxLoadCanvasHandleDoc(portal, selectedCanvas);
-    validateSelector(canvasDoc, input.selector);
+    validateSelector(canvasDoc, selector);
 
     const matches = createSceneTargets(canvasDoc)
-      .filter((target) => matchesSceneSelector(target, canvasDoc, input.selector.filters))
+      .filter((target) => matchesSceneSelector(target, canvasDoc, selector.filters))
       .map((target) => ({
         metadata: buildMatchMetadata(target, canvasDoc),
         payload: buildQueryPayload(target, canvasDoc, mode, {
@@ -419,7 +457,7 @@ export async function fxExecuteCanvasQuery(portal: TPortal, input: TCanvasQueryI
       ok: true,
       command: 'canvas.query',
       mode,
-      selector: input.selector,
+      selector: selector satisfies TSceneSelectorEnvelope,
       canvas: fnNormalizeCanvas(selectedCanvas),
       count: matches.length,
       matches,
@@ -434,8 +472,8 @@ export async function fxExecuteCanvasQuery(portal: TPortal, input: TCanvasQueryI
       command: 'canvas.query',
       code: 'CANVAS_QUERY_FAILED',
       message: error instanceof Error ? error.message : String(error),
-      canvasId: input.selector.canvasId,
-      canvasNameQuery: input.selector.canvasNameQuery,
+      canvasId: selector.canvasId,
+      canvasNameQuery: selector.canvasNameQuery,
     };
     throw errorDetails;
   }

@@ -4,7 +4,7 @@ import type { TCanvasDoc, TElement, TGroup } from '@vibecanvas/automerge-service
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
-import { fxExecuteCanvasMove } from 'packages/canvas-cmds/src/cmds/fx.cmd.move';
+import { txExecuteCanvasMove } from 'packages/canvas-cmds/src/cmds/tx.cmd.move';
 
 function createRectElement(overrides?: Partial<TElement>): TElement {
   return { id: 'rect-1', x: 40, y: 80, rotation: 0, zIndex: 'a0', parentGroupId: null, bindings: [], locked: false, createdAt: 1, updatedAt: 1, data: { type: 'rect', w: 120, h: 80 }, style: { backgroundColor: '#ffffff', strokeColor: '#111111', strokeWidth: 1, opacity: 1 }, ...overrides };
@@ -34,7 +34,7 @@ describe('move canvas command', () => {
     await handle.whenReady();
     const row = dbService.canvas.create({ id: 'canvas-1', automerge_url: handle.url, name: 'move-one-canvas' });
 
-    const result = await fxExecuteCanvasMove({ dbService, automergeService }, { canvasId: row.id, canvasNameQuery: null, ids: [rect.id], mode: 'relative', x: 15, y: -5 });
+    const result = await txExecuteCanvasMove({ dbService, automergeService }, { canvasId: row.id, canvasNameQuery: null, ids: [rect.id], mode: 'relative', x: 15, y: -5 });
     expect(result).toMatchObject({ ok: true, command: 'canvas.move', mode: 'relative', input: { x: 15, y: -5 }, delta: { dx: 15, dy: -5 }, matchedCount: 1, matchedIds: ['rect-1'], changedCount: 1, changedIds: ['rect-1'] });
     expect(handle.doc()!.elements[rect.id]?.x).toBe(55);
     expect(handle.doc()!.elements[rect.id]?.y).toBe(75);
@@ -51,7 +51,7 @@ describe('move canvas command', () => {
     await handle.whenReady();
     const row = dbService.canvas.create({ id: 'canvas-2', automerge_url: handle.url, name: 'move-subtree-canvas' });
 
-    const result = await fxExecuteCanvasMove({ dbService, automergeService }, { canvasId: row.id, canvasNameQuery: null, ids: [rootGroup.id], mode: 'relative', x: 7, y: 11 });
+    const result = await txExecuteCanvasMove({ dbService, automergeService }, { canvasId: row.id, canvasNameQuery: null, ids: [rootGroup.id], mode: 'relative', x: 7, y: 11 });
     expect(result).toMatchObject({ ok: true, command: 'canvas.move', mode: 'relative', matchedCount: 1, matchedIds: ['group-root'], changedCount: 2, changedIds: ['rect-direct', 'rect-nested'] });
     expect(handle.doc()!.elements[direct.id]?.x).toBe(17);
     expect(handle.doc()!.elements[nested.id]?.y).toBe(81);
@@ -65,12 +65,12 @@ describe('move canvas command', () => {
     await handle.whenReady();
     const row = dbService.canvas.create({ id: 'canvas-3', automerge_url: handle.url, name: 'move-errors-canvas' });
 
-    const result = await fxExecuteCanvasMove({ dbService, automergeService }, { canvasId: row.id, canvasNameQuery: null, ids: [rectA.id], mode: 'absolute', x: 300, y: 120 });
+    const result = await txExecuteCanvasMove({ dbService, automergeService }, { canvasId: row.id, canvasNameQuery: null, ids: [rectA.id], mode: 'absolute', x: 300, y: 120 });
     expect(result).toMatchObject({ ok: true, command: 'canvas.move', mode: 'absolute', delta: { dx: 260, dy: 40 }, changedIds: ['rect-a'] });
     expect(handle.doc()!.elements[rectA.id]?.x).toBe(300);
     expect(handle.doc()!.elements[rectA.id]?.y).toBe(120);
 
-    await expect(fxExecuteCanvasMove({ dbService, automergeService }, { canvasId: row.id, canvasNameQuery: null, ids: ['missing-id'], mode: 'relative', x: 1, y: 1 })).rejects.toMatchObject({ ok: false, command: 'canvas.move', code: 'CANVAS_MOVE_TARGET_NOT_FOUND' });
-    await expect(fxExecuteCanvasMove({ dbService, automergeService }, { canvasId: row.id, canvasNameQuery: null, ids: [rectA.id, rectB.id], mode: 'absolute', x: 10, y: 20 })).rejects.toMatchObject({ ok: false, command: 'canvas.move', code: 'CANVAS_MOVE_ABSOLUTE_REQUIRES_SINGLE_TARGET' });
+    await expect(txExecuteCanvasMove({ dbService, automergeService }, { canvasId: row.id, canvasNameQuery: null, ids: ['missing-id'], mode: 'relative', x: 1, y: 1 })).rejects.toMatchObject({ ok: false, command: 'canvas.move', code: 'CANVAS_MOVE_TARGET_NOT_FOUND' });
+    await expect(txExecuteCanvasMove({ dbService, automergeService }, { canvasId: row.id, canvasNameQuery: null, ids: [rectA.id, rectB.id], mode: 'absolute', x: 10, y: 20 })).rejects.toMatchObject({ ok: false, command: 'canvas.move', code: 'CANVAS_MOVE_ABSOLUTE_REQUIRES_SINGLE_TARGET' });
   });
 });
