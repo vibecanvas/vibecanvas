@@ -1,6 +1,6 @@
 import type { IEventPublisherService } from '@vibecanvas/event-publisher-service/IEventPublisherService';
 import type { ICliConfig } from '../../config';
-import { checkForUpgrade } from '../cli/cmd.upgrade';
+import { checkForUpgrade } from '../cli/cmds/cmd.upgrade';
 
 function checkForUpdateOnBoot(config: ICliConfig, eventPublisher: IEventPublisherService): void {
   checkForUpgrade({ config, checkOnly: true })

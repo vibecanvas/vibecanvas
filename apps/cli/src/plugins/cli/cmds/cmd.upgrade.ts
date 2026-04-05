@@ -1,10 +1,10 @@
 import { existsSync, readFileSync } from 'fs';
 import { join } from 'path';
 import { parseArgs } from 'util';
-import type { ICliConfig } from '../../config';
-import fnCliUpdateResolvePolicy from './core/fn.resolve-policy';
-import fnCliUpdateShouldUpgrade from './core/fn.should-upgrade';
-import { resolveCliPaths } from '../../resolve-paths';
+import type { ICliConfig } from '../../../config';
+import fnCliUpdateResolvePolicy from '../core/fn.resolve-policy';
+import fnCliUpdateShouldUpgrade from '../core/fn.should-upgrade';
+import { resolveCliPaths } from '../../../resolve-paths';
 
 type TInstallMethod = 'curl' | 'npm' | 'unknown';
 

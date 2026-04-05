@@ -1,7 +1,7 @@
 import { parseArgs } from 'node:util';
 import { executeCanvasList } from '@vibecanvas/canvas-cmds';
-import { buildCliConfig } from '../../build-config';
-import { parseCliArgv } from '../../parse-argv';
+import { buildCliConfig } from '../../../build-config';
+import { parseCliArgv } from '../../../parse-argv';
 
 const CANVAS_SUBCOMMANDS = ['list', 'query', 'patch', 'move', 'group', 'ungroup', 'delete', 'reorder', 'render'] as const;
 
@@ -187,43 +187,43 @@ export async function runCanvas(argv: readonly string[]): Promise<never> {
     }
 
     if (subcommand === 'query') {
-      const { runCanvasQuery } = await import('./canvas/cmd.query');
+      const { runCanvasQuery } = await import('../canvas/cmd.query');
       await runCanvasQuery(argv);
       throw new Error('runCanvasQuery() must exit the process.');
     }
 
     if (subcommand === 'move') {
-      const { runCanvasMove } = await import('./canvas/cmd.move');
+      const { runCanvasMove } = await import('../canvas/cmd.move');
       await runCanvasMove(argv);
       throw new Error('runCanvasMove() must exit the process.');
     }
 
     if (subcommand === 'patch') {
-      const { runCanvasPatch } = await import('./canvas/cmd.patch');
+      const { runCanvasPatch } = await import('../canvas/cmd.patch');
       await runCanvasPatch(argv);
       throw new Error('runCanvasPatch() must exit the process.');
     }
 
     if (subcommand === 'delete') {
-      const { runCanvasDelete } = await import('./canvas/cmd.delete');
+      const { runCanvasDelete } = await import('../canvas/cmd.delete');
       await runCanvasDelete(argv);
       throw new Error('runCanvasDelete() must exit the process.');
     }
 
     if (subcommand === 'reorder') {
-      const { runCanvasReorder } = await import('./canvas/cmd.reorder');
+      const { runCanvasReorder } = await import('../canvas/cmd.reorder');
       await runCanvasReorder(argv);
       throw new Error('runCanvasReorder() must exit the process.');
     }
 
     if (subcommand === 'group') {
-      const { runCanvasGroup } = await import('./canvas/cmd.group');
+      const { runCanvasGroup } = await import('../canvas/cmd.group');
       await runCanvasGroup(argv);
       throw new Error('runCanvasGroup() must exit the process.');
     }
 
     if (subcommand === 'ungroup') {
-      const { runCanvasUngroup } = await import('./canvas/cmd.ungroup');
+      const { runCanvasUngroup } = await import('../canvas/cmd.ungroup');
       await runCanvasUngroup(argv);
       throw new Error('runCanvasUngroup() must exit the process.');
     }
@@ -233,43 +233,43 @@ export async function runCanvas(argv: readonly string[]): Promise<never> {
   }
 
   if (subcommand === 'query') {
-    const { runCanvasQuery } = await import('./canvas/cmd.query');
+    const { runCanvasQuery } = await import('../canvas/cmd.query');
     await runCanvasQuery(argv);
     throw new Error('runCanvasQuery() must exit the process.');
   }
 
   if (subcommand === 'move') {
-    const { runCanvasMove } = await import('./canvas/cmd.move');
+    const { runCanvasMove } = await import('../canvas/cmd.move');
     await runCanvasMove(argv);
     throw new Error('runCanvasMove() must exit the process.');
   }
 
   if (subcommand === 'patch') {
-    const { runCanvasPatch } = await import('./canvas/cmd.patch');
+    const { runCanvasPatch } = await import('../canvas/cmd.patch');
     await runCanvasPatch(argv);
     throw new Error('runCanvasPatch() must exit the process.');
   }
 
   if (subcommand === 'delete') {
-    const { runCanvasDelete } = await import('./canvas/cmd.delete');
+    const { runCanvasDelete } = await import('../canvas/cmd.delete');
     await runCanvasDelete(argv);
     throw new Error('runCanvasDelete() must exit the process.');
   }
 
   if (subcommand === 'reorder') {
-    const { runCanvasReorder } = await import('./canvas/cmd.reorder');
+    const { runCanvasReorder } = await import('../canvas/cmd.reorder');
     await runCanvasReorder(argv);
     throw new Error('runCanvasReorder() must exit the process.');
   }
 
   if (subcommand === 'group') {
-    const { runCanvasGroup } = await import('./canvas/cmd.group');
+    const { runCanvasGroup } = await import('../canvas/cmd.group');
     await runCanvasGroup(argv);
     throw new Error('runCanvasGroup() must exit the process.');
   }
 
   if (subcommand === 'ungroup') {
-    const { runCanvasUngroup } = await import('./canvas/cmd.ungroup');
+    const { runCanvasUngroup } = await import('../canvas/cmd.ungroup');
     await runCanvasUngroup(argv);
     throw new Error('runCanvasUngroup() must exit the process.');
   }
@@ -308,14 +308,13 @@ export async function runCanvas(argv: readonly string[]): Promise<never> {
   }
 }
 
-import { createLocalCanvasState } from './canvas.local-state';
+import { createLocalCanvasState } from '../canvas.local-state';
 import type { ICliConfig } from '@vibecanvas/cli/config';
 import type { IAutomergeService } from '@vibecanvas/automerge-service/IAutomergeService';
 import type { IDbService } from '@vibecanvas/db/IDbService';
-import { fxDiscoverLocalCanvasServer } from './core/fx.canvas.server-discovery';
+import { fxDiscoverLocalCanvasServer } from '../core/fx.canvas.server-discovery';
 
 export async function runCanvasCommand(services: { db: IDbService, automerge: IAutomergeService }, config: ICliConfig) {
   const serverHealth = await fxDiscoverLocalCanvasServer({ bun: Bun }, { config })
-
   console.log(serverHealth)
 }

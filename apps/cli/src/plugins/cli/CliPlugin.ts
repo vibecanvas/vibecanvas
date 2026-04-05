@@ -2,9 +2,9 @@ import type { IPlugin } from '@vibecanvas/runtime';
 import type { ICliHooks } from '../../hooks';
 import type { IDbService } from '@vibecanvas/db/IDbService';
 import type { ICliConfig } from '../../config';
-import { txCmdUpgrade } from './cmd.upgrade';
+import { txCmdUpgrade } from './cmds/cmd.upgrade';
 import type { IAutomergeService } from '@vibecanvas/automerge-service/IAutomergeService';
-import { runCanvasCommand } from './cmd.canvas';
+import { runCanvasCommand } from './cmds/cmd.canvas';
 
 function printHelp(): void {
   console.log(`vibecanvas - Run your agents in an infinite canvas
