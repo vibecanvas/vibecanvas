@@ -8,11 +8,11 @@ export type {
 } from './context';
 export { normalizeCanvas } from './context';
 
-export type { TCanvasCmdErrorDetails } from './errors';
-export { CanvasCmdError, isCanvasCmdError, throwCanvasCmdError, toCanvasCmdError } from './errors';
+export type { TCanvasCmdErrorDetails } from './core/fn.errors';
+export { CanvasCmdError, isCanvasCmdError, throwCanvasCmdError, toCanvasCmdError } from './core/fn.errors';
 
-export type { TCanvasInventoryEntry, TCanvasListSuccess } from './cmd.list';
-export { executeCanvasList } from './cmd.list';
+export type { TCanvasInventoryEntry, TCanvasListSuccess } from './cmds/fx.cmd.list';
+export { executeCanvasList } from './cmds/fx.cmd.list';
 
 export type { TCanvasMoveInput, TCanvasMoveSuccess, TMoveMode } from './cmd.move';
 export { executeCanvasMove } from './cmd.move';

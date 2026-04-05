@@ -291,7 +291,7 @@
       "version": "0.0.1",
       "dependencies": {
         "@automerge/automerge-repo": "catalog:",
-        "@vibecanvas/shell": "workspace:*",
+        "@vibecanvas/db": "workspace:*",
       },
     },
     "packages/core-contract": {

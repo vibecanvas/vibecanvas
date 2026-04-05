@@ -1,6 +1,6 @@
 import type { TCanvasDoc } from '@vibecanvas/shell/automerge/index';
 import { getTargetBounds, isGroupInSubtree, sortSceneTargets, type TSceneBounds, type TSceneTarget } from './scene-shared';
-import type { TCanvasCmdErrorDetails } from './errors';
+import type { TCanvasCmdErrorDetails } from './core/fn.errors';
 
 export type TSceneSelectorSource = 'none' | 'flags' | 'where' | 'query';
 export type TSceneSelectorScalar = string | number | boolean | null;
