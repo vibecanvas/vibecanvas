@@ -128,19 +128,53 @@ describe('ungroup canvas command', () => {
     expect(doc.elements[rectB.id]?.y).toBe(40);
   });
 
+  test('ungrouping nested selected groups releases children to the nearest surviving ancestor', async () => {
+    const root = createGroup({ id: 'root-group', zIndex: 'a0' });
+    const parent = createGroup({ id: 'a-parent-group', parentGroupId: root.id, zIndex: 'a1' });
+    const child = createGroup({ id: 'b-child-group', parentGroupId: parent.id, zIndex: 'a2' });
+    const rect = createRectElement({ id: 'rect-nested', x: 25, y: 35, parentGroupId: child.id, zIndex: 'a3' });
+    const handle = automergeService.repo.create<TCanvasDoc>({
+      id: 'canvas-3',
+      name: 'ungroup-nested-selection-canvas',
+      groups: { [root.id]: root, [parent.id]: parent, [child.id]: child },
+      elements: { [rect.id]: rect },
+    });
+    await handle.whenReady();
+    const row = dbService.canvas.create({ id: 'canvas-3', automerge_url: handle.url, name: 'ungroup-nested-selection-canvas' });
+
+    const result = await txExecuteCanvasUngroup({ dbService, automergeService }, { canvasId: row.id, canvasNameQuery: null, ids: [parent.id, child.id] });
+
+    expect(result).toMatchObject({
+      ok: true,
+      command: 'canvas.ungroup',
+      matchedCount: 2,
+      matchedIds: ['a-parent-group', 'b-child-group'],
+      removedGroupIds: ['a-parent-group', 'b-child-group'],
+      releasedChildIds: ['rect-nested'],
+    });
+
+    const doc = handle.doc()!;
+    expect(doc.groups[parent.id]).toBeUndefined();
+    expect(doc.groups[child.id]).toBeUndefined();
+    expect(doc.groups[root.id]).toBeDefined();
+    expect(doc.elements[rect.id]?.parentGroupId).toBe(root.id);
+    expect(doc.elements[rect.id]?.x).toBe(25);
+    expect(doc.elements[rect.id]?.y).toBe(35);
+  });
+
   test('fails clearly on missing targets and non-group ids', async () => {
     const parent = createGroup({ id: 'group-parent', zIndex: 'a0' });
     const group = createGroup({ id: 'group-target', parentGroupId: parent.id, zIndex: 'a1' });
     const rect = createRectElement({ id: 'rect-a', parentGroupId: group.id, zIndex: 'a2' });
     const topLevel = createRectElement({ id: 'rect-top', zIndex: 'a3' });
     const handle = automergeService.repo.create<TCanvasDoc>({
-      id: 'canvas-3',
+      id: 'canvas-4',
       name: 'ungroup-invalid-canvas',
       groups: { [parent.id]: parent, [group.id]: group },
       elements: { [rect.id]: rect, [topLevel.id]: topLevel },
     });
     await handle.whenReady();
-    const row = dbService.canvas.create({ id: 'canvas-3', automerge_url: handle.url, name: 'ungroup-invalid-canvas' });
+    const row = dbService.canvas.create({ id: 'canvas-4', automerge_url: handle.url, name: 'ungroup-invalid-canvas' });
 
     await expect(txExecuteCanvasUngroup({ dbService, automergeService }, { canvasId: row.id, canvasNameQuery: null, ids: ['missing-id'] })).rejects.toMatchObject({
       ok: false,

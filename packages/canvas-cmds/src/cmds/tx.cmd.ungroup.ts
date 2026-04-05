@@ -70,6 +70,19 @@ function resolveGroupsByIds(doc: TCanvasDoc, ids: string[], canvasId: string, ca
   return ids.map((id) => doc.groups[id]!).filter(Boolean);
 }
 
+function resolveSurvivingParentGroupId(doc: TCanvasDoc, removedGroupIds: Set<string>, groupId: string): string | null {
+  let parentGroupId = doc.groups[groupId]?.parentGroupId ?? null;
+  const visited = new Set<string>();
+
+  while (parentGroupId && removedGroupIds.has(parentGroupId)) {
+    if (visited.has(parentGroupId)) break;
+    visited.add(parentGroupId);
+    parentGroupId = doc.groups[parentGroupId]?.parentGroupId ?? null;
+  }
+
+  return parentGroupId;
+}
+
 export async function txExecuteCanvasUngroup(portal: TPortal, input: TCanvasUngroupInput): Promise<TCanvasUngroupSuccess> {
   try {
     const ids = parseUngroupIds(input);
@@ -77,7 +90,8 @@ export async function txExecuteCanvasUngroup(portal: TPortal, input: TCanvasUngr
     const { handle, doc } = await fxLoadCanvasHandleDoc(portal, selectedCanvas);
     const matchedGroups = resolveGroupsByIds(doc, ids, selectedCanvas.id, input.canvasNameQuery ?? null);
     const removedGroupIds = fnSortIds(matchedGroups.map((group) => group.id));
-    const groupParentMap = new Map(matchedGroups.map((group) => [group.id, group.parentGroupId ?? null]));
+    const removedGroupIdSet = new Set(removedGroupIds);
+    const groupParentMap = new Map(removedGroupIds.map((groupId) => [groupId, resolveSurvivingParentGroupId(doc, removedGroupIdSet, groupId)]));
     const { releasedElementIds } = fnCollectDirectChildIds(doc, removedGroupIds);
     const now = Date.now();
 

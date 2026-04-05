@@ -221,4 +221,32 @@ describe('query canvas command', () => {
     expect(result.matches[0]?.payload).not.toHaveProperty('data');
     expect(result.matches[0]?.payload).not.toHaveProperty('style');
   });
+
+  test('treats blank canvasNameQuery as missing selector', async () => {
+    await expect(
+      fxExecuteCanvasQuery({ dbService, automergeService }, {
+        selector: {
+          source: 'query',
+          canvasId: null,
+          canvasNameQuery: '   ',
+          filters: {
+            ids: [],
+            kinds: [],
+            types: [],
+            style: {},
+            group: null,
+            subtree: null,
+            bounds: null,
+            boundsMode: 'intersects',
+          },
+        },
+      }),
+    ).rejects.toMatchObject({
+      ok: false,
+      command: 'canvas.query',
+      code: 'CANVAS_SELECTOR_REQUIRED',
+      canvasId: null,
+      canvasNameQuery: null,
+    });
+  });
 });

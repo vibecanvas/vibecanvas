@@ -34,7 +34,7 @@ export function fnResolveCanvasSelection(args: {
 }): TCanvasRecord {
   const { rows, selector, command, actionLabel } = args;
   const canvasId = selector.canvasId ?? null;
-  const canvasNameQuery = selector.canvasNameQuery ?? null;
+  const canvasNameQuery = selector.canvasNameQuery?.trim() || null;
 
   if (canvasId && canvasNameQuery) {
     throw {
@@ -71,7 +71,7 @@ export function fnResolveCanvasSelection(args: {
     };
   }
 
-  const query = canvasNameQuery?.trim() ?? '';
+  const query = canvasNameQuery as string;
   const matches = rows.filter((row) => row.name.toLocaleLowerCase().includes(query.toLocaleLowerCase()));
 
   if (matches.length === 1) return matches[0]!;
@@ -94,9 +94,12 @@ export function fnResolveCanvasSelection(args: {
     message: `Canvas name query '${query}' matched ${matches.length} canvases. Pass canvasId instead.`,
     canvasId: null,
     canvasNameQuery: query,
-    matches: fnSortIds(matches.map((row) => row.name)).map((name) => {
-      const row = matches.find((candidate) => candidate.name === name)!;
-      return { id: row.id, name: row.name };
-    }),
+    matches: [...matches]
+      .sort((left, right) => {
+        const nameCompare = left.name.localeCompare(right.name);
+        if (nameCompare !== 0) return nameCompare;
+        return left.id.localeCompare(right.id);
+      })
+      .map((row) => ({ id: row.id, name: row.name })),
   };
 }
