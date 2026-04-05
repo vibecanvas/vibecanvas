@@ -1,7 +1,7 @@
-import { expect, test, beforeEach, describe } from "bun:test";
-import { DbServiceBunSqlite } from "@vibecanvas/db/DbServiceBunSqlite"
-import * as schema from "@vibecanvas/db/schema"
-import { tmpdir } from "node:os"
+import { DbServiceBunSqlite } from "@vibecanvas/db/DbServiceBunSqlite/index";
+import { beforeEach, describe, expect, test } from "bun:test";
+import { tmpdir } from "node:os";
+import { fxExecuteCanvasList } from "packages/canvas-cmds/src/cmds/fx.cmd.list";
 
 describe('list canvas command', () => {
   let dbService!: DbServiceBunSqlite
@@ -14,8 +14,25 @@ describe('list canvas command', () => {
       silentMigrations: true
     })
   })
-  test("2 + 2", () => {
-    expect(2 + 2).toBe(4);
-    console.log(dbService.listCanvas())
+  test("should be empty", async () => {
+    const result = await fxExecuteCanvasList({ dbService })
+    expect(result).toEqual({ ok: true, command: 'canvas', subcommand: 'list', count: 0, canvases: [] })
+  })
+  test("should find 2 canvases", async () => {
+    // setup data
+    dbService.canvas.create({ id: '1', automerge_url: '', name: 'test' })
+    dbService.canvas.create({ id: '2', automerge_url: '', name: 'test2' })
+
+    const result = await fxExecuteCanvasList({ dbService })
+    expect(result).toMatchObject({
+      ok: true,
+      command: 'canvas',
+      subcommand: 'list',
+      count: 2,
+      canvases: [
+        { id: '1', automergeUrl: '', name: 'test' },
+        { id: '2', automergeUrl: '', name: 'test2' }
+      ]
+    })
   });
 })

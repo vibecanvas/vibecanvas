@@ -24,7 +24,7 @@ export type TPortal = {
 export async function fxExecuteCanvasList(portal: TPortal): Promise<TCanvasListSuccess> {
   try {
 
-    const canvases = portal.dbService.listCanvas().map(row => ({
+    const canvases = portal.dbService.canvas.listAll().map(row => ({
       id: row.id,
       name: row.name,
       createdAt: toIsoString(row.created_at),
