@@ -2,6 +2,8 @@ import { parseArgs } from 'util';
 
 type TCliCommand = 'serve' | 'canvas' | 'upgrade' | 'unknown';
 
+const CANVAS_SUBCOMMAND_ALIASES = new Set(['list', 'query', 'patch', 'move', 'group', 'ungroup', 'delete', 'reorder', 'render']);
+
 type TCanvasSubcommandOptions = {
   json?: boolean;
   canvasId?: string;
@@ -55,6 +57,7 @@ function getDefaultCommand(commandToken: string | undefined): TCliCommand {
   if (commandToken === undefined || /^\d+$/.test(commandToken)) return 'serve';
   if (commandToken === 'serve') return 'serve';
   if (commandToken.startsWith('-')) return 'serve';
+  if (CANVAS_SUBCOMMAND_ALIASES.has(commandToken)) return 'canvas';
   return 'unknown';
 }
 
@@ -117,7 +120,9 @@ function parseCliArgv(rawArgv: readonly string[] = Bun.argv): TCliParsedArgv {
   const commandToken = positionals[2];
   const command = getDefaultCommand(commandToken);
   const subcommand = command === 'canvas'
-    ? positionals[3]
+    ? commandToken === 'canvas'
+      ? positionals[3]
+      : commandToken
     : command === 'unknown'
       ? commandToken
       : undefined;

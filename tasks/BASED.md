@@ -87,6 +87,9 @@ Use the leaf files for execution history and local context.
 - [x]: [B10](b/B10.md) - style menu: drag then style jumps selection back to old position
 - [x]: [B11] - terminal after resize is not focuable anymore
 - [x]: [B12](b/B12.md) - terminal: ctrl+c echoes ^C but does not interrupt process
+- [ ]: [B13](b/B13.md) - canvas CLI: top-level alias docs lie; `vibecanvas query ...` is rejected
+- [ ]: [B14](b/B14.md) - canvas CLI: `canvas group --help` falls back to global help
+- [ ]: [B15](b/B15.md) - canvas CLI: `--json` output is not real JSON
 
 ## A dditions
 - [x]: [A1] - file: support common CodeMirror languages
@@ -104,7 +107,7 @@ Use the leaf files for execution history and local context.
 - [x]: [A13](a/A13.md) - canvas CLI: `ungroup` command
 - [x]: [A14](a/A14.md) - canvas CLI: `delete` command
 - [x]: [A15](a/A15.md) - canvas CLI: `reorder` command
-- [ ]: [A17] - rect dbl click -> enter edit mode (inline text)
+- [x]: [A17](a/A17.md) - rect dbl click -> enter edit mode (inline text)
 - [x]: [A18] - lift cmds to be api to allow live changes via crdt
 - [x]: [A19](a/A19.md) - canvas CLI: `add` command
 

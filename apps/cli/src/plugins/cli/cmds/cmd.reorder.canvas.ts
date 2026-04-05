@@ -5,20 +5,69 @@ import type { TSafeCanvasCmdClient } from '../core/fn.build-rpc-link';
 import { txExecuteCanvasReorder } from '@vibecanvas/canvas-cmds/cmds/tx.cmd.reorder';
 import { buildCanvasReorderInput } from './fn.canvas-subcommand-inputs';
 
+export function printCanvasReorderHelp(): void {
+  console.log(`Usage: vibecanvas canvas reorder [options]
+
+Reorder explicit element/group ids inside one selected canvas.
+
+Required canvas selector (choose exactly one):
+  --canvas <id>             Select one canvas by exact canvas row id
+  --canvas-name <query>     Select one canvas by unique case-insensitive name substring
+
+Required target selector:
+  --id <id>                 Exact element/group id to reorder (repeatable)
+
+Required action:
+  --action <name>           One of: front, back, forward, backward
+
+Options:
+  --db <path>               Optional explicit SQLite file override for the opened db
+  --json                    Emit machine-readable success/error payloads
+  --help, -h                Show this help message
+
+Output:
+  Text mode prints the requested action and before/after sibling order.
+  JSON mode prints { ok, command, action, canvas, matchedCount, matchedIds, parentGroupId, beforeOrder, afterOrder, changedIds }.
+
+Notes:
+  - all reordered ids must share the same direct parentGroupId.
+  - reorder updates sibling zIndex ordering only.
+  - no-op reorder requests fail clearly instead of silently succeeding.
+`)
+}
+
+function printCommandResult(result: unknown, wantsJson: boolean): never {
+  if (wantsJson) {
+    process.stdout.write(`${JSON.stringify(result)}\n`)
+    process.exit(0)
+  }
+
+  console.log(result)
+  process.exit(0)
+}
+
+function printCommandError(error: unknown, wantsJson: boolean): never {
+  if (wantsJson && typeof error !== 'string') {
+    process.stderr.write(`${JSON.stringify(error)}\n`)
+    process.exit(1)
+  }
+
+  console.error(error)
+  process.exit(1)
+}
+
 export async function runCanvasReorderCommand(services: { db: IDbService, automerge: IAutomergeService, safeClient: TSafeCanvasCmdClient | null }, config: ICliConfig) {
   const input = buildCanvasReorderInput(config.subcommandOptions)
+  const wantsJson = config.subcommandOptions?.json === true
 
   if (services.safeClient) {
     const [error, result] = await services.safeClient.reorder(input);
     if (error) {
-      console.error(error)
-      process.exit(1)
+      printCommandError(error, wantsJson)
     }
-    console.log(result)
-    process.exit(0)
+    printCommandResult(result, wantsJson)
   }
 
   const result = await txExecuteCanvasReorder({ dbService: services.db, automergeService: services.automerge }, input);
-  console.log(result)
-  process.exit(0)
+  printCommandResult(result, wantsJson)
 }

@@ -135,6 +135,21 @@ describe('canvas CLI test harness', () => {
     expect(listHelp.stdout).toContain('Usage: vibecanvas canvas list [options]');
   });
 
+  test('runs top-level canvas aliases against the same implementation', async () => {
+    const context = await createContext();
+    const seeded = await context.seedCanvasFixture({ name: 'alias-canvas' });
+
+    const result = await context.runVibecanvasCli(['query', '--canvas', seeded.canvas.id, '--json', '--db', context.dbPath]);
+
+    expectExitCode(result, 0);
+    expectNoStderr(result);
+    expect(parseJsonStdout<{ ok: boolean; command: string; canvas: { id: string } }>(result)).toMatchObject({
+      ok: true,
+      command: 'canvas.query',
+      canvas: { id: seeded.canvas.id },
+    });
+  });
+
   test('makes subcommand arguments visible in the top-level canvas help menu', async () => {
     const context = await createContext();
     const result = await context.runVibecanvasCli(['canvas', '--help']);

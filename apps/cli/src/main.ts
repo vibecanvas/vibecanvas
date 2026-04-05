@@ -8,7 +8,8 @@ import type { ICliConfig } from './config';
 import { bootCliRuntime, createCliHooks, shutdownCliRuntime } from './hooks';
 import { parseCliArgv } from './parse-argv';
 import { createAutomergePlugin } from './plugins/automerge/AutomergePlugin';
-import { createCliPlugin } from './plugins/cli/CliPlugin';
+import { createCliPlugin, printHelp } from './plugins/cli/CliPlugin';
+import { printCanvasCommandHelp } from './plugins/cli/cmds/cmd.canvas';
 import { createOrpcPlugin } from './plugins/orpc/OrpcPlugin';
 import { createPtyPlugin } from './plugins/pty/PtyPlugin';
 import { createServerPlugin } from './plugins/server/ServerPlugin';
@@ -23,6 +24,22 @@ function isStoppableService(service: IService): service is IService & IStoppable
 
 const parsedArgv = parseCliArgv();
 const config = buildCliConfig(parsedArgv);
+
+if (config.versionRequested) {
+  console.log(config.version)
+  process.exit(0)
+}
+
+if (config.helpRequested) {
+  if (config.command === 'canvas') {
+    printCanvasCommandHelp(config.subcommand)
+    process.exit(0)
+  }
+
+  printHelp()
+  process.exit(0)
+}
+
 const { services } = setupServices(config);
 
 const runtime = createRuntime<any, ICliConfig>({

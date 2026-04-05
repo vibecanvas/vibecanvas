@@ -6,7 +6,7 @@ import type { ICliHooks } from '../../hooks';
 import { runCanvasCommand } from './cmds/cmd.canvas';
 import { txCmdUpgrade } from './cmds/cmd.upgrade';
 
-function printHelp(): void {
+export function printHelp(): void {
   console.log(`vibecanvas - Run your agents in an infinite canvas
 
 Usage:
@@ -69,13 +69,13 @@ function createCliPlugin(): IPlugin<{ db: IDbService, automerge: IAutomergeServi
           process.exit(0);
         }
 
-        if (ctx.config.helpRequested) {
-          printHelp();
+        if (ctx.config.command === 'canvas') {
+          await runCanvasCommand({ db: ctx.services.require('db'), automerge: ctx.services.require('automerge') }, ctx.config);
           process.exit(0);
         }
 
-        if (ctx.config.command === 'canvas') {
-          await runCanvasCommand({ db: ctx.services.require('db'), automerge: ctx.services.require('automerge') }, ctx.config);
+        if (ctx.config.helpRequested) {
+          printHelp();
           process.exit(0);
         }
 

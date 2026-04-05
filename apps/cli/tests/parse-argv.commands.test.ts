@@ -29,6 +29,9 @@ describe('parseCliArgv command resolution', () => {
     expect(parseCliArgv(['bun', 'run', 'canvas', 'reorder'])).toMatchObject({ command: 'canvas', subcommand: 'reorder' });
     expect(parseCliArgv(['bun', 'run', 'canvas', 'group'])).toMatchObject({ command: 'canvas', subcommand: 'group' });
     expect(parseCliArgv(['bun', 'run', 'canvas', 'ungroup'])).toMatchObject({ command: 'canvas', subcommand: 'ungroup' });
+    expect(parseCliArgv(['bun', 'run', 'query'])).toMatchObject({ command: 'canvas', subcommand: 'query' });
+    expect(parseCliArgv(['bun', 'run', 'move'])).toMatchObject({ command: 'canvas', subcommand: 'move' });
+    expect(parseCliArgv(['bun', 'run', 'list'])).toMatchObject({ command: 'canvas', subcommand: 'list' });
     expect(parseCliArgv(['bun', 'run', 'upgrade'])).toMatchObject({ command: 'upgrade', subcommand: undefined });
   });
 

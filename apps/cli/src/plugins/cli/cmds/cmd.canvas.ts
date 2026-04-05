@@ -1,16 +1,42 @@
 import type { IAutomergeService } from '@vibecanvas/automerge-service/IAutomergeService';
 import type { ICliConfig } from '@vibecanvas/cli/config';
 import type { IDbService } from '@vibecanvas/db/IDbService';
-import { runCanvasGroupCommand } from './cmd.group.canvas';
-import { runCanvasListCommand } from './cmd.list.canvas';
-import { runCanvasMoveCommand } from './cmd.move.canvas';
-import { runCanvasQueryCommand } from './cmd.query.canvas';
-import { runCanvasReorderCommand } from './cmd.reorder.canvas';
-import { runCanvasUngroupCommand } from './cmd.ungroup.canvas';
+import { runCanvasGroupCommand, printCanvasGroupHelp } from './cmd.group.canvas';
+import { runCanvasListCommand, printCanvasListHelp } from './cmd.list.canvas';
+import { runCanvasMoveCommand, printCanvasMoveHelp } from './cmd.move.canvas';
+import { runCanvasQueryCommand, printCanvasQueryHelp } from './cmd.query.canvas';
+import { runCanvasReorderCommand, printCanvasReorderHelp } from './cmd.reorder.canvas';
+import { runCanvasUngroupCommand, printCanvasUngroupHelp } from './cmd.ungroup.canvas';
 import { fxDiscoverLocalCanvasServer } from '../core/fx.canvas.server-discovery';
 import { fnBuildRpcLink } from '../core/fn.build-rpc-link';
 
-function printCanvasHelp(): void {
+const CANVAS_SUBCOMMANDS = new Set(['list', 'query', 'patch', 'move', 'group', 'ungroup', 'delete', 'reorder', 'render']);
+
+export function printCanvasPatchHelp(): void {
+  console.log(`Usage: vibecanvas canvas patch [options]
+
+Patch explicit element/group ids with structured field updates.
+
+Required canvas selector (choose exactly one):
+  --canvas <id>             Select one canvas by exact canvas row id
+  --canvas-name <query>     Select one canvas by unique case-insensitive name substring
+
+Required target selector:
+  --id <id>                 Exact element/group id to patch (repeatable)
+
+Patch source (choose at least one):
+  --patch <json>            Inline JSON patch payload
+  --patch-file <path>       Read patch payload from a file
+  --patch-stdin             Read patch payload from stdin
+
+Options:
+  --db <path>               Optional explicit SQLite file override for the opened db
+  --json                    Emit machine-readable success/error payloads
+  --help, -h                Show this help message
+`)
+}
+
+export function printCanvasHelp(): void {
   console.log(`Usage: vibecanvas canvas <command> [options]
 
 Offline canvas commands (planned):
@@ -48,37 +74,97 @@ Notes:
 `);
 }
 
+export function printCanvasCommandHelp(subcommand?: string): void {
+  if (!subcommand) {
+    printCanvasHelp()
+    return
+  }
+
+  if (subcommand === 'list') {
+    printCanvasListHelp()
+    return
+  }
+
+  if (subcommand === 'query') {
+    printCanvasQueryHelp()
+    return
+  }
+
+  if (subcommand === 'move') {
+    printCanvasMoveHelp()
+    return
+  }
+
+  if (subcommand === 'patch') {
+    printCanvasPatchHelp()
+    return
+  }
+
+  if (subcommand === 'group') {
+    printCanvasGroupHelp()
+    return
+  }
+
+  if (subcommand === 'ungroup') {
+    printCanvasUngroupHelp()
+    return
+  }
+
+  if (subcommand === 'reorder') {
+    printCanvasReorderHelp()
+    return
+  }
+
+  printCanvasHelp()
+}
+
 export async function runCanvasCommand(services: { db: IDbService, automerge: IAutomergeService }, config: ICliConfig) {
-  const serverHealth = await fxDiscoverLocalCanvasServer({ bun: Bun }, { config })
   if (!config.subcommand) {
     printCanvasHelp()
     return
   }
 
+  if (!CANVAS_SUBCOMMANDS.has(config.subcommand)) {
+    console.error(`Unknown canvas command: ${config.subcommand}`)
+    process.exit(1)
+  }
+
+  if (config.helpRequested) {
+    printCanvasCommandHelp(config.subcommand)
+    return
+  }
+
+  const serverHealth = await fxDiscoverLocalCanvasServer({ bun: Bun }, { config })
   const safeClient = serverHealth ? fnBuildRpcLink(serverHealth) : null
 
   if (config.subcommand === 'list') {
     await runCanvasListCommand({ ...services, safeClient }, { ...config })
+    return
   }
 
   if (config.subcommand === 'query') {
     await runCanvasQueryCommand({ ...services, safeClient }, { ...config })
+    return
   }
 
   if (config.subcommand === 'move') {
     await runCanvasMoveCommand({ ...services, safeClient }, { ...config })
+    return
   }
 
   if (config.subcommand === 'group') {
     await runCanvasGroupCommand({ ...services, safeClient }, { ...config })
+    return
   }
 
   if (config.subcommand === 'ungroup') {
     await runCanvasUngroupCommand({ ...services, safeClient }, { ...config })
+    return
   }
 
   if (config.subcommand === 'reorder') {
     await runCanvasReorderCommand({ ...services, safeClient }, { ...config })
+    return
   }
 
   console.error(`Canvas command '${config.subcommand}' is not implemented yet.`)
