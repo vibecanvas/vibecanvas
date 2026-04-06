@@ -130,11 +130,12 @@ Use the leaf files for execution history and local context.
 - [x]: [S18](s/S18.md) - cli server: migrate http file/static/spa serving from apps/server
 - [x]: [S19](s/S19.md) - cli orpc: expose db events stream and remove apps/server api.db
 - [x]: [S20](s/S20.md) - cli server: restore compiled-mode port fallback when preferred port is busy
-- [ ]: [S21] remove apps/server and packages/functional-core and shell
+- [x]: [S21] remove apps/server and packages/functional-core and shell
 - [ ]: [S22] fix build and ci tests to use new apps/cli
 - [ ]: [S23] Use global costs for dev and prod ports
 - [ ]: [S24] rename @vibecanvas/db -> @vibecanvas/db-service
 - [ ]: [S25](s/S25.md) - db: remove filetrees table/schema; canvas-doc fully owns filetree state
+- [ ]: [S26](s/S26.md) - db: add filesystems table for local/remote machine identity
 
 ## E xplorations
 - [ ]: [E1](e/E1.md) - Tauri Research
