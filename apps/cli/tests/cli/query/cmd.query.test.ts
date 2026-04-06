@@ -1,5 +1,5 @@
+import type { TElement } from '@vibecanvas/automerge-service/types/canvas-doc';
 import { afterEach, describe, expect, test } from 'bun:test';
-import type { TElement } from '@vibecanvas/shell/automerge/index';
 import { createCliTestContext, createGroup, createRectElement, expectExitCode, expectNoStderr, parseJsonStdout, type TCliTestContext } from '../harness';
 
 const contexts: TCliTestContext[] = [];

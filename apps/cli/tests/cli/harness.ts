@@ -1,11 +1,11 @@
+import type { TCanvasDoc, TElement, TElementStyle, TGroup, TRectData } from '@vibecanvas/automerge-service/types/canvas-doc';
+import * as schema from '@vibecanvas/db/schema';
+import { expect } from 'bun:test';
 import { spawn } from 'node:child_process';
 import { mkdir, mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { expect } from 'bun:test';
-import type { TCanvasDoc, TElement, TElementStyle, TGroup, TRectData } from '@vibecanvas/shell/automerge/index';
-import * as schema from '@vibecanvas/db/schema';
 
 const TEST_DIR = dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = resolve(TEST_DIR, '../../../..');
