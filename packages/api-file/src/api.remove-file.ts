@@ -1,4 +1,4 @@
-import { fileMetaFromPathname } from '@vibecanvas/core/file/fn.file-storage';
+import { fileMetaFromPathname } from './core/fn.file-storage';
 import { baseFileOs } from './orpc';
 
 const apiRemoveFile = baseFileOs.remove.handler(async ({ input, context }) => {

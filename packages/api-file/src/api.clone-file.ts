@@ -1,4 +1,4 @@
-import { extensionFromFormat, fileMetaFromPathname, toPublicFileUrl } from '@vibecanvas/core/file/fn.file-storage';
+import { extensionFromFormat, fileMetaFromPathname, toPublicFileUrl } from './core/fn.file-storage';
 import { baseFileOs } from './orpc';
 
 const apiCloneFile = baseFileOs.clone.handler(async ({ input, context }) => {

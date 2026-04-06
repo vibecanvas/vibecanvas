@@ -1,5 +1,5 @@
 import { createHash } from 'crypto';
-import { extensionFromFormat, toPublicFileUrl } from '@vibecanvas/core/file/fn.file-storage';
+import { extensionFromFormat, toPublicFileUrl } from './core/fn.file-storage';
 import { baseFileOs } from './orpc';
 
 function getBase64Payload(base64OrDataUrl: string): string {
