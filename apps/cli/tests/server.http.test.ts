@@ -2,22 +2,33 @@ import { describe, expect, mock, test } from 'bun:test';
 import { createFileResponse, createPublicAssetLookup } from '../src/plugins/server/http';
 import type { IDbService } from '@vibecanvas/db/IDbService';
 
-type TMockDb = Pick<IDbService, 'getFile'>;
+type TMockDb = Pick<IDbService['file'], 'get'>;
 
-function createDb(getFile: TMockDb['getFile']): IDbService {
+function createDb(getFile: TMockDb['get']): IDbService {
   return {
     name: 'db',
     stop() {},
-    listCanvas() { return []; },
+    canvas: {
+      listAll() { return []; },
+      findByName() { return null; },
+      create() { throw new Error('not implemented'); },
+      renameById() { throw new Error('not implemented'); },
+      deleteById() { return []; },
+    },
+    fileTree: {
+      listAll() { return []; },
+      listByCanvasId() { return []; },
+      create() { throw new Error('not implemented'); },
+      update() { return null; },
+      deleteById() { return false; },
+    },
+    file: {
+      listAll() { return []; },
+      create() { throw new Error('not implemented'); },
+      get: getFile,
+      deleteById() {},
+    },
     getFullCanvas() { return null; },
-    updateCanvas() { return null; },
-    getFileTree() { return null; },
-    createFileTree() { throw new Error('not implemented'); },
-    updateFileTree() { return null; },
-    deleteFileTree() { return false; },
-    createFile() { throw new Error('not implemented'); },
-    getFile,
-    deleteFile() {},
   } as IDbService;
 }
 
