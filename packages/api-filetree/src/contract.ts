@@ -13,7 +13,6 @@ const updateFiletreeBodySchema = z.object({
   title: z.string().optional(),
   path: z.string().optional(),
   locked: z.boolean().optional(),
-  glob_pattern: z.string().nullable().optional(),
 });
 
 const filetreeContract = oc.router({

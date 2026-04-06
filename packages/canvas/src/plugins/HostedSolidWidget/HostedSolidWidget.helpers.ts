@@ -129,7 +129,6 @@ export function getDefaultWidgetElement(
         w: 360,
         h: 460,
         isCollapsed: false,
-        globPattern: null,
       } satisfies TFiletreeData,
     };
   }

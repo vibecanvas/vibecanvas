@@ -25,10 +25,8 @@ type TCreateFiletreeContextLogicArgs = {
 };
 
 export function createFiletreeContextLogic(args: TCreateFiletreeContextLogicArgs) {
-  let globDebounceTimer: ReturnType<typeof setTimeout> | null = null;
   let folderAutoOpenTimer: ReturnType<typeof setTimeout> | null = null;
   let folderAutoOpenTargetPath: string | null = null;
-  let didHydrateGlobInput = false;
   const lazyLoadedFolderPaths = new Set<string>();
 
   let watchAbort: AbortController | null = null;
@@ -37,9 +35,6 @@ export function createFiletreeContextLogic(args: TCreateFiletreeContextLogicArgs
 
   const [currentPath, setCurrentPath] = createSignal("");
   const [homePath, setHomePath] = createSignal<string | null>(null);
-  const [globInput, setGlobInput] = createSignal("");
-  const [isGlobDirty, setIsGlobDirty] = createSignal(false);
-  const [appliedGlob, setAppliedGlob] = createSignal<string | null>(null);
   const [isLoading, setIsLoading] = createSignal(false);
   const [errorMessage, setErrorMessage] = createSignal<string | null>(null);
   const [openFolders, setOpenFolders] = createSignal<Set<string>>(new Set());
@@ -95,12 +90,11 @@ export function createFiletreeContextLogic(args: TCreateFiletreeContextLogicArgs
     },
   );
 
-  const fetchTreeData = async (path: string, globPattern: string | null) => {
+  const fetchTreeData = async (path: string) => {
     const [listError, listResult] = await args.safeClient.api.filesystem.files({
       query: {
         path,
-        glob_pattern: globPattern ?? undefined,
-        max_depth: 5,
+        max_depth: 1,
       },
     });
 
@@ -119,16 +113,12 @@ export function createFiletreeContextLogic(args: TCreateFiletreeContextLogicArgs
   };
 
   const [treeData, { mutate: mutateTreeData, refetch: refetchTreeData }] = createResource(
-    () => {
-      const path = currentPath();
+    currentPath,
+    async (path): Promise<TFiletreeFilesResponse | null> => {
       if (!path) return null;
-      return { path, globPattern: appliedGlob() };
-    },
-    async (source): Promise<TFiletreeFilesResponse | null> => {
-      if (!source) return null;
       setIsLoading(true);
       setErrorMessage(null);
-      const result = await fetchTreeData(source.path, source.globPattern);
+      const result = await fetchTreeData(path);
       setIsLoading(false);
       return result;
     },
@@ -178,11 +168,6 @@ export function createFiletreeContextLogic(args: TCreateFiletreeContextLogicArgs
         void args.safeClient.api.filesystem.unwatch({ watchId });
       }
     }
-  };
-
-  const normalizeGlob = (value: string | null | undefined): string | null => {
-    const normalized = (value ?? "").trim();
-    return normalized === "" ? null : normalized;
   };
 
   const normalizePathForCompare = (path: string): string => path.replaceAll("\\", "/").replace(/\/+$/, "");
@@ -290,7 +275,7 @@ export function createFiletreeContextLogic(args: TCreateFiletreeContextLogicArgs
   const loadSubdirectoryChildren = async (folderPath: string) => {
     if (lazyLoadedFolderPaths.has(folderPath)) return;
 
-    const result = await fetchTreeData(folderPath, appliedGlob());
+    const result = await fetchTreeData(folderPath);
     if (!result) return;
 
     lazyLoadedFolderPaths.add(folderPath);
@@ -323,7 +308,7 @@ export function createFiletreeContextLogic(args: TCreateFiletreeContextLogicArgs
     void refetchTreeData();
   };
 
-  const updateFiletree = async (updates: { path?: string; glob_pattern?: string | null; title?: string }) => {
+  const updateFiletree = async (updates: { path?: string; title?: string }) => {
     if (updates.path) localStorage.setItem(LAST_FILETREE_PATH_KEY, updates.path);
     const [updateError, updated] = await args.safeClient.api.filetree.update({
       params: { id: args.filetreeId },
@@ -381,11 +366,6 @@ export function createFiletreeContextLogic(args: TCreateFiletreeContextLogicArgs
     setDragOverTargetPath(null);
     setIsRootDropTarget(false);
     setIsDragMoveCancelled(true);
-  };
-
-  const handleGlobInput = (value: string) => {
-    setIsGlobDirty(true);
-    setGlobInput(value);
   };
 
   const handleRefresh = () => {
@@ -531,23 +511,6 @@ export function createFiletreeContextLogic(args: TCreateFiletreeContextLogicArgs
     if (!row) return;
     setErrorMessage(null);
     setCurrentPath(row.path);
-
-    const persistedGlob = normalizeGlob(row.glob_pattern);
-    if (!isGlobDirty()) {
-      setAppliedGlob(persistedGlob);
-    }
-
-    if (!didHydrateGlobInput) {
-      setGlobInput(row.glob_pattern ?? "");
-      setIsGlobDirty(false);
-      didHydrateGlobInput = true;
-      return;
-    }
-
-    const draftGlob = normalizeGlob(globInput());
-    if (persistedGlob === draftGlob) {
-      setIsGlobDirty(false);
-    }
   }));
 
   createEffect(() => {
@@ -556,12 +519,9 @@ export function createFiletreeContextLogic(args: TCreateFiletreeContextLogicArgs
     setErrorMessage((previous) => previous ?? "File tree data is unavailable");
   });
 
-  createEffect(on(
-    () => `${currentPath()}::${appliedGlob() ?? ""}`,
-    () => {
-      lazyLoadedFolderPaths.clear();
-    },
-  ));
+  createEffect(on(currentPath, () => {
+    lazyLoadedFolderPaths.clear();
+  }));
 
   createEffect(() => {
     const tree = treeData();
@@ -574,21 +534,6 @@ export function createFiletreeContextLogic(args: TCreateFiletreeContextLogicArgs
     });
   });
 
-  createEffect(on(globInput, (globValue) => {
-    if (globDebounceTimer) clearTimeout(globDebounceTimer);
-    globDebounceTimer = setTimeout(() => {
-      const normalizedNullable = normalizeGlob(globValue);
-      setAppliedGlob(normalizedNullable);
-
-      const existingGlob = filetree()?.glob_pattern ?? null;
-      if (existingGlob !== normalizedNullable) {
-        void updateFiletree({ glob_pattern: normalizedNullable });
-      } else {
-        setIsGlobDirty(false);
-      }
-    }, 300);
-  }));
-
   createEffect(on(currentPath, (path) => {
     if (!path) {
       stopWatching();
@@ -598,7 +543,6 @@ export function createFiletreeContextLogic(args: TCreateFiletreeContextLogicArgs
   }));
 
   onCleanup(() => {
-    if (globDebounceTimer) clearTimeout(globDebounceTimer);
     clearFolderAutoOpenTimer();
     window.removeEventListener("keydown", handleWindowKeyDown);
     stopWatching();
@@ -608,7 +552,6 @@ export function createFiletreeContextLogic(args: TCreateFiletreeContextLogicArgs
     filetree,
     currentPath,
     homePath,
-    globInput,
     isLoading,
     errorMessage,
     treeData,
@@ -620,7 +563,6 @@ export function createFiletreeContextLogic(args: TCreateFiletreeContextLogicArgs
     setIsPathDialogOpen,
     handleSetHome,
     handleSetParentPath,
-    handleGlobInput,
     handleRefresh,
     handlePathSelected,
     handleNodeDragStart,

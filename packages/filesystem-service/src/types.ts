@@ -22,7 +22,6 @@ export type TFilesystemListResult = {
 
 export type TFilesystemFilesArgs = {
   path: string;
-  glob_pattern?: string;
   max_depth?: number;
 };
 

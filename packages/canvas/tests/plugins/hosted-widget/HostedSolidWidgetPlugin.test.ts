@@ -288,7 +288,7 @@ describe("HostedSolidWidgetPlugin", () => {
           createdAt: 1,
           updatedAt: 1,
           style: {},
-          data: { type: "filetree", w: 420, h: 320, isCollapsed: false, globPattern: null },
+          data: { type: "filetree", w: 420, h: 320, isCollapsed: false },
         },
         tree1: {
           id: "tree1",
@@ -302,7 +302,7 @@ describe("HostedSolidWidgetPlugin", () => {
           createdAt: 1,
           updatedAt: 1,
           style: {},
-          data: { type: "filetree", w: 420, h: 340, isCollapsed: false, globPattern: null },
+          data: { type: "filetree", w: 420, h: 340, isCollapsed: false },
         },
         terminal1: {
           id: "terminal1",
@@ -355,7 +355,7 @@ describe("HostedSolidWidgetPlugin", () => {
           createdAt: 1,
           updatedAt: 1,
           style: {},
-          data: { type: "filetree", w: 420, h: 320, isCollapsed: false, globPattern: null },
+          data: { type: "filetree", w: 420, h: 320, isCollapsed: false },
         },
       },
     });
@@ -398,7 +398,7 @@ describe("HostedSolidWidgetPlugin", () => {
           createdAt: 1,
           updatedAt: 1,
           style: {},
-          data: { type: "filetree", w: 300, h: 240, isCollapsed: false, globPattern: null },
+          data: { type: "filetree", w: 300, h: 240, isCollapsed: false },
         },
         early: {
           id: "early",
@@ -448,7 +448,7 @@ describe("HostedSolidWidgetPlugin", () => {
           createdAt: 1,
           updatedAt: 1,
           style: {},
-          data: { type: "filetree", w: 320, h: 220, isCollapsed: false, globPattern: null },
+          data: { type: "filetree", w: 320, h: 220, isCollapsed: false },
         },
       },
     });
@@ -770,7 +770,7 @@ describe("HostedSolidWidgetPlugin", () => {
             createdAt: 1,
             updatedAt: 1,
             style: {},
-            data: { type: "filetree", w: 360, h: 460, isCollapsed: false, globPattern: null },
+            data: { type: "filetree", w: 360, h: 460, isCollapsed: false },
           },
         },
       });
@@ -872,7 +872,7 @@ describe("HostedSolidWidgetPlugin", () => {
             style: {},
             data: args.type === "terminal"
               ? { type: "terminal", w: 320, h: 220, isCollapsed: false, workingDirectory: "." }
-              : { type: "filetree", w: 320, h: 220, isCollapsed: false, globPattern: null },
+              : { type: "filetree", w: 320, h: 220, isCollapsed: false },
           },
         },
       });
@@ -1164,7 +1164,7 @@ describe("HostedSolidWidgetPlugin", () => {
           createdAt: 1,
           updatedAt: 1,
           style: {},
-          data: { type: "filetree", w: 360, h: 460, isCollapsed: false, globPattern: null },
+          data: { type: "filetree", w: 360, h: 460, isCollapsed: false },
         },
       },
     });
@@ -1222,7 +1222,7 @@ describe("HostedSolidWidgetPlugin", () => {
           createdAt: 1,
           updatedAt: 1,
           style: {},
-          data: { type: "filetree", w: 360, h: 460, isCollapsed: false, globPattern: null },
+          data: { type: "filetree", w: 360, h: 460, isCollapsed: false },
         },
       },
     });

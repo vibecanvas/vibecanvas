@@ -126,13 +126,13 @@ export type TFiletreeSafeClient = {
     };
     filetree: {
       create(args: { canvas_id: string; path?: string; x: number; y: number }): TFiletreeSafeResult<TFiletreeRow>;
-      update(args: { params: { id: string }; body: { title?: string; path?: string; locked?: boolean; glob_pattern?: string | null } }): TFiletreeSafeResult<TFiletreeRow>;
+      update(args: { params: { id: string }; body: { title?: string; path?: string; locked?: boolean } }): TFiletreeSafeResult<TFiletreeRow>;
       remove(args: { params: { id: string } }): TFiletreeSafeResult<void>;
     };
     filesystem: {
       home(): TFiletreeSafeResult<TFiletreeHomeResponse | TFiletreeErrorResponse>;
       list(args: { query: { path: string; omitFiles?: boolean } }): TFiletreeSafeResult<TFiletreeListResponse | TFiletreeErrorResponse>;
-      files(args: { query: { path: string; glob_pattern?: string; max_depth?: number } }): TFiletreeSafeResult<TFiletreeFilesResponse | TFiletreeErrorResponse>;
+      files(args: { query: { path: string; max_depth?: number } }): TFiletreeSafeResult<TFiletreeFilesResponse | TFiletreeErrorResponse>;
       move(args: { body: { source_path: string; destination_dir_path: string } }): TFiletreeSafeResult<TFiletreeMoveResponse | TFiletreeErrorResponse>;
       inspect(args: { query: { path: string } }): TFiletreeSafeResult<TFileInspectResponse | TFiletreeErrorResponse>;
       read(args: { query: { path: string; maxBytes?: number; content?: "text" | "base64" | "binary" | "none" } }): TFiletreeSafeResult<TFileReadResponse>;

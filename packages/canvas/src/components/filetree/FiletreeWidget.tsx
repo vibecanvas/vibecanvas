@@ -149,14 +149,6 @@ export function FiletreeWidget(props: TFiletreeWidgetProps) {
           </button>
         </div>
 
-        <input
-          class="h-7 border border-border bg-background px-2 text-xs"
-          value={filetreeLogic.globInput()}
-          onInput={(event) => {
-            filetreeLogic.handleGlobInput(event.currentTarget.value);
-          }}
-          placeholder="Glob pattern (optional)"
-        />
       </div>
 
       <div

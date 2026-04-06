@@ -20,7 +20,6 @@ function createFileTreeElement(id: string, x: number, y: number): TElement {
       w: 360,
       h: 460,
       isCollapsed: false,
-      globPattern: null,
     },
     style: {
       backgroundColor: '#f8f9fa',
@@ -42,7 +41,6 @@ const apiCreateFiletree = baseFiletreeOs.create.handler(async ({ input, context 
     title: 'File Tree',
     path: input.path ?? '',
     locked: false,
-    glob_pattern: null,
   });
 
   try {

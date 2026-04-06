@@ -123,7 +123,7 @@ const filesystemContract = oc.router({
     .output(z.union([dirListSchema, projectDirErrorSchema])),
 
   files: oc
-    .input(z.object({ query: z.object({ path: z.string(), glob_pattern: z.string().optional(), max_depth: z.number().optional() }) }))
+    .input(z.object({ query: z.object({ path: z.string(), max_depth: z.number().optional() }) }))
     .output(z.union([dirFilesSchema, projectDirErrorSchema])),
 
   move: oc
