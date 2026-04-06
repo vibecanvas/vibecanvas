@@ -1,4 +1,4 @@
-import { TElement, TElementData, TElementStyle, TDiamondData, TEllipseData, TRectData } from "@vibecanvas/shell/automerge/index";
+import { TElement, TElementData, TElementStyle, TDiamondData, TEllipseData, TRectData } from "@vibecanvas/automerge-service/types/canvas-doc";
 import Konva from "konva";
 import type { TTool } from "../../components/FloatingCanvasToolbar/toolbar.types";
 import { getWorldPosition } from "../shared/node-space";

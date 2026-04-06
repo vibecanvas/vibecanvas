@@ -1,4 +1,4 @@
-import type { TElement, TIframeBrowserTab } from "@vibecanvas/shell/automerge/index";
+import type { TElement, TIframeBrowserTab } from "@vibecanvas/automerge-service/types/canvas-doc";
 import Konva from "konva";
 import { getWorldPosition } from "../shared/node-space";
 import { HOSTED_WIDGET_NODE_ATTR } from "../shared/hosted-widget.shared";

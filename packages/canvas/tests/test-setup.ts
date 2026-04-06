@@ -2,7 +2,7 @@ import Konva from "konva";
 import { mkdir, writeFile } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
 import type { DocHandle } from "@automerge/automerge-repo";
-import type { TCanvasDoc } from "@vibecanvas/shell/automerge/index";
+import type { TCanvasDoc } from "@vibecanvas/automerge-service/types/canvas-doc";
 import { createRoot } from "solid-js";
 import { vi } from "vitest";
 import type { IPlugin, IPluginContext } from "../src/plugins";
@@ -23,8 +23,8 @@ export function ensureResizeObserver() {
   }
 
   class MockResizeObserver {
-    observe() {}
-    disconnect() {}
+    observe() { }
+    disconnect() { }
   }
 
   vi.stubGlobal("ResizeObserver", MockResizeObserver);
@@ -116,7 +116,7 @@ export async function createCanvasTestHarness(args: {
   width?: number;
   height?: number;
   appCapabilities?: Pick<IPluginContext["capabilities"], "uploadImage" | "cloneImage" | "deleteImage" | "notification" | "terminal" | "filetree" | "file">;
-}) : Promise<TCanvasTestHarness> {
+}): Promise<TCanvasTestHarness> {
   ensureResizeObserver();
   ensureRangeGeometryMocks();
 

@@ -1,4 +1,4 @@
-import { TElement } from "@vibecanvas/shell/automerge/index";
+import { TElement } from "@vibecanvas/automerge-service/types/canvas-doc";
 import Konva from "konva";
 import { throttle } from "@solid-primitives/scheduled";
 import { CustomEvents } from "../../custom-events";

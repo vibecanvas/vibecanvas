@@ -1,5 +1,5 @@
 import { createEffect } from "solid-js";
-import type { TElement } from "@vibecanvas/shell/automerge/index";
+import type { TElement } from "@vibecanvas/automerge-service/types/canvas-doc";
 import Konva from "konva";
 import type { TTool } from "../../components/FloatingCanvasToolbar/toolbar.types";
 import { CustomEvents } from "../../custom-events";

@@ -1,5 +1,5 @@
 import type { DocHandle } from "@automerge/automerge-repo";
-import type { TCanvasDoc, TElement, TGroup } from "@vibecanvas/shell/automerge/index";
+import type { TCanvasDoc, TElement, TGroup } from "@vibecanvas/automerge-service/types/canvas-doc";
 import Konva from "konva";
 import diff from "microdiff";
 import { GroupPlugin, IPluginContext, Shape2dPlugin } from "../../plugins";
@@ -15,7 +15,7 @@ type TElementPatch = TEntityPatch<TElement>;
 type TGroupPatch = TEntityPatch<TGroup>;
 
 export class Crdt {
-  constructor(public readonly docHandle: DocHandle<TCanvasDoc>) {}
+  constructor(public readonly docHandle: DocHandle<TCanvasDoc>) { }
 
   patch(data: { elements: TElementPatch[]; groups: TGroupPatch[] }): void {
     this.docHandle.change((doc) => {

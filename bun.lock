@@ -32,14 +32,12 @@
         "@vibecanvas/api-pty": "workspace:*",
         "@vibecanvas/automerge-service": "workspace:*",
         "@vibecanvas/canvas-cmds": "workspace:*",
-        "@vibecanvas/core-contract": "workspace:*",
         "@vibecanvas/db": "workspace:*",
         "@vibecanvas/event-publisher-service": "workspace:*",
         "@vibecanvas/filesystem-service": "workspace:*",
         "@vibecanvas/pty-service": "workspace:*",
         "@vibecanvas/runtime": "workspace:*",
         "@vibecanvas/shared-functions": "workspace:*",
-        "@vibecanvas/shell": "workspace:*",
         "@vibecanvas/tapable": "workspace:*",
       },
     },
@@ -153,7 +151,6 @@
       "dependencies": {
         "@orpc/contract": "catalog:",
         "@orpc/server": "catalog:",
-        "@vibecanvas/core": "workspace:*",
         "@vibecanvas/db": "workspace:*",
         "zod": "catalog:",
       },
@@ -177,7 +174,6 @@
         "@vibecanvas/automerge-service": "workspace:*",
         "@vibecanvas/db": "workspace:*",
         "@vibecanvas/event-publisher-service": "workspace:*",
-        "@vibecanvas/shell": "workspace:*",
         "zod": "catalog:",
       },
     },
@@ -239,7 +235,8 @@
         "@kobalte/core": "catalog:",
         "@orpc/contract": "catalog:",
         "@solid-primitives/scheduled": "^1.5.3",
-        "@vibecanvas/shell": "workspace:*",
+        "@vibecanvas/automerge-service": "workspace:*",
+        "@vibecanvas/db": "workspace:*",
         "ghostty-web": "^0.4.0",
         "konva": "^9.3.22",
         "lucide-solid": "catalog:",
@@ -273,16 +270,6 @@
         "@vibecanvas/db": "workspace:*",
       },
     },
-    "packages/core-contract": {
-      "name": "@vibecanvas/core-contract",
-      "version": "0.2.2",
-      "dependencies": {
-        "@orpc/contract": "catalog:",
-        "@vibecanvas/shell": "workspace:*",
-        "drizzle-zod": "catalog:",
-        "zod": "catalog:",
-      },
-    },
     "packages/db": {
       "name": "@vibecanvas/db",
       "version": "0.0.1",
@@ -312,35 +299,6 @@
       "dependencies": {
         "@vibecanvas/event-publisher-service": "workspace:*",
         "@vibecanvas/runtime": "workspace:*",
-      },
-    },
-    "packages/functional-core": {
-      "name": "@vibecanvas/core",
-      "version": "0.2.2",
-      "dependencies": {
-        "@automerge/automerge": "catalog:",
-        "@automerge/automerge-repo": "catalog:",
-        "@vibecanvas/shell": "workspace:*",
-        "drizzle-orm": "catalog:",
-        "typescript": "catalog:",
-      },
-    },
-    "packages/imperative-shell": {
-      "name": "@vibecanvas/shell",
-      "version": "0.2.2",
-      "dependencies": {
-        "@automerge/automerge": "catalog:",
-        "@automerge/automerge-repo": "catalog:",
-        "@automerge/automerge-repo-network-websocket": "catalog:",
-        "@orpc/server": "catalog:",
-        "@vibecanvas/core": "workspace:*",
-        "bun-pty": "^0.4.8",
-        "drizzle-orm": "catalog:",
-        "drizzle-zod": "catalog:",
-        "zod": "catalog:",
-      },
-      "devDependencies": {
-        "drizzle-kit": "catalog:",
       },
     },
     "packages/pty-service": {
@@ -988,10 +946,6 @@
 
     "@vibecanvas/cli": ["@vibecanvas/cli@workspace:apps/cli"],
 
-    "@vibecanvas/core": ["@vibecanvas/core@workspace:packages/functional-core"],
-
-    "@vibecanvas/core-contract": ["@vibecanvas/core-contract@workspace:packages/core-contract"],
-
     "@vibecanvas/db": ["@vibecanvas/db@workspace:packages/db"],
 
     "@vibecanvas/event-publisher-service": ["@vibecanvas/event-publisher-service@workspace:packages/event-publisher-service"],
@@ -1005,8 +959,6 @@
     "@vibecanvas/runtime": ["@vibecanvas/runtime@workspace:packages/runtime"],
 
     "@vibecanvas/shared-functions": ["@vibecanvas/shared-functions@workspace:packages/shared-functions"],
-
-    "@vibecanvas/shell": ["@vibecanvas/shell@workspace:packages/imperative-shell"],
 
     "@vibecanvas/tapable": ["@vibecanvas/tapable@workspace:packages/tapable"],
 

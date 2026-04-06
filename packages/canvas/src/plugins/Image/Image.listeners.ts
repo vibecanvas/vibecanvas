@@ -1,5 +1,5 @@
 import { throttle } from "@solid-primitives/scheduled";
-import type { TElement } from "@vibecanvas/shell/automerge/index";
+import type { TElement } from "@vibecanvas/automerge-service/types/canvas-doc";
 import Konva from "konva";
 import { CustomEvents } from "../../custom-events";
 import { CanvasMode } from "../../services/canvas/enum";

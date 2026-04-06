@@ -1,4 +1,4 @@
-import type { TArrowData, TElement, TElementStyle, TLineData } from "@vibecanvas/shell/automerge/index";
+import type { TArrowData, TElement, TElementStyle, TLineData } from "@vibecanvas/automerge-service/types/canvas-doc";
 import Konva from "konva";
 import { createComponent, createMemo, createSignal } from "solid-js";
 import { render } from "solid-js/web";
@@ -73,11 +73,11 @@ export class SelectionStyleMenuPlugin implements IPlugin {
           return this.getResolvedSelection(context);
         });
         const sections = createMemo(() => this.getVisibleSections(resolved().elements));
-          const visible = createMemo(() => {
-            if (context.state.editingTextId !== null) return false;
-            const next = sections();
-            return next.showFillPicker || next.showStrokeColorPicker || next.showStrokeWidthPicker || next.showTextPickers || next.showOpacityPicker || next.showLineTypePicker || next.showStartCapPicker || next.showEndCapPicker;
-          });
+        const visible = createMemo(() => {
+          if (context.state.editingTextId !== null) return false;
+          const next = sections();
+          return next.showFillPicker || next.showStrokeColorPicker || next.showStrokeWidthPicker || next.showTextPickers || next.showOpacityPicker || next.showLineTypePicker || next.showStartCapPicker || next.showEndCapPicker;
+        });
         const values = createMemo(() => this.getCurrentValues(resolved().elements));
 
         return createComponent(SelectionStyleMenu, {
@@ -150,28 +150,28 @@ export class SelectionStyleMenuPlugin implements IPlugin {
 
   private getVisibleSections(elements: TElement[]): TSelectionStyleMenuSections {
     if (elements.length === 0) {
-        return {
-          showFillPicker: false,
-          showStrokeColorPicker: false,
-          showStrokeWidthPicker: false,
-          showTextPickers: false,
-          showOpacityPicker: false,
-          showLineTypePicker: false,
-          showStartCapPicker: false,
-          showEndCapPicker: false,
-        };
-      }
-
       return {
-        showFillPicker: elements.some((element) => hasPropertySupport(element, "fill")),
-        showStrokeColorPicker: elements.some((element) => hasPropertySupport(element, "stroke")),
-        showStrokeWidthPicker: elements.some((element) => hasPropertySupport(element, "strokeWidth")),
-        showTextPickers: elements.some((element) => hasPropertySupport(element, "fontFamily")),
-        showOpacityPicker: elements.some((element) => hasPropertySupport(element, "opacity")),
-        showLineTypePicker: elements.some((element) => hasPropertySupport(element, "lineType")),
-        showStartCapPicker: elements.some((element) => hasPropertySupport(element, "startCap")),
-        showEndCapPicker: elements.some((element) => hasPropertySupport(element, "endCap")),
+        showFillPicker: false,
+        showStrokeColorPicker: false,
+        showStrokeWidthPicker: false,
+        showTextPickers: false,
+        showOpacityPicker: false,
+        showLineTypePicker: false,
+        showStartCapPicker: false,
+        showEndCapPicker: false,
       };
+    }
+
+    return {
+      showFillPicker: elements.some((element) => hasPropertySupport(element, "fill")),
+      showStrokeColorPicker: elements.some((element) => hasPropertySupport(element, "stroke")),
+      showStrokeWidthPicker: elements.some((element) => hasPropertySupport(element, "strokeWidth")),
+      showTextPickers: elements.some((element) => hasPropertySupport(element, "fontFamily")),
+      showOpacityPicker: elements.some((element) => hasPropertySupport(element, "opacity")),
+      showLineTypePicker: elements.some((element) => hasPropertySupport(element, "lineType")),
+      showStartCapPicker: elements.some((element) => hasPropertySupport(element, "startCap")),
+      showEndCapPicker: elements.some((element) => hasPropertySupport(element, "endCap")),
+    };
   }
 
   private getCurrentValues(elements: TElement[]): TSelectionStyleMenuValues {

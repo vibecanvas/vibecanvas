@@ -5,7 +5,7 @@ import { PenPlugin, SceneHydratorPlugin, SelectionStyleMenuPlugin, Shape2dPlugin
 import { CanvasMode } from "../../../src/services/canvas/enum";
 import { createPenDataFromStrokePoints, type TStrokePoint } from "../../../src/plugins/shared/pen.math";
 import { createCanvasTestHarness, createMockDocHandle, flushCanvasEffects } from "../../test-setup";
-import type { TElement, TPenData } from "@vibecanvas/shell/automerge/index";
+import type { TElement, TPenData } from "@vibecanvas/automerge-service/types/canvas-doc";
 
 function createPenElement(args?: {
   id?: string;
@@ -493,12 +493,14 @@ describe("PenPlugin", () => {
   test("alt-dragging one pen in a top-level multi-selection should clone both selected pens", async () => {
     let context!: IPluginContext;
     const elementA = createPenElement({ id: "pen-a" });
-    const elementB = createPenElement({ id: "pen-b", points: [
-      { x: 320, y: 180, pressure: 0.5 },
-      { x: 350, y: 200, pressure: 0.55 },
-      { x: 385, y: 210, pressure: 0.6 },
-      { x: 420, y: 235, pressure: 0.5 },
-    ] });
+    const elementB = createPenElement({
+      id: "pen-b", points: [
+        { x: 320, y: 180, pressure: 0.5 },
+        { x: 350, y: 200, pressure: 0.55 },
+        { x: 385, y: 210, pressure: 0.6 },
+        { x: 420, y: 235, pressure: 0.5 },
+      ]
+    });
     const docHandle = createMockDocHandle({
       elements: {
         [elementA.id]: structuredClone(elementA),

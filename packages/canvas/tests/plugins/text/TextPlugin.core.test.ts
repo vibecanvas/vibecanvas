@@ -1,6 +1,6 @@
 import Konva from "konva";
 import type { DocHandle } from "@automerge/automerge-repo";
-import type { TCanvasDoc, TElement } from "@vibecanvas/shell/automerge/index";
+import type { TCanvasDoc, TElement } from "@vibecanvas/automerge-service/types/canvas-doc";
 import { describe, expect, test } from "vitest";
 import { TextPlugin, TransformPlugin, type IPluginContext } from "../../../src/plugins";
 import { createCanvasTestHarness, createMockDocHandle, exportStageSnapshot, flushCanvasEffects } from "../../test-setup";
@@ -69,7 +69,7 @@ describe("TextPlugin – resize", () => {
   test("toTElement bakes scaleX/scaleY into width/height", () => {
     const node = new Konva.Text({ id: "bake-test", x: 50, y: 50, width: 200, height: 60, text: "hello", fontSize: 16, fontFamily: "Arial", scaleX: 1.5, scaleY: 2 });
     const el = TextPlugin.toTElement(node);
-    const data = el.data as import("@vibecanvas/shell/automerge/index").TTextData;
+    const data = el.data as import("@vibecanvas/automerge-service/types/canvas-doc").TTextData;
     expect(data.w).toBeCloseTo(300, 5);
     expect(data.h).toBeCloseTo(120, 5);
   });
@@ -180,7 +180,7 @@ describe("TextPlugin – CRDT persistence", () => {
     textarea.dispatchEvent(new Event("blur"));
     await flushCanvasEffects();
 
-    const data = docHandle.doc().elements["crdt-text-1"].data as import("@vibecanvas/shell/automerge/index").TTextData;
+    const data = docHandle.doc().elements["crdt-text-1"].data as import("@vibecanvas/automerge-service/types/canvas-doc").TTextData;
     expect(data.text).toBe("Hello CRDT");
     harness.destroy();
   });
@@ -207,7 +207,7 @@ describe("TextPlugin – CRDT persistence", () => {
     textarea.dispatchEvent(new Event("blur"));
     await flushCanvasEffects();
 
-    const data = docHandle.doc().elements["crdt-nl-1"].data as import("@vibecanvas/shell/automerge/index").TTextData;
+    const data = docHandle.doc().elements["crdt-nl-1"].data as import("@vibecanvas/automerge-service/types/canvas-doc").TTextData;
     expect(data.text.split("\n")).toHaveLength(3);
     harness.destroy();
   });
@@ -271,7 +271,7 @@ describe("TextPlugin – toTElement", () => {
   test("serializes a Konva.Text node to TElement correctly", () => {
     const node = new Konva.Text({ id: "t1", x: 10, y: 20, width: 150, height: 30, text: "hi", fontSize: 18, fontFamily: "Arial", align: "left", verticalAlign: "top", lineHeight: 1.2 });
     const el = TextPlugin.toTElement(node);
-    const data = el.data as import("@vibecanvas/shell/automerge/index").TTextData;
+    const data = el.data as import("@vibecanvas/automerge-service/types/canvas-doc").TTextData;
     expect(data.text).toBe("hi");
     expect(data.fontSize).toBe(18);
     expect(data.textAlign).toBe("left");
@@ -280,7 +280,7 @@ describe("TextPlugin – toTElement", () => {
   test("serializes multiline text with newlines intact", () => {
     const node = new Konva.Text({ id: "t2", x: 0, y: 0, width: 200, height: 80, text: "line1\nline2\nline3", fontSize: 16, fontFamily: "Arial" });
     const el = TextPlugin.toTElement(node);
-    const data = el.data as import("@vibecanvas/shell/automerge/index").TTextData;
+    const data = el.data as import("@vibecanvas/automerge-service/types/canvas-doc").TTextData;
     expect(data.text.split("\n")).toHaveLength(3);
   });
 });

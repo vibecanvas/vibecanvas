@@ -1,4 +1,4 @@
-import type { TElement } from "@vibecanvas/shell/automerge/index";
+import type { TElement } from "@vibecanvas/automerge-service/types/canvas-doc";
 import Konva from "konva";
 import type { TTool } from "../../components/FloatingCanvasToolbar/toolbar.types";
 import { CustomEvents } from "../../custom-events";
@@ -134,7 +134,7 @@ export class HostedSolidWidgetPlugin implements IPlugin {
     const mount = this.findTerminalMountAtPoint(event.clientX, event.clientY);
     if (!mount) return false;
 
-      const insertedText = toShellEscapedPathText(path);
+    const insertedText = toShellEscapedPathText(path);
     context.setState("mode", CanvasMode.SELECT);
     context.hooks.customEvent.call(CustomEvents.TOOL_SELECT, "select");
     context.setState("selection", [mount.node]);

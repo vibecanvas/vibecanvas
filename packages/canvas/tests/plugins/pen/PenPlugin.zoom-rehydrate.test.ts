@@ -1,5 +1,5 @@
 import Konva from "konva";
-import type { TElement } from "@vibecanvas/shell/automerge/index";
+import type { TElement } from "@vibecanvas/automerge-service/types/canvas-doc";
 import { describe, expect, test } from "vitest";
 import { PenPlugin, SceneHydratorPlugin, type IPluginContext } from "../../../src/plugins";
 import { createPenDataFromStrokePoints } from "../../../src/plugins/shared/pen.math";

@@ -1,5 +1,5 @@
-import type { TElement, TFileData, TFiletreeData, TTerminalData } from "@vibecanvas/shell/automerge/index";
-import type * as schema from "@vibecanvas/shell/database/schema";
+import type { TElement, TFileData, TFiletreeData, TTerminalData } from "@vibecanvas/automerge-service/types/canvas-doc";
+import type * as schema from "@vibecanvas/db/schema";
 import { Group } from "konva/lib/Group";
 import { Shape, ShapeConfig } from "konva/lib/Shape";
 import { CanvasMode, Theme } from "./enum";
@@ -91,27 +91,27 @@ export type TFileInspectResponse = {
 
 export type TFileReadResponse =
   | {
-      kind: "text";
-      content: string;
-      truncated: boolean;
-    }
+    kind: "text";
+    content: string;
+    truncated: boolean;
+  }
   | {
-      kind: "binary";
-      content: string | null;
-      size: number;
-      mime?: string;
-      encoding?: "base64" | "hex";
-    }
+    kind: "binary";
+    content: string | null;
+    size: number;
+    mime?: string;
+    encoding?: "base64" | "hex";
+  }
   | {
-      kind: "none";
-      size: number;
-    }
+    kind: "none";
+    size: number;
+  }
   | TFiletreeErrorResponse;
 
 export type TFileWriteResponse =
   | {
-      success: true;
-    }
+    success: true;
+  }
   | TFiletreeErrorResponse;
 
 type TFiletreeSafeResult<T> = Promise<[unknown, T | null | undefined]>;
