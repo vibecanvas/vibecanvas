@@ -1,29 +1,8 @@
-import { ctrlDirFiles } from '@vibecanvas/core/filesystem/ctrl.dir-files';
-import { ctrlDirHome } from '@vibecanvas/core/filesystem/ctrl.dir-home';
-import { ctrlDirList } from '@vibecanvas/core/filesystem/ctrl.dir-list';
-import { ctrlFileInspect } from '@vibecanvas/core/filesystem/ctrl.file-inspect';
-import { ctrlFileMove } from '@vibecanvas/core/filesystem/ctrl.file-move';
-import { ctrlFileRead } from '@vibecanvas/core/filesystem/ctrl.file-read';
 import type { IEventPublisherService } from '@vibecanvas/event-publisher-service/IEventPublisherService';
 import { existsSync, readFileSync, readdirSync, renameSync, statSync, watch, writeFileSync, type FSWatcher } from 'fs';
 import { homedir } from 'os';
-import { basename, dirname, extname, join, resolve, sep } from 'path';
 import type { IFilesystemService } from './IFilesystemService';
-import type {
-  TFilesystemFilesArgs,
-  TFilesystemFilesResult,
-  TFilesystemInspectArgs,
-  TFilesystemInspectResult,
-  TFilesystemListArgs,
-  TFilesystemListResult,
-  TFilesystemMoveArgs,
-  TFilesystemMoveResult,
-  TFilesystemReadArgs,
-  TFilesystemReadResult,
-  TFilesystemWatchEvent,
-  TFilesystemWriteArgs,
-  TFilesystemWriteResult,
-} from './types';
+import type { TFilesystemWatchEvent } from './types';
 
 type TWatchEntry = {
   watcher: FSWatcher;
@@ -43,53 +22,75 @@ export class FilesystemServiceNode implements IFilesystemService {
   constructor(private eventPublisher: IEventPublisherService) {
   }
 
-  home(): TErrTuple<{ path: string }> {
-    return ctrlDirHome({ os: { homedir } }, {});
+  homeDir(): string {
+    return homedir();
   }
 
-  list(args: TFilesystemListArgs): TErrTuple<TFilesystemListResult> {
-    return ctrlDirList({
-      fs: { readdirSync, existsSync },
-      path: { dirname, join },
-    }, args);
+  exists(path: string): boolean {
+    return existsSync(path);
   }
 
-  files(args: TFilesystemFilesArgs): TErrTuple<TFilesystemFilesResult> {
-    return ctrlDirFiles({
-      fs: { readdirSync, existsSync, statSync },
-      path: { join },
-    }, args);
-  }
-
-  move(args: TFilesystemMoveArgs): TErrTuple<TFilesystemMoveResult> {
-    return ctrlFileMove({
-      fs: { existsSync, statSync, renameSync },
-      path: { basename, join, resolve, sep },
-    }, args);
-  }
-
-  inspect(args: TFilesystemInspectArgs): TErrTuple<TFilesystemInspectResult> {
-    return ctrlFileInspect({
-      fs: { statSync },
-      path: { basename, extname },
-    }, args);
-  }
-
-  read(args: TFilesystemReadArgs): TErrTuple<TFilesystemReadResult> {
-    return ctrlFileRead({
-      fs: { readFileSync, statSync },
-      path: { extname },
-    }, args);
-  }
-
-  write(args: TFilesystemWriteArgs): TErrTuple<TFilesystemWriteResult> {
+  readdir(path: string): TErrTuple<import('fs').Dirent[]> {
     try {
-      writeFileSync(args.path, args.content, 'utf8');
-      return [{ success: true }, null];
+      return [readdirSync(path, { withFileTypes: true }), null];
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to read directory';
+      return [null, {
+        code: 'SRV.FILESYSTEM.READDIR.FAILED',
+        statusCode: 500,
+        externalMessage: { en: message },
+      }];
+    }
+  }
+
+  stat(path: string): TErrTuple<import('fs').Stats> {
+    try {
+      return [statSync(path), null];
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to stat path';
+      return [null, {
+        code: 'SRV.FILESYSTEM.STAT.FAILED',
+        statusCode: 500,
+        externalMessage: { en: message },
+      }];
+    }
+  }
+
+  readFile(path: string): TErrTuple<Buffer> {
+    try {
+      return [readFileSync(path), null];
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to read file';
+      return [null, {
+        code: 'SRV.FILESYSTEM.READ.FAILED',
+        statusCode: 500,
+        externalMessage: { en: message },
+      }];
+    }
+  }
+
+  writeFile(path: string, content: string): TErrTuple<void> {
+    try {
+      writeFileSync(path, content, 'utf8');
+      return [undefined, null];
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Failed to write file';
       return [null, {
         code: 'SRV.FILESYSTEM.WRITE.FAILED',
+        statusCode: 500,
+        externalMessage: { en: message },
+      }];
+    }
+  }
+
+  rename(sourcePath: string, targetPath: string): TErrTuple<void> {
+    try {
+      renameSync(sourcePath, targetPath);
+      return [undefined, null];
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to rename path';
+      return [null, {
+        code: 'SRV.FILESYSTEM.RENAME.FAILED',
         statusCode: 500,
         externalMessage: { en: message },
       }];

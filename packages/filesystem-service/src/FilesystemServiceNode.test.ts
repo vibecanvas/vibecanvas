@@ -29,51 +29,38 @@ describe('FilesystemServiceNode', () => {
     rmSync(root, { recursive: true, force: true });
   });
 
-  test('home, list, files, inspect, read, write, and move work through the service', () => {
+  test('raw filesystem primitives work through the service', () => {
     const sourceDir = join(root, 'source');
-    const nestedDir = join(sourceDir, 'nested');
     const destinationDir = join(root, 'destination');
     mkdirSync(sourceDir);
-    mkdirSync(nestedDir);
     mkdirSync(destinationDir);
 
     const filePath = join(sourceDir, 'hello.txt');
     const movedPath = join(destinationDir, 'hello.txt');
 
-    const [writeResult, writeError] = service.write({ path: filePath, content: 'hello world' });
+    const [writeResult, writeError] = service.writeFile(filePath, 'hello world');
     expect(writeError).toBeNull();
-    expect(writeResult).toEqual({ success: true });
+    expect(writeResult).toBeUndefined();
 
-    const [homeResult, homeError] = service.home();
-    expect(homeError).toBeNull();
-    expect(typeof homeResult?.path).toBe('string');
+    expect(typeof service.homeDir()).toBe('string');
+    expect(service.exists(filePath)).toBe(true);
 
-    const [listResult, listError] = service.list({ path: sourceDir, omitFiles: true });
-    expect(listError).toBeNull();
-    expect(listResult?.children.map((child) => child.name)).toEqual(['nested']);
+    const [entries, entriesError] = service.readdir(sourceDir);
+    expect(entriesError).toBeNull();
+    expect(entries?.map((entry) => entry.name)).toEqual(['hello.txt']);
 
-    const [filesResult, filesError] = service.files({ path: root, glob_pattern: '*.txt', max_depth: 3 });
-    expect(filesError).toBeNull();
-    expect(filesResult?.children.some((child) => child.name === 'source')).toBe(true);
+    const [stats, statsError] = service.stat(filePath);
+    expect(statsError).toBeNull();
+    expect(stats?.isFile()).toBe(true);
 
-    const [inspectResult, inspectError] = service.inspect({ path: filePath });
-    expect(inspectError).toBeNull();
-    expect(inspectResult?.name).toBe('hello.txt');
-    expect(inspectResult?.kind).toBe('text');
+    const [contents, contentsError] = service.readFile(filePath);
+    expect(contentsError).toBeNull();
+    expect(contents?.toString('utf8')).toBe('hello world');
 
-    const [readResult, readError] = service.read({ path: filePath, content: 'text' });
-    expect(readError).toBeNull();
-    expect(readResult).toEqual({ kind: 'text', content: 'hello world', truncated: false });
-
-    const [moveResult, moveError] = service.move({
-      source_path: filePath,
-      destination_dir_path: destinationDir,
-    });
-    expect(moveError).toBeNull();
-    expect(moveResult?.target_path).toBe(movedPath);
-
-    const [movedInspect] = service.inspect({ path: movedPath });
-    expect(movedInspect?.path).toBe(movedPath);
+    const [renameResult, renameError] = service.rename(filePath, movedPath);
+    expect(renameError).toBeNull();
+    expect(renameResult).toBeUndefined();
+    expect(service.exists(movedPath)).toBe(true);
   });
 
   test('watch, keepalive, unwatch, and stop manage watcher lifecycle', async () => {

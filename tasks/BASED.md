@@ -133,6 +133,7 @@ Use the leaf files for execution history and local context.
 - [ ]: [S21] remove apps/server and packages/functional-core and shell
 - [ ]: [S22] fix build and ci tests to use new apps/cli
 - [ ]: [S23] Use global costs for dev and prod ports
+- [ ]: [S24] rename @vibecanvas/db -> @vibecanvas/db-service
 
 ## E xplorations
 - [ ]: [E1](e/E1.md) - Tauri Research

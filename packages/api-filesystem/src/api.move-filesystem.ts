@@ -1,10 +1,10 @@
+import { fnToApiFilesystemError } from './core/fn.to-api-filesystem-error';
+import { txMoveFilesystem } from './core/tx.move-filesystem';
 import { baseFilesystemOs } from './orpc';
 
 const apiMoveFilesystem = baseFilesystemOs.move.handler(async ({ input, context }) => {
-  const [result, error] = context.filesystem.move(input.body);
-  if (error || !result) {
-    return { type: error?.code ?? 'ERROR', message: error?.externalMessage?.en ?? 'Failed to move file or folder' };
-  }
+  const [result, error] = txMoveFilesystem({ filesystem: context.filesystem }, input.body);
+  if (error || !result) return fnToApiFilesystemError(error, 'Failed to move file or folder');
   return result;
 });
 
