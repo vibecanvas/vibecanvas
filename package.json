@@ -10,8 +10,10 @@
   ],
   "catalog": {
     "@automerge/automerge": "3.2.5",
-    "@automerge/automerge-repo": "2.5.4",
-    "@automerge/automerge-repo-network-websocket": "2.5.4",
+    "@automerge/automerge-repo": "2.5.5",
+    "@automerge/automerge-repo-network-broadcastchannel": "2.5.5",
+    "@automerge/automerge-repo-network-websocket": "2.5.5",
+    "@automerge/automerge-repo-storage-indexeddb": "2.5.5",
     "@orpc/client": "1.13.13",
     "@orpc/contract": "1.13.13",
     "@orpc/server": "1.13.13",
@@ -25,6 +27,7 @@
     "solid-js": "^1.9.12"
   },
   "scripts": {
+    "postinstall": "node scripts/patch-automerge-repo-throttle.mjs",
     "test": "bun run --parallel --filter '*' test",
     "test:ci:docker": "docker run --rm -it --platform linux/amd64 -v \"$PWD\":/repo -w /repo ubuntu:24.04 bash -lc 'export DEBIAN_FRONTEND=noninteractive && apt-get update && apt-get install -y curl unzip git ca-certificates && curl -fsSL https://bun.sh/install | bash && export BUN_INSTALL=/root/.bun && export PATH=$BUN_INSTALL/bin:$PATH && bun --version && bun install --frozen-lockfile && bun run test'",
     "test:binary": "bun run scripts/test-binary.ts",
