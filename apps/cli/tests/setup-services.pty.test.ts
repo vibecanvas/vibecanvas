@@ -33,9 +33,13 @@ describe('setupServices PTY wiring', () => {
     await services.get('db')?.stop?.();
   });
 
-  test('does not provide pty service outside serve mode', () => {
+  test('provides pty service outside serve mode too', async () => {
     const { services } = setupServices(createConfig({ command: 'canvas' }));
+    const pty = services.get('pty');
 
-    expect(services.get('pty')).toBeUndefined();
+    expect(pty?.name).toBe('pty');
+
+    await pty?.stop?.();
+    await services.get('db')?.stop?.();
   });
 });
