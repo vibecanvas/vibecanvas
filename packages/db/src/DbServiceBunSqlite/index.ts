@@ -60,9 +60,10 @@ export class DbServiceBunSqlite implements IDbService {
 
   canvas = {
     listAll: () => this.drizzle.query.canvas.findMany().sync() as TCanvasRecord[],
+    findByName: (name: string) => this.drizzle.query.canvas.findFirst({ where: eq(schema.canvas.name, name) }).sync() as TCanvasRecord | null,
     create: (args: TCanvasInsertArgs) => this.drizzle.insert(schema.canvas).values(args).returning().all()[0]!,
     renameById: (args: { id: string, name: string }) => this.drizzle.update(schema.canvas).set({ name: args.name }).where(eq(schema.canvas.id, args.id)).returning().all()[0]!,
-    deleteById: (args: { id: string }) => this.drizzle.delete(schema.canvas).where(eq(schema.canvas.id, args.id)).returning().all()[0]!,
+    deleteById: (args: { id: string }) => this.drizzle.delete(schema.canvas).where(eq(schema.canvas.id, args.id)).returning().all(),
   };
 
   fileTree = {

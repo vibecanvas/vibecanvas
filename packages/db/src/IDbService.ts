@@ -55,9 +55,10 @@ type TGetFileArgs = {
 export interface IDbService extends IService, IStoppableService {
   canvas: {
     listAll(): TCanvasRecord[];
+    findByName(name: string): TCanvasRecord | null;
     create(args: TCanvasInsertArgs): TCanvasRecord;
     renameById(args: { id: string, name: string }): TCanvasRecord;
-    deleteById(args: { id: string }): TCanvasRecord;
+    deleteById(args: { id: string }): TCanvasRecord[];
   };
   fileTree: {
     listAll(): TFileTreeRecord[];
