@@ -145,9 +145,10 @@ Use the leaf files for execution history and local context.
 - [ ]: [E10] - headless chrome to stream to canvas
 - [ ]: [E11] - https://github.com/cr0hn/dockerscan
 - [ ]: [E12] - https://github.com/superradcompany/microsandbox
-- [ ]: [E13](e/E13.md) - Research Pluginsystem for server
-- [ ]: [E14] - do we need packages/functional-core
+- [x]: [E13](e/E13.md) - Research Pluginsystem for server
+- [x]: [E14] - do we need packages/functional-core
 - [ ]: [E15](e/E15.md) - canvas UI extensions: sideloadable community widgets and ArrowJS exploration
+- [ ]: [E16] - filewatch performance. -> on big folders are slow
 
 ## D irections
 - [ ]: [D1] - AI can edit the canvas directly
