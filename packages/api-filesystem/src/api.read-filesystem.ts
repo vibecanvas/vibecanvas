@@ -1,11 +1,38 @@
-import { fxReadFilesystem } from './core/fx.read-filesystem';
+import { resolve } from 'path';
+import { fnCreateFilesystemError } from './core/fn.create-filesystem-error';
+import { fnDetectFileKind } from './core/fn.detect-file-kind';
+import { fnDetectMime } from './core/fn.detect-mime';
 import { fnToApiFilesystemError } from './core/fn.to-api-filesystem-error';
 import { baseFilesystemOs } from './orpc';
 
 const apiReadFilesystem = baseFilesystemOs.read.handler(async ({ input, context }) => {
-  const [result, error] = fxReadFilesystem({ filesystem: context.filesystem }, input.query);
-  if (error || !result) return fnToApiFilesystemError(error, 'Failed to read file');
-  return result;
+  const path = resolve(input.query.path);
+  const [buffer, error] = context.filesystem.readFile(path);
+  if (error || !buffer) {
+    return fnToApiFilesystemError(error ?? fnCreateFilesystemError('FX.FILESYSTEM.READ.NOT_FOUND', `Path not found: ${path}`, 404), 'Failed to read file');
+  }
+
+  const maxBytes = input.query.maxBytes ?? buffer.length;
+  const truncatedBuffer = buffer.subarray(0, maxBytes);
+  const truncated = truncatedBuffer.length < buffer.length;
+  const kind = fnDetectFileKind(path);
+  const mime = fnDetectMime(path) ?? undefined;
+
+  if (input.query.content === 'none') return { kind: 'none', size: buffer.length };
+
+  if (kind === 'text' && input.query.content !== 'base64' && input.query.content !== 'binary') {
+    return { kind: 'text', content: truncatedBuffer.toString('utf8'), truncated };
+  }
+
+  if (input.query.content === 'binary') {
+    return { kind: 'binary', content: truncatedBuffer.toString('hex'), size: buffer.length, mime, encoding: 'hex' as const };
+  }
+
+  if (input.query.content === 'base64') {
+    return { kind: 'binary', content: truncatedBuffer.toString('base64'), size: buffer.length, mime, encoding: 'base64' as const };
+  }
+
+  return { kind: 'binary', content: null, size: buffer.length, mime };
 });
 
 export { apiReadFilesystem };
