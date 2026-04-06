@@ -1,6 +1,6 @@
 import type { IService } from '@vibecanvas/runtime';
-import type { ZDbEventSchema } from '@vibecanvas/core-contract/db.contract.ts';
-import type { ZNotificationEvent } from '@vibecanvas/core-contract/notification.contract.ts';
+import type { ZDbEventSchema } from '@vibecanvas/api-db/contract';
+import type { ZNotificationEvent } from '@vibecanvas/api-notification/contract';
 import type { z } from 'zod';
 
 export type TDbEvent = z.infer<typeof ZDbEventSchema>;
