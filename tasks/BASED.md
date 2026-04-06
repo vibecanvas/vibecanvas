@@ -133,9 +133,9 @@ Use the leaf files for execution history and local context.
 - [x]: [S21] remove apps/server and packages/functional-core and shell
 - [ ]: [S22] fix build and ci tests to use new apps/cli
 - [ ]: [S23] Use global costs for dev and prod ports
-- [ ]: [S24] rename @vibecanvas/db -> @vibecanvas/db-service
+- [ ]: [S24] rename @vibecanvas/db -> @vibecanvas/service.db and co
 - [ ]: [S25](s/S25.md) - db: remove filetrees table/schema; canvas-doc fully owns filetree state
-- [ ]: [S26](s/S26.md) - db: add filesystems table for local/remote machine identity
+- [ ]: [S26](s/S26.md) - db: add filesystems db table for local/remote machine identity
 
 ## E xplorations
 - [ ]: [E1](e/E1.md) - Tauri Research
@@ -150,11 +150,12 @@ Use the leaf files for execution history and local context.
 - [x]: [E13](e/E13.md) - Research Pluginsystem for server
 - [x]: [E14] - do we need packages/functional-core
 - [ ]: [E15](e/E15.md) - canvas UI extensions: sideloadable community widgets and ArrowJS exploration
-- [ ]: [E16] - filewatch performance. -> on big folders are slow
+- [x]: [E16] - filewatch performance. -> on big folders are slow
+- [ ]: [E17](e/E17.md) - automerge authority: optimistic local writes with server validation/reject path
 
 ## D irections
 - [ ]: [D1] - AI can edit the canvas directly
-- [ ]: [D2] - Server plugin system
+- [x]: [D2] - Server plugin system
 
 ## Pragmatic Code Style
 
