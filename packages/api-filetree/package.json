@@ -12,7 +12,6 @@
     "@vibecanvas/automerge-service": "workspace:*",
     "@vibecanvas/db": "workspace:*",
     "@vibecanvas/event-publisher-service": "workspace:*",
-    "@vibecanvas/shell": "workspace:*",
     "zod": "catalog:"
   }
 }
