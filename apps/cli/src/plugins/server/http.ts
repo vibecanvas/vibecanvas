@@ -88,7 +88,7 @@ function createFileResponse(req: Request, db: IDbService): Response {
   const fileMeta = fileMetaFromPathname(new URL(req.url).pathname);
   if (!fileMeta) return new Response('Not Found', { status: 404 });
 
-  const record = db.getFile(fileMeta);
+  const record = db.file.get(fileMeta);
   if (!record) return new Response('Not Found', { status: 404 });
 
   const etag = `"${record.id}:${record.hash}"`;

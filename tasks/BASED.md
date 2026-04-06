@@ -134,6 +134,7 @@ Use the leaf files for execution history and local context.
 - [ ]: [S22] fix build and ci tests to use new apps/cli
 - [ ]: [S23] Use global costs for dev and prod ports
 - [ ]: [S24] rename @vibecanvas/db -> @vibecanvas/db-service
+- [ ]: [S25](s/S25.md) - db: remove filetrees table/schema; canvas-doc fully owns filetree state
 
 ## E xplorations
 - [ ]: [E1](e/E1.md) - Tauri Research
