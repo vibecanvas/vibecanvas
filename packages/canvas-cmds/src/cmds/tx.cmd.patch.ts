@@ -252,6 +252,7 @@ export async function txExecuteCanvasPatch(portal: TPortal, input: TCanvasPatchI
         }
       }
     });
+    await portal.automergeService.repo.flush([handle.documentId]);
 
     return {
       ok: true,

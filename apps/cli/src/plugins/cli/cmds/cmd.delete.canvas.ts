@@ -1,47 +1,43 @@
 import type { IAutomergeService } from '@vibecanvas/automerge-service/IAutomergeService';
 import type { ICliConfig } from '@vibecanvas/cli/config';
 import type { IDbService } from '@vibecanvas/db/IDbService';
+import { txExecuteCanvasDelete } from '@vibecanvas/canvas-cmds/cmds/tx.cmd.delete';
 import type { TSafeCanvasCmdClient } from '../core/fn.build-rpc-link';
 import { fnPrintCommandError, fnPrintCommandResult } from '../core/fn.print-command-result';
-import { txExecuteCanvasGroup } from '@vibecanvas/canvas-cmds/cmds/tx.cmd.group';
-import { buildCanvasGroupInput } from './fn.canvas-subcommand-inputs';
+import { buildCanvasDeleteInput } from './fn.canvas-subcommand-inputs';
 
-export function printCanvasGroupHelp(): void {
-  console.log(`Usage: vibecanvas canvas group [options]
+export function printCanvasDeleteHelp(): void {
+  console.log(`Usage: vibecanvas canvas delete [options]
 
-Group explicit element ids inside one selected canvas.
+Delete explicit element/group ids inside one selected canvas.
 
 Required canvas selector (choose exactly one):
   --canvas <id>             Select one canvas by exact canvas row id
   --canvas-name <query>     Select one canvas by unique case-insensitive name substring
 
 Required target selector:
-  --id <id>                 Exact element id to group (repeatable)
+  --id <id>                 Exact element/group id to delete (repeatable)
+
+Effects mode:
+  --doc-only                Mutate the persisted doc only (default)
+  --with-effects-if-available
+                            Also attempt live cleanup when available
 
 Options:
   --db <path>               Optional explicit SQLite file override for the opened db
   --json                    Emit machine-readable success/error payloads
   --help, -h                Show this help message
-
-Output:
-  Text mode prints the new group id and grouped child ids.
-  JSON mode prints { ok, command, canvas, matchedCount, matchedIds, group: { id, parentGroupId, childIds } }.
-
-Notes:
-  - grouping currently supports explicit element ids only.
-  - all ids must share the same direct parentGroupId.
-  - grouping preserves absolute element positions and only changes structure.
-`)
+`);
 }
 
-export async function runCanvasGroupCommand(services: { db: IDbService, automerge: IAutomergeService, safeClient: TSafeCanvasCmdClient | null }, config: ICliConfig) {
+export async function runCanvasDeleteCommand(services: { db: IDbService, automerge: IAutomergeService, safeClient: TSafeCanvasCmdClient | null }, config: ICliConfig) {
   const wantsJson = config.subcommandOptions?.json === true;
 
   try {
-    const input = buildCanvasGroupInput(config.subcommandOptions);
+    const input = buildCanvasDeleteInput(config.subcommandOptions);
 
     if (services.safeClient) {
-      const [error, result] = await services.safeClient.group(input);
+      const [error, result] = await services.safeClient.delete(input);
       if (error) {
         fnPrintCommandError(error, wantsJson);
         return;
@@ -50,7 +46,7 @@ export async function runCanvasGroupCommand(services: { db: IDbService, automerg
       return;
     }
 
-    const result = await txExecuteCanvasGroup({ dbService: services.db, automergeService: services.automerge }, input);
+    const result = await txExecuteCanvasDelete({ dbService: services.db, automergeService: services.automerge }, input);
     fnPrintCommandResult(result, wantsJson);
   } catch (error) {
     fnPrintCommandError(error, wantsJson);

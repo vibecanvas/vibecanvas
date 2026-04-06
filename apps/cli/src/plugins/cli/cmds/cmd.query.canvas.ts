@@ -3,7 +3,7 @@ import type { ICliConfig } from '@vibecanvas/cli/config';
 import type { IDbService } from '@vibecanvas/db/IDbService';
 import type { TSafeCanvasCmdClient } from '../core/fn.build-rpc-link';
 import { fnPrintCommandError, fnPrintCommandResult } from '../core/fn.print-command-result';
-import { fxExecuteCanvasQuery } from '@vibecanvas/canvas-cmds/cmds/fx.cmd.query';
+import { fxExecuteCanvasQuery, type TCanvasQuerySuccess } from '@vibecanvas/canvas-cmds/cmds/fx.cmd.query';
 import { buildCanvasQueryInput } from './fn.canvas-subcommand-inputs';
 
 export function printCanvasQueryHelp(): void {
@@ -61,18 +61,61 @@ Examples:
 `)
 }
 
-export async function runCanvasQueryCommand(services: { db: IDbService, automerge: IAutomergeService, safeClient: TSafeCanvasCmdClient | null }, config: ICliConfig) {
-  const input = buildCanvasQueryInput(config.subcommandOptions)
-  const wantsJson = config.subcommandOptions?.json === true
+function stableStringify(value: unknown): string {
+  if (Array.isArray(value)) return `[${value.map((entry) => stableStringify(entry)).join(',')}]`;
+  if (value && typeof value === 'object') {
+    return `{${Object.keys(value as Record<string, unknown>).sort().map((key) => `${JSON.stringify(key)}:${stableStringify((value as Record<string, unknown>)[key])}`).join(',')}}`;
+  }
+  return JSON.stringify(value);
+}
 
-  if (services.safeClient) {
-    const [error, result] = await services.safeClient.query(input);
-    if (error) {
-      fnPrintCommandError(error, wantsJson)
+function printCanvasQueryText(result: TCanvasQuerySuccess): void {
+  const targetLabel = result.count === 1 ? 'target' : 'targets';
+  process.stdout.write(`Query matched ${result.count} ${targetLabel} in canvas=${result.canvas.id} name=${JSON.stringify(result.canvas.name)} mode=${result.mode}\n`);
+
+  for (const match of result.matches) {
+    const typeLabel = match.metadata.type === null ? 'group' : match.metadata.type;
+    const bounds = match.metadata.bounds;
+    const boundsLabel = bounds ? `(${bounds.x}, ${bounds.y}, ${bounds.w}, ${bounds.h})` : 'null';
+    process.stdout.write(`- ${match.metadata.kind} ${match.metadata.id} [${typeLabel}] parent=${match.metadata.parentGroupId ?? 'null'} bounds=${boundsLabel} z=${match.metadata.zIndex} locked=${match.metadata.locked}\n`);
+    if (Object.prototype.hasOwnProperty.call(match.payload, 'data')) {
+      process.stdout.write(`  data=${stableStringify((match.payload as Record<string, unknown>).data)}\n`);
     }
-    fnPrintCommandResult(result, wantsJson)
+    if (Object.prototype.hasOwnProperty.call(match.payload, 'style')) {
+      process.stdout.write(`  style=${stableStringify((match.payload as Record<string, unknown>).style)}\n`);
+    }
   }
 
-  const result = await fxExecuteCanvasQuery({ dbService: services.db, automergeService: services.automerge }, input);
-  fnPrintCommandResult(result, wantsJson)
+  process.exitCode = 0;
+}
+
+export async function runCanvasQueryCommand(services: { db: IDbService, automerge: IAutomergeService, safeClient: TSafeCanvasCmdClient | null }, config: ICliConfig) {
+  const wantsJson = config.subcommandOptions?.json === true;
+
+  try {
+    const input = buildCanvasQueryInput(config.subcommandOptions);
+
+    if (services.safeClient) {
+      const [error, result] = await services.safeClient.query(input);
+      if (error) {
+        fnPrintCommandError(error, wantsJson);
+        return;
+      }
+      if (wantsJson) {
+        fnPrintCommandResult(result, true);
+        return;
+      }
+      printCanvasQueryText(result as TCanvasQuerySuccess);
+      return;
+    }
+
+    const result = await fxExecuteCanvasQuery({ dbService: services.db, automergeService: services.automerge }, input);
+    if (wantsJson) {
+      fnPrintCommandResult(result, true);
+      return;
+    }
+    printCanvasQueryText(result);
+  } catch (error) {
+    fnPrintCommandError(error, wantsJson);
+  }
 }

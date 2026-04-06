@@ -3,6 +3,8 @@ import type { TCanvasMoveInput } from '@vibecanvas/canvas-cmds/cmds/tx.cmd.move'
 import type { TCanvasGroupInput } from '@vibecanvas/canvas-cmds/cmds/tx.cmd.group';
 import type { TCanvasUngroupInput } from '@vibecanvas/canvas-cmds/cmds/tx.cmd.ungroup';
 import type { TCanvasReorderInput } from '@vibecanvas/canvas-cmds/cmds/tx.cmd.reorder';
+import type { TCanvasPatchEnvelope, TCanvasPatchInput } from '@vibecanvas/canvas-cmds/cmds/tx.cmd.patch';
+import type { TCanvasDeleteInput } from '@vibecanvas/canvas-cmds/cmds/tx.cmd.delete';
 import type { TCanvasQueryInput, TSceneBounds, TSceneSelector, TSceneSelectorEnvelope, TSceneSelectorScalar } from '@vibecanvas/canvas-cmds/cmds/fx.cmd.query';
 
 function parseScalarString(value: string): TSceneSelectorScalar {
@@ -83,7 +85,33 @@ function parseQuerySelector(queryJson: string): TSceneSelector | undefined {
   };
 }
 
+function sortUnique(values: string[] | undefined): string[] {
+  return [...new Set((values ?? []).map((value) => value.trim()).filter(Boolean))].sort((left, right) => left.localeCompare(right));
+}
+
 export function buildCanvasQueryInput(options?: TCanvasSubcommandOptions): TCanvasQueryInput {
+  const selectorModeCount = Number(Boolean(options?.where)) + Number(Boolean(options?.queryJson)) + Number(Boolean(
+    (options?.ids?.length ?? 0) > 0
+    || (options?.kinds?.length ?? 0) > 0
+    || (options?.types?.length ?? 0) > 0
+    || (options?.styles?.length ?? 0) > 0
+    || options?.groupId
+    || options?.subtree
+    || options?.bounds
+    || options?.boundsMode
+  ));
+
+  if (selectorModeCount > 1) {
+    throw {
+      ok: false,
+      command: 'canvas.query',
+      code: 'CANVAS_QUERY_SELECTOR_CONFLICT',
+      message: 'Pass at most one selector input style: structured flags, --where, or --query.',
+      canvasId: options?.canvasId ?? null,
+      canvasNameQuery: options?.canvasNameQuery ?? null,
+    };
+  }
+
   const selector: TSceneSelectorEnvelope = {
     source: 'none',
     canvasId: options?.canvasId,
@@ -121,7 +149,7 @@ export function buildCanvasQueryInput(options?: TCanvasSubcommandOptions): TCanv
 
     selector.source = hasFlags ? 'flags' : 'none';
     selector.filters = {
-      ids: options?.ids ?? [],
+      ids: sortUnique(options?.ids),
       kinds: (options?.kinds?.filter((value): value is 'element' | 'group' => value === 'element' || value === 'group')) ?? [],
       types: options?.types ?? [],
       style,
@@ -150,7 +178,7 @@ export function buildCanvasMoveInput(options?: TCanvasSubcommandOptions): TCanva
   return {
     canvasId: options?.canvasId,
     canvasNameQuery: options?.canvasNameQuery,
-    ids: options?.ids,
+    ids: sortUnique(options?.ids),
     mode: options?.absolute ? 'absolute' : options?.relative ? 'relative' : undefined,
     x: parseOptionalNumber(options?.x),
     y: parseOptionalNumber(options?.y),
@@ -161,7 +189,7 @@ export function buildCanvasGroupInput(options?: TCanvasSubcommandOptions): TCanv
   return {
     canvasId: options?.canvasId,
     canvasNameQuery: options?.canvasNameQuery,
-    ids: options?.ids,
+    ids: sortUnique(options?.ids),
   };
 }
 
@@ -169,7 +197,7 @@ export function buildCanvasUngroupInput(options?: TCanvasSubcommandOptions): TCa
   return {
     canvasId: options?.canvasId,
     canvasNameQuery: options?.canvasNameQuery,
-    ids: options?.ids,
+    ids: sortUnique(options?.ids),
   };
 }
 
@@ -177,7 +205,41 @@ export function buildCanvasReorderInput(options?: TCanvasSubcommandOptions): TCa
   return {
     canvasId: options?.canvasId,
     canvasNameQuery: options?.canvasNameQuery,
-    ids: options?.ids,
+    ids: sortUnique(options?.ids),
     action: options?.action as TCanvasReorderInput['action'],
+  };
+}
+
+function parsePatchEnvelope(options?: TCanvasSubcommandOptions): TCanvasPatchEnvelope | undefined {
+  if (options?.patch) return JSON.parse(options.patch) as TCanvasPatchEnvelope;
+  return undefined;
+}
+
+export function buildCanvasPatchInput(options?: TCanvasSubcommandOptions, patch?: TCanvasPatchEnvelope): TCanvasPatchInput {
+  return {
+    canvasId: options?.canvasId,
+    canvasNameQuery: options?.canvasNameQuery,
+    ids: sortUnique(options?.ids),
+    patch: patch ?? parsePatchEnvelope(options),
+  };
+}
+
+export function buildCanvasDeleteInput(options?: TCanvasSubcommandOptions): TCanvasDeleteInput {
+  if (options?.docOnly && options?.withEffectsIfAvailable) {
+    throw {
+      ok: false,
+      command: 'canvas.delete',
+      code: 'CANVAS_DELETE_EFFECTS_MODE_CONFLICT',
+      message: 'Delete effects mode must be exactly one of --doc-only or --with-effects-if-available when specified.',
+      canvasId: options?.canvasId ?? null,
+      canvasNameQuery: options?.canvasNameQuery ?? null,
+    };
+  }
+
+  return {
+    canvasId: options?.canvasId,
+    canvasNameQuery: options?.canvasNameQuery,
+    ids: sortUnique(options?.ids),
+    effectsMode: options?.withEffectsIfAvailable ? 'with-effects-if-available' : 'doc-only',
   };
 }

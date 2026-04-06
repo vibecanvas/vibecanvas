@@ -1,16 +1,20 @@
 # apps/cli
 
-`apps/cli` is the new runtime home for Vibecanvas.
+`apps/cli` is the runtime home for Vibecanvas CLI + server boot.
 
-It should gradually replace `apps/server` as command/bootstrap wiring moves over.
+It is the app entrypoint layer.
+It owns:
+- CLI parsing
+- runtime boot
+- plugin composition
+- final shutdown / exit behavior
 
 ## Core rule
 
 - **plugins contain logic and composition**
 - **services do I/O / networking / resource management**
 
-In short:
-
+Short:
 - plugin = orchestration / wiring / command behavior
 - service = stateful capability / side effect boundary
 
@@ -18,25 +22,24 @@ In short:
 
 ### Plugins
 Plugins:
-- decide how the app is assembled
+- decide how app is assembled
 - depend on services
 - tap hooks
 - read config
-- may provide additional services
-- may coordinate multiple services
+- coordinate multiple services
 
 Plugins should contain logic like:
 - command handling
 - route/protocol composition
-- app lifecycle orchestration
-- conditional behavior based on config
-
-Plugins should **not** be the place where low-level I/O resources are implemented.
+- lifecycle orchestration
+- conditional behavior from config
 
 Examples in `apps/cli`:
 - `CliPlugin`
 - `ServerPlugin`
 - `OrpcPlugin`
+- `PtyPlugin`
+- `AutomergePlugin`
 
 ### Services
 Services:
@@ -45,20 +48,16 @@ Services:
 - manage stateful runtime capabilities
 - expose methods to plugins
 
-Services are the boundary for things like:
-- database access
-- filesystem access
-- PTY/session management
-- network clients/servers
-- CRDT repos
-
 Examples:
 - `IDbService`
-- future filesystem/pty/automerge services
+- filesystem service
+- PTY service
+- automerge service
+- event publisher service
 
 ## Dependency direction
 
-Preferred direction:
+Preferred:
 
 ```text
 plugin -> service contract -> concrete service implementation
@@ -70,14 +69,15 @@ Avoid:
 plugin -> concrete implementation details
 ```
 
-Example:
-- good: plugin depends on `IDbService`
-- bad: plugin depends on Bun SQLite internals directly
+Good:
+- plugin depends on `IDbService`
 
-## How to use `@vibecanvas/runtime`
+Bad:
+- plugin depends on Bun SQLite internals directly
 
-`@vibecanvas/runtime` is the generic composition layer.
+## Runtime ownership
 
+`@vibecanvas/runtime` is generic.
 It provides:
 - `IPlugin`
 - `IPluginContext`
@@ -89,23 +89,28 @@ It provides:
 
 It does **not** provide CLI semantics.
 
-That means `apps/cli` owns:
+`apps/cli` owns:
 - `ICliConfig`
 - `ICliHooks`
 - `createCliHooks()`
 - `bootCliRuntime()`
 - `shutdownCliRuntime()`
 
-## Runtime pattern in apps/cli
+Keep CLI semantics here.
+Do not push them back into runtime package.
 
-The expected flow is:
+## Bootstrap flow
+
+Current `src/main.ts` flow:
 
 1. parse argv
 2. build fully resolved `ICliConfig`
-3. setup foundational services
-4. create runtime
-5. register plugins
-6. boot runtime
+3. handle early `--help` / `--version`
+4. set quiet env flags for canvas commands
+5. create foundational services with `setupServices()`
+6. create runtime
+7. boot runtime
+8. if command is not `serve`, shutdown runtime and exit with `process.exitCode`
 
 Current bootstrap files:
 
@@ -119,11 +124,43 @@ src/
   main.ts
 ```
 
+## Important: command exit behavior
+
+For one-shot commands like:
+- `canvas ...`
+- `upgrade`
+
+we do **not** call `process.exit()` deep inside command wrappers anymore.
+
+Instead:
+- wrapper prints result or error
+- wrapper sets `process.exitCode`
+- control returns to `main.ts`
+- `main.ts` runs `await runtime.shutdown()`
+- then `main.ts` does final `process.exit(process.exitCode ?? 0)`
+
+Current pattern in `main.ts`:
+
+```ts
+if (config.command !== 'serve') {
+  await runtime.shutdown();
+  process.exit(process.exitCode ?? 0);
+}
+```
+
+Why this matters:
+- direct `process.exit()` is too blunt
+- it skips runtime shutdown
+- it can leave Automerge / ws / PTY resources alive
+- it can return before persisted writes are durable
+
+Rule:
+- wrappers print + set exit code
+- `main.ts` owns final shutdown + final exit
+
 ## Config ownership
 
 `apps/cli` owns config.
-
-Do not move CLI-specific config back into `@vibecanvas/runtime`.
 
 `ICliConfig` should be fully resolved before runtime creation.
 
@@ -136,7 +173,7 @@ That means values like these should already be set:
 
 ## Hooks usage
 
-CLI hooks are app-local transport/lifecycle hooks:
+CLI hooks are app-local lifecycle / transport hooks:
 - `boot`
 - `ready`
 - `shutdown`
@@ -147,88 +184,28 @@ CLI hooks are app-local transport/lifecycle hooks:
 - `wsClose`
 - `registerCommands`
 
-Use hooks for app/runtime coordination.
+Use hooks for runtime coordination.
+Do **not** use hooks when a normal service method is clearer.
 
-Do **not** use hooks as a replacement for normal service interfaces when a service method would be clearer.
+## Runtime modes
 
-## Current guidance for this app
+### `serve`
+Long-lived mode.
 
-### Keep in plugins
-- command behavior
-- server transport wiring
-- ORPC protocol wiring
-- lifecycle coordination
+Runtime stays up.
+Plugins own server / ORPC / websocket behavior.
+Signals trigger shutdown.
 
-### Keep in services
-- DB access
-- future PTY manager
-- future filesystem watcher
-- future automerge repo
+### `canvas` and `upgrade`
+Short-lived mode.
 
-## Deep import policy
+These still boot runtime first.
+They run through normal services.
+Then they shutdown runtime and exit.
 
-Prefer deep imports for extracted packages.
-
-Examples:
-- `@vibecanvas/db/IDbService`
-- `@vibecanvas/db/DbServiceBunSqlite`
-- `@vibecanvas/api-canvas/contract`
-- `@vibecanvas/api-file/handlers`
-
-Avoid introducing new root barrel exports when the package is intended to stay deep-import-only.
-
-## Migration guidance
-
-`apps/server` is still legacy.
-
-When moving code into `apps/cli`:
-- extract contracts/services first
-- keep implementations small and explicit
-- prefer WIP wiring over hidden magic
-- move one boundary at a time
-
-## Practical rules
-
-1. If it manages a resource, it is probably a service.
-2. If it coordinates behavior, it is probably a plugin.
-3. Plugins may depend on services.
-4. Services should not depend on plugins.
-5. Keep runtime generic; keep CLI semantics in `apps/cli`.
-6. Keep package boundaries explicit with deep imports.
-
-## How CLI commands work
-
-This app has **two execution paths**:
-
-### 1. Top-level CLI path in `src/main.ts`
-
-`src/main.ts` is the real entrypoint.
-
-It does this in order:
-
-1. rewrite top-level canvas aliases
-   - `vibecanvas list` -> `vibecanvas canvas list`
-   - `vibecanvas query` -> `vibecanvas canvas query`
-   - `vibecanvas move` -> `vibecanvas canvas move`
-2. run canvas `--db` bootstrap validation early
-3. parse top-level flags
-4. if command is `canvas`, dispatch into `src/plugins/cli/cmd.canvas.ts` + `src/plugins/cli/canvas/*`
-5. otherwise boot the runtime for normal app/server behavior
-
-So:
-- `canvas` commands are handled **before** runtime boot
-- `serve` / websocket / ORPC behavior is handled by runtime boot
-
-### 2. Runtime/plugin path
-
-If the command is not a direct canvas CLI command, `main.ts` boots runtime with:
-- `createCliPlugin()`
-- `createOrpcPlugin()`
-- `createPtyPlugin()`
-- `createAutomergePlugin()`
-- `createServerPlugin()`
-
-This is the long-lived app path.
+Important current fact:
+- `canvas` commands do **not** bypass runtime boot anymore
+- they are dispatched by `CliPlugin` from the `ready` hook
 
 ## Canvas CLI structure
 
@@ -237,118 +214,192 @@ Canvas CLI code lives under:
 ```text
 src/plugins/cli/
   bootstrap.ts
-  canvas.local-state.ts
-  cmd.canvas.ts
-  canvas/
-    cmd.query.ts
-    cmd.move.ts
-    cmd.patch.ts
-    cmd.delete.ts
-    cmd.reorder.ts
-    cmd.group.ts
-    cmd.ungroup.ts
+  cmds/
+    cmd.canvas.ts
+    cmd.list.canvas.ts
+    cmd.query.canvas.ts
+    cmd.move.canvas.ts
+    cmd.patch.canvas.ts
+    cmd.group.canvas.ts
+    cmd.ungroup.canvas.ts
+    cmd.delete.canvas.ts
+    cmd.reorder.canvas.ts
+    fn.canvas-subcommand-inputs.ts
+  core/
+    fn.print-command-result.ts
+    fn.build-rpc-link.ts
+    fx.canvas.server-discovery.ts
 ```
 
-### Responsibilities
+This is current reality.
+If older docs mention `src/plugins/cli/canvas/*`, that is stale.
 
-#### `bootstrap.ts`
-Early `--db` validation.
+## Responsibilities
+
+### `bootstrap.ts`
+Early CLI bootstrap helpers.
 
 Important rule:
-- fail **before** importing stateful db/automerge code when `--db` is malformed
+- fail **before** stateful db/automerge imports when `--db` is malformed
 
-This keeps tests deterministic and avoids accidental side effects.
+This keeps tests deterministic.
 
-#### `canvas.local-state.ts`
-Builds local, short-lived command state for offline canvas commands.
-
-It creates:
-- sqlite db service
-- automerge repo over sqlite storage
-- `TCanvasCmdContext` for `@vibecanvas/canvas-cmds`
-
-This file is the local adapter from app CLI -> shared command package.
-
-#### `cmd.canvas.ts`
-Canvas command gateway/router.
+### `cmd.canvas.ts`
+Canvas command gateway.
 
 It:
-- parses `vibecanvas canvas ...`
-- prints canvas top-level help
-- routes into `src/plugins/cli/canvas/cmd.*.ts`
-- keeps top-level canvas dispatch centralized
+- prints canvas help
+- chooses safe-client vs local path
+- routes to subcommand wrappers
+- keeps dispatch centralized
 
-#### `canvas/cmd.query.ts`
-Query-specific argv parsing + help + output.
+### `cmd.<name>.canvas.ts`
+Thin wrappers.
 
-It should:
-- parse flags
-- build shared selector envelope
-- call `executeCanvasQuery()` from `@vibecanvas/canvas-cmds`
-- print json/text
-- convert thrown command errors into CLI stderr + exit code
+They should own:
+- argv-to-input conversion
+- help text
+- text/json rendering
+- stdin/file payload loading when needed
+- error -> stderr mapping
+- exit code setting
 
-#### `canvas/cmd.move.ts`
-Move-specific argv parsing + help + output.
+They should **not** own canvas semantics.
 
-It should:
-- parse flags
-- normalize ids / x / y / mode
-- call `executeCanvasMove()` from `@vibecanvas/canvas-cmds`
-- print json/text
-- convert thrown command errors into CLI stderr + exit code
+### `fn.canvas-subcommand-inputs.ts`
+Typed argv normalization layer.
 
-#### `canvas/cmd.patch.ts`
-Patch-specific argv parsing + help + output.
+Keep it:
+- explicit
+- local
+- boring
 
-It should:
-- parse flags
-- load the patch payload from inline json, file, or stdin
-- call `executeCanvasPatch()` from `@vibecanvas/canvas-cmds`
-- print json/text
-- convert thrown command errors into CLI stderr + exit code
+No clever parsing maze.
+
+### `fn.print-command-result.ts`
+Print helpers.
+
+Important current rule:
+- do **not** call `process.exit()` here
+- print
+- set `process.exitCode`
+- return
+
+Reason:
+- graceful shutdown must still happen later in `main.ts`
 
 ## Shared command rule
 
 `apps/cli` should not reimplement canvas logic.
 
 Shared behavior belongs in:
-- `@vibecanvas/canvas-cmds`
+- `packages/canvas-cmds`
 
-`apps/cli/src/plugins/cli/cmd.canvas.ts` and `apps/cli/src/plugins/cli/canvas/*` should only own:
+CLI wrappers should mostly own:
 - argv parsing
 - help text
 - stdout/stderr rendering
-- process exit behavior
-- local command context creation
+- file/stdin payload loading
+- client vs local dispatch
 
-If changing selection / query / move semantics:
-- prefer updating `packages/canvas-cmds`
-- keep `apps/cli` wrappers thin
+If changing semantics for:
+- selection
+- query
+- move
+- patch
+- delete
+- reorder
+- group
+- ungroup
+
+prefer updating `packages/canvas-cmds`.
+Keep `apps/cli` thin.
+
+## Safe-client vs local execution
+
+Canvas commands can run two ways.
+
+### Local path
+Used when `--db` is passed.
+
+Wrapper calls shared implementation directly with local:
+- db service
+- automerge service
+
+This path is deterministic.
+Tests mostly use this.
+
+### Safe-client path
+Used when `--db` is omitted and a local Vibecanvas server is discovered.
+
+Wrapper:
+- probes local server health
+- builds ORPC safe client
+- calls server command API
+
+Rule:
+- wrapper behavior should match local path
+- output contract must stay stable
 
 ## Command output rule
 
 For canvas CLI commands:
 - human output goes to `stdout`
-- machine-readable success goes to `stdout` as json when `--json`
+- machine-readable success goes to `stdout` as JSON with `--json`
 - errors go to `stderr`
-- non-zero exit for failures
+- failures set non-zero `process.exitCode`
 
-Keep this stable. Tests depend on it.
+Current state:
+- `list` has stable text + JSON output
+- `query` has stable text + JSON output
+- mutation commands mainly use JSON contract in tests
+
+Keep this stable.
+Tests depend on exact shape.
+
+## Persistence rule for mutating canvas commands
+
+Mutating commands in `packages/canvas-cmds` must flush Automerge before returning success.
+
+Current pattern after `handle.change(...)`:
+
+```ts
+await portal.automergeService.repo.flush([handle.documentId])
+```
+
+Why:
+- CLI tests read persisted doc state in a fresh subprocess after command exits
+- without flush, command may report success before sqlite-backed Automerge storage is durable
+
+If adding a new mutating command:
+1. mutate with `handle.change(...)`
+2. flush
+3. return success
 
 ## DB path rule
 
 Important boundary:
 - `dbPath` is CLI/bootstrap concern
-- `dbPath` should not leak into `@vibecanvas/canvas-cmds`
+- `dbPath` should not leak into `packages/canvas-cmds`
 
 That means:
-- top-level CLI can still print resolved db path where useful
-- shared command package should not depend on db path existing in its context
+- CLI may print resolved db path where useful
+- shared command package should stay unaware of CLI storage resolution details
 
-## Testing strategy for CLI commands
+## Deep import policy
 
-The reference spirit comes from legacy server CLI tests, but the active test home is now:
+Prefer deep imports for extracted packages.
+
+Examples:
+- `@vibecanvas/db/IDbService`
+- `@vibecanvas/db/DbServiceBunSqlite`
+- `@vibecanvas/canvas-cmds/cmds/tx.cmd.move`
+
+Avoid introducing root barrels when package is meant to stay deep-import-only.
+
+## Testing strategy
+
+Active CLI test home:
 
 ```text
 apps/cli/tests/cli/
@@ -364,60 +415,78 @@ list/cmd.list.test.ts
 query/cmd.query.test.ts
 query/cmd.query.filters.test.ts
 move/cmd.move.test.ts
+patch/cmd.patch.test.ts
+delete/cmd.delete.test.ts
+group/cmd.group.test.ts
+ungroup/cmd.ungroup.test.ts
+reorder/cmd.reorder.test.ts
 ```
 
 ### `harness.ts`
-Creates an isolated temp sandbox per test context.
+Creates isolated temp sandboxes.
 
 It provides helpers to:
 - create temp config/data/cache dirs
-- initialize a fresh sqlite database
-- run the real CLI entrypoint
+- initialize fresh sqlite db
+- run real CLI entrypoint
 - seed canvases and docs
 - read persisted automerge docs back out
 
 ### `harness.worker.ts`
-Does low-level sqlite/automerge fixture work in a subprocess.
+Does low-level sqlite/automerge fixture work in subprocesses.
 
 Use this when tests need to:
 - seed canvas rows
-- seed persisted automerge docs
-- inspect persisted docs after a command runs
+- seed persisted docs
+- inspect persisted docs after command runs
 
-### What CLI tests should assert
+### What to assert
 
-For every command, prefer end-to-end assertions on:
+Prefer end-to-end assertions on:
 - exit code
 - stdout
 - stderr
-- json payload stability
+- JSON payload stability
 - persisted sqlite/automerge side effects
 
-This is better than unit-testing wrappers only.
+This catches real regressions.
+It already caught shutdown / flush problems.
 
 ## When adding a new canvas command
 
-Example: `patch`, `group`, `delete`, etc.
-
 Follow this order:
 
-1. add shared execution to `packages/canvas-cmds`
-2. add/extend local adapter needs in `src/plugins/cli/canvas.local-state.ts` only if necessary
-3. add `src/plugins/cli/canvas/cmd.<name>.ts`
-4. route it from `src/plugins/cli/cmd.canvas.ts`
-5. add end-to-end tests in `apps/cli/tests/cli/<name>/`
-6. keep help text and error shape stable
+1. add shared execution in `packages/canvas-cmds`
+2. add typed input builder in `fn.canvas-subcommand-inputs.ts` if needed
+3. add `cmd.<name>.canvas.ts`
+4. route it from `cmd.canvas.ts`
+5. add subprocess tests in `apps/cli/tests/cli/<name>/`
+6. make text output and JSON contract explicit
+7. flush Automerge on mutation before success return
 
-## Keep these boundaries clean
+## Practical rules
+
+1. If it manages a resource, it is probably a service.
+2. If it coordinates behavior, it is probably a plugin.
+3. Plugins may depend on services.
+4. Services should not depend on plugins.
+5. `main.ts` owns final shutdown and final exit.
+6. Canvas semantics belong in `packages/canvas-cmds`.
+7. Mutating commands must flush before returning.
+8. Keep package boundaries explicit with deep imports.
+
+## Good vs bad
 
 ### Good
-- `main.ts` decides command path
-- `plugins/cli/cmd.canvas.ts` + `plugins/cli/canvas/*` parse args and print
-- `canvas-cmds` executes shared logic
-- tests spawn the real CLI entrypoint
+- `main.ts` owns final shutdown and process exit
+- `CliPlugin` dispatches commands from runtime
+- `cmds/*` parse args and print
+- `canvas-cmds` executes shared semantics
+- subprocess tests verify real persisted behavior
 
 ### Bad
-- duplicating query/move logic in `apps/cli`
-- leaking dbPath into shared command context
-- booting full runtime just to run local canvas CLI commands
-- testing only helper functions and skipping subprocess assertions
+- calling `process.exit()` deep inside command wrappers
+- duplicating canvas semantics in `apps/cli`
+- skipping `repo.flush()` in mutating shared commands
+- leaking db bootstrap details into shared command package
+- testing helpers only and skipping subprocess assertions

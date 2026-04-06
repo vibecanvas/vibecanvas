@@ -131,6 +131,7 @@ export async function txExecuteCanvasReorder(portal: TPortal, input: TCanvasReor
         if (element) element.zIndex = entry.zIndex;
       }
     });
+    await portal.automergeService.repo.flush([handle.documentId]);
 
     return {
       ok: true,

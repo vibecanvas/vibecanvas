@@ -66,23 +66,25 @@ function createCliPlugin(): IPlugin<{ db: IDbService, automerge: IAutomergeServi
       ctx.hooks.ready.tapPromise(async () => {
         if (ctx.config.versionRequested) {
           console.log(ctx.config.version);
-          process.exit(0);
+          process.exitCode = 0;
+          return;
         }
 
         if (ctx.config.command === 'canvas') {
           await runCanvasCommand({ db: ctx.services.require('db'), automerge: ctx.services.require('automerge') }, ctx.config);
-          process.exit(0);
+          return;
         }
 
         if (ctx.config.helpRequested) {
           printHelp();
-          process.exit(0);
+          process.exitCode = 0;
+          return;
         }
 
         if (ctx.config.command === 'unknown') {
           console.error(`Unknown command: ${ctx.config.subcommand}`);
           printHelp();
-          process.exit(1);
+          process.exitCode = 1;
         }
       });
     },

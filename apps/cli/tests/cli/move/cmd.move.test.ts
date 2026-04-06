@@ -177,9 +177,13 @@ describe('canvas CLI move', () => {
       ok: false,
       command: 'canvas.move',
       code: 'CANVAS_SELECTOR_AMBIGUOUS',
-      message: "Canvas name query 'design board' matched 2 canvases. Pass --canvas <id> instead.",
+      message: "Canvas name query 'design board' matched 2 canvases. Pass canvasId instead.",
       canvasId: null,
       canvasNameQuery: 'design board',
+      matches: [
+        { name: 'design board alpha' },
+        { name: 'design board beta' },
+      ],
     });
 
     const invalidAbsolute = await context.runCanvasCli(['move', '--canvas', seeded.canvas.id, '--id', rectA.id, '--id', rectB.id, '--absolute', '--x', '10', '--y', '20', '--json']);

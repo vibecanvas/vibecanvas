@@ -44,17 +44,24 @@ Notes:
 }
 
 export async function runCanvasMoveCommand(services: { db: IDbService, automerge: IAutomergeService, safeClient: TSafeCanvasCmdClient | null }, config: ICliConfig) {
-  const input = buildCanvasMoveInput(config.subcommandOptions)
-  const wantsJson = config.subcommandOptions?.json === true
+  const wantsJson = config.subcommandOptions?.json === true;
 
-  if (services.safeClient) {
-    const [error, result] = await services.safeClient.move(input);
-    if (error) {
-      fnPrintCommandError(error, wantsJson)
+  try {
+    const input = buildCanvasMoveInput(config.subcommandOptions);
+
+    if (services.safeClient) {
+      const [error, result] = await services.safeClient.move(input);
+      if (error) {
+        fnPrintCommandError(error, wantsJson);
+        return;
+      }
+      fnPrintCommandResult(result, wantsJson);
+      return;
     }
-    fnPrintCommandResult(result, wantsJson)
-  }
 
-  const result = await txExecuteCanvasMove({ dbService: services.db, automergeService: services.automerge }, input);
-  fnPrintCommandResult(result, wantsJson)
+    const result = await txExecuteCanvasMove({ dbService: services.db, automergeService: services.automerge }, input);
+    fnPrintCommandResult(result, wantsJson);
+  } catch (error) {
+    fnPrintCommandError(error, wantsJson);
+  }
 }

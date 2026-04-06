@@ -3,7 +3,7 @@ import type { ICliConfig } from '@vibecanvas/cli/config';
 import type { IDbService } from '@vibecanvas/db/IDbService';
 import type { TSafeCanvasCmdClient } from '../core/fn.build-rpc-link';
 import { fnPrintCommandError, fnPrintCommandResult } from '../core/fn.print-command-result';
-import { fxExecuteCanvasList } from '@vibecanvas/canvas-cmds/cmds/fx.cmd.list';
+import { fxExecuteCanvasList, type TCanvasListSuccess } from '@vibecanvas/canvas-cmds/cmds/fx.cmd.list';
 
 export function printCanvasListHelp(): void {
   console.log(`Usage: vibecanvas canvas list [options]
@@ -28,17 +28,39 @@ Notes:
 `)
 }
 
-export async function runCanvasListCommand(services: { db: IDbService, automerge: IAutomergeService, safeClient: TSafeCanvasCmdClient | null }, config: ICliConfig) {
-  const wantsJson = config.subcommandOptions?.json === true
-
-  if (services.safeClient) {
-    const [error, result] = await services.safeClient.list();
-    if (error) {
-      fnPrintCommandError(error, wantsJson)
-    }
-    fnPrintCommandResult(result, wantsJson, { dbPath: config.dbPath })
+function printCanvasListText(result: TCanvasListSuccess, dbPath: string): void {
+  process.stdout.write(`Canvas inventory: ${result.count} canvases in ${dbPath}\n`);
+  for (const canvas of result.canvases) {
+    process.stdout.write(`- id=${canvas.id} name=${JSON.stringify(canvas.name)} createdAt=${canvas.createdAt} automergeUrl=${canvas.automergeUrl}\n`);
   }
+  process.exitCode = 0;
+}
 
-  const result = await fxExecuteCanvasList({ dbService: services.db });
-  fnPrintCommandResult(result, wantsJson, { dbPath: config.dbPath })
+export async function runCanvasListCommand(services: { db: IDbService, automerge: IAutomergeService, safeClient: TSafeCanvasCmdClient | null }, config: ICliConfig) {
+  const wantsJson = config.subcommandOptions?.json === true;
+
+  try {
+    if (services.safeClient) {
+      const [error, result] = await services.safeClient.list();
+      if (error) {
+        fnPrintCommandError(error, wantsJson);
+        return;
+      }
+      if (wantsJson) {
+        fnPrintCommandResult(result, true, { dbPath: config.dbPath });
+        return;
+      }
+      printCanvasListText(result as TCanvasListSuccess, config.dbPath);
+      return;
+    }
+
+    const result = await fxExecuteCanvasList({ dbService: services.db });
+    if (wantsJson) {
+      fnPrintCommandResult(result, true, { dbPath: config.dbPath });
+      return;
+    }
+    printCanvasListText(result, config.dbPath);
+  } catch (error) {
+    fnPrintCommandError(error, wantsJson);
+  }
 }

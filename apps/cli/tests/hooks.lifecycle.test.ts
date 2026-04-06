@@ -12,7 +12,7 @@ describe('cli runtime hooks', () => {
     hooks.registerCommands.tap(() => {
       calls.push('registerCommands');
     });
-    hooks.ready.tap(() => {
+    hooks.ready.tapPromise(async () => {
       calls.push('ready');
     });
 

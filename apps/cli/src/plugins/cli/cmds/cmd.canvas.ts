@@ -1,9 +1,11 @@
 import type { IAutomergeService } from '@vibecanvas/automerge-service/IAutomergeService';
 import type { ICliConfig } from '@vibecanvas/cli/config';
 import type { IDbService } from '@vibecanvas/db/IDbService';
+import { runCanvasDeleteCommand, printCanvasDeleteHelp } from './cmd.delete.canvas';
 import { runCanvasGroupCommand, printCanvasGroupHelp } from './cmd.group.canvas';
 import { runCanvasListCommand, printCanvasListHelp } from './cmd.list.canvas';
 import { runCanvasMoveCommand, printCanvasMoveHelp } from './cmd.move.canvas';
+import { runCanvasPatchCommand } from './cmd.patch.canvas';
 import { runCanvasQueryCommand, printCanvasQueryHelp } from './cmd.query.canvas';
 import { runCanvasReorderCommand, printCanvasReorderHelp } from './cmd.reorder.canvas';
 import { runCanvasUngroupCommand, printCanvasUngroupHelp } from './cmd.ungroup.canvas';
@@ -109,6 +111,11 @@ export function printCanvasCommandHelp(subcommand?: string): void {
     return
   }
 
+  if (subcommand === 'delete') {
+    printCanvasDeleteHelp()
+    return
+  }
+
   if (subcommand === 'reorder') {
     printCanvasReorderHelp()
     return
@@ -125,7 +132,8 @@ export async function runCanvasCommand(services: { db: IDbService, automerge: IA
 
   if (!CANVAS_SUBCOMMAND_SET.has(config.subcommand)) {
     console.error(`Unknown canvas command: ${config.subcommand}`)
-    process.exit(1)
+    process.exitCode = 1
+    return
   }
 
   if (config.helpRequested) {
@@ -152,6 +160,11 @@ export async function runCanvasCommand(services: { db: IDbService, automerge: IA
     return
   }
 
+  if (config.subcommand === 'patch') {
+    await runCanvasPatchCommand({ ...services, safeClient }, { ...config })
+    return
+  }
+
   if (config.subcommand === 'group') {
     await runCanvasGroupCommand({ ...services, safeClient }, { ...config })
     return
@@ -162,11 +175,16 @@ export async function runCanvasCommand(services: { db: IDbService, automerge: IA
     return
   }
 
+  if (config.subcommand === 'delete') {
+    await runCanvasDeleteCommand({ ...services, safeClient }, { ...config })
+    return
+  }
+
   if (config.subcommand === 'reorder') {
     await runCanvasReorderCommand({ ...services, safeClient }, { ...config })
     return
   }
 
   console.error(`Canvas command '${config.subcommand}' is not implemented yet.`)
-  process.exit(1)
+  process.exitCode = 1
 }

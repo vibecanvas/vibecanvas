@@ -38,17 +38,24 @@ Notes:
 }
 
 export async function runCanvasReorderCommand(services: { db: IDbService, automerge: IAutomergeService, safeClient: TSafeCanvasCmdClient | null }, config: ICliConfig) {
-  const input = buildCanvasReorderInput(config.subcommandOptions)
-  const wantsJson = config.subcommandOptions?.json === true
+  const wantsJson = config.subcommandOptions?.json === true;
 
-  if (services.safeClient) {
-    const [error, result] = await services.safeClient.reorder(input);
-    if (error) {
-      fnPrintCommandError(error, wantsJson)
+  try {
+    const input = buildCanvasReorderInput(config.subcommandOptions);
+
+    if (services.safeClient) {
+      const [error, result] = await services.safeClient.reorder(input);
+      if (error) {
+        fnPrintCommandError(error, wantsJson);
+        return;
+      }
+      fnPrintCommandResult(result, wantsJson);
+      return;
     }
-    fnPrintCommandResult(result, wantsJson)
-  }
 
-  const result = await txExecuteCanvasReorder({ dbService: services.db, automergeService: services.automerge }, input);
-  fnPrintCommandResult(result, wantsJson)
+    const result = await txExecuteCanvasReorder({ dbService: services.db, automergeService: services.automerge }, input);
+    fnPrintCommandResult(result, wantsJson);
+  } catch (error) {
+    fnPrintCommandError(error, wantsJson);
+  }
 }

@@ -115,6 +115,7 @@ export async function txExecuteCanvasUngroup(portal: TPortal, input: TCanvasUngr
         delete nextDoc.groups[removedGroupId];
       }
     });
+    await portal.automergeService.repo.flush([handle.documentId]);
 
     return {
       ok: true,

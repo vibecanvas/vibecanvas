@@ -92,3 +92,8 @@ setupSignals(async () => {
 });
 
 await runtime.boot();
+
+if (config.command !== 'serve') {
+  await runtime.shutdown();
+  process.exit(process.exitCode ?? 0);
+}

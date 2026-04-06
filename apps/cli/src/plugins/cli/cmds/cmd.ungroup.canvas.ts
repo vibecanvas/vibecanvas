@@ -35,17 +35,24 @@ Notes:
 }
 
 export async function runCanvasUngroupCommand(services: { db: IDbService, automerge: IAutomergeService, safeClient: TSafeCanvasCmdClient | null }, config: ICliConfig) {
-  const input = buildCanvasUngroupInput(config.subcommandOptions)
-  const wantsJson = config.subcommandOptions?.json === true
+  const wantsJson = config.subcommandOptions?.json === true;
 
-  if (services.safeClient) {
-    const [error, result] = await services.safeClient.ungroup(input);
-    if (error) {
-      fnPrintCommandError(error, wantsJson)
+  try {
+    const input = buildCanvasUngroupInput(config.subcommandOptions);
+
+    if (services.safeClient) {
+      const [error, result] = await services.safeClient.ungroup(input);
+      if (error) {
+        fnPrintCommandError(error, wantsJson);
+        return;
+      }
+      fnPrintCommandResult(result, wantsJson);
+      return;
     }
-    fnPrintCommandResult(result, wantsJson)
-  }
 
-  const result = await txExecuteCanvasUngroup({ dbService: services.db, automergeService: services.automerge }, input);
-  fnPrintCommandResult(result, wantsJson)
+    const result = await txExecuteCanvasUngroup({ dbService: services.db, automergeService: services.automerge }, input);
+    fnPrintCommandResult(result, wantsJson);
+  } catch (error) {
+    fnPrintCommandError(error, wantsJson);
+  }
 }

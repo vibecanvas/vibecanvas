@@ -99,6 +99,7 @@ export async function txExecuteCanvasDelete(portal: TPortal, input: TCanvasDelet
       for (const elementId of plan.deletedElementIds) delete nextDoc.elements[elementId];
       for (const groupId of plan.deletedGroupIds) delete nextDoc.groups[groupId];
     });
+    await portal.automergeService.repo.flush([handle.documentId]);
 
     return {
       ok: true,

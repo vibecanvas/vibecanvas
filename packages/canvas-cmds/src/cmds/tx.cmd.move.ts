@@ -186,6 +186,7 @@ export async function txExecuteCanvasMove(portal: TPortal, input: TCanvasMoveInp
         element.updatedAt = now;
       }
     });
+    await portal.automergeService.repo.flush([handle.documentId]);
 
     return {
       ok: true,

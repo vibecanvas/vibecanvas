@@ -24,12 +24,20 @@ export type TPortal = {
 export async function fxExecuteCanvasList(portal: TPortal): Promise<TCanvasListSuccess> {
   try {
 
-    const canvases = portal.dbService.canvas.listAll().map(row => ({
-      id: row.id,
-      name: row.name,
-      createdAt: toIsoString(row.created_at),
-      automergeUrl: row.automerge_url,
-    } satisfies TCanvasInventoryEntry))
+    const canvases = portal.dbService.canvas.listAll()
+      .sort((left, right) => {
+        const leftCreatedAt = Number(left.created_at);
+        const rightCreatedAt = Number(right.created_at);
+        if (leftCreatedAt !== rightCreatedAt) return leftCreatedAt - rightCreatedAt;
+        if (left.name !== right.name) return left.name.localeCompare(right.name);
+        return left.id.localeCompare(right.id);
+      })
+      .map(row => ({
+        id: row.id,
+        name: row.name,
+        createdAt: toIsoString(row.created_at),
+        automergeUrl: row.automerge_url,
+      } satisfies TCanvasInventoryEntry))
 
     return {
       ok: true,
