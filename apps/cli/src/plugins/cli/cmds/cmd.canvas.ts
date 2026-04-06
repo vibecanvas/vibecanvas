@@ -134,7 +134,8 @@ export async function runCanvasCommand(services: { db: IDbService, automerge: IA
     return
   }
 
-  const serverHealth = await fxDiscoverLocalCanvasServer({ bun: Bun }, { config })
+  const shouldUseSafeClient = !config.rawArgv.includes('--db')
+  const serverHealth = shouldUseSafeClient ? await fxDiscoverLocalCanvasServer({ bun: Bun }, { config }) : null
   const safeClient = serverHealth ? fnBuildRpcLink(serverHealth) : null
 
   if (config.subcommand === 'list') {

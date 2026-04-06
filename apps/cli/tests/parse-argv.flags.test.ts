@@ -46,6 +46,22 @@ describe('parseCliArgv flag parsing', () => {
     });
   });
 
+  test('normalizes single and repeated multi-string options into arrays', () => {
+    const single = parseCliArgv(['bun', 'run', 'canvas', 'query', '--kind', 'element', '--type', 'rect', '--style', 'backgroundColor=#fff']);
+    expect(single.subcommandOptions).toMatchObject({
+      kinds: ['element'],
+      types: ['rect'],
+      styles: ['backgroundColor=#fff'],
+    });
+
+    const repeated = parseCliArgv(['bun', 'run', 'canvas', 'query', '--kind', 'element', '--kind', 'group', '--type', 'rect', '--type', 'text', '--style', 'backgroundColor=#fff', '--style', 'opacity=1']);
+    expect(repeated.subcommandOptions).toMatchObject({
+      kinds: ['element', 'group'],
+      types: ['rect', 'text'],
+      styles: ['backgroundColor=#fff', 'opacity=1'],
+    });
+  });
+
   test('parses query flags into subcommandOptions', () => {
     const parsed = parseCliArgv([
       'bun',
@@ -159,5 +175,9 @@ describe('parseCliArgv flag parsing', () => {
     expect(() => parseCliArgv(['bun', 'run', 'serve', '--port', '0'])).toThrow('Invalid port: 0');
     expect(() => parseCliArgv(['bun', 'run', 'serve', '--port', '70000'])).toThrow('Invalid port: 70000');
     expect(() => parseCliArgv(['bun', 'run', 'serve', '--port', 'abc'])).toThrow('Invalid port: abc');
+  });
+
+  test('rejects option tokens as --db values', () => {
+    expect(() => parseCliArgv(['bun', 'run', 'canvas', 'list', '--db', '--json'])).toThrow("--db requires a path value. Received option token '--json' instead.");
   });
 });

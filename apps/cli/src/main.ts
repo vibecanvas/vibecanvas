@@ -6,7 +6,7 @@ import { buildCliConfig } from './build-config';
 import { resolveCanvasCliBootstrap } from './plugins/cli/bootstrap';
 import type { ICliConfig } from './config';
 import { bootCliRuntime, createCliHooks, shutdownCliRuntime } from './hooks';
-import { parseCliArgv } from './parse-argv';
+import { CliArgvError, parseCliArgv } from './parse-argv';
 import { createAutomergePlugin } from './plugins/automerge/AutomergePlugin';
 import { createCliPlugin, printHelp } from './plugins/cli/CliPlugin';
 import { printCanvasCommandHelp } from './plugins/cli/cmds/cmd.canvas';
@@ -22,8 +22,31 @@ function isStoppableService(service: IService): service is IService & IStoppable
 
 
 
-const parsedArgv = parseCliArgv();
-const config = buildCliConfig(parsedArgv);
+const rawArgv = Bun.argv
+const wantsJson = rawArgv.includes('--json')
+
+function exitArgvError(error: CliArgvError): never {
+  if (wantsJson) {
+    process.stderr.write(`${JSON.stringify({ ok: false, command: 'canvas', code: error.code, message: error.message })}\n`)
+    process.exit(1)
+  }
+
+  console.error(error.message)
+  process.exit(1)
+}
+
+let parsedArgv
+let config
+
+try {
+  parsedArgv = parseCliArgv(rawArgv);
+  config = buildCliConfig(parsedArgv);
+} catch (error) {
+  if (error instanceof CliArgvError) {
+    exitArgvError(error)
+  }
+  throw error
+}
 
 if (config.versionRequested) {
   console.log(config.version)
@@ -38,6 +61,11 @@ if (config.helpRequested) {
 
   printHelp()
   process.exit(0)
+}
+
+if (config.command === 'canvas') {
+  process.env.VIBECANVAS_SILENT_DB_MIGRATIONS = '1'
+  process.env.VIBECANVAS_SILENT_AUTOMERGE_LOGS = '1'
 }
 
 const { services } = setupServices(config);

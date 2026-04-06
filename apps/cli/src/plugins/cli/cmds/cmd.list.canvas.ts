@@ -27,9 +27,12 @@ Notes:
 `)
 }
 
-function printCommandResult(result: unknown, wantsJson: boolean): never {
+function printCommandResult(result: unknown, wantsJson: boolean, dbPath: string): never {
   if (wantsJson) {
-    process.stdout.write(`${JSON.stringify(result)}\n`)
+    const payload = typeof result === 'object' && result !== null && !('dbPath' in result)
+      ? { ...result, dbPath }
+      : result
+    process.stdout.write(`${JSON.stringify(payload)}\n`)
     process.exit(0)
   }
 
@@ -55,9 +58,9 @@ export async function runCanvasListCommand(services: { db: IDbService, automerge
     if (error) {
       printCommandError(error, wantsJson)
     }
-    printCommandResult(result, wantsJson)
+    printCommandResult(result, wantsJson, config.dbPath)
   }
 
   const result = await fxExecuteCanvasList({ dbService: services.db });
-  printCommandResult(result, wantsJson)
+  printCommandResult(result, wantsJson, config.dbPath)
 }

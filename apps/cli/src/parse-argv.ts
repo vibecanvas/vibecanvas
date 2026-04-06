@@ -38,6 +38,16 @@ type TCanvasSubcommandOptions = {
   withEffectsIfAvailable?: boolean;
 };
 
+class CliArgvError extends Error {
+  code: string;
+
+  constructor(code: string, message: string) {
+    super(message);
+    this.name = 'CliArgvError';
+    this.code = code;
+  }
+}
+
 type TCliParsedArgv = {
   rawArgv: string[];
   argv: string[];
@@ -68,6 +78,25 @@ function parsePort(value: string | undefined): number | undefined {
     throw new Error(`Invalid port: ${value}`);
   }
   return port;
+}
+
+function validateOptionValue(flag: string, value: string | undefined): string | undefined {
+  if (value === undefined) return undefined;
+  if (value.trim().length === 0) {
+    throw new CliArgvError('CLI_FLAG_EMPTY_VALUE', `${flag} requires a non-empty value.`);
+  }
+  if (value.startsWith('-')) {
+    throw new CliArgvError('DB_FLAG_MISSING_VALUE', `${flag} requires a path value. Received option token '${value}' instead.`);
+  }
+  return value;
+}
+
+function normalizeMultiStringOption(value: unknown): string[] {
+  if (value === undefined) return [];
+  if (Array.isArray(value)) {
+    return value.filter((entry): entry is string => typeof entry === 'string');
+  }
+  return typeof value === 'string' ? [value] : [];
 }
 
 function parseCliArgv(rawArgv: readonly string[] = Bun.argv): TCliParsedArgv {
@@ -127,10 +156,10 @@ function parseCliArgv(rawArgv: readonly string[] = Bun.argv): TCliParsedArgv {
       ? commandToken
       : undefined;
 
-  const ids = (Array.isArray(values.id) ? values.id : values.id === undefined ? [] : [values.id]).flatMap((value) => typeof value === 'string' ? value.split(',') : []);
-  const kinds = Array.isArray(values.kind) ? values.kind.filter((value): value is string => typeof value === 'string') : values.kind === undefined ? [] : [values.kind].filter((value): value is string => typeof value === 'string');
-  const types = Array.isArray(values.type) ? values.type.filter((value): value is string => typeof value === 'string') : values.type === undefined ? [] : [values.type].filter((value): value is string => typeof value === 'string');
-  const styles = Array.isArray(values.style) ? values.style.filter((value): value is string => typeof value === 'string') : values.style === undefined ? [] : [values.style].filter((value): value is string => typeof value === 'string');
+  const ids = normalizeMultiStringOption(values.id).flatMap((value) => value.split(','));
+  const kinds = normalizeMultiStringOption(values.kind);
+  const types = normalizeMultiStringOption(values.type);
+  const styles = normalizeMultiStringOption(values.style);
 
   return {
     rawArgv: [...rawArgv],
@@ -138,7 +167,7 @@ function parseCliArgv(rawArgv: readonly string[] = Bun.argv): TCliParsedArgv {
     command,
     subcommand,
     port: parsePort(typeof values.port === 'string' ? values.port : /^\d+$/.test(commandToken ?? '') ? commandToken : undefined),
-    dbPath: typeof values.db === 'string' ? values.db : undefined,
+    dbPath: validateOptionValue('--db', typeof values.db === 'string' ? values.db : undefined),
     helpRequested: values.help === true,
     versionRequested: values.version === true,
     upgradeTarget: typeof values.upgrade === 'string' ? values.upgrade : undefined,
@@ -173,5 +202,5 @@ function parseCliArgv(rawArgv: readonly string[] = Bun.argv): TCliParsedArgv {
   };
 }
 
-export { parseCliArgv };
+export { CliArgvError, parseCliArgv };
 export type { TCliCommand, TCliParsedArgv, TCanvasSubcommandOptions };

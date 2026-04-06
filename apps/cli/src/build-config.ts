@@ -1,5 +1,6 @@
 import { txConfigPath } from '@vibecanvas/shared-functions/vibecanvas-config/tx.config-path';
 import { existsSync, mkdirSync } from 'fs';
+import { dirname } from 'path';
 import type { ICliConfig } from './config';
 import type { TCliParsedArgv } from './parse-argv';
 
@@ -17,6 +18,9 @@ function buildCliConfig(parsed: TCliParsedArgv): ICliConfig {
     process.exit(1);
   }
 
+  const dbPath = parsed.dbPath ?? resolved.databasePath;
+  mkdirSync(dirname(dbPath), { recursive: true });
+
   return {
     cwd: process.cwd(),
     dev,
@@ -28,7 +32,7 @@ function buildCliConfig(parsed: TCliParsedArgv): ICliConfig {
     argv: parsed.argv,
     port: parsed.port ?? getDefaultPort(compiled),
     dataPath: resolved.paths.dataDir,
-    dbPath: parsed.dbPath ?? resolved.databasePath,
+    dbPath,
     configPath: resolved.configDir,
     cachePath: resolved.paths.cacheDir,
     helpRequested: parsed.helpRequested,
