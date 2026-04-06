@@ -7,6 +7,9 @@
     ".": "./src/IPtyService.ts",
     "./*": "./src/*.ts"
   },
+  "scripts": {
+    "test": "bun test"
+  },
   "dependencies": {
     "@vibecanvas/runtime": "workspace:*",
     "bun-pty": "^0.4.8"
