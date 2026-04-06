@@ -1,5 +1,5 @@
 import Konva from "konva";
-import type { TElement, TGroup } from "@vibecanvas/shell/automerge/types/canvas-doc";
+import type { TElement, TGroup } from "@vibecanvas/automerge-service/types/canvas-doc";
 import type { IPlugin, IPluginContext } from "../shared/interface";
 
 type TMountedGroups = Map<string, Konva.Group>;
