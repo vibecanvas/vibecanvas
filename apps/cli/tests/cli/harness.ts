@@ -129,7 +129,7 @@ export async function createCliTestContext(): Promise<TCliTestContext> {
     cmd: [
       'bun',
       '-e',
-      `import { createSqliteDb } from './packages/db/src/DbServiceBunSqlite.ts'; const db = createSqliteDb({ databasePath: process.env.VIBECANVAS_DB, dataDir: process.env.VIBECANVAS_DATA_DIR, cacheDir: process.env.VIBECANVAS_CACHE_DIR, silentMigrations: false }); db.stop();`,
+      `import { createSqliteDb } from './packages/db/src/DbServiceBunSqlite/index.ts'; const db = createSqliteDb({ databasePath: process.env.VIBECANVAS_DB, dataDir: process.env.VIBECANVAS_DATA_DIR, cacheDir: process.env.VIBECANVAS_CACHE_DIR, silentMigrations: false }); db.stop();`,
     ],
     cwd: REPO_ROOT,
     env: { ...process.env, VIBECANVAS_DB: dbPath, VIBECANVAS_DATA_DIR: dataDir, VIBECANVAS_CACHE_DIR: cacheDir, VIBECANVAS_CONFIG: configDir },
