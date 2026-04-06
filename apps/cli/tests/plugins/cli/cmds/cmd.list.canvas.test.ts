@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, test } from 'bun:test';
-import { createCliTestContext, expectExitCode, expectNoStderr, parseJsonStdout, type TCliTestContext } from '../harness';
+import { createCliTestContext, expectExitCode, expectNoStderr, parseJsonStdout, type TCliTestContext } from '../../../cli/harness';
 
 type TCanvasListEntry = {
   id: string;

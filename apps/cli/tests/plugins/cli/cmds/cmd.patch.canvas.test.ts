@@ -1,6 +1,6 @@
 import { writeFile } from 'node:fs/promises';
 import { afterEach, describe, expect, test } from 'bun:test';
-import { createCliTestContext, createGroup, createRectElement, createTextElement, expectExitCode, expectNoStderr, parseJsonStdout, type TCliTestContext } from '../harness';
+import { createCliTestContext, createGroup, createRectElement, createTextElement, expectExitCode, expectNoStderr, parseJsonStdout, type TCliTestContext } from '../../../cli/harness';
 
 type TPatchJson = {
   ok: true;
