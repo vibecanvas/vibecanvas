@@ -5,7 +5,7 @@
  * These represent the source of truth from the server.
  */
 
-import type * as schema from "@vibecanvas/shell/database/schema";
+import type * as schema from "@vibecanvas/db/schema";
 
 // Canvas ID type used throughout the app
 export type TCanvasId = string;
