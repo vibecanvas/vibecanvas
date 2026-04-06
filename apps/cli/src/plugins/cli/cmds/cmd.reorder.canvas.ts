@@ -2,6 +2,7 @@ import type { IAutomergeService } from '@vibecanvas/automerge-service/IAutomerge
 import type { ICliConfig } from '@vibecanvas/cli/config';
 import type { IDbService } from '@vibecanvas/db/IDbService';
 import type { TSafeCanvasCmdClient } from '../core/fn.build-rpc-link';
+import { fnPrintCommandError, fnPrintCommandResult } from '../core/fn.print-command-result';
 import { txExecuteCanvasReorder } from '@vibecanvas/canvas-cmds/cmds/tx.cmd.reorder';
 import { buildCanvasReorderInput } from './fn.canvas-subcommand-inputs';
 
@@ -36,26 +37,6 @@ Notes:
 `)
 }
 
-function printCommandResult(result: unknown, wantsJson: boolean): never {
-  if (wantsJson) {
-    process.stdout.write(`${JSON.stringify(result)}\n`)
-    process.exit(0)
-  }
-
-  console.log(result)
-  process.exit(0)
-}
-
-function printCommandError(error: unknown, wantsJson: boolean): never {
-  if (wantsJson && typeof error !== 'string') {
-    process.stderr.write(`${JSON.stringify(error)}\n`)
-    process.exit(1)
-  }
-
-  console.error(error)
-  process.exit(1)
-}
-
 export async function runCanvasReorderCommand(services: { db: IDbService, automerge: IAutomergeService, safeClient: TSafeCanvasCmdClient | null }, config: ICliConfig) {
   const input = buildCanvasReorderInput(config.subcommandOptions)
   const wantsJson = config.subcommandOptions?.json === true
@@ -63,11 +44,11 @@ export async function runCanvasReorderCommand(services: { db: IDbService, autome
   if (services.safeClient) {
     const [error, result] = await services.safeClient.reorder(input);
     if (error) {
-      printCommandError(error, wantsJson)
+      fnPrintCommandError(error, wantsJson)
     }
-    printCommandResult(result, wantsJson)
+    fnPrintCommandResult(result, wantsJson)
   }
 
   const result = await txExecuteCanvasReorder({ dbService: services.db, automergeService: services.automerge }, input);
-  printCommandResult(result, wantsJson)
+  fnPrintCommandResult(result, wantsJson)
 }

@@ -2,6 +2,7 @@ import type { IAutomergeService } from '@vibecanvas/automerge-service/IAutomerge
 import type { ICliConfig } from '@vibecanvas/cli/config';
 import type { IDbService } from '@vibecanvas/db/IDbService';
 import type { TSafeCanvasCmdClient } from '../core/fn.build-rpc-link';
+import { fnPrintCommandError, fnPrintCommandResult } from '../core/fn.print-command-result';
 import { fxExecuteCanvasList } from '@vibecanvas/canvas-cmds/cmds/fx.cmd.list';
 
 export function printCanvasListHelp(): void {
@@ -27,40 +28,17 @@ Notes:
 `)
 }
 
-function printCommandResult(result: unknown, wantsJson: boolean, dbPath: string): never {
-  if (wantsJson) {
-    const payload = typeof result === 'object' && result !== null && !('dbPath' in result)
-      ? { ...result, dbPath }
-      : result
-    process.stdout.write(`${JSON.stringify(payload)}\n`)
-    process.exit(0)
-  }
-
-  console.log(result)
-  process.exit(0)
-}
-
-function printCommandError(error: unknown, wantsJson: boolean): never {
-  if (wantsJson && typeof error !== 'string') {
-    process.stderr.write(`${JSON.stringify(error)}\n`)
-    process.exit(1)
-  }
-
-  console.error(error)
-  process.exit(1)
-}
-
 export async function runCanvasListCommand(services: { db: IDbService, automerge: IAutomergeService, safeClient: TSafeCanvasCmdClient | null }, config: ICliConfig) {
   const wantsJson = config.subcommandOptions?.json === true
 
   if (services.safeClient) {
     const [error, result] = await services.safeClient.list();
     if (error) {
-      printCommandError(error, wantsJson)
+      fnPrintCommandError(error, wantsJson)
     }
-    printCommandResult(result, wantsJson, config.dbPath)
+    fnPrintCommandResult(result, wantsJson, { dbPath: config.dbPath })
   }
 
   const result = await fxExecuteCanvasList({ dbService: services.db });
-  printCommandResult(result, wantsJson, config.dbPath)
+  fnPrintCommandResult(result, wantsJson, { dbPath: config.dbPath })
 }

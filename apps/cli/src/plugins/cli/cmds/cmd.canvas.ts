@@ -9,8 +9,7 @@ import { runCanvasReorderCommand, printCanvasReorderHelp } from './cmd.reorder.c
 import { runCanvasUngroupCommand, printCanvasUngroupHelp } from './cmd.ungroup.canvas';
 import { fxDiscoverLocalCanvasServer } from '../core/fx.canvas.server-discovery';
 import { fnBuildRpcLink } from '../core/fn.build-rpc-link';
-
-const CANVAS_SUBCOMMANDS = new Set(['list', 'query', 'patch', 'move', 'group', 'ungroup', 'delete', 'reorder', 'render']);
+import { CANVAS_SUBCOMMAND_SET } from '../core/constants';
 
 export function printCanvasPatchHelp(): void {
   console.log(`Usage: vibecanvas canvas patch [options]
@@ -124,7 +123,7 @@ export async function runCanvasCommand(services: { db: IDbService, automerge: IA
     return
   }
 
-  if (!CANVAS_SUBCOMMANDS.has(config.subcommand)) {
+  if (!CANVAS_SUBCOMMAND_SET.has(config.subcommand)) {
     console.error(`Unknown canvas command: ${config.subcommand}`)
     process.exit(1)
   }

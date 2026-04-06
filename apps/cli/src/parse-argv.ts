@@ -1,8 +1,7 @@
 import { parseArgs } from 'util';
+import { CANVAS_SUBCOMMAND_SET } from './plugins/cli/core/constants';
 
 type TCliCommand = 'serve' | 'canvas' | 'upgrade' | 'unknown';
-
-const CANVAS_SUBCOMMAND_ALIASES = new Set(['list', 'query', 'patch', 'move', 'group', 'ungroup', 'delete', 'reorder', 'render']);
 
 type TCanvasSubcommandOptions = {
   json?: boolean;
@@ -67,7 +66,7 @@ function getDefaultCommand(commandToken: string | undefined): TCliCommand {
   if (commandToken === undefined || /^\d+$/.test(commandToken)) return 'serve';
   if (commandToken === 'serve') return 'serve';
   if (commandToken.startsWith('-')) return 'serve';
-  if (CANVAS_SUBCOMMAND_ALIASES.has(commandToken)) return 'canvas';
+  if (CANVAS_SUBCOMMAND_SET.has(commandToken)) return 'canvas';
   return 'unknown';
 }
 
