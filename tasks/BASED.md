@@ -90,6 +90,7 @@ Use the leaf files for execution history and local context.
 - [ ]: [B13](b/B13.md) - canvas CLI: top-level alias docs lie; `vibecanvas query ...` is rejected
 - [ ]: [B14](b/B14.md) - canvas CLI: `canvas group --help` falls back to global help
 - [ ]: [B15](b/B15.md) - canvas CLI: `--json` output is not real JSON
+- [ ]: [B16](b/B16.md) - ci: `@vibecanvas/canvas` tests load Konva node entry and require native `canvas`
 
 ## A dditions
 - [x]: [A1] - file: support common CodeMirror languages
