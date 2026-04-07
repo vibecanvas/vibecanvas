@@ -18,11 +18,6 @@ Required canvas selector (choose exactly one):
 Required target selector:
   --id <id>                 Exact element/group id to delete (repeatable)
 
-Effects mode:
-  --doc-only                Mutate the persisted doc only (default)
-  --with-effects-if-available
-                            Also attempt live cleanup when available
-
 Options:
   --db <path>               Optional explicit SQLite file override for the opened db
   --json                    Emit machine-readable success/error payloads

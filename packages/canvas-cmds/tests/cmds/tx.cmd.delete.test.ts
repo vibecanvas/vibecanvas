@@ -51,7 +51,7 @@ describe('delete canvas command', () => {
     dbService.stop();
   });
 
-  test('deletes one element by id in default doc-only mode and leaves siblings intact', async () => {
+  test('deletes one element by id and leaves siblings intact', async () => {
     const keep = createRectElement({ id: 'rect-keep', x: 10, y: 20 });
     const target = createRectElement({ id: 'rect-target', x: 40, y: 80 });
     const handle = automergeService.repo.create<TCanvasDoc>({ id: 'canvas-1', name: 'delete-element-canvas', elements: { [keep.id]: keep, [target.id]: target }, groups: {} });
@@ -63,13 +63,10 @@ describe('delete canvas command', () => {
     expect(result).toMatchObject({
       ok: true,
       command: 'canvas.delete',
-      effectsMode: 'doc-only',
       matchedCount: 1,
       matchedIds: ['rect-target'],
       deletedElementIds: ['rect-target'],
       deletedGroupIds: [],
-      skippedEffects: [],
-      warnings: [],
     });
 
     const doc = handle.doc()!;
@@ -97,13 +94,10 @@ describe('delete canvas command', () => {
     expect(result).toMatchObject({
       ok: true,
       command: 'canvas.delete',
-      effectsMode: 'doc-only',
       matchedCount: 1,
       matchedIds: ['group-root'],
       deletedElementIds: ['rect-direct', 'rect-nested'],
       deletedGroupIds: ['group-child', 'group-root'],
-      skippedEffects: [],
-      warnings: [],
     });
 
     const doc = handle.doc()!;
@@ -133,7 +127,6 @@ describe('delete canvas command', () => {
     expect(result).toMatchObject({
       ok: true,
       command: 'canvas.delete',
-      effectsMode: 'doc-only',
       matchedCount: 2,
       matchedIds: ['group-mixed', 'rect-loose'],
       deletedElementIds: ['rect-child', 'rect-loose'],
@@ -145,28 +138,6 @@ describe('delete canvas command', () => {
     expect(doc.elements[child.id]).toBeUndefined();
     expect(doc.elements[loose.id]).toBeUndefined();
     expect(doc.elements[keep.id]).toBeDefined();
-  });
-
-  test('with-effects-if-available records skipped cleanups and offline warning while still mutating the doc', async () => {
-    const target = createRectElement({ id: 'rect-effects' });
-    const handle = automergeService.repo.create<TCanvasDoc>({ id: 'canvas-4', name: 'delete-effects-canvas', elements: { [target.id]: target }, groups: {} });
-    await handle.whenReady();
-    const row = dbService.canvas.create({ id: 'canvas-4', automerge_url: handle.url, name: 'delete-effects-canvas' });
-
-    const result = await txExecuteCanvasDelete({ dbService, automergeService }, { canvasId: row.id, canvasNameQuery: null, ids: [target.id], effectsMode: 'with-effects-if-available' });
-
-    expect(result).toMatchObject({
-      ok: true,
-      command: 'canvas.delete',
-      effectsMode: 'with-effects-if-available',
-      deletedElementIds: ['rect-effects'],
-      deletedGroupIds: [],
-    });
-    expect(result.skippedEffects).toEqual([{ id: 'rect-effects', effect: 'live-plugin-cleanup', reason: 'cli-offline' }]);
-    expect(result.warnings).toEqual(["Effects mode 'with-effects-if-available' is a no-op in offline CLI; 1 plugin cleanup skipped."]);
-
-    const doc = handle.doc()!;
-    expect(doc.elements[target.id]).toBeUndefined();
   });
 
   test('fails with CANVAS_DELETE_TARGET_NOT_FOUND when an id does not exist and leaves the doc untouched', async () => {

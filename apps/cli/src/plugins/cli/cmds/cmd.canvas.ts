@@ -12,6 +12,7 @@ import { runCanvasUngroupCommand, printCanvasUngroupHelp } from './cmd.canvas.un
 import { fxDiscoverLocalCanvasServer } from '../core/fx.canvas.server-discovery';
 import { fnBuildRpcLink } from '../core/fn.build-rpc-link';
 import { CANVAS_SUBCOMMAND_SET } from '../core/constants';
+import { fnBuildUnknownCommandError, fnPrintCommandError } from '../core/fn.print-command-result';
 
 export function printCanvasPatchHelp(): void {
   console.log(`Usage: vibecanvas canvas patch [options]
@@ -30,10 +31,24 @@ Patch source (choose at least one):
   --patch-file <path>       Read patch payload from a file
   --patch-stdin             Read patch payload from stdin
 
+Patch envelope:
+  Element targets expect:   {"element":{...}}
+  Group targets expect:     {"group":{...}}
+
+Common examples:
+  vibecanvas patch --canvas 3d3f... --id rect-1 --patch '{"element":{"x":55}}' --json
+  vibecanvas patch --canvas 3d3f... --id rect-1 --patch '{"element":{"style":{"backgroundColor":"#ff0000"}}}' --json
+  vibecanvas patch --canvas 3d3f... --id group-1 --patch '{"group":{"locked":true}}' --json
+
 Options:
   --db <path>               Optional explicit SQLite file override for the opened db
   --json                    Emit machine-readable success/error payloads
   --help, -h                Show this help message
+
+Notes:
+  - top-level patch keys must be element or group.
+  - use element.data / element.style for nested element updates.
+  - errors include a short hint and one likely next step.
 `)
 }
 
@@ -48,7 +63,7 @@ Offline canvas commands:
   move ...                                     Move explicit element/group ids deterministically
   group ...                                    Group matching elements
   ungroup ...                                  Ungroup a group
-  delete (--canvas <id> | --canvas-name <query>) --id <id>... [--doc-only | --with-effects-if-available]
+  delete (--canvas <id> | --canvas-name <query>) --id <id>...
                                                 Permanently delete elements/groups; deleting a group cascades to descendants
   reorder (--canvas <id> | --canvas-name <query>) --id <id>... --action <front|back|forward|backward>
                                                 Reorder sibling zIndex for explicit element/group ids
@@ -63,6 +78,11 @@ Database path precedence:
   2. VIBECANVAS_DB
   3. VIBECANVAS_CONFIG
   4. default dev/prod storage resolution
+
+Next steps:
+  1. vibecanvas canvas list --json
+  2. vibecanvas query --canvas <canvas-id> --json
+  3. vibecanvas patch --canvas <canvas-id> --id <target-id> --patch '{"element":{"x":10}}' --json
 
 Notes:
   - --db is optional; when omitted the CLI falls back to VIBECANVAS_DB, VIBECANVAS_CONFIG, then default dev/prod storage resolution.
@@ -130,8 +150,9 @@ export async function runCanvasCommand(services: { db: IDbService, automerge: IA
   }
 
   if (!CANVAS_SUBCOMMAND_SET.has(config.subcommand)) {
-    console.error(`Unknown canvas command: ${config.subcommand}`)
-    printCanvasHelp()
+    const wantsJson = config.subcommandOptions?.json === true
+    fnPrintCommandError(fnBuildUnknownCommandError('canvas', config.subcommand), wantsJson)
+    if (!wantsJson) printCanvasHelp()
     process.exitCode = 1
     return
   }

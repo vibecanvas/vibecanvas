@@ -111,7 +111,7 @@ Use the leaf files for execution history and local context.
 - [x]: [A17](a/A17.md) - rect dbl click -> enter edit mode (inline text)
 - [x]: [A18] - lift cmds to be api to allow live changes via crdt
 - [x]: [A19](a/A19.md) - canvas CLI: `add` command
-- [ ]: [A20](a/A20.md) - canvas CLI: agent-friendly help, discovery, and forgiving errors
+- [x]: [A20](a/A20.md) - canvas CLI: agent-friendly help, discovery, and forgiving errors
 
 ## S ubtractions
 - [ ]: [S1](s/S1.md) - double bun run dev -> find new port
@@ -139,6 +139,7 @@ Use the leaf files for execution history and local context.
 - [ ]: [S25](s/S25.md) - db: remove filetrees table/schema; canvas-doc fully owns filetree state
 - [ ]: [S26](s/S26.md) - db: add filesystems db table for local/remote machine identity
 - [x]: [S27](s/S27.md) - canvas CLI: remove unimplemented `render` command and help traces
+- [ ]: [S28] - use runtime package in canvas, like cli does
 
 ## E xplorations
 - [ ]: [E1](e/E1.md) - Tauri Research
@@ -157,8 +158,12 @@ Use the leaf files for execution history and local context.
 - [ ]: [E17](e/E17.md) - automerge authority: optimistic local writes with server validation/reject path
 
 ## D irections
-- [ ]: [D1] - AI can edit the canvas directly
+- [~]: [D1] - AI can edit the canvas directly
 - [x]: [D2] - Server plugin system
+- [ ]: [D3] - Support pluggable filsystem architecture
+- [ ]: [D4] - Support sideloadable ui elements
+- [ ]: [D5] - AI Canvas Element, attachable to other elements
+- [ ]: [D6] - Gateway support
 
 ## Pragmatic Code Style
 

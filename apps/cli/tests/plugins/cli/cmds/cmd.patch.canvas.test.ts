@@ -151,6 +151,20 @@ describe('canvas CLI patch', () => {
       ok: false,
       command: 'canvas.patch',
       code: 'CANVAS_PATCH_PAYLOAD_INVALID',
+      hint: 'Patch payload must be valid JSON using {"element":{...}} or {"group":{...}}.',
+      next: 'Examples: {"element":{"x":10,"style":{"backgroundColor":"#ff0000"}}} or {"group":{"locked":true}}',
+    });
+
+    const intuitiveButWrong = await context.runCanvasCli(['patch', '--canvas', seeded.canvas.id, '--id', rect.id, '--patch', '{"locked":true}', '--json']);
+    expectExitCode(intuitiveButWrong, 1);
+    expect(intuitiveButWrong.stdout).toBe('');
+    expect(JSON.parse(intuitiveButWrong.stderr)).toMatchObject({
+      ok: false,
+      command: 'canvas.patch',
+      code: 'CANVAS_PATCH_PAYLOAD_INVALID',
+      message: "Unknown patch branch 'locked'.",
+      hint: 'Patch payload must use one top-level envelope: {"element":{...}} for elements or {"group":{...}} for groups.',
+      next: 'Try: vibecanvas patch --canvas <canvas-id> --id <target-id> --patch \'{"element":{"x":10}}\' --json',
     });
 
     const invalidField = await context.runCanvasCli(['patch', '--canvas', seeded.canvas.id, '--id', rect.id, '--patch', '{"element":{"data":{"text":"wrong"}}}', '--json']);
@@ -161,6 +175,8 @@ describe('canvas CLI patch', () => {
       command: 'canvas.patch',
       code: 'CANVAS_PATCH_PAYLOAD_INVALID',
       message: "Patch field 'element.data.text' is invalid for element 'rect-1' of type 'rect'.",
+      hint: 'Patch payload must be valid JSON using {"element":{...}} or {"group":{...}}.',
+      next: 'Examples: {"element":{"x":10,"style":{"backgroundColor":"#ff0000"}}} or {"group":{"locked":true}}',
     });
   });
 });

@@ -4,14 +4,11 @@ import { createCliTestContext, createGroup, createRectElement, expectExitCode, e
 type TDeleteJson = {
   ok: true;
   command: 'canvas.delete';
-  effectsMode: 'doc-only' | 'with-effects-if-available';
   canvas: { id: string; name: string };
   matchedCount: number;
   matchedIds: string[];
   deletedElementIds: string[];
   deletedGroupIds: string[];
-  skippedEffects: Array<{ id: string; effect: string; reason: string }>;
-  warnings: string[];
 };
 
 const contexts: TCliTestContext[] = [];
@@ -29,7 +26,7 @@ async function createContext(): Promise<TCliTestContext> {
 }
 
 describe('canvas CLI delete', () => {
-  test('deletes one element by id in default doc-only mode and leaves siblings intact', async () => {
+  test('deletes one element by id and leaves siblings intact', async () => {
     const context = await createContext();
     const keep = createRectElement({ id: 'rect-keep', x: 10, y: 20 });
     const target = createRectElement({ id: 'rect-target', x: 40, y: 80 });
@@ -42,13 +39,10 @@ describe('canvas CLI delete', () => {
     expect(parseJsonStdout<TDeleteJson>(result)).toMatchObject({
       ok: true,
       command: 'canvas.delete',
-      effectsMode: 'doc-only',
       matchedCount: 1,
       matchedIds: ['rect-target'],
       deletedElementIds: ['rect-target'],
       deletedGroupIds: [],
-      skippedEffects: [],
-      warnings: [],
     });
 
     const doc = await context.readCanvasDoc(seeded.automergeUrl);
@@ -76,13 +70,10 @@ describe('canvas CLI delete', () => {
     expect(parseJsonStdout<TDeleteJson>(result)).toMatchObject({
       ok: true,
       command: 'canvas.delete',
-      effectsMode: 'doc-only',
       matchedCount: 1,
       matchedIds: ['group-root'],
       deletedElementIds: ['rect-direct', 'rect-nested'],
       deletedGroupIds: ['group-child', 'group-root'],
-      skippedEffects: [],
-      warnings: [],
     });
 
     const doc = await context.readCanvasDoc(seeded.automergeUrl);
@@ -112,7 +103,6 @@ describe('canvas CLI delete', () => {
     expect(parseJsonStdout<TDeleteJson>(result)).toMatchObject({
       ok: true,
       command: 'canvas.delete',
-      effectsMode: 'doc-only',
       matchedCount: 2,
       matchedIds: ['group-mixed', 'rect-loose'],
       deletedElementIds: ['rect-child', 'rect-loose'],
@@ -124,34 +114,6 @@ describe('canvas CLI delete', () => {
     expect(doc.elements[child.id]).toBeUndefined();
     expect(doc.elements[loose.id]).toBeUndefined();
     expect(doc.elements[keep.id]).toBeDefined();
-  });
-
-  test('with-effects-if-available records skipped cleanups and offline warning while still mutating the doc', async () => {
-    const context = await createContext();
-    const target = createRectElement({ id: 'rect-effects' });
-    const seeded = await context.seedCanvasFixture({ name: 'delete-effects-canvas', elements: { [target.id]: target } });
-
-    const result = await context.runCanvasCli(['delete', '--canvas', seeded.canvas.id, '--id', target.id, '--with-effects-if-available', '--json']);
-
-    expectExitCode(result, 0);
-    expectNoStderr(result);
-    const payload = parseJsonStdout<TDeleteJson>(result);
-    expect(payload).toMatchObject({
-      ok: true,
-      command: 'canvas.delete',
-      effectsMode: 'with-effects-if-available',
-      deletedElementIds: ['rect-effects'],
-      deletedGroupIds: [],
-    });
-    expect(payload.skippedEffects).toEqual([
-      { id: 'rect-effects', effect: 'live-plugin-cleanup', reason: 'cli-offline' },
-    ]);
-    expect(payload.warnings).toEqual([
-      "Effects mode 'with-effects-if-available' is a no-op in offline CLI; 1 plugin cleanup skipped.",
-    ]);
-
-    const doc = await context.readCanvasDoc(seeded.automergeUrl);
-    expect(doc.elements[target.id]).toBeUndefined();
   });
 
   test('fails with CANVAS_DELETE_TARGET_NOT_FOUND when an id does not exist and leaves the doc untouched', async () => {
@@ -206,23 +168,4 @@ describe('canvas CLI delete', () => {
     });
   });
 
-  test('fails with CANVAS_DELETE_EFFECTS_MODE_CONFLICT when both --doc-only and --with-effects-if-available are passed', async () => {
-    const context = await createContext();
-    const rect = createRectElement({ id: 'rect-conflict' });
-    const seeded = await context.seedCanvasFixture({ name: 'delete-conflict-canvas', elements: { [rect.id]: rect } });
-
-    const result = await context.runCanvasCli(['delete', '--canvas', seeded.canvas.id, '--id', rect.id, '--doc-only', '--with-effects-if-available', '--json']);
-
-    expectExitCode(result, 1);
-    expect(result.stdout).toBe('');
-    expect(JSON.parse(result.stderr)).toMatchObject({
-      ok: false,
-      command: 'canvas.delete',
-      code: 'CANVAS_DELETE_EFFECTS_MODE_CONFLICT',
-      canvasId: seeded.canvas.id,
-    });
-
-    const doc = await context.readCanvasDoc(seeded.automergeUrl);
-    expect(doc.elements[rect.id]).toBeDefined();
-  });
 });

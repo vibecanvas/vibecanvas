@@ -5,6 +5,7 @@ import type { ICliConfig } from '../../config';
 import type { ICliHooks } from '../../hooks';
 import { runCanvasCommand } from './cmds/cmd.canvas';
 import { txCmdUpgrade } from './cmds/cmd.upgrade';
+import { fnBuildUnknownCommandError, fnPrintCommandError } from './core/fn.print-command-result';
 
 export function printHelp(): void {
   console.log(`vibecanvas - Run your agents in an infinite canvas
@@ -44,6 +45,12 @@ Canvas subcommands:
   delete    Permanently delete element/group ids (cascades groups to descendants)
   reorder   Change stacking order (front/back/forward/backward)
 
+Help ladder:
+  1. vibecanvas --help
+  2. vibecanvas canvas --help
+  3. vibecanvas <subcommand> --help
+  4. run the command; errors include a short hint and next step
+
 Subcommand help:
   Any subcommand accepts --help for command-specific usage.
   Canvas subcommands also work as top-level aliases, so both
@@ -81,8 +88,9 @@ function createCliPlugin(): IPlugin<{ db: IDbService, automerge: IAutomergeServi
         }
 
         if (ctx.config.command === 'unknown') {
-          console.error(`Unknown command: ${ctx.config.subcommand}`);
-          printHelp();
+          const wantsJson = ctx.config.subcommandOptions?.json === true;
+          fnPrintCommandError(fnBuildUnknownCommandError('root', ctx.config.subcommand), wantsJson);
+          if (!wantsJson) printHelp();
           process.exitCode = 1;
         }
       });

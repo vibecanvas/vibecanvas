@@ -10,6 +10,7 @@ import { CliArgvError, parseCliArgv } from './parse-argv';
 import { createAutomergePlugin } from './plugins/automerge/AutomergePlugin';
 import { createCliPlugin, printHelp } from './plugins/cli/CliPlugin';
 import { printCanvasCommandHelp, printCanvasHelp } from './plugins/cli/cmds/cmd.canvas';
+import { fnBuildUnknownCommandError, fnPrintCommandError } from './plugins/cli/core/fn.print-command-result';
 import { createOrpcPlugin } from './plugins/orpc/OrpcPlugin';
 import { createPtyPlugin } from './plugins/pty/PtyPlugin';
 import { createServerPlugin } from './plugins/server/ServerPlugin';
@@ -26,12 +27,7 @@ const rawArgv = Bun.argv
 const wantsJson = rawArgv.includes('--json')
 
 function exitArgvError(error: CliArgvError): never {
-  if (wantsJson) {
-    process.stderr.write(`${JSON.stringify({ ok: false, command: 'canvas', code: error.code, message: error.message })}\n`)
-    process.exit(1)
-  }
-
-  console.error(error.message)
+  fnPrintCommandError({ ok: false, command: null, code: error.code, message: error.message }, wantsJson)
   process.exit(1)
 }
 
@@ -65,19 +61,31 @@ if (config.helpRequested) {
       process.exit(0)
     }
 
-    console.error(`Unknown canvas command: ${config.subcommand}`)
-    printCanvasHelp()
+    fnPrintCommandError(fnBuildUnknownCommandError('canvas', config.subcommand), wantsJson)
+    if (!wantsJson) printCanvasHelp()
     process.exit(1)
   }
 
   if (config.command === 'unknown') {
-    console.error(`Unknown command: ${config.subcommand}`)
-    printHelp()
+    fnPrintCommandError(fnBuildUnknownCommandError('root', config.subcommand), wantsJson)
+    if (!wantsJson) printHelp()
     process.exit(1)
   }
 
   printHelp()
   process.exit(0)
+}
+
+if (config.command === 'unknown') {
+  fnPrintCommandError(fnBuildUnknownCommandError('root', config.subcommand), wantsJson)
+  if (!wantsJson) printHelp()
+  process.exit(1)
+}
+
+if (config.command === 'canvas' && config.subcommand && !['list', 'query', 'move', 'patch', 'group', 'ungroup', 'delete', 'reorder'].includes(config.subcommand)) {
+  fnPrintCommandError(fnBuildUnknownCommandError('canvas', config.subcommand), wantsJson)
+  if (!wantsJson) printCanvasHelp()
+  process.exit(1)
 }
 
 if (config.command === 'canvas') {

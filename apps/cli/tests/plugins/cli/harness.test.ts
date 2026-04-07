@@ -70,6 +70,7 @@ describe('canvas CLI test harness', () => {
     expect(result.stdout).toContain('query     Run structured readonly canvas queries');
     expect(result.stdout).toContain('move      Move explicit element/group ids deterministically');
     expect(result.stdout).toContain('patch     Patch explicit element/group ids with structured field updates');
+    expect(result.stdout).toContain('Help ladder:');
     expect(result.stdout).toContain('Any subcommand accepts --help for command-specific usage.');
     expect(result.stdout).toContain('vibecanvas query --help');
   });
@@ -108,6 +109,9 @@ describe('canvas CLI test harness', () => {
     expect(patchHelp.stdout).toContain('--patch <json>');
     expect(patchHelp.stdout).toContain('--patch-file <path>');
     expect(patchHelp.stdout).toContain('--patch-stdin');
+    expect(patchHelp.stdout).toContain('Patch envelope:');
+    expect(patchHelp.stdout).toContain('{"element":{...}}');
+    expect(patchHelp.stdout).toContain('{"group":{...}}');
   });
 
   test('shows canvas subcommand help even when the canvas prefix is omitted', async () => {
@@ -157,7 +161,36 @@ describe('canvas CLI test harness', () => {
     expectExitCode(result, 0);
     expectNoStderr(result);
     expect(result.stdout).toContain('query (--canvas <id> | --canvas-name <query>) [selectors]');
+    expect(result.stdout).toContain('Next steps:');
     expect(result.stdout).toContain("Use 'vibecanvas canvas <subcommand> --help' for command-specific arguments and examples.");
+  });
+
+  test('suggests nearest commands for unknown root and canvas subcommands', async () => {
+    const context = await createContext();
+
+    const rootUnknown = await context.runVibecanvasCli(['qurey', '--json']);
+    expectExitCode(rootUnknown, 1);
+    expect(rootUnknown.stdout).toBe('');
+    expect(JSON.parse(rootUnknown.stderr)).toMatchObject({
+      ok: false,
+      command: 'cli',
+      code: 'CLI_COMMAND_UNKNOWN',
+      hint: "Did you mean 'query'?",
+      next: 'Try: vibecanvas query --help',
+      suggestions: ['query'],
+    });
+
+    const canvasUnknown = await context.runVibecanvasCli(['canvas', 'gruop', '--help', '--json']);
+    expectExitCode(canvasUnknown, 1);
+    expect(canvasUnknown.stdout).toBe('');
+    expect(JSON.parse(canvasUnknown.stderr)).toMatchObject({
+      ok: false,
+      command: 'canvas',
+      code: 'CANVAS_SUBCOMMAND_UNKNOWN',
+      hint: "Did you mean 'group'?",
+      next: 'Try: vibecanvas group --help',
+      suggestions: ['group'],
+    });
   });
 
   test('runs the real canvas CLI path with explicit isolated --db wiring', async () => {

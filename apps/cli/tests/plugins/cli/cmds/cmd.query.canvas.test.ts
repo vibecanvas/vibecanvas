@@ -359,8 +359,41 @@ describe('canvas CLI query', () => {
       command: 'canvas.query',
       code: 'CANVAS_QUERY_SELECTOR_CONFLICT',
       message: 'Pass at most one selector input style: structured flags, --where, or --query.',
+      hint: 'Use exactly one selector style: structured flags, --where, or --query.',
+      next: 'Try: vibecanvas query --canvas <canvas-id> --id <target-id> --json',
       canvasId: seeded.canvas.id,
       canvasNameQuery: null,
     });
+  });
+
+  test('blind agent can reach query then patch from help and error hints alone', async () => {
+    const context = await createContext();
+    const rect = createRectElement({ id: 'rect-blind', x: 10, y: 20 });
+    const seeded = await context.seedCanvasFixture({ name: 'blind-agent-canvas', elements: { [rect.id]: rect } });
+
+    const rootHelp = await context.runVibecanvasCli(['--help']);
+    expectExitCode(rootHelp, 0);
+    expect(rootHelp.stdout).toContain('Help ladder:');
+    expect(rootHelp.stdout).toContain('vibecanvas query --help');
+
+    const patchHelp = await context.runVibecanvasCli(['patch', '--help']);
+    expectExitCode(patchHelp, 0);
+    expect(patchHelp.stdout).toContain('Patch envelope:');
+    expect(patchHelp.stdout).toContain('{"element":{...}}');
+
+    const wrongPatch = await context.runVibecanvasCli(['patch', '--canvas', seeded.canvas.id, '--id', rect.id, '--patch', '{"locked":true}', '--json', '--db', context.dbPath]);
+    expectExitCode(wrongPatch, 1);
+    expect(JSON.parse(wrongPatch.stderr)).toMatchObject({
+      code: 'CANVAS_PATCH_PAYLOAD_INVALID',
+      hint: 'Patch payload must use one top-level envelope: {"element":{...}} for elements or {"group":{...}} for groups.',
+    });
+
+    const query = await context.runVibecanvasCli(['query', '--canvas', seeded.canvas.id, '--id', rect.id, '--json', '--db', context.dbPath]);
+    expectExitCode(query, 0);
+    expect(parseJsonStdout<{ ok: boolean; command: string; count: number }>(query)).toMatchObject({ ok: true, command: 'canvas.query', count: 1 });
+
+    const patch = await context.runVibecanvasCli(['patch', '--canvas', seeded.canvas.id, '--id', rect.id, '--patch', '{"element":{"x":99}}', '--json', '--db', context.dbPath]);
+    expectExitCode(patch, 0);
+    expect(parseJsonStdout<{ ok: boolean; command: string; changedCount: number }>(patch)).toMatchObject({ ok: true, command: 'canvas.patch', changedCount: 1 });
   });
 });

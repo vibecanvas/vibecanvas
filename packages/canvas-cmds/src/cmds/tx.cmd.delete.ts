@@ -6,26 +6,20 @@ import { fxLoadCanvasHandleDoc } from '../core/fx.canvas';
 import { fnCollectGroupCascade } from '../core/fn.group';
 import type { TCanvasCmdErrorDetails } from '../types';
 
-export type TDeleteEffectsMode = 'doc-only' | 'with-effects-if-available';
-
 export type TCanvasDeleteInput = {
   canvasId?: string | null;
   canvasNameQuery?: string | null;
   ids?: string[];
-  effectsMode?: TDeleteEffectsMode;
 };
 
 export type TCanvasDeleteSuccess = {
   ok: true;
   command: 'canvas.delete';
-  effectsMode: TDeleteEffectsMode;
   canvas: TCanvasSummary;
   matchedCount: number;
   matchedIds: string[];
   deletedElementIds: string[];
   deletedGroupIds: string[];
-  skippedEffects: Array<{ id: string; effect: string; reason: string }>;
-  warnings: string[];
 };
 
 export type TPortal = {
@@ -37,10 +31,6 @@ function parseDeleteIds(input: TCanvasDeleteInput): string[] {
   const ids = fnSortIds([...new Set((input.ids ?? []).map((value) => value.trim()).filter(Boolean))]);
   if (ids.length > 0) return ids;
   throw { ok: false, command: 'canvas.delete', code: 'CANVAS_DELETE_ID_REQUIRED', message: 'Delete requires at least one id.', canvasId: input.canvasId ?? null, canvasNameQuery: input.canvasNameQuery ?? null } satisfies TCanvasCmdErrorDetails;
-}
-
-function resolveEffectsMode(input: TCanvasDeleteInput): TDeleteEffectsMode {
-  return input.effectsMode ?? 'doc-only';
 }
 
 function resolveDeletionPlan(doc: TCanvasDoc, ids: string[], canvasId: string, canvasNameQuery: string | null): { matchedIds: string[]; deletedElementIds: string[]; deletedGroupIds: string[] } {
@@ -79,21 +69,12 @@ function resolveDeletionPlan(doc: TCanvasDoc, ids: string[], canvasId: string, c
   };
 }
 
-function buildEffectsResult(args: { effectsMode: TDeleteEffectsMode; deletedElementIds: string[] }): Pick<TCanvasDeleteSuccess, 'skippedEffects' | 'warnings'> {
-  if (args.effectsMode === 'doc-only') return { skippedEffects: [], warnings: [] };
-  const skippedEffects = args.deletedElementIds.map((id) => ({ id, effect: 'live-plugin-cleanup', reason: 'cli-offline' }));
-  const warnings = skippedEffects.length > 0 ? [`Effects mode 'with-effects-if-available' is a no-op in offline CLI; ${skippedEffects.length} plugin cleanup skipped.`] : [];
-  return { skippedEffects, warnings };
-}
-
 export async function txExecuteCanvasDelete(portal: TPortal, input: TCanvasDeleteInput): Promise<TCanvasDeleteSuccess> {
   try {
     const ids = parseDeleteIds(input);
-    const effectsMode = resolveEffectsMode(input);
     const selectedCanvas = fnResolveCanvasSelection({ rows: portal.dbService.canvas.listAll(), selector: input, command: 'canvas.delete', actionLabel: 'Delete' });
     const { handle, doc } = await fxLoadCanvasHandleDoc(portal, selectedCanvas);
     const plan = resolveDeletionPlan(doc, ids, selectedCanvas.id, input.canvasNameQuery ?? null);
-    const effects = buildEffectsResult({ effectsMode, deletedElementIds: plan.deletedElementIds });
 
     handle.change((nextDoc) => {
       for (const elementId of plan.deletedElementIds) delete nextDoc.elements[elementId];
@@ -104,14 +85,11 @@ export async function txExecuteCanvasDelete(portal: TPortal, input: TCanvasDelet
     return {
       ok: true,
       command: 'canvas.delete',
-      effectsMode,
       canvas: fnNormalizeCanvas(selectedCanvas),
       matchedCount: plan.matchedIds.length,
       matchedIds: plan.matchedIds,
       deletedElementIds: plan.deletedElementIds,
       deletedGroupIds: plan.deletedGroupIds,
-      skippedEffects: effects.skippedEffects,
-      warnings: effects.warnings,
     };
   } catch (error) {
     if (typeof error === 'object' && error !== null && 'ok' in error && 'code' in error) throw error;

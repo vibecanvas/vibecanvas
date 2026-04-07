@@ -74,7 +74,13 @@ describe('canvas CLI --db bootstrap', () => {
     expect(result.stdout.trim()).toBe('');
 
     const parsed = JSON.parse(result.stderr.trim());
-    expect(parsed).toMatchObject({ ok: false, command: 'canvas', code: 'DB_FLAG_MISSING_VALUE' });
+    expect(parsed).toMatchObject({
+      ok: false,
+      command: null,
+      code: 'DB_FLAG_MISSING_VALUE',
+      hint: 'Pass one SQLite file path right after --db.',
+      next: 'Try: vibecanvas canvas list --db ./tmp/vibecanvas.sqlite --json',
+    });
     expect(stat(path.join(configDir, 'vibecanvas.sqlite'))).rejects.toThrow();
   });
 });

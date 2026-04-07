@@ -225,21 +225,9 @@ export function buildCanvasPatchInput(options?: TCanvasSubcommandOptions, patch?
 }
 
 export function buildCanvasDeleteInput(options?: TCanvasSubcommandOptions): TCanvasDeleteInput {
-  if (options?.docOnly && options?.withEffectsIfAvailable) {
-    throw {
-      ok: false,
-      command: 'canvas.delete',
-      code: 'CANVAS_DELETE_EFFECTS_MODE_CONFLICT',
-      message: 'Delete effects mode must be exactly one of --doc-only or --with-effects-if-available when specified.',
-      canvasId: options?.canvasId ?? null,
-      canvasNameQuery: options?.canvasNameQuery ?? null,
-    };
-  }
-
   return {
     canvasId: options?.canvasId,
     canvasNameQuery: options?.canvasNameQuery,
     ids: sortUnique(options?.ids),
-    effectsMode: options?.withEffectsIfAvailable ? 'with-effects-if-available' : 'doc-only',
   };
 }
