@@ -1,6 +1,7 @@
 #!/usr/bin/env bun
 
 import path from "path"
+import net from "node:net"
 import { Glob } from "bun"
 
 type TArgs = {
@@ -176,6 +177,28 @@ async function assertPathMissing(targetPath: string, label: string): Promise<voi
   }
 }
 
+async function createPortBlocker(port: number): Promise<{ close: () => Promise<void> }> {
+  const server = net.createServer()
+
+  await new Promise<void>((resolve, reject) => {
+    server.once("error", reject)
+    server.listen(port, "127.0.0.1", () => {
+      server.off("error", reject)
+      resolve()
+    })
+  })
+
+  return {
+    close: () =>
+      new Promise<void>((resolve, reject) => {
+        server.close((error) => {
+          if (error) reject(error)
+          else resolve()
+        })
+      }),
+  }
+}
+
 async function runBinaryScenario(binaryPath: string, args: TArgs, scenario: TBinaryScenario): Promise<void> {
   const baseUrl = `http://127.0.0.1:${scenario.port}`
   console.log(`[test-binary] Scenario '${scenario.name}' using ${baseUrl}`)
@@ -277,6 +300,7 @@ async function main() {
   const binaryPath = await resolveBinaryPath(args.binaryPath)
   const tempRoot = path.join(process.cwd(), `.tmp-binary-test-${Date.now()}`)
   const tempConfigDir = path.join(tempRoot, "config-mode")
+  const tempCompiledConfigDir = path.join(tempRoot, "compiled-config-mode")
   const tempDbDir = path.join(tempRoot, "db-mode")
   const explicitDbPath = path.join(tempDbDir, "nested", "binary-test.sqlite")
   const xdgRoot = path.join(tempRoot, "xdg-root")
@@ -309,6 +333,23 @@ async function main() {
     expectedAbsentPaths: [path.join(xdgRoot, "data", "vibecanvas", "vibecanvas.sqlite")],
     cleanupPaths: [tempDbDir, xdgRoot],
   })
+
+  const defaultCompiledPort = 7496
+  const blockedCompiledPort = await createPortBlocker(defaultCompiledPort)
+  try {
+    await runBinaryScenario(binaryPath, args, {
+      name: "compiled-default-port-fallback",
+      port: defaultCompiledPort + 1,
+      cmd: [],
+      env: {
+        VIBECANVAS_CONFIG: tempCompiledConfigDir,
+      },
+      expectedDbPath: path.join(tempCompiledConfigDir, "vibecanvas.sqlite"),
+      cleanupPaths: [tempCompiledConfigDir],
+    })
+  } finally {
+    await blockedCompiledPort.close()
+  }
 
   console.log("[test-binary] All checks passed")
 }

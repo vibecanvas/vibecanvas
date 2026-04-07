@@ -9,8 +9,14 @@ function getDefaultPort(compiled: boolean): number {
 }
 
 function buildCliConfig(parsed: TCliParsedArgv): ICliConfig {
-  const compiled = process.env.VIBECANVAS_COMPILED === 'true';
+  const compiled =
+    (typeof VIBECANVAS_COMPILED !== 'undefined' && VIBECANVAS_COMPILED) ||
+    process.env.VIBECANVAS_COMPILED === 'true';
   const dev = !compiled;
+  const version =
+    (typeof VIBECANVAS_VERSION !== 'undefined' && VIBECANVAS_VERSION) ||
+    process.env.VIBECANVAS_VERSION ||
+    '0.0.0';
   const [resolved, error] = txConfigPath({ fs: { existsSync, mkdirSync } }, { isCompiled: compiled });
 
   if (error || !resolved) {
@@ -25,7 +31,7 @@ function buildCliConfig(parsed: TCliParsedArgv): ICliConfig {
     cwd: process.cwd(),
     dev,
     compiled,
-    version: process.env.VIBECANVAS_VERSION ?? '0.0.0',
+    version,
     command: parsed.command,
     subcommand: parsed.subcommand,
     rawArgv: parsed.rawArgv,

@@ -290,6 +290,10 @@ async function main() {
   const inferredChannel = inferReleaseChannelFromVersion(version)
   const channel = parseChannelArg(process.argv, inferredChannel)
 
+  process.env.VIBECANVAS_VERSION = version
+  process.env.VIBECANVAS_COMPILED = "true"
+  process.env.VIBECANVAS_CHANNEL = channel
+
   // Filter targets
   const filteredTargets = singleFlag
     ? targets.filter(

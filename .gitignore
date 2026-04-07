@@ -24,6 +24,9 @@ bun.lockb
 .DS_Store
 Thumbs.db
 
+# Tmp
+.tmp*
+
 # Logs
 *.log
 logs/

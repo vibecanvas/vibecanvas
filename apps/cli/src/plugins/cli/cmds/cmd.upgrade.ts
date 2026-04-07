@@ -81,7 +81,9 @@ function getServerVersion(config: ICliConfig): string {
 }
 
 function getUpdateChannel(): (typeof UPDATE_CHANNELS)[number] {
-  const channel = process.env.VIBECANVAS_CHANNEL;
+  const channel =
+    (typeof VIBECANVAS_CHANNEL !== 'undefined' && VIBECANVAS_CHANNEL) ||
+    process.env.VIBECANVAS_CHANNEL;
   if (channel === 'stable' || channel === 'beta' || channel === 'nightly') {
     return channel;
   }
