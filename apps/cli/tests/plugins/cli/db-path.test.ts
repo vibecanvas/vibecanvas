@@ -5,7 +5,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { afterEach, describe, expect, test } from 'bun:test';
 
-const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../../..');
+const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../../../..');
 const cliEntrypoint = path.join(repoRoot, 'apps/cli/src/main.ts');
 const cleanupPaths: string[] = [];
 

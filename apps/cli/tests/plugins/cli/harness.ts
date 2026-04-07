@@ -8,7 +8,7 @@ import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const TEST_DIR = dirname(fileURLToPath(import.meta.url));
-const REPO_ROOT = resolve(TEST_DIR, '../../../..');
+const REPO_ROOT = resolve(TEST_DIR, '../../../../..');
 const EXPECTED_MIGRATIONS_DIR = resolve(REPO_ROOT, 'packages/service-db/database-migrations');
 
 type TCanvasRow = typeof schema.canvas.$inferSelect;
@@ -120,16 +120,17 @@ export async function createCliTestContext(): Promise<TCliTestContext> {
   };
 
   const runHarnessWorker = async <TResult>(command: string, payload: unknown): Promise<TResult> => {
-    const result = await runProcess({ cmd: ['bun', 'run', 'apps/cli/tests/cli/harness.worker.ts', command, encodePayload(payload)], cwd: REPO_ROOT, env: { ...process.env, VIBECANVAS_CONFIG: configDir } });
+    const result = await runProcess({ cmd: ['bun', 'run', 'apps/cli/tests/plugins/cli/harness.worker.ts', command, encodePayload(payload)], cwd: REPO_ROOT, env: { ...process.env, VIBECANVAS_CONFIG: configDir } });
     if (result.exitCode !== 0) throw new Error(`Harness worker failed for ${command}: ${result.stderr || result.stdout}`);
     return result.stdout.trim() ? JSON.parse(result.stdout) as TResult : (undefined as TResult);
   };
 
+  const dbServiceEntry = resolve(REPO_ROOT, 'packages/service-db/src/DbServiceBunSqlite/index.ts');
   const migrateResult = await runProcess({
     cmd: [
       'bun',
       '-e',
-      `import { createSqliteDb } from './packages/service-db/src/DbServiceBunSqlite/index.ts'; const db = createSqliteDb({ databasePath: process.env.VIBECANVAS_DB, dataDir: process.env.VIBECANVAS_DATA_DIR, cacheDir: process.env.VIBECANVAS_CACHE_DIR, silentMigrations: false }); db.stop();`,
+      `import { createSqliteDb } from ${JSON.stringify(dbServiceEntry)}; const db = createSqliteDb({ databasePath: process.env.VIBECANVAS_DB, dataDir: process.env.VIBECANVAS_DATA_DIR, cacheDir: process.env.VIBECANVAS_CACHE_DIR, silentMigrations: false }); db.stop();`,
     ],
     cwd: REPO_ROOT,
     env: { ...process.env, VIBECANVAS_DB: dbPath, VIBECANVAS_DATA_DIR: dataDir, VIBECANVAS_CACHE_DIR: cacheDir, VIBECANVAS_CONFIG: configDir },
