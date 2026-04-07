@@ -39,11 +39,10 @@ Canvas subcommands:
   query     Run structured readonly canvas queries
   move      Move explicit element/group ids deterministically
   patch     Patch explicit element/group ids with structured field updates
-  group     Group matching elements (planned)
-  ungroup   Ungroup a group (planned)
+  group     Group matching elements
+  ungroup   Ungroup a group
   delete    Permanently delete element/group ids (cascades groups to descendants)
   reorder   Change stacking order (front/back/forward/backward)
-  render    Render the persisted canvas state (planned)
 
 Subcommand help:
   Any subcommand accepts --help for command-specific usage.

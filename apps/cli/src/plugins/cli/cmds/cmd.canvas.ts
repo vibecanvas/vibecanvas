@@ -40,7 +40,7 @@ Options:
 export function printCanvasHelp(): void {
   console.log(`Usage: vibecanvas canvas <command> [options]
 
-Offline canvas commands (planned):
+Offline canvas commands:
   list                                         List canvases in the local database
   query (--canvas <id> | --canvas-name <query>) [selectors]
                                                 Run a structured readonly canvas query
@@ -52,7 +52,6 @@ Offline canvas commands (planned):
                                                 Permanently delete elements/groups; deleting a group cascades to descendants
   reorder (--canvas <id> | --canvas-name <query>) --id <id>... --action <front|back|forward|backward>
                                                 Reorder sibling zIndex for explicit element/group ids
-  render ...                                   Render the persisted canvas state
 
 Shared options:
   --db <path>   Optional explicit SQLite file override; otherwise falls back to configured/default storage
@@ -71,7 +70,7 @@ Notes:
   - Missing or duplicate --db flags fail before the CLI imports SQLite or Automerge state.
   - list never depends on a selected/default canvas; it always enumerates every canvas in the opened db.
   - Use 'vibecanvas canvas <subcommand> --help' for command-specific arguments and examples.
-  - Offline canvas commands are being added incrementally; unimplemented commands still honor --db resolution.
+  - Offline canvas commands are being added incrementally.
 `);
 }
 
@@ -132,6 +131,7 @@ export async function runCanvasCommand(services: { db: IDbService, automerge: IA
 
   if (!CANVAS_SUBCOMMAND_SET.has(config.subcommand)) {
     console.error(`Unknown canvas command: ${config.subcommand}`)
+    printCanvasHelp()
     process.exitCode = 1
     return
   }
@@ -185,6 +185,4 @@ export async function runCanvasCommand(services: { db: IDbService, automerge: IA
     return
   }
 
-  console.error(`Canvas command '${config.subcommand}' is not implemented yet.`)
-  process.exitCode = 1
 }

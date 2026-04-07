@@ -9,7 +9,7 @@ import { bootCliRuntime, createCliHooks, shutdownCliRuntime } from './hooks';
 import { CliArgvError, parseCliArgv } from './parse-argv';
 import { createAutomergePlugin } from './plugins/automerge/AutomergePlugin';
 import { createCliPlugin, printHelp } from './plugins/cli/CliPlugin';
-import { printCanvasCommandHelp } from './plugins/cli/cmds/cmd.canvas';
+import { printCanvasCommandHelp, printCanvasHelp } from './plugins/cli/cmds/cmd.canvas';
 import { createOrpcPlugin } from './plugins/orpc/OrpcPlugin';
 import { createPtyPlugin } from './plugins/pty/PtyPlugin';
 import { createServerPlugin } from './plugins/server/ServerPlugin';
@@ -55,8 +55,25 @@ if (config.versionRequested) {
 
 if (config.helpRequested) {
   if (config.command === 'canvas') {
-    printCanvasCommandHelp(config.subcommand)
-    process.exit(0)
+    if (!config.subcommand) {
+      printCanvasCommandHelp(config.subcommand)
+      process.exit(0)
+    }
+
+    if (config.subcommand === 'list' || config.subcommand === 'query' || config.subcommand === 'move' || config.subcommand === 'patch' || config.subcommand === 'group' || config.subcommand === 'ungroup' || config.subcommand === 'delete' || config.subcommand === 'reorder') {
+      printCanvasCommandHelp(config.subcommand)
+      process.exit(0)
+    }
+
+    console.error(`Unknown canvas command: ${config.subcommand}`)
+    printCanvasHelp()
+    process.exit(1)
+  }
+
+  if (config.command === 'unknown') {
+    console.error(`Unknown command: ${config.subcommand}`)
+    printHelp()
+    process.exit(1)
   }
 
   printHelp()

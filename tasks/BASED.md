@@ -133,11 +133,11 @@ Use the leaf files for execution history and local context.
 - [x]: [S20](s/S20.md) - cli server: restore compiled-mode port fallback when preferred port is busy
 - [x]: [S21] remove apps/server and packages/functional-core and shell
 - [x]: [S22] fix build and ci tests to use new apps/cli
-- [ ]: [S23] Use global costs for dev and prod ports
+- [x]: [S23] Use global costs for dev and prod ports
 - [x]: [S24] rename @vibecanvas/service-db -> @vibecanvas/service.db and co
 - [ ]: [S25](s/S25.md) - db: remove filetrees table/schema; canvas-doc fully owns filetree state
 - [ ]: [S26](s/S26.md) - db: add filesystems db table for local/remote machine identity
-- [ ]: [S27](s/S27.md) - canvas CLI: remove unimplemented `render` command and help traces
+- [x]: [S27](s/S27.md) - canvas CLI: remove unimplemented `render` command and help traces
 
 ## E xplorations
 - [ ]: [E1](e/E1.md) - Tauri Research
