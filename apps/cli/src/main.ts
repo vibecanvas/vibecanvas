@@ -1,16 +1,13 @@
 #!/usr/bin/env bun
-import { parseArgs } from 'node:util';
-import { createRuntime } from '@vibecanvas/runtime';
 import type { IService, IStoppableService } from '@vibecanvas/runtime';
+import { createRuntime } from '@vibecanvas/runtime';
 import { buildCliConfig } from './build-config';
-import { resolveCanvasCliBootstrap } from './plugins/cli/bootstrap';
 import type { ICliConfig } from './config';
 import { bootCliRuntime, createCliHooks, shutdownCliRuntime } from './hooks';
 import { CliArgvError, parseCliArgv } from './parse-argv';
 import { createAutomergePlugin } from './plugins/automerge/AutomergePlugin';
-import { createCliPlugin, printHelp } from './plugins/cli/CliPlugin';
-import { printCanvasCommandHelp, printCanvasHelp } from './plugins/cli/cmds/cmd.canvas';
-import { fnBuildUnknownCommandError, fnPrintCommandError } from './plugins/cli/core/fn.print-command-result';
+import { createCliPlugin } from './plugins/cli/CliPlugin';
+import { fnPrintCommandError } from './plugins/cli/core/fn.print-command-result';
 import { createOrpcPlugin } from './plugins/orpc/OrpcPlugin';
 import { createPtyPlugin } from './plugins/pty/PtyPlugin';
 import { createServerPlugin } from './plugins/server/ServerPlugin';
@@ -42,50 +39,6 @@ try {
     exitArgvError(error)
   }
   throw error
-}
-
-if (config.versionRequested) {
-  console.log(config.version)
-  process.exit(0)
-}
-
-if (config.helpRequested) {
-  if (config.command === 'canvas') {
-    if (!config.subcommand) {
-      printCanvasCommandHelp(config.subcommand)
-      process.exit(0)
-    }
-
-    if (config.subcommand === 'list' || config.subcommand === 'query' || config.subcommand === 'move' || config.subcommand === 'patch' || config.subcommand === 'group' || config.subcommand === 'ungroup' || config.subcommand === 'delete' || config.subcommand === 'reorder') {
-      printCanvasCommandHelp(config.subcommand)
-      process.exit(0)
-    }
-
-    fnPrintCommandError(fnBuildUnknownCommandError('canvas', config.subcommand), wantsJson)
-    if (!wantsJson) printCanvasHelp()
-    process.exit(1)
-  }
-
-  if (config.command === 'unknown') {
-    fnPrintCommandError(fnBuildUnknownCommandError('root', config.subcommand), wantsJson)
-    if (!wantsJson) printHelp()
-    process.exit(1)
-  }
-
-  printHelp()
-  process.exit(0)
-}
-
-if (config.command === 'unknown') {
-  fnPrintCommandError(fnBuildUnknownCommandError('root', config.subcommand), wantsJson)
-  if (!wantsJson) printHelp()
-  process.exit(1)
-}
-
-if (config.command === 'canvas' && config.subcommand && !['list', 'query', 'move', 'patch', 'group', 'ungroup', 'delete', 'reorder'].includes(config.subcommand)) {
-  fnPrintCommandError(fnBuildUnknownCommandError('canvas', config.subcommand), wantsJson)
-  if (!wantsJson) printCanvasHelp()
-  process.exit(1)
 }
 
 if (config.command === 'canvas') {

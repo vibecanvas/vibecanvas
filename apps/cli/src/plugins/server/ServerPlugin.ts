@@ -35,7 +35,7 @@ function createServerPlugin(): IPlugin<{ eventPublisher: IEventPublisherService 
       let bunServer: ReturnType<typeof Bun.serve<TOrpcWebSocketData>> | null = null;
 
       ctx.hooks.boot.tapPromise(async () => {
-        if (ctx.config.command !== 'serve') return;
+        if (ctx.config.command !== 'serve' || ctx.config.helpRequested || ctx.config.versionRequested) return;
 
         bunServer = serveWithPortFallback<TOrpcWebSocketData>((port) => Bun.serve<TOrpcWebSocketData>({
           port,
@@ -96,7 +96,7 @@ function createServerPlugin(): IPlugin<{ eventPublisher: IEventPublisherService 
       });
 
       ctx.hooks.ready.tapPromise(async () => {
-        if (ctx.config.command !== 'serve') return;
+        if (ctx.config.command !== 'serve' || ctx.config.helpRequested || ctx.config.versionRequested) return;
         if (!bunServer) return;
 
         console.log(`Server listening on http://localhost:${bunServer.port}`);

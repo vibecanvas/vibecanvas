@@ -3,7 +3,7 @@ import type { IDbService } from '@vibecanvas/service-db/IDbService';
 import type { IPlugin } from '@vibecanvas/runtime';
 import type { ICliConfig } from '../../config';
 import type { ICliHooks } from '../../hooks';
-import { runCanvasCommand } from './cmds/cmd.canvas';
+import { runCanvasCommand, printCanvasCommandHelp, printCanvasHelp } from './cmds/cmd.canvas';
 import { txCmdUpgrade } from './cmds/cmd.upgrade';
 import { fnBuildUnknownCommandError, fnPrintCommandError } from './core/fn.print-command-result';
 
@@ -70,28 +70,56 @@ function createCliPlugin(): IPlugin<{ db: IDbService, automerge: IAutomergeServi
       });
 
       ctx.hooks.ready.tapPromise(async () => {
+        const wantsJson = ctx.config.subcommandOptions?.json === true;
+
         if (ctx.config.versionRequested) {
           console.log(ctx.config.version);
           process.exitCode = 0;
           return;
         }
 
-        if (ctx.config.command === 'canvas') {
-          await runCanvasCommand({ db: ctx.services.require('db'), automerge: ctx.services.require('automerge') }, ctx.config);
+        if (ctx.config.command === 'unknown') {
+          fnPrintCommandError(fnBuildUnknownCommandError('root', ctx.config.subcommand), wantsJson);
+          if (!wantsJson) printHelp();
+          process.exitCode = 1;
           return;
         }
 
-        if (ctx.config.helpRequested) {
+        if (ctx.config.helpRequested && ctx.config.command !== 'canvas') {
           printHelp();
           process.exitCode = 0;
           return;
         }
 
-        if (ctx.config.command === 'unknown') {
-          const wantsJson = ctx.config.subcommandOptions?.json === true;
-          fnPrintCommandError(fnBuildUnknownCommandError('root', ctx.config.subcommand), wantsJson);
-          if (!wantsJson) printHelp();
+        if (ctx.config.command === 'canvas' && ctx.config.helpRequested) {
+          if (!ctx.config.subcommand) {
+            printCanvasHelp();
+            process.exitCode = 0;
+            return;
+          }
+
+          if (!['list', 'query', 'move', 'patch', 'group', 'ungroup', 'delete', 'reorder'].includes(ctx.config.subcommand)) {
+            fnPrintCommandError(fnBuildUnknownCommandError('canvas', ctx.config.subcommand), wantsJson);
+            if (!wantsJson) printCanvasHelp();
+            process.exitCode = 1;
+            return;
+          }
+
+          printCanvasCommandHelp(ctx.config.subcommand);
+          process.exitCode = 0;
+          return;
+        }
+
+        if (ctx.config.command === 'canvas' && ctx.config.subcommand && !['list', 'query', 'move', 'patch', 'group', 'ungroup', 'delete', 'reorder'].includes(ctx.config.subcommand)) {
+          fnPrintCommandError(fnBuildUnknownCommandError('canvas', ctx.config.subcommand), wantsJson);
+          if (!wantsJson) printCanvasHelp();
           process.exitCode = 1;
+          return;
+        }
+
+        if (ctx.config.command === 'canvas') {
+          await runCanvasCommand({ db: ctx.services.require('db'), automerge: ctx.services.require('automerge') }, ctx.config);
+          return;
         }
       });
     },
