@@ -230,7 +230,8 @@ else
         archive_ext=".zip"
     fi
 
-    filename="$APP-$target$archive_ext"
+    package_name="$APP-$target"
+    filename="$package_name$archive_ext"
 
     # Get version
     if [[ -z "$requested_version" ]]; then
@@ -331,7 +332,16 @@ else
     done
 
     if [[ "$checksum_verified" != "true" ]]; then
-        echo -e "${MUTED}No embedded checksum file found in archive; skipping checksum verification${NC}"
+        checksum_url="https://github.com/$REPO/releases/download/v${specific_version}/${package_name}.sha256"
+        echo -e "${MUTED}Downloading checksum...${NC}"
+        if curl -fsSL -o "$tmp_dir/${package_name}.sha256" "$checksum_url"; then
+            verify_binary_checksum "$binary_candidate" "$tmp_dir/${package_name}.sha256"
+            checksum_verified=true
+        else
+            echo -e "${RED}Failed to download checksum file${NC}"
+            echo -e "${MUTED}URL: $checksum_url${NC}"
+            exit 1
+        fi
     fi
 
     cp "$binary_candidate" "$INSTALL_DIR/vibecanvas"
@@ -349,7 +359,7 @@ else
     done
 
     if [[ "$migrations_installed" != "true" ]]; then
-        echo -e "${MUTED}No migration directory found in archive; startup auto-migration may fail${NC}"
+        echo -e "${MUTED}No migration directory found in archive. Embedded migrations will be used if present.${NC}"
     fi
 fi
 
