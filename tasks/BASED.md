@@ -110,6 +110,7 @@ Use the leaf files for execution history and local context.
 - [x]: [A17](a/A17.md) - rect dbl click -> enter edit mode (inline text)
 - [x]: [A18] - lift cmds to be api to allow live changes via crdt
 - [x]: [A19](a/A19.md) - canvas CLI: `add` command
+- [ ]: [A20](a/A20.md) - canvas CLI: agent-friendly help, discovery, and forgiving errors
 
 ## S ubtractions
 - [ ]: [S1](s/S1.md) - double bun run dev -> find new port
