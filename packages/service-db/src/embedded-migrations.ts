@@ -1,4 +1,4 @@
-// Transitional: packages/db still reuses the imperative-shell migration folder
+// Transitional: packages/service-db still reuses the imperative-shell migration folder
 // at runtime, but does not embed those assets yet.
 
 export function listEmbeddedMigrationFiles(): string[] {

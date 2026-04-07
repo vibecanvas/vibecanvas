@@ -1,6 +1,6 @@
-import type { IAutomergeService } from '@vibecanvas/automerge-service/IAutomergeService';
-import type { IDbService } from '@vibecanvas/db/IDbService';
-import type { IEventPublisherService } from '@vibecanvas/event-publisher-service/IEventPublisherService';
+import type { IAutomergeService } from '@vibecanvas/service-automerge/IAutomergeService';
+import type { IDbService } from '@vibecanvas/service-db/IDbService';
+import type { IEventPublisherService } from '@vibecanvas/service-event-publisher/IEventPublisherService';
 
 type TCanvasApiContext = {
   db: IDbService;

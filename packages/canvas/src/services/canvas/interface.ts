@@ -1,5 +1,5 @@
-import type { TElement, TFileData, TFiletreeData, TTerminalData } from "@vibecanvas/automerge-service/types/canvas-doc";
-import type * as schema from "@vibecanvas/db/schema";
+import type { TElement, TFileData, TFiletreeData, TTerminalData } from "@vibecanvas/service-automerge/types/canvas-doc";
+import type * as schema from "@vibecanvas/service-db/schema";
 import { Group } from "konva/lib/Group";
 import { Shape, ShapeConfig } from "konva/lib/Shape";
 import { CanvasMode, Theme } from "./enum";

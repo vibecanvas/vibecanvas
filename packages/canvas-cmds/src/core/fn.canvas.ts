@@ -1,4 +1,4 @@
-import type { TCanvasRecord } from '@vibecanvas/db/IDbService';
+import type { TCanvasRecord } from '@vibecanvas/service-db/IDbService';
 import { toIsoString } from './fn.conversion';
 
 export type TCanvasSummary = {

@@ -1,5 +1,5 @@
 import { throttle } from "@solid-primitives/scheduled";
-import type { TElement } from "@vibecanvas/automerge-service/types/canvas-doc";
+import type { TElement } from "@vibecanvas/service-automerge/types/canvas-doc";
 import Konva from "konva";
 import { collectHostedWidgetSelectionShapes, getHostedWidgetPointerWorldPoint } from "../shared/hosted-widget.shared";
 import type { IPluginContext } from "../shared/interface";

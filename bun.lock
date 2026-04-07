@@ -30,13 +30,13 @@
         "@vibecanvas/api-filetree": "workspace:*",
         "@vibecanvas/api-notification": "workspace:*",
         "@vibecanvas/api-pty": "workspace:*",
-        "@vibecanvas/automerge-service": "workspace:*",
         "@vibecanvas/canvas-cmds": "workspace:*",
-        "@vibecanvas/db": "workspace:*",
-        "@vibecanvas/event-publisher-service": "workspace:*",
-        "@vibecanvas/filesystem-service": "workspace:*",
-        "@vibecanvas/pty-service": "workspace:*",
         "@vibecanvas/runtime": "workspace:*",
+        "@vibecanvas/service-automerge": "workspace:*",
+        "@vibecanvas/service-db": "workspace:*",
+        "@vibecanvas/service-event-publisher": "workspace:*",
+        "@vibecanvas/service-filesystem": "workspace:*",
+        "@vibecanvas/service-pty": "workspace:*",
         "@vibecanvas/shared-functions": "workspace:*",
         "@vibecanvas/tapable": "workspace:*",
       },
@@ -63,9 +63,9 @@
         "@vibecanvas/api-filetree": "workspace:*",
         "@vibecanvas/api-notification": "workspace:*",
         "@vibecanvas/api-pty": "workspace:*",
-        "@vibecanvas/automerge-service": "workspace:*",
         "@vibecanvas/canvas": "workspace:*",
-        "@vibecanvas/db": "workspace:*",
+        "@vibecanvas/service-automerge": "workspace:*",
+        "@vibecanvas/service-db": "workspace:*",
         "konva": "^9.3.22",
         "lucide-solid": "catalog:",
         "partysocket": "^1.1.16",
@@ -120,7 +120,7 @@
       "dependencies": {
         "@orpc/contract": "catalog:",
         "@orpc/server": "catalog:",
-        "@vibecanvas/db": "workspace:*",
+        "@vibecanvas/service-db": "workspace:*",
         "zod": "catalog:",
       },
     },
@@ -130,9 +130,9 @@
       "dependencies": {
         "@orpc/contract": "catalog:",
         "@orpc/server": "catalog:",
-        "@vibecanvas/automerge-service": "workspace:*",
         "@vibecanvas/canvas-cmds": "workspace:*",
-        "@vibecanvas/db": "workspace:*",
+        "@vibecanvas/service-automerge": "workspace:*",
+        "@vibecanvas/service-db": "workspace:*",
       },
     },
     "packages/api-db": {
@@ -141,7 +141,7 @@
       "dependencies": {
         "@orpc/contract": "catalog:",
         "@orpc/server": "catalog:",
-        "@vibecanvas/event-publisher-service": "workspace:*",
+        "@vibecanvas/service-event-publisher": "workspace:*",
         "zod": "catalog:",
       },
     },
@@ -151,7 +151,7 @@
       "dependencies": {
         "@orpc/contract": "catalog:",
         "@orpc/server": "catalog:",
-        "@vibecanvas/db": "workspace:*",
+        "@vibecanvas/service-db": "workspace:*",
         "zod": "catalog:",
       },
     },
@@ -161,7 +161,7 @@
       "dependencies": {
         "@orpc/contract": "catalog:",
         "@orpc/server": "catalog:",
-        "@vibecanvas/filesystem-service": "workspace:*",
+        "@vibecanvas/service-filesystem": "workspace:*",
         "zod": "catalog:",
       },
     },
@@ -171,9 +171,9 @@
       "dependencies": {
         "@orpc/contract": "catalog:",
         "@orpc/server": "catalog:",
-        "@vibecanvas/automerge-service": "workspace:*",
-        "@vibecanvas/db": "workspace:*",
-        "@vibecanvas/event-publisher-service": "workspace:*",
+        "@vibecanvas/service-automerge": "workspace:*",
+        "@vibecanvas/service-db": "workspace:*",
+        "@vibecanvas/service-event-publisher": "workspace:*",
         "zod": "catalog:",
       },
     },
@@ -183,7 +183,7 @@
       "dependencies": {
         "@orpc/contract": "catalog:",
         "@orpc/server": "catalog:",
-        "@vibecanvas/event-publisher-service": "workspace:*",
+        "@vibecanvas/service-event-publisher": "workspace:*",
         "zod": "catalog:",
       },
     },
@@ -193,18 +193,8 @@
       "dependencies": {
         "@orpc/contract": "catalog:",
         "@orpc/server": "catalog:",
-        "@vibecanvas/pty-service": "workspace:*",
+        "@vibecanvas/service-pty": "workspace:*",
         "zod": "catalog:",
-      },
-    },
-    "packages/automerge-service": {
-      "name": "@vibecanvas/automerge-service",
-      "version": "0.0.1",
-      "dependencies": {
-        "@automerge/automerge-repo": "catalog:",
-        "@automerge/automerge-repo-network-websocket": "catalog:",
-        "@vibecanvas/runtime": "workspace:*",
-        "@vibecanvas/shared-functions": "workspace:*",
       },
     },
     "packages/canvas": {
@@ -235,8 +225,8 @@
         "@kobalte/core": "catalog:",
         "@orpc/contract": "catalog:",
         "@solid-primitives/scheduled": "^1.5.3",
-        "@vibecanvas/automerge-service": "workspace:*",
-        "@vibecanvas/db": "workspace:*",
+        "@vibecanvas/service-automerge": "workspace:*",
+        "@vibecanvas/service-db": "workspace:*",
         "ghostty-web": "^0.4.0",
         "konva": "^9.3.22",
         "lucide-solid": "catalog:",
@@ -266,12 +256,29 @@
       "version": "0.0.1",
       "dependencies": {
         "@automerge/automerge-repo": "catalog:",
-        "@vibecanvas/automerge-service": "workspace:*",
-        "@vibecanvas/db": "workspace:*",
+        "@vibecanvas/service-automerge": "workspace:*",
+        "@vibecanvas/service-db": "workspace:*",
       },
     },
-    "packages/db": {
-      "name": "@vibecanvas/db",
+    "packages/runtime": {
+      "name": "@vibecanvas/runtime",
+      "version": "0.0.1",
+      "dependencies": {
+        "@vibecanvas/tapable": "workspace:*",
+      },
+    },
+    "packages/service-automerge": {
+      "name": "@vibecanvas/service-automerge",
+      "version": "0.0.1",
+      "dependencies": {
+        "@automerge/automerge-repo": "catalog:",
+        "@automerge/automerge-repo-network-websocket": "catalog:",
+        "@vibecanvas/runtime": "workspace:*",
+        "@vibecanvas/shared-functions": "workspace:*",
+      },
+    },
+    "packages/service-db": {
+      "name": "@vibecanvas/service-db",
       "version": "0.0.1",
       "dependencies": {
         "@vibecanvas/runtime": "workspace:*",
@@ -282,8 +289,8 @@
         "zod": "catalog:",
       },
     },
-    "packages/event-publisher-service": {
-      "name": "@vibecanvas/event-publisher-service",
+    "packages/service-event-publisher": {
+      "name": "@vibecanvas/service-event-publisher",
       "version": "0.0.1",
       "dependencies": {
         "@orpc/server": "catalog:",
@@ -293,27 +300,20 @@
         "zod": "catalog:",
       },
     },
-    "packages/filesystem-service": {
-      "name": "@vibecanvas/filesystem-service",
+    "packages/service-filesystem": {
+      "name": "@vibecanvas/service-filesystem",
       "version": "0.0.1",
       "dependencies": {
-        "@vibecanvas/event-publisher-service": "workspace:*",
         "@vibecanvas/runtime": "workspace:*",
+        "@vibecanvas/service-event-publisher": "workspace:*",
       },
     },
-    "packages/pty-service": {
-      "name": "@vibecanvas/pty-service",
+    "packages/service-pty": {
+      "name": "@vibecanvas/service-pty",
       "version": "0.0.1",
       "dependencies": {
         "@vibecanvas/runtime": "workspace:*",
         "bun-pty": "^0.4.8",
-      },
-    },
-    "packages/runtime": {
-      "name": "@vibecanvas/runtime",
-      "version": "0.0.1",
-      "dependencies": {
-        "@vibecanvas/tapable": "workspace:*",
       },
     },
     "packages/shared-functions": {
@@ -949,25 +949,25 @@
 
     "@vibecanvas/api-pty": ["@vibecanvas/api-pty@workspace:packages/api-pty"],
 
-    "@vibecanvas/automerge-service": ["@vibecanvas/automerge-service@workspace:packages/automerge-service"],
-
     "@vibecanvas/canvas": ["@vibecanvas/canvas@workspace:packages/canvas"],
 
     "@vibecanvas/canvas-cmds": ["@vibecanvas/canvas-cmds@workspace:packages/canvas-cmds"],
 
     "@vibecanvas/cli": ["@vibecanvas/cli@workspace:apps/cli"],
 
-    "@vibecanvas/db": ["@vibecanvas/db@workspace:packages/db"],
-
-    "@vibecanvas/event-publisher-service": ["@vibecanvas/event-publisher-service@workspace:packages/event-publisher-service"],
-
-    "@vibecanvas/filesystem-service": ["@vibecanvas/filesystem-service@workspace:packages/filesystem-service"],
-
     "@vibecanvas/frontend": ["@vibecanvas/frontend@workspace:apps/frontend"],
 
-    "@vibecanvas/pty-service": ["@vibecanvas/pty-service@workspace:packages/pty-service"],
-
     "@vibecanvas/runtime": ["@vibecanvas/runtime@workspace:packages/runtime"],
+
+    "@vibecanvas/service-automerge": ["@vibecanvas/service-automerge@workspace:packages/service-automerge"],
+
+    "@vibecanvas/service-db": ["@vibecanvas/service-db@workspace:packages/service-db"],
+
+    "@vibecanvas/service-event-publisher": ["@vibecanvas/service-event-publisher@workspace:packages/service-event-publisher"],
+
+    "@vibecanvas/service-filesystem": ["@vibecanvas/service-filesystem@workspace:packages/service-filesystem"],
+
+    "@vibecanvas/service-pty": ["@vibecanvas/service-pty@workspace:packages/service-pty"],
 
     "@vibecanvas/shared-functions": ["@vibecanvas/shared-functions@workspace:packages/shared-functions"],
 
@@ -1743,7 +1743,7 @@
 
     "update-browserslist-db": ["update-browserslist-db@1.2.3", "", { "dependencies": { "escalade": "^3.2.0", "picocolors": "^1.1.1" }, "peerDependencies": { "browserslist": ">= 4.21.0" }, "bin": { "update-browserslist-db": "cli.js" } }, "sha512-Js0m9cx+qOgDxo0eMiFGEueWztz+d4+M3rGlmKPT+T4IS/jP4ylw3Nwpu6cpTTP8R1MAC1kF4VbdLt3ARf209w=="],
 
-    "uuid": ["uuid@9.0.1", "", { "bin": { "uuid": "dist/bin/uuid" } }, "sha512-b+1eJOlsR9K8HJpow9Ok3fiWOWSIcIzXodvv0rQjVoOVNpWMpxf1wZNpt4y9h10odCNrqnYp1OBzRktckBe3sA=="],
+    "uuid": ["uuid@10.0.0", "", { "bin": { "uuid": "dist/bin/uuid" } }, "sha512-8XkAphELsDnEGrDxUOHB3RGvXz6TeuYSGEZBOjtTtPm2lwhGBjLgOzLHB63IUWfBpNucQjND6d3AOudO+H3RWQ=="],
 
     "vfile": ["vfile@6.0.3", "", { "dependencies": { "@types/unist": "^3.0.0", "vfile-message": "^4.0.0" } }, "sha512-KzIbH/9tXat2u30jf+smMwFCsno4wHVdNmzFyL+T/L3UGqqk6JKfVqOFOZEpZSHADH1k40ab6NUIXZq422ov3Q=="],
 
@@ -1823,6 +1823,8 @@
 
     "@astrojs/solid-js/vite": ["vite@6.4.2", "", { "dependencies": { "esbuild": "^0.25.0", "fdir": "^6.4.4", "picomatch": "^4.0.2", "postcss": "^8.5.3", "rollup": "^4.34.9", "tinyglobby": "^0.2.13" }, "optionalDependencies": { "fsevents": "~2.3.3" }, "peerDependencies": { "@types/node": "^18.0.0 || ^20.0.0 || >=22.0.0", "jiti": ">=1.21.0", "less": "*", "lightningcss": "^1.21.0", "sass": "*", "sass-embedded": "*", "stylus": "*", "sugarss": "*", "terser": "^5.16.0", "tsx": "^4.8.1", "yaml": "^2.4.2" }, "optionalPeers": ["@types/node", "jiti", "less", "lightningcss", "sass", "sass-embedded", "stylus", "sugarss", "terser", "tsx", "yaml"], "bin": { "vite": "bin/vite.js" } }, "sha512-2N/55r4JDJ4gdrCvGgINMy+HH3iRpNIz8K6SFwVsA+JbQScLiC+clmAxBgwiSPgcG9U15QmvqCGWzMbqda5zGQ=="],
 
+    "@automerge/automerge-repo/uuid": ["uuid@9.0.1", "", { "bin": { "uuid": "dist/bin/uuid" } }, "sha512-b+1eJOlsR9K8HJpow9Ok3fiWOWSIcIzXodvv0rQjVoOVNpWMpxf1wZNpt4y9h10odCNrqnYp1OBzRktckBe3sA=="],
+
     "@babel/core/semver": ["semver@6.3.1", "", { "bin": { "semver": "bin/semver.js" } }, "sha512-BR7VvDCVHO+q2xBEWskxS6DJE1qRnb7DxzUrogb71CWoSficBxYsiAGd+Kl0mmq/MprG9yArRkyrQxTO6XjMzA=="],
 
     "@babel/helper-compilation-targets/lru-cache": ["lru-cache@5.1.1", "", { "dependencies": { "yallist": "^3.0.2" } }, "sha512-KpNARQA3Iwv+jTA0utUVVbrh+Jlrr1Fv0e56GGzAFOXN7dk/FviaDW8LHmK52DlcH4WP2n6gI8vN1aesBFgo9w=="],
@@ -1878,8 +1880,6 @@
     "hast-util-raw/parse5": ["parse5@7.3.0", "", { "dependencies": { "entities": "^6.0.0" } }, "sha512-IInvU7fabl34qmi9gY8XOVxhYyMyuH2xUNpb2q8/Y+7552KlejkRvqvD19nMoUW/uQGGbqNpA6Tufu5FL5BZgw=="],
 
     "parse-entities/@types/unist": ["@types/unist@2.0.11", "", {}, "sha512-CmBKiL6NNo/OqgmMn95Fk9Whlp2mtvIv+KNpQKN2F4SjvrEesubTRWGYSg+BnWZOnlCaSTU1sMpsBOzgbYhnsA=="],
-
-    "vite-plugin-top-level-await/uuid": ["uuid@10.0.0", "", { "bin": { "uuid": "dist/bin/uuid" } }, "sha512-8XkAphELsDnEGrDxUOHB3RGvXz6TeuYSGEZBOjtTtPm2lwhGBjLgOzLHB63IUWfBpNucQjND6d3AOudO+H3RWQ=="],
 
     "zod-to-ts/zod": ["zod@3.25.76", "", {}, "sha512-gzUt/qt81nXsFGKIFcC3YnfEAx5NkunCfnDlvuBSSFS02bcXu4Lmea0AFIUwbLWxWPx3d9p8S5QoaujKcNQxcQ=="],
 

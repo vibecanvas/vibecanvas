@@ -1,4 +1,4 @@
-import type { TArrowData, TElementStyle, TLineData } from "@vibecanvas/automerge-service/types/canvas-doc";
+import type { TArrowData, TElementStyle, TLineData } from "@vibecanvas/service-automerge/types/canvas-doc";
 import Konva from "konva";
 import type { TTool } from "../../components/FloatingCanvasToolbar/toolbar.types";
 import type { IPluginContext } from "../shared/interface";
@@ -10,7 +10,7 @@ export type TShape1dNode = Konva.Shape & { getSelfRect(): { x: number; y: number
 export type THandleDragSnapshot = {
   nodeId: string;
   pointIndex: number;
-  beforeElement: import("@vibecanvas/automerge-service/types/canvas-doc").TElement;
+  beforeElement: import("@vibecanvas/service-automerge/types/canvas-doc").TElement;
   beforePoints: TPoint[];
   beforeAbsoluteTransform: Konva.Transform;
 };

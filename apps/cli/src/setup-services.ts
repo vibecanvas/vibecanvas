@@ -1,14 +1,14 @@
 import type { Database } from 'bun:sqlite';
-import { AutomergeService } from '@vibecanvas/automerge-service/AutomergeServer';
-import type { IAutomergeService } from '@vibecanvas/automerge-service/IAutomergeService';
-import { createSqliteDb } from '@vibecanvas/db/DbServiceBunSqlite/index';
-import type { IDbService } from '@vibecanvas/db/IDbService';
-import { EventPublisherService } from '@vibecanvas/event-publisher-service/EventPublisherService';
-import type { IEventPublisherService } from '@vibecanvas/event-publisher-service/IEventPublisherService';
-import { FilesystemServiceNode } from '@vibecanvas/filesystem-service/FilesystemServiceNode';
-import type { IFilesystemService } from '@vibecanvas/filesystem-service/IFilesystemService';
-import { PtyServiceBunPty } from '@vibecanvas/pty-service/PtyServiceBunPty';
-import type { IPtyService } from '@vibecanvas/pty-service/IPtyService';
+import { AutomergeService } from '@vibecanvas/service-automerge/AutomergeServer';
+import type { IAutomergeService } from '@vibecanvas/service-automerge/IAutomergeService';
+import { createSqliteDb } from '@vibecanvas/service-db/DbServiceBunSqlite/index';
+import type { IDbService } from '@vibecanvas/service-db/IDbService';
+import { EventPublisherService } from '@vibecanvas/service-event-publisher/EventPublisherService';
+import type { IEventPublisherService } from '@vibecanvas/service-event-publisher/IEventPublisherService';
+import { FilesystemServiceNode } from '@vibecanvas/service-filesystem/FilesystemServiceNode';
+import type { IFilesystemService } from '@vibecanvas/service-filesystem/IFilesystemService';
+import { PtyServiceBunPty } from '@vibecanvas/service-pty/PtyServiceBunPty';
+import type { IPtyService } from '@vibecanvas/service-pty/IPtyService';
 import { createServiceRegistry } from '@vibecanvas/runtime';
 import type { ICliConfig } from './config';
 

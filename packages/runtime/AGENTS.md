@@ -189,5 +189,5 @@ after: ['notification?']
 
 ## Current known examples
 
-- `@vibecanvas/db` uses this package for service capability typing.
+- `@vibecanvas/service-db` uses this package for service capability typing.
 - `apps/cli` uses this package for generic runtime assembly and keeps CLI hooks local.

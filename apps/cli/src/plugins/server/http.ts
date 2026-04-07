@@ -1,4 +1,4 @@
-import type { IDbService, TFileFormat } from '@vibecanvas/db/IDbService';
+import type { IDbService, TFileFormat } from '@vibecanvas/service-db/IDbService';
 import type { ICliConfig } from '../../config';
 
 type TEmbeddedAssetsModule = {

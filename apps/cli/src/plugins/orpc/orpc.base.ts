@@ -7,11 +7,11 @@ import { filesystemContract } from '@vibecanvas/api-filesystem/contract';
 import { filetreeContract } from '@vibecanvas/api-filetree/contract';
 import { notificationContract } from '@vibecanvas/api-notification/contract';
 import { ptyContract } from '@vibecanvas/api-pty/contract';
-import type { IAutomergeService } from '@vibecanvas/automerge-service/IAutomergeService';
-import type { IDbService } from '@vibecanvas/db/IDbService';
-import type { IEventPublisherService } from '@vibecanvas/event-publisher-service/IEventPublisherService';
-import type { IFilesystemService } from '@vibecanvas/filesystem-service/IFilesystemService';
-import type { IPtyService } from '@vibecanvas/pty-service/IPtyService';
+import type { IAutomergeService } from '@vibecanvas/service-automerge/IAutomergeService';
+import type { IDbService } from '@vibecanvas/service-db/IDbService';
+import type { IEventPublisherService } from '@vibecanvas/service-event-publisher/IEventPublisherService';
+import type { IFilesystemService } from '@vibecanvas/service-filesystem/IFilesystemService';
+import type { IPtyService } from '@vibecanvas/service-pty/IPtyService';
 
 const contract = oc.router({
   canvas: canvasContract,

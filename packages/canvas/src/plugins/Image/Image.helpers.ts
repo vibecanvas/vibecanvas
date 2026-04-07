@@ -1,4 +1,4 @@
-import type { TElement } from "@vibecanvas/automerge-service/types/canvas-doc";
+import type { TElement } from "@vibecanvas/service-automerge/types/canvas-doc";
 import { getSupportedImageFormat } from "../../utils/image";
 import type { IPluginContext } from "../shared/interface";
 

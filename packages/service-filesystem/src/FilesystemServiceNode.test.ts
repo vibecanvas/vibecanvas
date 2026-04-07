@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from 'fs';
 import { tmpdir } from 'os';
 import { join } from 'path';
-import { EventPublisherService } from '@vibecanvas/event-publisher-service/EventPublisherService';
+import { EventPublisherService } from '@vibecanvas/service-event-publisher/EventPublisherService';
 import { FilesystemServiceNode } from './FilesystemServiceNode';
 
 async function nextEvent<T>(iterator: AsyncIterable<T>, timeoutMs = 3000): Promise<T> {

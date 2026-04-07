@@ -9,9 +9,9 @@
   "dependencies": {
     "@orpc/contract": "catalog:",
     "@orpc/server": "catalog:",
-    "@vibecanvas/automerge-service": "workspace:*",
-    "@vibecanvas/db": "workspace:*",
-    "@vibecanvas/event-publisher-service": "workspace:*",
+    "@vibecanvas/service-automerge": "workspace:*",
+    "@vibecanvas/service-db": "workspace:*",
+    "@vibecanvas/service-event-publisher": "workspace:*",
     "zod": "catalog:"
   }
 }

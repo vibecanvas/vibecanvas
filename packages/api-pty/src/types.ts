@@ -1,4 +1,4 @@
-import type { IPtyService } from '@vibecanvas/pty-service/IPtyService';
+import type { IPtyService } from '@vibecanvas/service-pty/IPtyService';
 
 type TPtyApiContext = {
   pty: IPtyService;

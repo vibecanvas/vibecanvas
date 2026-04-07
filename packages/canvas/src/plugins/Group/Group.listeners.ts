@@ -1,6 +1,6 @@
 import Konva from "konva";
 import { throttle } from "@solid-primitives/scheduled";
-import type { TElement } from "@vibecanvas/automerge-service/types/canvas-doc";
+import type { TElement } from "@vibecanvas/service-automerge/types/canvas-doc";
 import { CustomEvents } from "../../custom-events";
 import { CanvasMode } from "../../services/canvas/enum";
 import { startSelectionCloneDrag } from "../shared/clone-drag";

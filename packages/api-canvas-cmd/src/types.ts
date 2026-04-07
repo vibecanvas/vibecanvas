@@ -1,5 +1,5 @@
-import type { IAutomergeService } from '@vibecanvas/automerge-service/IAutomergeService';
-import type { IDbService } from '@vibecanvas/db/IDbService';
+import type { IAutomergeService } from '@vibecanvas/service-automerge/IAutomergeService';
+import type { IDbService } from '@vibecanvas/service-db/IDbService';
 
 type TCanvasCmdApiContext = {
   db: IDbService;

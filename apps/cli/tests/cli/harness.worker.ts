@@ -1,6 +1,6 @@
 import { Repo, type PeerId } from '@automerge/automerge-repo';
-import { BunSqliteStorageAdapter } from '@vibecanvas/automerge-service/adapters/sqlite.adapter';
-import type { TCanvasDoc } from '@vibecanvas/automerge-service/types/canvas-doc';
+import { BunSqliteStorageAdapter } from '@vibecanvas/service-automerge/adapters/sqlite.adapter';
+import type { TCanvasDoc } from '@vibecanvas/service-automerge/types/canvas-doc';
 import { Database } from 'bun:sqlite';
 
 type TCanvasRow = {

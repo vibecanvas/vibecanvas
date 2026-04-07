@@ -1,5 +1,5 @@
-import type { IAutomergeService } from '@vibecanvas/automerge-service/IAutomergeService';
-import type { WebSocketWithIsAlive } from '@vibecanvas/automerge-service/adapters/websocket.adapter';
+import type { IAutomergeService } from '@vibecanvas/service-automerge/IAutomergeService';
+import type { WebSocketWithIsAlive } from '@vibecanvas/service-automerge/adapters/websocket.adapter';
 import type { IPlugin } from '@vibecanvas/runtime';
 import type { ICliConfig } from '../../config';
 import type { ICliHooks } from '../../hooks';

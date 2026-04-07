@@ -1,6 +1,6 @@
-import type { IAutomergeService } from '@vibecanvas/automerge-service/IAutomergeService';
+import type { IAutomergeService } from '@vibecanvas/service-automerge/IAutomergeService';
 import type { ICliConfig } from '@vibecanvas/cli/config';
-import type { IDbService } from '@vibecanvas/db/IDbService';
+import type { IDbService } from '@vibecanvas/service-db/IDbService';
 import { runCanvasDeleteCommand, printCanvasDeleteHelp } from './cmd.delete.canvas';
 import { runCanvasGroupCommand, printCanvasGroupHelp } from './cmd.group.canvas';
 import { runCanvasListCommand, printCanvasListHelp } from './cmd.list.canvas';

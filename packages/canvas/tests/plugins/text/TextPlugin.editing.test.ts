@@ -1,6 +1,6 @@
 import Konva from "konva";
 import type { DocHandle } from "@automerge/automerge-repo";
-import type { TCanvasDoc } from "@vibecanvas/automerge-service/types/canvas-doc";
+import type { TCanvasDoc } from "@vibecanvas/service-automerge/types/canvas-doc";
 import { describe, expect, test } from "vitest";
 import { TextPlugin, type IPluginContext } from "../../../src/plugins";
 import { CanvasMode } from "../../../src/services/canvas/enum";
@@ -41,7 +41,7 @@ describe("TextPlugin – newline and whitespace", () => {
     await flushCanvasEffects();
     await exportStageSnapshot({ stage: harness.stage, label: "newline test – after commit multiline", relativeFilePath: `${snapshotDir}/02-after-commit.png`, waitMs: 60 });
     expect(node.text()).toBe("Hello\nWorld\n  indented");
-    const data = docHandle.doc().elements["nl-text-1"].data as import("@vibecanvas/automerge-service/types/canvas-doc").TTextData;
+    const data = docHandle.doc().elements["nl-text-1"].data as import("@vibecanvas/service-automerge/types/canvas-doc").TTextData;
     expect(data.text).toBe("Hello\nWorld\n  indented");
     harness.destroy();
   });

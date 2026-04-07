@@ -15,7 +15,7 @@ function createTestFilesystem() {
         return [null, { code: 'SRV.TEST.READDIR.FAILED', statusCode: 500, externalMessage: { en: message } }];
       }
     },
-  } as import('@vibecanvas/filesystem-service/IFilesystemService').IFilesystemService;
+  } as import('@vibecanvas/service-filesystem/IFilesystemService').IFilesystemService;
 }
 
 describe('api.files-filesystem helpers', () => {

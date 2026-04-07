@@ -1,6 +1,6 @@
 import Konva from "konva";
 import { describe, expect, test } from "vitest";
-import type { TCanvasDoc, TElement, TGroup } from "@vibecanvas/automerge-service/types/canvas-doc";
+import type { TCanvasDoc, TElement, TGroup } from "@vibecanvas/service-automerge/types/canvas-doc";
 import { ContextMenuPlugin, GroupPlugin, RenderOrderPlugin, SceneHydratorPlugin, Shape2dPlugin, type IPluginContext } from "../../../src/plugins";
 import { createCanvasTestHarness, createMockDocHandle, flushCanvasEffects } from "../../test-setup";
 

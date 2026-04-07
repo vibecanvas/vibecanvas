@@ -1,7 +1,7 @@
 import Konva from "konva";
 import { createEffect } from "solid-js";
 import type { IPlugin, IPluginContext } from "../shared/interface";
-import { TElement } from "@vibecanvas/automerge-service/types/canvas-doc";
+import { TElement } from "@vibecanvas/service-automerge/types/canvas-doc";
 import { PenPlugin } from "../Pen/Pen.plugin";
 import { Shape1dPlugin } from "../Shape1d/Shape1d.plugin";
 import { HOSTED_WIDGET_NODE_ATTR, HOSTED_WIDGET_TRANSFORMER_VISIBLE_ATTR } from "../shared/hosted-widget.shared";

@@ -1,6 +1,6 @@
-import type { IAutomergeService } from '@vibecanvas/automerge-service/IAutomergeService';
+import type { IAutomergeService } from '@vibecanvas/service-automerge/IAutomergeService';
 import type { ICliConfig } from '@vibecanvas/cli/config';
-import type { IDbService } from '@vibecanvas/db/IDbService';
+import type { IDbService } from '@vibecanvas/service-db/IDbService';
 import { txExecuteCanvasDelete } from '@vibecanvas/canvas-cmds/cmds/tx.cmd.delete';
 import type { TSafeCanvasCmdClient } from '../core/fn.build-rpc-link';
 import { fnPrintCommandError, fnPrintCommandResult } from '../core/fn.print-command-result';

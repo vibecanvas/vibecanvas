@@ -1,4 +1,4 @@
-import type { IEventPublisherService } from '@vibecanvas/event-publisher-service/IEventPublisherService';
+import type { IEventPublisherService } from '@vibecanvas/service-event-publisher/IEventPublisherService';
 import { existsSync, readFileSync, readdirSync, renameSync, statSync, watch, writeFileSync, type FSWatcher } from 'fs';
 import { homedir } from 'os';
 import type { IFilesystemService } from './IFilesystemService';

@@ -1,5 +1,5 @@
 import { oc } from '@orpc/contract';
-import { ZFileTreeSelect } from '@vibecanvas/db/schema';
+import { ZFileTreeSelect } from '@vibecanvas/service-db/schema';
 import { z } from 'zod';
 
 const createFiletreeInputSchema = z.object({

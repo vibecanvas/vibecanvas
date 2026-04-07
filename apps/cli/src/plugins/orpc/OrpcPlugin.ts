@@ -1,11 +1,11 @@
 import { onError } from '@orpc/server';
 import { RPCHandler as FetchRPCHandler } from '@orpc/server/fetch';
 import { RPCHandler } from '@orpc/server/bun-ws';
-import type { IAutomergeService } from '@vibecanvas/automerge-service/IAutomergeService';
-import type { IDbService } from '@vibecanvas/db/IDbService';
-import type { IEventPublisherService } from '@vibecanvas/event-publisher-service/IEventPublisherService';
-import type { IFilesystemService } from '@vibecanvas/filesystem-service/IFilesystemService';
-import type { IPtyService } from '@vibecanvas/pty-service/IPtyService';
+import type { IAutomergeService } from '@vibecanvas/service-automerge/IAutomergeService';
+import type { IDbService } from '@vibecanvas/service-db/IDbService';
+import type { IEventPublisherService } from '@vibecanvas/service-event-publisher/IEventPublisherService';
+import type { IFilesystemService } from '@vibecanvas/service-filesystem/IFilesystemService';
+import type { IPtyService } from '@vibecanvas/service-pty/IPtyService';
 import type { IPlugin } from '@vibecanvas/runtime';
 import { baseCanvasCmdOs, canvasCmdHandlers } from '@vibecanvas/api-canvas-cmd/handlers';
 import type { ICliConfig } from '../../config';

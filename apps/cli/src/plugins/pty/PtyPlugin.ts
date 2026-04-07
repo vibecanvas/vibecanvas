@@ -1,4 +1,4 @@
-import type { IPtyService } from '@vibecanvas/pty-service/IPtyService';
+import type { IPtyService } from '@vibecanvas/service-pty/IPtyService';
 import type { IPlugin } from '@vibecanvas/runtime';
 import type { ICliConfig } from '../../config';
 import type { ICliHooks } from '../../hooks';

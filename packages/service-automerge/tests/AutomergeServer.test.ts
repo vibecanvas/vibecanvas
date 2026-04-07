@@ -2,7 +2,7 @@ import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test } fr
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { AutomergeService } from '../src/AutomergeServer';
-import { DbServiceBunSqlite } from '../../db/src/DbServiceBunSqlite/index';
+import { DbServiceBunSqlite } from '../../service-db/src/DbServiceBunSqlite/index';
 import type { TCanvasDoc } from '../src/types/canvas-doc';
 
 async function waitForPersistedDoc(args: { dbService: DbServiceBunSqlite; automergeUrl: string; timeoutMs?: number }): Promise<void> {

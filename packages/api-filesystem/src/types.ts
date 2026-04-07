@@ -1,4 +1,4 @@
-import type { IFilesystemService } from '@vibecanvas/filesystem-service/IFilesystemService';
+import type { IFilesystemService } from '@vibecanvas/service-filesystem/IFilesystemService';
 
 type TFilesystemApiContext = {
   filesystem: IFilesystemService;

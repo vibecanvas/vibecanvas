@@ -1,6 +1,6 @@
-import type { IAutomergeService } from '@vibecanvas/automerge-service/IAutomergeService';
-import type { TCanvasDoc, TElement, TElementType, TGroup } from '@vibecanvas/automerge-service/types/canvas-doc';
-import type { IDbService } from '@vibecanvas/db/IDbService';
+import type { IAutomergeService } from '@vibecanvas/service-automerge/IAutomergeService';
+import type { TCanvasDoc, TElement, TElementType, TGroup } from '@vibecanvas/service-automerge/types/canvas-doc';
+import type { IDbService } from '@vibecanvas/service-db/IDbService';
 import { fnNormalizeCanvas, fnResolveCanvasSelection, fnSortIds, type TCanvasSummary } from '../core/fn.canvas';
 import { fxLoadCanvasHandleDoc } from '../core/fx.canvas';
 import type { TCanvasCmdErrorDetails } from '../types';

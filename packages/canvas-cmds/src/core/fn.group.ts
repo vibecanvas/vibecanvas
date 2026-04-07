@@ -1,4 +1,4 @@
-import type { TCanvasDoc, TElement, TGroup } from '@vibecanvas/automerge-service/types/canvas-doc';
+import type { TCanvasDoc, TElement, TGroup } from '@vibecanvas/service-automerge/types/canvas-doc';
 import { fnSortIds } from './fn.canvas';
 
 export function fnCollectGroupCascade(doc: TCanvasDoc, rootGroupId: string): { groupIds: string[]; elementIds: string[] } {

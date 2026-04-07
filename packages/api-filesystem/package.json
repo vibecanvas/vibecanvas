@@ -10,7 +10,7 @@
   "dependencies": {
     "@orpc/contract": "catalog:",
     "@orpc/server": "catalog:",
-    "@vibecanvas/filesystem-service": "workspace:*",
+    "@vibecanvas/service-filesystem": "workspace:*",
     "zod": "catalog:"
   }
 }

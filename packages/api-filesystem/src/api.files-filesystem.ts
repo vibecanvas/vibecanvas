@@ -1,5 +1,5 @@
 import { resolve } from 'path';
-import type { TFilesystemDirNode } from '@vibecanvas/filesystem-service/types';
+import type { TFilesystemDirNode } from '@vibecanvas/service-filesystem/types';
 import { fnCreateFilesystemError } from './core/fn.create-filesystem-error';
 import { fnToApiFilesystemError } from './core/fn.to-api-filesystem-error';
 import { baseFilesystemOs } from './orpc';
@@ -25,7 +25,7 @@ const apiFilesFilesystem = baseFilesystemOs.files.handler(async ({ input, contex
 });
 
 function walkDirectory(
-  filesystem: import('@vibecanvas/filesystem-service/IFilesystemService').IFilesystemService,
+  filesystem: import('@vibecanvas/service-filesystem/IFilesystemService').IFilesystemService,
   directoryPath: string,
   depthRemaining: number,
 ): TErrTuple<TFilesystemDirNode[]> {

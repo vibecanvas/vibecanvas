@@ -5,7 +5,7 @@ import { CustomEvents } from "../../custom-events";
 import { CanvasMode } from "../../services/canvas/enum";
 import type { IPlugin, IPluginContext } from "../shared/interface";
 import type { Group } from "konva/lib/Group";
-import type { TElement, TGroup } from "@vibecanvas/automerge-service/types/canvas-doc";
+import type { TElement, TGroup } from "@vibecanvas/service-automerge/types/canvas-doc";
 import { GroupPlugin } from "../Group/Group.plugin";
 import { ImagePlugin } from "../Image/Image.plugin";
 import { Shape2dPlugin } from "../Shape2d/Shape2d.plugin";

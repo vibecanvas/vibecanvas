@@ -1,6 +1,6 @@
 import { describe, expect, mock, test } from 'bun:test';
 import { createFileResponse, createPublicAssetLookup } from '../src/plugins/server/http';
-import type { IDbService } from '@vibecanvas/db/IDbService';
+import type { IDbService } from '@vibecanvas/service-db/IDbService';
 
 type TMockDb = Pick<IDbService['file'], 'get'>;
 

@@ -52,15 +52,15 @@ packages/api-<name>/
 
 Rules:
 - `"exports": { "./*": "./src/*.ts" }` — deep-import only, no `index.ts`.
-- Depend on **interface packages only** (`@vibecanvas/db`, `@vibecanvas/event-publisher-service`, `@vibecanvas/automerge-service`, etc.), never on concrete classes or `apps/*`.
+- Depend on **interface packages only** (`@vibecanvas/service-db`, `@vibecanvas/service-event-publisher`, `@vibecanvas/service-automerge`, etc.), never on concrete classes or `apps/*`.
 
 ## contract.ts
 
-Declare the ORPC sub-router with Zod schemas for input and output. Reuse Drizzle-derived schemas (`ZCanvasSelect`, `ZFileTreeSelect`, …) from `@vibecanvas/db/schema` whenever the output is a DB row.
+Declare the ORPC sub-router with Zod schemas for input and output. Reuse Drizzle-derived schemas (`ZCanvasSelect`, `ZFileTreeSelect`, …) from `@vibecanvas/service-db/schema` whenever the output is a DB row.
 
 ```ts
 import { oc } from '@orpc/contract';
-import { ZFileTreeSelect } from '@vibecanvas/db/schema';
+import { ZFileTreeSelect } from '@vibecanvas/service-db/schema';
 import { z } from 'zod';
 
 const createFiletreeInputSchema = z.object({
@@ -98,9 +98,9 @@ Conventions:
 Declare the context object the handlers need. It lists **interfaces only**, plus `requestId?: string` for correlation.
 
 ```ts
-import type { IAutomergeService } from '@vibecanvas/automerge-service/IAutomergeService';
-import type { IDbService } from '@vibecanvas/db/IDbService';
-import type { IEventPublisherService } from '@vibecanvas/event-publisher-service/IEventPublisherService';
+import type { IAutomergeService } from '@vibecanvas/service-automerge/IAutomergeService';
+import type { IDbService } from '@vibecanvas/service-db/IDbService';
+import type { IEventPublisherService } from '@vibecanvas/service-event-publisher/IEventPublisherService';
 
 type TFiletreeApiContext = {
   db: IDbService;

@@ -1,5 +1,5 @@
 import { ORPCError } from '@orpc/server';
-import type { TCanvasDoc, TElement } from '@vibecanvas/automerge-service/types/canvas-doc';
+import type { TCanvasDoc, TElement } from '@vibecanvas/service-automerge/types/canvas-doc';
 import { baseFiletreeOs } from './orpc';
 
 function createFileTreeElement(id: string, x: number, y: number): TElement {

@@ -1,5 +1,5 @@
 import { extname } from 'path';
-import type { TFilesystemFileKind } from '@vibecanvas/filesystem-service/types';
+import type { TFilesystemFileKind } from '@vibecanvas/service-filesystem/types';
 
 const TEXT_EXTENSIONS = new Set([
   '.txt', '.md', '.mdx', '.json', '.js', '.jsx', '.ts', '.tsx', '.css', '.scss', '.html', '.yml', '.yaml', '.xml', '.svg', '.toml', '.env', '.gitignore', '.npmrc'

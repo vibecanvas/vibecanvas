@@ -1,4 +1,4 @@
-import type { TElement } from '@vibecanvas/automerge-service/types/canvas-doc';
+import type { TElement } from '@vibecanvas/service-automerge/types/canvas-doc';
 import { afterEach, describe, expect, test } from 'bun:test';
 import { createCliTestContext, createGroup, createRectElement, expectExitCode, expectNoStderr, parseJsonStdout, type TCliTestContext } from '../../../cli/harness';
 

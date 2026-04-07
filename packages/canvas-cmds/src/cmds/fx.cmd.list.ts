@@ -1,4 +1,4 @@
-import type { IDbService } from '@vibecanvas/db/IDbService';
+import type { IDbService } from '@vibecanvas/service-db/IDbService';
 import { toIsoString } from '../core/fn.conversion';
 import type { TCanvasCmdErrorDetails } from '../types';
 

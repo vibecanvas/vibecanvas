@@ -1,6 +1,6 @@
-import { AutomergeService } from '@vibecanvas/automerge-service/AutomergeServer';
-import type { TCanvasDoc, TElement, TGroup } from '@vibecanvas/automerge-service/types/canvas-doc';
-import { DbServiceBunSqlite } from '@vibecanvas/db/DbServiceBunSqlite/index';
+import { AutomergeService } from '@vibecanvas/service-automerge/AutomergeServer';
+import type { TCanvasDoc, TElement, TGroup } from '@vibecanvas/service-automerge/types/canvas-doc';
+import { DbServiceBunSqlite } from '@vibecanvas/service-db/DbServiceBunSqlite/index';
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';

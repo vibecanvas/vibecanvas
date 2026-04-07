@@ -6,7 +6,7 @@ import type { History } from "../../services/canvas/History";
 import type { IState, TCloneImage, TDeleteImage, TFileCapability, TFiletreeCapability, TTerminalCapability, TUploadImage } from '../../services/canvas/interface';
 import type { AsyncParallelHook, SyncExitHook, SyncHook } from '../../tapable';
 import type { Crdt } from "../../services/canvas/crdt";
-import type { TElement, TGroup } from "@vibecanvas/automerge-service/types/canvas-doc";
+import type { TElement, TGroup } from "@vibecanvas/service-automerge/types/canvas-doc";
 
 export type TRenderOrderSnapshot = {
   parentId: string;

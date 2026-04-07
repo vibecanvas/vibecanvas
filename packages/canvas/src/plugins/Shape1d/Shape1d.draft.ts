@@ -1,4 +1,4 @@
-import type { TElement } from "@vibecanvas/automerge-service/types/canvas-doc";
+import type { TElement } from "@vibecanvas/service-automerge/types/canvas-doc";
 import { DEFAULT_OPACITY, DEFAULT_STROKE, DEFAULT_STROKE_WIDTH, type TPoint, type TShape1dData } from "./Shape1d.shared";
 
 export function createFallbackPreviewElement(payload: { activeTool: "line" | "arrow"; draftElementId: string | null }) {

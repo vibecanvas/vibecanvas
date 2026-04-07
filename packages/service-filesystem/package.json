@@ -1,5 +1,5 @@
 {
-  "name": "@vibecanvas/filesystem-service",
+  "name": "@vibecanvas/service-filesystem",
   "version": "0.0.1",
   "private": true,
   "type": "module",
@@ -8,7 +8,7 @@
     "./*": "./src/*.ts"
   },
   "dependencies": {
-    "@vibecanvas/event-publisher-service": "workspace:*",
+    "@vibecanvas/service-event-publisher": "workspace:*",
     "@vibecanvas/runtime": "workspace:*"
   }
 }

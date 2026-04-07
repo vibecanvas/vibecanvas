@@ -1,4 +1,4 @@
-import { DbServiceBunSqlite } from "@vibecanvas/db/DbServiceBunSqlite/index";
+import { DbServiceBunSqlite } from "@vibecanvas/service-db/DbServiceBunSqlite/index";
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { tmpdir } from "node:os";
 import { fxExecuteCanvasList } from "packages/canvas-cmds/src/cmds/fx.cmd.list";

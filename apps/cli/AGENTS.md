@@ -391,8 +391,8 @@ That means:
 Prefer deep imports for extracted packages.
 
 Examples:
-- `@vibecanvas/db/IDbService`
-- `@vibecanvas/db/DbServiceBunSqlite`
+- `@vibecanvas/service-db/IDbService`
+- `@vibecanvas/service-db/DbServiceBunSqlite`
 - `@vibecanvas/canvas-cmds/cmds/tx.cmd.move`
 
 Avoid introducing root barrels when package is meant to stay deep-import-only.

@@ -5,7 +5,7 @@ import { PenPlugin, SceneHydratorPlugin, SelectionStyleMenuPlugin, Shape2dPlugin
 import { CanvasMode } from "../../../src/services/canvas/enum";
 import { createPenDataFromStrokePoints, type TStrokePoint } from "../../../src/plugins/shared/pen.math";
 import { createCanvasTestHarness, createMockDocHandle, flushCanvasEffects } from "../../test-setup";
-import type { TElement, TPenData } from "@vibecanvas/automerge-service/types/canvas-doc";
+import type { TElement, TPenData } from "@vibecanvas/service-automerge/types/canvas-doc";
 
 function createPenElement(args?: {
   id?: string;

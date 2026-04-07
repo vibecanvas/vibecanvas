@@ -1,4 +1,4 @@
-import type { IEventPublisherService } from '@vibecanvas/event-publisher-service/IEventPublisherService';
+import type { IEventPublisherService } from '@vibecanvas/service-event-publisher/IEventPublisherService';
 import type { IPlugin } from '@vibecanvas/runtime';
 import type { ICliConfig } from '../../config';
 import type { ICliHooks } from '../../hooks';

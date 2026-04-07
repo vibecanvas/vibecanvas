@@ -2,7 +2,7 @@ import { describe, expect, mock, test } from 'bun:test';
 import { createCliHooks } from '../src/hooks';
 import { createPtyPlugin } from '../src/plugins/pty/PtyPlugin';
 import type { ICliConfig } from '../src/config';
-import type { IPtyService } from '@vibecanvas/pty-service/IPtyService';
+import type { IPtyService } from '@vibecanvas/service-pty/IPtyService';
 
 type TMockSocket = WebSocket & {
   data?: {
