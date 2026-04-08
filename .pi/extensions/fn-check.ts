@@ -18,6 +18,7 @@ type TWriteInput = {
 type TDeclKind = "function" | "type" | "class" | "value";
 
 const FN_FILE_RE = /^fn\..+\.ts$/;
+const FN_TEST_FILE_RE = /^fn\..+\.test\.ts$/;
 const ALLOWED_RUNTIME_IMPORT_RE = /^(fn|fx|tx)\..+$/;
 const FORBIDDEN_GLOBALS = [
   "globalThis",
@@ -54,7 +55,9 @@ function resolveToolPath(cwd: string, filePath: string): string {
 }
 
 function isFnFilePath(filePath: string): boolean {
-  return FN_FILE_RE.test(path.basename(stripToolPathPrefix(filePath)));
+  const baseName = path.basename(stripToolPathPrefix(filePath));
+  if (FN_TEST_FILE_RE.test(baseName)) return false;
+  return FN_FILE_RE.test(baseName);
 }
 
 function getModuleLeaf(modulePath: string): string {
@@ -488,7 +491,7 @@ export default function fnCheckExtension(pi: ExtensionAPI) {
     return {
       systemPrompt:
         event.systemPrompt +
-        "\n\n## fn-check\nWhen editing or writing any fn.*.ts file, obey these rules:\n- exported functions must start with fx\n- imports must be type-only unless imported module leaf starts with fn., fx., or tx.\n- no direct use of runtime globals like window, fetch, Bun, process, console, globalThis\n- do not export classes or other runtime values; only functions and types\n",
+        "\n\n## fn-check\nWhen editing or writing any fn.*.ts file, obey these rules. Ignore fn.*.test.ts files.\n- exported functions must start with fx\n- imports must be type-only unless imported module leaf starts with fn., fx., or tx.\n- no direct use of runtime globals like window, fetch, Bun, process, console, globalThis\n- do not export classes or other runtime values; only functions and types\n",
     };
   });
 
