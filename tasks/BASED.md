@@ -113,6 +113,9 @@ Use the leaf files for execution history and local context.
 - [x]: [A18] - lift cmds to be api to allow live changes via crdt
 - [x]: [A19](a/A19.md) - canvas CLI: `add` command
 - [x]: [A20](a/A20.md) - canvas CLI: agent-friendly help, discovery, and forgiving errors
+- [ ]: [A21](a/A21.md) - canvas CLI: add `--dry-run` for add/patch/move/group/ungroup/delete
+- [ ]: [A22](a/A22.md) - canvas CLI: allow JSON array payloads for multi-element add and multi-target patch
+- [ ]: [A23](a/A23.md) - canvas CLI: document minimal required add args per element type and default optional fields
 
 ## S ubtractions
 - [ ]: [S1](s/S1.md) - double bun run dev -> find new port
