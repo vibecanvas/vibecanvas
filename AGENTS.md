@@ -18,3 +18,65 @@ Notes:
 - Patch clamps negative timeout delays with `Math.max(0, wait)`.
 - Reason: upstream package can emit `TimeoutNegativeWarning` in dev/runtime.
 - Do not remove unless upstream fix is verified and hook is removed on purpose.
+
+## Functional Core Directive
+
+We want as much code as possible to be simple functions.
+
+Goal:
+- separate logic from state
+- keep business rules in small boring functions
+- push mutable state and side effects to edges
+- make code easier to test, move, and reuse
+
+Folder rule:
+- agent should try to maintain a `/core` folder in every package
+- put functions and logic-first code in that `/core` folder
+- if package structure needs it, `/core` may live inside a subfolder instead
+- only do nested `/core` folders when complexity is high and locality is better
+
+Bias:
+- prefer moving logic into `/core` instead of leaving it mixed with UI, services, transport, or stateful code
+- prefer simple functions over classes and hidden state
+- if unsure, choose simpler split: state outside, logic inside `/core`
+
+## File Type Rules
+
+Print and follow these rules when working on function files.
+Do not guess. Use these rules.
+
+### fn.*.ts
+- ignore `fn.*.test.ts` files
+- exported functions must start with `fx`
+- imports must be type-only unless imported module leaf starts with `fn.`, `fx.`, or `tx.`
+- no direct use of runtime globals like `window`, `fetch`, `Bun`, `process`, `console`, `globalThis`
+- do not export classes or other runtime values; only functions and types
+- fn is for pure functions
+- keep fn logic deterministic and state-free
+
+### fx.*.ts
+- ignore `fx.*.test.ts` files
+- exported functions must start with `fx`
+- imports must be type-only unless imported module leaf starts with `fn.` or `fx.`
+- no direct use of runtime globals like `window`, `fetch`, `Bun`, `process`, `console`, `globalThis`
+- do not export classes or other runtime values; only functions and types
+- every `fx*` function must have exactly 2 params
+- first param must be named `portal` and typed as `TPortal*`
+- second param must be named `args` and typed as `TArgs*`
+- `TPortal` may hold side effects and mutable services objects
+- `TArgs` is usually serializable payload data
+- fx is for impure reads; use brain and prefer tx for impure writes
+
+### tx.*.ts
+- ignore `tx.*.test.ts` files
+- exported functions must start with `tx`
+- imports must be type-only unless imported module leaf starts with `fn.`, `fx.`, or `tx.`
+- no direct use of runtime globals like `window`, `fetch`, `Bun`, `process`, `console`, `globalThis`
+- do not export classes or other runtime values; only functions and types
+- every `tx*` function must have exactly 2 params
+- first param must be named `portal` and typed as `TPortal*`
+- second param must be named `args` and typed as `TArgs*`
+- `TPortal` may hold side effects and mutable services objects
+- `TArgs` is usually serializable payload data
+- tx is for impure writes; use brain and prefer tx when code changes external world state
+- tx may runtime-import `fn.*`, `fx.*`, and `tx.*` helpers
