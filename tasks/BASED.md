@@ -164,7 +164,7 @@ Use the leaf files for execution history and local context.
 - [ ]: [D4] - Support sideloadable ui elements
 - [ ]: [D5] - AI Canvas Element, attachable to other elements
 - [ ]: [D6] - Gateway support
-- [ ]: [D7] - Make automerge authoritative 
+- [ ]: [D7] - Auth support
 
 ## Pragmatic Code Style
 

@@ -1,4 +1,5 @@
 import type { TCanvasSubcommandOptions } from '../../../parse-argv';
+import type { TCanvasAddElementInput, TCanvasAddInput } from '@vibecanvas/canvas-cmds/cmds/tx.cmd.add';
 import type { TCanvasMoveInput } from '@vibecanvas/canvas-cmds/cmds/tx.cmd.move';
 import type { TCanvasGroupInput } from '@vibecanvas/canvas-cmds/cmds/tx.cmd.group';
 import type { TCanvasUngroupInput } from '@vibecanvas/canvas-cmds/cmds/tx.cmd.ungroup';
@@ -219,6 +220,14 @@ function parseOptionalNumber(value: string | undefined): number | undefined {
   if (value === undefined) return undefined;
   const numeric = Number(value);
   return Number.isFinite(numeric) ? numeric : undefined;
+}
+
+export function buildCanvasAddInput(options: TCanvasSubcommandOptions | undefined, elements: TCanvasAddElementInput[]): TCanvasAddInput {
+  return {
+    canvasId: options?.canvasId,
+    canvasNameQuery: options?.canvasNameQuery,
+    elements,
+  };
 }
 
 export function buildCanvasMoveInput(options?: TCanvasSubcommandOptions): TCanvasMoveInput {

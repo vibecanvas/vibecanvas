@@ -5,6 +5,7 @@ import type { ICliConfig } from '../../config';
 import type { ICliHooks } from '../../hooks';
 import { runCanvasCommand, printCanvasCommandHelp, printCanvasHelp } from './cmds/cmd.canvas';
 import { txCmdUpgrade } from './cmds/cmd.upgrade';
+import { CANVAS_SUBCOMMAND_SET } from './core/constants';
 import { fnBuildUnknownCommandError, fnPrintCommandError } from './core/fn.print-command-result';
 
 export function printHelp(): void {
@@ -16,7 +17,7 @@ Usage:
 Commands:
   serve     Start the vibecanvas runtime (default when no command given)
   upgrade   Check for and install updates
-  canvas    Offline canvas CLI surface
+  canvas    Canvas command surface
 
 Options:
   --port <number>      Port for server/runtime (default: 3000 dev, 7496 compiled)
@@ -36,8 +37,9 @@ Examples:
   vibecanvas --version
 
 Canvas subcommands:
-  list      List canvases in the local database
+  list      List canvases in the selected database
   query     Run structured readonly canvas queries
+  add       Add primitive elements to one canvas
   move      Move explicit element/group ids deterministically
   patch     Patch explicit element/group ids with structured field updates
   group     Group matching elements
@@ -98,7 +100,7 @@ function createCliPlugin(): IPlugin<{ db: IDbService, automerge: IAutomergeServi
             return;
           }
 
-          if (!['list', 'query', 'move', 'patch', 'group', 'ungroup', 'delete', 'reorder'].includes(ctx.config.subcommand)) {
+          if (!CANVAS_SUBCOMMAND_SET.has(ctx.config.subcommand)) {
             fnPrintCommandError(fnBuildUnknownCommandError('canvas', ctx.config.subcommand), wantsJson);
             if (!wantsJson) printCanvasHelp();
             process.exitCode = 1;
@@ -110,7 +112,7 @@ function createCliPlugin(): IPlugin<{ db: IDbService, automerge: IAutomergeServi
           return;
         }
 
-        if (ctx.config.command === 'canvas' && ctx.config.subcommand && !['list', 'query', 'move', 'patch', 'group', 'ungroup', 'delete', 'reorder'].includes(ctx.config.subcommand)) {
+        if (ctx.config.command === 'canvas' && ctx.config.subcommand && !CANVAS_SUBCOMMAND_SET.has(ctx.config.subcommand)) {
           fnPrintCommandError(fnBuildUnknownCommandError('canvas', ctx.config.subcommand), wantsJson);
           if (!wantsJson) printCanvasHelp();
           process.exitCode = 1;

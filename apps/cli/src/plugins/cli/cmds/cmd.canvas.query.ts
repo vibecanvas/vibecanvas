@@ -1,8 +1,8 @@
 import type { IAutomergeService } from '@vibecanvas/service-automerge/IAutomergeService';
 import type { ICliConfig } from '@vibecanvas/cli/config';
 import type { IDbService } from '@vibecanvas/service-db/IDbService';
-import type { TSafeCanvasCmdClient } from '../core/fn.build-rpc-link';
 import { fnPrintCommandError, fnPrintCommandResult } from '../core/fn.print-command-result';
+import { fxDispatchCanvasCommand } from '../core/fx.dispatch-canvas-command';
 import { fxExecuteCanvasQuery, type TCanvasQuerySuccess } from '@vibecanvas/canvas-cmds/cmds/fx.cmd.query';
 import { buildCanvasQueryInput } from './fn.canvas-subcommand-inputs';
 
@@ -89,27 +89,20 @@ function printCanvasQueryText(result: TCanvasQuerySuccess): void {
   process.exitCode = 0;
 }
 
-export async function runCanvasQueryCommand(services: { db: IDbService, automerge: IAutomergeService, safeClient: TSafeCanvasCmdClient | null }, config: ICliConfig) {
+export async function runCanvasQueryCommand(services: { db: IDbService, automerge: IAutomergeService }, config: ICliConfig) {
   const wantsJson = config.subcommandOptions?.json === true;
 
   try {
     const input = buildCanvasQueryInput(config.subcommandOptions);
 
-    if (services.safeClient) {
-      const [error, result] = await services.safeClient.query(input);
-      if (error) {
-        fnPrintCommandError(error, wantsJson);
-        return;
-      }
-      if (wantsJson) {
-        fnPrintCommandResult(result, true);
-        return;
-      }
-      printCanvasQueryText(result as TCanvasQuerySuccess);
-      return;
-    }
-
-    const result = await fxExecuteCanvasQuery({ dbService: services.db, automergeService: services.automerge }, input);
+    const result = await fxDispatchCanvasCommand(services, config, {
+      client: async (safeClient) => {
+        const [error, response] = await safeClient.query(input);
+        if (error) throw error;
+        return response as TCanvasQuerySuccess;
+      },
+      local: async () => fxExecuteCanvasQuery({ dbService: services.db, automergeService: services.automerge }, input),
+    });
     if (wantsJson) {
       fnPrintCommandResult(result, true);
       return;

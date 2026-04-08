@@ -1,8 +1,8 @@
 import type { IAutomergeService } from '@vibecanvas/service-automerge/IAutomergeService';
 import type { ICliConfig } from '@vibecanvas/cli/config';
 import type { IDbService } from '@vibecanvas/service-db/IDbService';
-import type { TSafeCanvasCmdClient } from '../core/fn.build-rpc-link';
 import { fnPrintCommandError, fnPrintCommandResult } from '../core/fn.print-command-result';
+import { fxDispatchCanvasCommand } from '../core/fx.dispatch-canvas-command';
 import { fxExecuteCanvasList, type TCanvasListSuccess } from '@vibecanvas/canvas-cmds/cmds/fx.cmd.list';
 
 export function printCanvasListHelp(): void {
@@ -36,25 +36,18 @@ function printCanvasListText(result: TCanvasListSuccess, dbPath: string): void {
   process.exitCode = 0;
 }
 
-export async function runCanvasListCommand(services: { db: IDbService, automerge: IAutomergeService, safeClient: TSafeCanvasCmdClient | null }, config: ICliConfig) {
+export async function runCanvasListCommand(services: { db: IDbService, automerge: IAutomergeService }, config: ICliConfig) {
   const wantsJson = config.subcommandOptions?.json === true;
 
   try {
-    if (services.safeClient) {
-      const [error, result] = await services.safeClient.list();
-      if (error) {
-        fnPrintCommandError(error, wantsJson);
-        return;
-      }
-      if (wantsJson) {
-        fnPrintCommandResult(result, true, { dbPath: config.dbPath });
-        return;
-      }
-      printCanvasListText(result as TCanvasListSuccess, config.dbPath);
-      return;
-    }
-
-    const result = await fxExecuteCanvasList({ dbService: services.db });
+    const result = await fxDispatchCanvasCommand(services, config, {
+      client: async (safeClient) => {
+        const [error, response] = await safeClient.list();
+        if (error) throw error;
+        return response as TCanvasListSuccess;
+      },
+      local: async () => fxExecuteCanvasList({ dbService: services.db }),
+    });
     if (wantsJson) {
       fnPrintCommandResult(result, true, { dbPath: config.dbPath });
       return;

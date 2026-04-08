@@ -66,8 +66,9 @@ describe('canvas CLI test harness', () => {
     expect(result.stdout).toContain('Usage:');
     expect(result.stdout).toContain('Commands:');
     expect(result.stdout).toContain('Canvas subcommands:');
-    expect(result.stdout).toContain('list      List canvases in the local database');
+    expect(result.stdout).toContain('list      List canvases in the selected database');
     expect(result.stdout).toContain('query     Run structured readonly canvas queries');
+    expect(result.stdout).toContain('add       Add primitive elements to one canvas');
     expect(result.stdout).toContain('move      Move explicit element/group ids deterministically');
     expect(result.stdout).toContain('patch     Patch explicit element/group ids with structured field updates');
     expect(result.stdout).toContain('Help ladder:');
@@ -93,6 +94,14 @@ describe('canvas CLI test harness', () => {
     expect(queryHelp.stdout).toContain('--omitdata');
     expect(queryHelp.stdout).toContain('--omitstyle');
     expect(queryHelp.stdout).toContain('query never performs natural-language parsing.');
+
+    const addHelp = await context.runVibecanvasCli(['canvas', 'add', '--help']);
+    expectExitCode(addHelp, 0);
+    expectNoStderr(addHelp);
+    expect(addHelp.stdout).toContain('Usage: vibecanvas canvas add [options]');
+    expect(addHelp.stdout).toContain('--element <json>');
+    expect(addHelp.stdout).toContain('--elements-file <path>');
+    expect(addHelp.stdout).toContain('--elements-stdin');
 
     const moveHelp = await context.runVibecanvasCli(['canvas', 'move', '--help']);
     expectExitCode(moveHelp, 0);
@@ -122,6 +131,11 @@ describe('canvas CLI test harness', () => {
     expectNoStderr(queryHelp);
     expect(queryHelp.stdout).toContain('Usage: vibecanvas canvas query [options]');
     expect(queryHelp.stdout).toContain('--style <key=value>');
+
+    const addHelp = await context.runVibecanvasCli(['add', '--help']);
+    expectExitCode(addHelp, 0);
+    expectNoStderr(addHelp);
+    expect(addHelp.stdout).toContain('Usage: vibecanvas canvas add [options]');
 
     const moveHelp = await context.runVibecanvasCli(['move', '--help']);
     expectExitCode(moveHelp, 0);
@@ -161,6 +175,7 @@ describe('canvas CLI test harness', () => {
     expectExitCode(result, 0);
     expectNoStderr(result);
     expect(result.stdout).toContain('query (--canvas <id> | --canvas-name <query>) [selectors]');
+    expect(result.stdout).toContain('add (--canvas <id> | --canvas-name <query>) [element source]');
     expect(result.stdout).toContain('Next steps:');
     expect(result.stdout).toContain("Use 'vibecanvas canvas <subcommand> --help' for command-specific arguments and examples.");
   });

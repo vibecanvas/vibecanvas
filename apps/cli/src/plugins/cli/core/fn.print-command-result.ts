@@ -93,6 +93,21 @@ function fnNormalizeCommandError(error: unknown): TCliErrorPayload {
     Object.assign(normalized, fnBuildPatchHint(normalized.message));
   }
 
+  if (!normalized.hint && normalized.command === 'canvas.add' && normalized.code === 'CANVAS_ADD_SOURCE_REQUIRED') {
+    normalized.hint = 'Pass exactly one element source: --element, --elements-file, or --elements-stdin.';
+    normalized.next = 'Try: vibecanvas add --canvas <canvas-id> --element \'{"type":"rect","x":10,"y":20}\' --json';
+  }
+
+  if (!normalized.hint && normalized.command === 'canvas.add' && normalized.code === 'CANVAS_ADD_SOURCE_CONFLICT') {
+    normalized.hint = 'Choose one add payload source only.';
+    normalized.next = 'Remove extra add source flags and retry.';
+  }
+
+  if (!normalized.hint && normalized.command === 'canvas.add' && normalized.code === 'CANVAS_ADD_PAYLOAD_INVALID') {
+    normalized.hint = 'Add payloads must be valid JSON objects, or a JSON array when using file/stdin.';
+    normalized.next = 'Try: vibecanvas add --canvas <canvas-id> --element \'{"type":"rect"}\' --json';
+  }
+
   if (!normalized.hint && normalized.command === 'canvas.query' && normalized.code === 'CANVAS_QUERY_SELECTOR_CONFLICT') {
     normalized.hint = 'Use exactly one selector style: structured flags, --where, or --query.';
     normalized.next = 'Try: vibecanvas query --canvas <canvas-id> --id <target-id> --json';

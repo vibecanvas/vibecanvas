@@ -27,6 +27,10 @@ type TCanvasSubcommandOptions = {
   x?: string;
   y?: string;
 
+  elementJsons?: string[];
+  elementsFile?: string;
+  elementsStdin?: boolean;
+
   patch?: string;
   patchFile?: string;
   patchStdin?: boolean;
@@ -131,6 +135,10 @@ function parseCliArgv(rawArgv: readonly string[] = Bun.argv): TCliParsedArgv {
       x: { type: 'string' },
       y: { type: 'string' },
 
+      element: { type: 'string', multiple: true },
+      'elements-file': { type: 'string' },
+      'elements-stdin': { type: 'boolean', default: false },
+
       patch: { type: 'string' },
       'patch-file': { type: 'string' },
       'patch-stdin': { type: 'boolean', default: false },
@@ -153,6 +161,7 @@ function parseCliArgv(rawArgv: readonly string[] = Bun.argv): TCliParsedArgv {
   const kinds = normalizeMultiStringOption(values.kind);
   const types = normalizeMultiStringOption(values.type);
   const styles = normalizeMultiStringOption(values.style);
+  const elementJsons = normalizeMultiStringOption(values.element);
 
   return {
     rawArgv: [...rawArgv],
@@ -185,6 +194,9 @@ function parseCliArgv(rawArgv: readonly string[] = Bun.argv): TCliParsedArgv {
       absolute: values.absolute === true,
       x: typeof values.x === 'string' ? values.x : undefined,
       y: typeof values.y === 'string' ? values.y : undefined,
+      elementJsons,
+      elementsFile: typeof values['elements-file'] === 'string' ? values['elements-file'] : undefined,
+      elementsStdin: values['elements-stdin'] === true,
       patch: typeof values.patch === 'string' ? values.patch : undefined,
       patchFile: typeof values['patch-file'] === 'string' ? values['patch-file'] : undefined,
       patchStdin: values['patch-stdin'] === true,

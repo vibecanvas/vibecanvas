@@ -1,8 +1,8 @@
 import type { IAutomergeService } from '@vibecanvas/service-automerge/IAutomergeService';
 import type { ICliConfig } from '@vibecanvas/cli/config';
 import type { IDbService } from '@vibecanvas/service-db/IDbService';
-import type { TSafeCanvasCmdClient } from '../core/fn.build-rpc-link';
 import { fnPrintCommandError, fnPrintCommandResult } from '../core/fn.print-command-result';
+import { fxDispatchCanvasCommand } from '../core/fx.dispatch-canvas-command';
 import { txExecuteCanvasGroup } from '@vibecanvas/canvas-cmds/cmds/tx.cmd.group';
 import { buildCanvasGroupInput } from './fn.canvas-subcommand-inputs';
 
@@ -34,23 +34,20 @@ Notes:
 `)
 }
 
-export async function runCanvasGroupCommand(services: { db: IDbService, automerge: IAutomergeService, safeClient: TSafeCanvasCmdClient | null }, config: ICliConfig) {
+export async function runCanvasGroupCommand(services: { db: IDbService, automerge: IAutomergeService }, config: ICliConfig) {
   const wantsJson = config.subcommandOptions?.json === true;
 
   try {
     const input = buildCanvasGroupInput(config.subcommandOptions);
 
-    if (services.safeClient) {
-      const [error, result] = await services.safeClient.group(input);
-      if (error) {
-        fnPrintCommandError(error, wantsJson);
-        return;
-      }
-      fnPrintCommandResult(result, wantsJson);
-      return;
-    }
-
-    const result = await txExecuteCanvasGroup({ dbService: services.db, automergeService: services.automerge }, input);
+    const result = await fxDispatchCanvasCommand(services, config, {
+      client: async (safeClient) => {
+        const [error, response] = await safeClient.group(input);
+        if (error) throw error;
+        return response;
+      },
+      local: async () => txExecuteCanvasGroup({ dbService: services.db, automergeService: services.automerge }, input),
+    });
     fnPrintCommandResult(result, wantsJson);
   } catch (error) {
     fnPrintCommandError(error, wantsJson);
