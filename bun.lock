@@ -111,7 +111,7 @@
         "@astrojs/mdx": "^4.2.2",
         "@astrojs/solid-js": "^5.0.6",
         "astro": "^5.4.2",
-        "solid-js": "^1.9.9",
+        "solid-js": "catalog:",
       },
     },
     "packages/api-canvas": {
@@ -343,7 +343,7 @@
     "drizzle-kit": "0.31.10",
     "drizzle-orm": "0.45.2",
     "drizzle-zod": "0.8.3",
-    "lucide-solid": "^0.577.0",
+    "lucide-solid": "^1.7.0",
     "solid-js": "^1.9.12",
     "typescript": "5.9.3",
     "zod": "4.3.6",
@@ -1349,7 +1349,7 @@
 
     "lru-cache": ["lru-cache@11.3.0", "", {}, "sha512-sr8xPKE25m6vJVcrdn6NxtC0fVfuPowbscLypegRgOm0yXSqr5JNHCAY3hnusdJ7HRBW04j6Ip4khvHU778DuQ=="],
 
-    "lucide-solid": ["lucide-solid@0.577.0", "", { "peerDependencies": { "solid-js": "^1.4.7" } }, "sha512-r/rsauBlyNjFlUhXCkD544tOH1GgcFFupw9oP2zZT4BiFkHoO3MTr12QfKBrS5zCRIhktc/qY2tRr925hFlNuQ=="],
+    "lucide-solid": ["lucide-solid@1.7.0", "", { "peerDependencies": { "solid-js": "^1.4.7" } }, "sha512-z+6Vmueb4W3Rf7ZQIEbcwWhQ/ci8vumLnixRzITXXs2uBjFPQvIvhotivUFAlgSj4xDvU822A1p0wioQlFyx8A=="],
 
     "magic-string": ["magic-string@0.30.21", "", { "dependencies": { "@jridgewell/sourcemap-codec": "^1.5.5" } }, "sha512-vd2F4YUyEXKGcLHoq+TEyCjxueSeHnFxyyjNp80yg0XV4vUhnDer/lvvlqM/arB5bXQN5K2/3oinyCRyx8T2CQ=="],
 
