@@ -26,7 +26,7 @@ Required canvas selector (choose exactly one):
 Required target selector:
   --id <id>                 Exact element/group id to patch (repeatable)
 
-Patch source (choose at least one):
+Patch source (choose exactly one):
   --patch <json>            Inline JSON patch payload
   --patch-file <path>       Read patch payload from a file
   --patch-stdin             Read patch payload from stdin

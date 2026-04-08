@@ -32,9 +32,6 @@ type TCanvasSubcommandOptions = {
   patchStdin?: boolean;
 
   action?: string;
-
-  docOnly?: boolean;
-  withEffectsIfAvailable?: boolean;
 };
 
 class CliArgvError extends Error {
@@ -139,9 +136,6 @@ function parseCliArgv(rawArgv: readonly string[] = Bun.argv): TCliParsedArgv {
       'patch-stdin': { type: 'boolean', default: false },
 
       action: { type: 'string' },
-
-      'doc-only': { type: 'boolean', default: false },
-      'with-effects-if-available': { type: 'boolean', default: false },
     },
   });
 
@@ -195,8 +189,6 @@ function parseCliArgv(rawArgv: readonly string[] = Bun.argv): TCliParsedArgv {
       patchFile: typeof values['patch-file'] === 'string' ? values['patch-file'] : undefined,
       patchStdin: values['patch-stdin'] === true,
       action: typeof values.action === 'string' ? values.action : undefined,
-      docOnly: values['doc-only'] === true,
-      withEffectsIfAvailable: values['with-effects-if-available'] === true,
     },
   };
 }

@@ -7,21 +7,34 @@ import type { TSafeCanvasCmdClient } from '../core/fn.build-rpc-link';
 import { fnPrintCommandError, fnPrintCommandResult } from '../core/fn.print-command-result';
 import { buildCanvasPatchInput } from './fn.canvas-subcommand-inputs';
 
-async function readPatchEnvelope(config: ICliConfig): Promise<TCanvasPatchEnvelope | undefined> {
+function buildPatchSourceError(options: ICliConfig['subcommandOptions'], code: string, message: string) {
+  return {
+    ok: false,
+    command: 'canvas.patch',
+    code,
+    message,
+    canvasId: options?.canvasId ?? null,
+    canvasNameQuery: options?.canvasNameQuery ?? null,
+  };
+}
+
+async function readPatchEnvelope(config: ICliConfig): Promise<TCanvasPatchEnvelope> {
   const options = config.subcommandOptions;
+  const sourceCount = Number(Boolean(options?.patch)) + Number(Boolean(options?.patchFile)) + Number(Boolean(options?.patchStdin));
+
+  if (sourceCount === 0) {
+    throw buildPatchSourceError(options, 'CANVAS_PATCH_SOURCE_REQUIRED', 'Patch requires exactly one patch source: --patch, --patch-file, or --patch-stdin.');
+  }
+
+  if (sourceCount > 1) {
+    throw buildPatchSourceError(options, 'CANVAS_PATCH_SOURCE_CONFLICT', 'Patch accepts exactly one patch source: --patch, --patch-file, or --patch-stdin.');
+  }
 
   if (options?.patch) {
     try {
       return JSON.parse(options.patch) as TCanvasPatchEnvelope;
     } catch {
-      throw {
-        ok: false,
-        command: 'canvas.patch',
-        code: 'CANVAS_PATCH_PAYLOAD_INVALID',
-        message: 'Patch payload must be valid JSON.',
-        canvasId: options?.canvasId ?? null,
-        canvasNameQuery: options?.canvasNameQuery ?? null,
-      };
+      throw buildPatchSourceError(options, 'CANVAS_PATCH_PAYLOAD_INVALID', 'Patch payload must be valid JSON.');
     }
   }
 
@@ -29,34 +42,16 @@ async function readPatchEnvelope(config: ICliConfig): Promise<TCanvasPatchEnvelo
     try {
       return JSON.parse(await readFile(options.patchFile, 'utf8')) as TCanvasPatchEnvelope;
     } catch {
-      throw {
-        ok: false,
-        command: 'canvas.patch',
-        code: 'CANVAS_PATCH_PAYLOAD_INVALID',
-        message: 'Patch payload must be valid JSON.',
-        canvasId: options?.canvasId ?? null,
-        canvasNameQuery: options?.canvasNameQuery ?? null,
-      };
+      throw buildPatchSourceError(options, 'CANVAS_PATCH_PAYLOAD_INVALID', 'Patch payload must be valid JSON.');
     }
   }
 
-  if (options?.patchStdin) {
-    const stdinText = await new Response(Bun.stdin.stream()).text();
-    try {
-      return JSON.parse(stdinText) as TCanvasPatchEnvelope;
-    } catch {
-      throw {
-        ok: false,
-        command: 'canvas.patch',
-        code: 'CANVAS_PATCH_PAYLOAD_INVALID',
-        message: 'Patch payload must be valid JSON.',
-        canvasId: options?.canvasId ?? null,
-        canvasNameQuery: options?.canvasNameQuery ?? null,
-      };
-    }
+  const stdinText = await new Response(Bun.stdin.stream()).text();
+  try {
+    return JSON.parse(stdinText) as TCanvasPatchEnvelope;
+  } catch {
+    throw buildPatchSourceError(options, 'CANVAS_PATCH_PAYLOAD_INVALID', 'Patch payload must be valid JSON.');
   }
-
-  return undefined;
 }
 
 export async function runCanvasPatchCommand(services: { db: IDbService, automerge: IAutomergeService, safeClient: TSafeCanvasCmdClient | null }, config: ICliConfig) {

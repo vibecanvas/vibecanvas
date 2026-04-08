@@ -154,12 +154,10 @@ describe('parseCliArgv flag parsing', () => {
       action: 'front',
     });
 
-    const deleteParsed = parseCliArgv(['bun', 'run', 'canvas', 'delete', '--id', 'dead', '--doc-only', '--with-effects-if-available']);
+    const deleteParsed = parseCliArgv(['bun', 'run', 'canvas', 'delete', '--id', 'dead']);
     expect(deleteParsed.subcommand).toBe('delete');
     expect(deleteParsed.subcommandOptions).toMatchObject({
       ids: ['dead'],
-      docOnly: true,
-      withEffectsIfAvailable: true,
     });
 
     const groupParsed = parseCliArgv(['bun', 'run', 'canvas', 'group', '--id', 'a,b']);

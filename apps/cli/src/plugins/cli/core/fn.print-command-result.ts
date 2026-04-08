@@ -98,6 +98,26 @@ function fnNormalizeCommandError(error: unknown): TCliErrorPayload {
     normalized.next = 'Try: vibecanvas query --canvas <canvas-id> --id <target-id> --json';
   }
 
+  if (!normalized.hint && normalized.command === 'canvas.query' && normalized.code === 'CANVAS_QUERY_OUTPUT_INVALID') {
+    normalized.hint = 'Use one of the documented output modes only.';
+    normalized.next = 'Try: vibecanvas query --canvas <canvas-id> --output summary --json';
+  }
+
+  if (!normalized.hint && normalized.command === 'canvas.query' && normalized.code === 'CANVAS_QUERY_JSON_INVALID') {
+    normalized.hint = '--query must be a JSON object with known selector fields.';
+    normalized.next = 'Try: vibecanvas query --canvas <canvas-id> --query \'{"ids":["target-id"]}\' --json';
+  }
+
+  if (!normalized.hint && normalized.command === 'canvas.patch' && normalized.code === 'CANVAS_PATCH_SOURCE_REQUIRED') {
+    normalized.hint = 'Pass exactly one patch source: --patch, --patch-file, or --patch-stdin.';
+    normalized.next = 'Try: vibecanvas patch --canvas <canvas-id> --id <target-id> --patch \'{"element":{"x":10}}\' --json';
+  }
+
+  if (!normalized.hint && normalized.command === 'canvas.patch' && normalized.code === 'CANVAS_PATCH_SOURCE_CONFLICT') {
+    normalized.hint = 'Choose one patch source only.';
+    normalized.next = 'Remove extra patch source flags and retry.';
+  }
+
   if (!normalized.hint && normalized.code === 'DB_FLAG_MISSING_VALUE') {
     normalized.hint = 'Pass one SQLite file path right after --db.';
     normalized.next = 'Try: vibecanvas canvas list --db ./tmp/vibecanvas.sqlite --json';

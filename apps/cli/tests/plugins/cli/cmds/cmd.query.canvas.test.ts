@@ -366,6 +366,40 @@ describe('canvas CLI query', () => {
     });
   });
 
+  test('rejects invalid output mode values', async () => {
+    const context = await createContext();
+    const rect = createRectElement({ id: 'rect-output' });
+    const seeded = await context.seedCanvasFixture({ name: 'query-output-canvas', elements: { [rect.id]: rect } });
+
+    const result = await context.runCanvasCli(['query', '--canvas', seeded.canvas.id, '--id', rect.id, '--output', 'potato', '--json']);
+
+    expectExitCode(result, 1);
+    expect(result.stdout).toBe('');
+    expect(JSON.parse(result.stderr)).toMatchObject({
+      ok: false,
+      command: 'canvas.query',
+      code: 'CANVAS_QUERY_OUTPUT_INVALID',
+      hint: 'Use one of the documented output modes only.',
+    });
+  });
+
+  test('rejects invalid --query json shapes instead of falling back to match-all', async () => {
+    const context = await createContext();
+    const rect = createRectElement({ id: 'rect-query-json' });
+    const seeded = await context.seedCanvasFixture({ name: 'query-json-canvas', elements: { [rect.id]: rect } });
+
+    const result = await context.runCanvasCli(['query', '--canvas', seeded.canvas.id, '--query', '[]', '--json']);
+
+    expectExitCode(result, 1);
+    expect(result.stdout).toBe('');
+    expect(JSON.parse(result.stderr)).toMatchObject({
+      ok: false,
+      command: 'canvas.query',
+      code: 'CANVAS_QUERY_JSON_INVALID',
+      hint: '--query must be a JSON object with known selector fields.',
+    });
+  });
+
   test('blind agent can reach query then patch from help and error hints alone', async () => {
     const context = await createContext();
     const rect = createRectElement({ id: 'rect-blind', x: 10, y: 20 });

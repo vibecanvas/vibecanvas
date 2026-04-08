@@ -179,4 +179,33 @@ describe('canvas CLI patch', () => {
       next: 'Examples: {"element":{"x":10,"style":{"backgroundColor":"#ff0000"}}} or {"group":{"locked":true}}',
     });
   });
+
+  test('requires exactly one patch source', async () => {
+    const context = await createContext();
+    const rect = createRectElement({ id: 'rect-1' });
+    const seeded = await context.seedCanvasFixture({ name: 'patch-source-canvas', elements: { [rect.id]: rect } });
+    const patchPath = `${context.tempRoot}/multi-source.patch.json`;
+
+    await writeFile(patchPath, JSON.stringify({ element: { x: 77 } }), 'utf8');
+
+    const missingSource = await context.runCanvasCli(['patch', '--canvas', seeded.canvas.id, '--id', rect.id, '--json']);
+    expectExitCode(missingSource, 1);
+    expect(missingSource.stdout).toBe('');
+    expect(JSON.parse(missingSource.stderr)).toMatchObject({
+      ok: false,
+      command: 'canvas.patch',
+      code: 'CANVAS_PATCH_SOURCE_REQUIRED',
+      hint: 'Pass exactly one patch source: --patch, --patch-file, or --patch-stdin.',
+    });
+
+    const conflictingSource = await context.runCanvasCli(['patch', '--canvas', seeded.canvas.id, '--id', rect.id, '--patch', '{"element":{"x":12}}', '--patch-file', patchPath, '--json']);
+    expectExitCode(conflictingSource, 1);
+    expect(conflictingSource.stdout).toBe('');
+    expect(JSON.parse(conflictingSource.stderr)).toMatchObject({
+      ok: false,
+      command: 'canvas.patch',
+      code: 'CANVAS_PATCH_SOURCE_CONFLICT',
+      hint: 'Choose one patch source only.',
+    });
+  });
 });

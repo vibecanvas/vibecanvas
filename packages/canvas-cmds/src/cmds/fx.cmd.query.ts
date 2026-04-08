@@ -434,11 +434,23 @@ function buildQueryPayload(target: TSceneTarget, doc: TCanvasDoc, mode: TSceneOu
   };
 }
 
+const OUTPUT_MODES = new Set<TSceneOutputMode>(['summary', 'focused', 'full']);
+
 export async function fxExecuteCanvasQuery(portal: TPortal, input: TCanvasQueryInput): Promise<TCanvasQuerySuccess> {
   const selector = normalizeSceneSelector(input.selector);
 
   try {
     const mode = input.output ?? 'summary';
+    if (!OUTPUT_MODES.has(mode)) {
+      throw {
+        ok: false,
+        command: 'canvas.query',
+        code: 'CANVAS_QUERY_OUTPUT_INVALID',
+        message: `Invalid output mode '${String(mode)}'. Expected one of: summary, focused, full.`,
+        canvasId: selector.canvasId,
+        canvasNameQuery: selector.canvasNameQuery,
+      } satisfies TCanvasCmdErrorDetails;
+    }
     const omitData = Boolean(input.omitData);
     const omitStyle = Boolean(input.omitStyle);
     const canvasRows = portal.dbService.canvas.listAll();

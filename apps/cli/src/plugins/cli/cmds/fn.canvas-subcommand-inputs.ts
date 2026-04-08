@@ -48,21 +48,46 @@ function parseWhereSelector(where: string): TSceneSelector {
   };
 }
 
-function parseQuerySelector(queryJson: string): TSceneSelector | undefined {
+function parseQuerySelector(queryJson: string): TSceneSelector {
   const parsed = JSON.parse(queryJson) as Record<string, unknown>;
-  if (!parsed || Array.isArray(parsed) || typeof parsed !== 'object') return undefined;
+  if (!parsed || Array.isArray(parsed) || typeof parsed !== 'object') {
+    throw {
+      ok: false,
+      command: 'canvas.query',
+      code: 'CANVAS_QUERY_JSON_INVALID',
+      message: '--query must be a JSON object with fields like { ids, kinds, types, style, group, subtree, bounds, boundsMode }.',
+    };
+  }
 
   const kinds = Array.isArray(parsed.kinds)
     ? parsed.kinds.map((value) => typeof value === 'string' ? value.trim() : '').filter((value): value is 'element' | 'group' => value === 'element' || value === 'group')
     : [];
 
   const styleRaw = parsed.style;
-  const style = styleRaw && !Array.isArray(styleRaw) && typeof styleRaw === 'object'
+  if (styleRaw !== undefined && (Array.isArray(styleRaw) || (styleRaw !== null && typeof styleRaw !== 'object'))) {
+    throw {
+      ok: false,
+      command: 'canvas.query',
+      code: 'CANVAS_QUERY_JSON_INVALID',
+      message: '--query style must be an object of scalar values.',
+    };
+  }
+
+  const style = styleRaw && typeof styleRaw === 'object'
     ? Object.fromEntries(Object.entries(styleRaw).filter(([, value]) => typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean' || value === null))
     : {};
 
   const boundsRaw = parsed.bounds;
-  const boundsRecord = boundsRaw && !Array.isArray(boundsRaw) && typeof boundsRaw === 'object'
+  if (boundsRaw !== undefined && (Array.isArray(boundsRaw) || (boundsRaw !== null && typeof boundsRaw !== 'object'))) {
+    throw {
+      ok: false,
+      command: 'canvas.query',
+      code: 'CANVAS_QUERY_JSON_INVALID',
+      message: '--query bounds must be an object like { x, y, w, h }.',
+    };
+  }
+
+  const boundsRecord = boundsRaw && typeof boundsRaw === 'object'
     ? boundsRaw as Record<string, unknown>
     : null;
   const bounds = boundsRecord
@@ -71,7 +96,16 @@ function parseQuerySelector(queryJson: string): TSceneSelector | undefined {
     && typeof boundsRecord.w === 'number'
     && typeof boundsRecord.h === 'number'
     ? { x: boundsRecord.x, y: boundsRecord.y, w: boundsRecord.w, h: boundsRecord.h }
-    : null;
+    : boundsRecord === null
+      ? null
+      : (() => {
+          throw {
+            ok: false,
+            command: 'canvas.query',
+            code: 'CANVAS_QUERY_JSON_INVALID',
+            message: '--query bounds must include numeric x, y, w, and h fields.',
+          };
+        })();
 
   return {
     ids: Array.isArray(parsed.ids) ? parsed.ids.map((value) => typeof value === 'string' ? value.trim() : '').filter(Boolean) : [],
@@ -88,6 +122,8 @@ function parseQuerySelector(queryJson: string): TSceneSelector | undefined {
 function sortUnique(values: string[] | undefined): string[] {
   return [...new Set((values ?? []).map((value) => value.trim()).filter(Boolean))].sort((left, right) => left.localeCompare(right));
 }
+
+const QUERY_OUTPUT_MODES = new Set<TCanvasQueryInput['output']>(['summary', 'focused', 'full']);
 
 export function buildCanvasQueryInput(options?: TCanvasSubcommandOptions): TCanvasQueryInput {
   const selectorModeCount = Number(Boolean(options?.where)) + Number(Boolean(options?.queryJson)) + Number(Boolean(
@@ -133,7 +169,7 @@ export function buildCanvasQueryInput(options?: TCanvasSubcommandOptions): TCanv
     selector.filters = parseWhereSelector(options.where);
   } else if (options?.queryJson) {
     selector.source = 'query';
-    selector.filters = parseQuerySelector(options.queryJson) ?? selector.filters;
+    selector.filters = parseQuerySelector(options.queryJson);
   } else {
     const style = parseStyleAssignments(options?.styles);
     const hasFlags = Boolean(
@@ -157,6 +193,17 @@ export function buildCanvasQueryInput(options?: TCanvasSubcommandOptions): TCanv
       subtree: options?.subtree ?? null,
       bounds: parseBounds(options?.bounds) ?? null,
       boundsMode: options?.boundsMode === 'contains' ? 'contains' : 'intersects',
+    };
+  }
+
+  if (options?.output !== undefined && !QUERY_OUTPUT_MODES.has(options.output as TCanvasQueryInput['output'])) {
+    throw {
+      ok: false,
+      command: 'canvas.query',
+      code: 'CANVAS_QUERY_OUTPUT_INVALID',
+      message: `Invalid --output mode '${options.output}'. Expected one of: summary, focused, full.`,
+      canvasId: options?.canvasId ?? null,
+      canvasNameQuery: options?.canvasNameQuery ?? null,
     };
   }
 
