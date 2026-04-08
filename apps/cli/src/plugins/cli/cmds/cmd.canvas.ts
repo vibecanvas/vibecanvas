@@ -9,11 +9,12 @@ import { runCanvasMoveCommand, printCanvasMoveHelp } from './cmd.canvas.move';
 import { runCanvasPatchCommand } from './cmd.canvas.patch';
 import { runCanvasQueryCommand, printCanvasQueryHelp } from './cmd.canvas.query';
 import { runCanvasReorderCommand, printCanvasReorderHelp } from './cmd.canvas.reorder';
-import { runCanvasUngroupCommand, printCanvasUngroupHelp } from './cmd.canvas.ungroup';
-import { CANVAS_SUBCOMMAND_SET } from '../core/constants';
+import { CANVAS_PATCH_HELP_EXAMPLES } from '../canvas-command.examples';
+import { listCanvasCommandSchemaFilters, renderCanvasCommandSchema } from '../core/canvas-command.docs';
+import { runCanvasUngroupCommand, printCanvasUngroupHelp } from './cmd.canvas.ungroup';import { CANVAS_SUBCOMMAND_SET } from '../core/constants';
 import { fnBuildUnknownCommandError, fnPrintCommandError } from '../core/fn.print-command-result';
 
-export function printCanvasPatchHelp(): void {
+export function printCanvasPatchHelp(args?: { schema?: boolean | string }): void {
   console.log(`Usage: vibecanvas canvas patch [options]
 
 Patch explicit element/group ids with structured field updates.
@@ -34,20 +35,25 @@ Patch envelope:
   Element targets expect:   {"element":{...}}
   Group targets expect:     {"group":{...}}
 
-Common examples:
-  vibecanvas patch --canvas 3d3f... --id rect-1 --patch '{"element":{"x":55}}' --json
-  vibecanvas patch --canvas 3d3f... --id rect-1 --patch '{"element":{"style":{"backgroundColor":"#ff0000"}}}' --json
-  vibecanvas patch --canvas 3d3f... --id group-1 --patch '{"group":{"locked":true}}' --json
+Examples:
+  ${CANVAS_PATCH_HELP_EXAMPLES.moveElement}
+  ${CANVAS_PATCH_HELP_EXAMPLES.styleElement}
+  ${CANVAS_PATCH_HELP_EXAMPLES.lockGroup}
 
 Options:
   --db <path>               Optional explicit SQLite file override for the opened db
   --json                    Emit machine-readable success/error payloads
+  --schema [type]           Print schema blocks sourced from canvas-doc.ts
+                            Filters: ${listCanvasCommandSchemaFilters('patch')}
   --help, -h                Show this help message
 
 Notes:
   - top-level patch keys must be element or group.
   - use element.data / element.style for nested element updates.
-  - errors include a short hint and one likely next step.
+  - --schema with no type prints all patch schema blocks.
+  - errors include a short hint and one likely next step.${args?.schema ? `
+
+${renderCanvasCommandSchema({ doc: 'patch', filter: args.schema })}` : ''}
 `)
 }
 
@@ -99,7 +105,7 @@ Notes:
 `);
 }
 
-export function printCanvasCommandHelp(subcommand?: string): void {
+export function printCanvasCommandHelp(subcommand?: string, args?: { schema?: boolean | string }): void {
   if (!subcommand) {
     printCanvasHelp();
     return;
@@ -116,7 +122,7 @@ export function printCanvasCommandHelp(subcommand?: string): void {
   }
 
   if (subcommand === 'add') {
-    printCanvasAddHelp();
+    printCanvasAddHelp(args);
     return;
   }
 
@@ -126,7 +132,7 @@ export function printCanvasCommandHelp(subcommand?: string): void {
   }
 
   if (subcommand === 'patch') {
-    printCanvasPatchHelp();
+    printCanvasPatchHelp(args);
     return;
   }
 
@@ -168,7 +174,7 @@ export async function runCanvasCommand(services: { db: IDbService, automerge: IA
   }
 
   if (config.helpRequested) {
-    printCanvasCommandHelp(config.subcommand);
+    printCanvasCommandHelp(config.subcommand, { schema: config.subcommandOptions?.schema });
     return;
   }
 

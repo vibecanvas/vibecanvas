@@ -76,17 +76,16 @@ export function fnBuildUnknownCommandError(scope: 'root' | 'canvas', input: stri
 }
 
 function fnNormalizeCommandError(error: unknown): TCliErrorPayload {
-  const payload = typeof error === 'object' && error !== null
+  const payload: Record<string, unknown> = typeof error === 'object' && error !== null
     ? { ...error as Record<string, unknown> }
     : { message: typeof error === 'string' ? error : String(error) };
 
   const normalized: TCliErrorPayload = {
+    ...payload,
     ok: false,
     command: typeof payload.command === 'string' || payload.command === null ? payload.command as string | null : 'canvas',
     code: typeof payload.code === 'string' ? payload.code : 'CLI_COMMAND_FAILED',
     message: typeof payload.message === 'string' ? payload.message : 'Command failed.',
-    ...payload,
-    ok: false,
   };
 
   if (!normalized.hint && normalized.command === 'canvas.patch' && normalized.code === 'CANVAS_PATCH_PAYLOAD_INVALID') {
@@ -94,18 +93,23 @@ function fnNormalizeCommandError(error: unknown): TCliErrorPayload {
   }
 
   if (!normalized.hint && normalized.command === 'canvas.add' && normalized.code === 'CANVAS_ADD_SOURCE_REQUIRED') {
-    normalized.hint = 'Pass exactly one element source: --element, --elements-file, or --elements-stdin.';
-    normalized.next = 'Try: vibecanvas add --canvas <canvas-id> --element \'{"type":"rect","x":10,"y":20}\' --json';
+    normalized.hint = 'Pass exactly one element source: --element, --elements-file, --elements-stdin, or shorthand flags.';
+    normalized.next = 'Try: vibecanvas add --canvas <canvas-id> --rect 10,20,120,80 --json';
   }
 
   if (!normalized.hint && normalized.command === 'canvas.add' && normalized.code === 'CANVAS_ADD_SOURCE_CONFLICT') {
     normalized.hint = 'Choose one add payload source only.';
-    normalized.next = 'Remove extra add source flags and retry.';
+    normalized.next = 'Do not mix shorthand flags with --element/--elements-file/--elements-stdin.';
   }
 
   if (!normalized.hint && normalized.command === 'canvas.add' && normalized.code === 'CANVAS_ADD_PAYLOAD_INVALID') {
     normalized.hint = 'Add payloads must be valid JSON objects, or a JSON array when using file/stdin.';
     normalized.next = 'Try: vibecanvas add --canvas <canvas-id> --element \'{"type":"rect"}\' --json';
+  }
+
+  if (!normalized.hint && normalized.command === 'canvas.add' && normalized.code === 'CANVAS_ADD_SHORTHAND_INVALID') {
+    normalized.hint = 'Use strict shorthand grammar only: rect x,y,w,h; ellipse x,y,rx,ry; diamond x,y,w,h; text x,y,text; line/arrow x,y,x2,y2.';
+    normalized.next = 'Try: vibecanvas add --canvas <canvas-id> --text 40,20,hello --json';
   }
 
   if (!normalized.hint && normalized.command === 'canvas.query' && normalized.code === 'CANVAS_QUERY_SELECTOR_CONFLICT') {

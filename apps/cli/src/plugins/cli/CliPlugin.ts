@@ -107,7 +107,7 @@ function createCliPlugin(): IPlugin<{ db: IDbService, automerge: IAutomergeServi
             return;
           }
 
-          printCanvasCommandHelp(ctx.config.subcommand);
+          printCanvasCommandHelp(ctx.config.subcommand, { schema: ctx.config.subcommandOptions?.schema });
           process.exitCode = 0;
           return;
         }

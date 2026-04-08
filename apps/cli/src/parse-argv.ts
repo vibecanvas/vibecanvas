@@ -5,6 +5,7 @@ type TCliCommand = 'serve' | 'canvas' | 'upgrade' | 'unknown';
 
 type TCanvasSubcommandOptions = {
   json?: boolean;
+  schema?: boolean | string;
   canvasId?: string;
   canvasNameQuery?: string;
   ids?: string[];
@@ -30,6 +31,12 @@ type TCanvasSubcommandOptions = {
   elementJsons?: string[];
   elementsFile?: string;
   elementsStdin?: boolean;
+  rects?: string[];
+  ellipses?: string[];
+  diamonds?: string[];
+  texts?: string[];
+  lines?: string[];
+  arrows?: string[];
 
   patch?: string;
   patchFile?: string;
@@ -99,6 +106,22 @@ function normalizeMultiStringOption(value: unknown): string[] {
   return typeof value === 'string' ? [value] : [];
 }
 
+function parseSchemaOption(argv: readonly string[]): boolean | string | undefined {
+  for (let index = 0; index < argv.length; index += 1) {
+    const token = argv[index];
+    if (!token) continue;
+    if (token === '--schema') {
+      const next = argv[index + 1];
+      return next && !next.startsWith('-') ? next : true;
+    }
+    if (token.startsWith('--schema=')) {
+      const value = token.slice('--schema='.length).trim();
+      return value.length > 0 ? value : true;
+    }
+  }
+  return undefined;
+}
+
 function parseCliArgv(rawArgv: readonly string[] = Bun.argv): TCliParsedArgv {
   const argv = [...rawArgv];
   const { values, positionals } = parseArgs({
@@ -113,6 +136,7 @@ function parseCliArgv(rawArgv: readonly string[] = Bun.argv): TCliParsedArgv {
       upgrade: { type: 'string' },
 
       json: { type: 'boolean', default: false },
+      schema: { type: 'boolean', default: false },
       canvas: { type: 'string' },
       'canvas-name': { type: 'string' },
       id: { type: 'string', multiple: true },
@@ -138,6 +162,12 @@ function parseCliArgv(rawArgv: readonly string[] = Bun.argv): TCliParsedArgv {
       element: { type: 'string', multiple: true },
       'elements-file': { type: 'string' },
       'elements-stdin': { type: 'boolean', default: false },
+      rect: { type: 'string', multiple: true },
+      ellipse: { type: 'string', multiple: true },
+      diamond: { type: 'string', multiple: true },
+      text: { type: 'string', multiple: true },
+      line: { type: 'string', multiple: true },
+      arrow: { type: 'string', multiple: true },
 
       patch: { type: 'string' },
       'patch-file': { type: 'string' },
@@ -162,6 +192,14 @@ function parseCliArgv(rawArgv: readonly string[] = Bun.argv): TCliParsedArgv {
   const types = normalizeMultiStringOption(values.type);
   const styles = normalizeMultiStringOption(values.style);
   const elementJsons = normalizeMultiStringOption(values.element);
+  const rects = normalizeMultiStringOption(values.rect);
+  const ellipses = normalizeMultiStringOption(values.ellipse);
+  const diamonds = normalizeMultiStringOption(values.diamond);
+  const texts = normalizeMultiStringOption(values.text);
+  const lines = normalizeMultiStringOption(values.line);
+  const arrows = normalizeMultiStringOption(values.arrow);
+
+  const schema = parseSchemaOption(argv);
 
   return {
     rawArgv: [...rawArgv],
@@ -175,6 +213,7 @@ function parseCliArgv(rawArgv: readonly string[] = Bun.argv): TCliParsedArgv {
     upgradeTarget: typeof values.upgrade === 'string' ? values.upgrade : undefined,
     subcommandOptions: {
       json: values.json === true,
+      schema,
       canvasId: typeof values.canvas === 'string' ? values.canvas : undefined,
       canvasNameQuery: typeof values['canvas-name'] === 'string' ? values['canvas-name'] : undefined,
       ids,
@@ -197,6 +236,12 @@ function parseCliArgv(rawArgv: readonly string[] = Bun.argv): TCliParsedArgv {
       elementJsons,
       elementsFile: typeof values['elements-file'] === 'string' ? values['elements-file'] : undefined,
       elementsStdin: values['elements-stdin'] === true,
+      rects,
+      ellipses,
+      diamonds,
+      texts,
+      lines,
+      arrows,
       patch: typeof values.patch === 'string' ? values.patch : undefined,
       patchFile: typeof values['patch-file'] === 'string' ? values['patch-file'] : undefined,
       patchStdin: values['patch-stdin'] === true,
