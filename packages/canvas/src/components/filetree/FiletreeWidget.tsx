@@ -19,6 +19,7 @@ type TFiletreeWidgetProps = {
   safeClient: TFiletreeSafeClient;
   setWindowChrome?: (chrome: THostedWidgetChrome | null) => void;
   onPathChange: (path: string) => void;
+  onOpenFile?: (path: string) => void;
 };
 
 export function FiletreeWidget(props: TFiletreeWidgetProps) {
@@ -80,6 +81,10 @@ export function FiletreeWidget(props: TFiletreeWidgetProps) {
           }}
           onClick={() => {
             filetreeLogic.handleNodeClick(node);
+          }}
+          onDblClick={() => {
+            if (node.is_dir) return;
+            props.onOpenFile?.(node.path);
           }}
         >
           <Show when={node.is_dir} fallback={<span class="w-3" />}>

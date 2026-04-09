@@ -7,6 +7,7 @@ type TFiletreeHostedWidgetProps = {
   safeClient?: TFiletreeSafeClient;
   setWindowChrome?: (chrome: THostedWidgetChrome | null) => void;
   onPathChange: (path: string) => void;
+  onOpenFile?: (path: string) => void;
 };
 
 export function FiletreeHostedWidget(props: TFiletreeHostedWidgetProps) {
@@ -25,6 +26,7 @@ export function FiletreeHostedWidget(props: TFiletreeHostedWidgetProps) {
         safeClient={props.safeClient}
         setWindowChrome={props.setWindowChrome}
         onPathChange={props.onPathChange}
+        onOpenFile={props.onOpenFile}
       />
     </div>
   );

@@ -21,6 +21,7 @@ export function createHostedWidgetMount(
     showTransformerForNode: (context: IPluginContext, node: Konva.Rect) => void;
     removeHostedNode: (context: IPluginContext, node: Konva.Rect) => Promise<void>;
     reloadHostedNode: (context: IPluginContext, node: Konva.Rect) => Promise<void>;
+    openFilePreview: (context: IPluginContext, node: Konva.Rect, path: string) => void;
     mountWidgetFromUpdate: (node: Konva.Rect, element: THostedWidgetElement) => void;
     syncMountedNode: (node: Konva.Rect) => void;
     toElement: (node: Konva.Rect) => THostedWidgetElement;
@@ -101,6 +102,9 @@ export function createHostedWidgetMount(
               node.setAttr(HOSTED_ELEMENT_ATTR, structuredClone(nextElement));
               runtime.mountWidgetFromUpdate(node, nextElement);
               context.crdt.patch({ elements: [nextElement], groups: [] });
+            }}
+            onOpenFile={(path) => {
+              runtime.openFilePreview(context, node, path);
             }}
           />
         </Show>
