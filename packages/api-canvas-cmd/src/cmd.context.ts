@@ -24,6 +24,7 @@ function createCanvasCmdContext(context: TCanvasCmdApiContext): TCanvasCmdPortal
   return {
     dbService: context.db,
     automergeService: context.automerge,
+    crypto,
   };
 }
 

@@ -3,6 +3,7 @@ import type { IAutomergeService } from '@vibecanvas/service-automerge/IAutomerge
 import type { ICliConfig } from '@vibecanvas/cli/config';
 import type { IDbService } from '@vibecanvas/service-db/IDbService';
 import { txExecuteCanvasAdd, type TCanvasAddElementInput, type TCanvasAddSuccess } from '@vibecanvas/canvas-cmds/cmds/tx.cmd.add';
+import { fxRenderCanvasAddContracts } from '@vibecanvas/canvas-cmds/cmds/fn.canvas-add-contract';
 import { CANVAS_ADD_HELP_EXAMPLES } from '../canvas-command.examples';
 import { fxDispatchCanvasCommand } from '../core/fx.dispatch-canvas-command';
 import { listCanvasCommandSchemaFilters, renderCanvasCommandSchema } from '../core/canvas-command.docs';
@@ -36,12 +37,16 @@ Notes on ids:
 Examples:
   ${CANVAS_ADD_HELP_EXAMPLES.inlineRect}
   ${CANVAS_ADD_HELP_EXAMPLES.inlineText}
+  ${CANVAS_ADD_HELP_EXAMPLES.inlineMinimalRect}
+  ${CANVAS_ADD_HELP_EXAMPLES.inlineMinimalText}
   ${CANVAS_ADD_HELP_EXAMPLES.elementsFile}
   ${CANVAS_ADD_HELP_EXAMPLES.shorthandRect}
   ${CANVAS_ADD_HELP_EXAMPLES.shorthandText}
 
 Supported types:
   rect | ellipse | diamond | text | line | arrow
+
+${fxRenderCanvasAddContracts()}
 
 Options:
   --db <path>               Optional explicit SQLite file override for the opened db
@@ -228,7 +233,7 @@ export async function runCanvasAddCommand(services: { db: IDbService, automerge:
         return response as TCanvasAddSuccess;
       },
       local: async () => {
-        const result = await txExecuteCanvasAdd({ dbService: services.db, automergeService: services.automerge }, input);
+        const result = await txExecuteCanvasAdd({ dbService: services.db, automergeService: services.automerge, crypto }, input);
         await Bun.sleep(75);
         return result;
       },

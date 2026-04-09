@@ -115,7 +115,7 @@ Use the leaf files for execution history and local context.
 - [x]: [A20](a/A20.md) - canvas CLI: agent-friendly help, discovery, and forgiving errors
 - [ ]: [A21](a/A21.md) - canvas CLI: add `--dry-run` for add/patch/move/group/ungroup/delete
 - [ ]: [A22](a/A22.md) - canvas CLI: allow JSON array payloads for multi-element add and multi-target patch
-- [ ]: [A23](a/A23.md) - canvas CLI: document minimal required add args per element type and default optional fields
+- [x]: [A23](a/A23.md) - canvas CLI: document minimal required add args per element type and default optional fields
 
 ## S ubtractions
 - [ ]: [S1](s/S1.md) - double bun run dev -> find new port
@@ -140,7 +140,7 @@ Use the leaf files for execution history and local context.
 - [x]: [S22] fix build and ci tests to use new apps/cli
 - [x]: [S23] Use global costs for dev and prod ports
 - [x]: [S24] rename @vibecanvas/service-db -> @vibecanvas/service.db and co
-- [ ]: [S25](s/S25.md) - db: remove filetrees table/schema; canvas-doc fully owns filetree state
+- [~]: [S25](s/S25.md) - db: remove filetrees table/schema; canvas-doc fully owns filetree state
 - [ ]: [S26](s/S26.md) - db: add filesystems db table for local/remote machine identity
 - [x]: [S27](s/S27.md) - canvas CLI: remove unimplemented `render` command and help traces
 - [ ]: [S28] - use runtime package in canvas, like cli does

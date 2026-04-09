@@ -2,6 +2,8 @@ import { writeFile } from 'node:fs/promises';
 import { afterEach, describe, expect, test } from 'bun:test';
 import {
   CANVAS_ADD_EXAMPLE_FILE_PAYLOAD,
+  CANVAS_ADD_EXAMPLE_INLINE_MINIMAL_RECT_PAYLOAD,
+  CANVAS_ADD_EXAMPLE_INLINE_MINIMAL_TEXT_PAYLOAD,
   CANVAS_ADD_EXAMPLE_INLINE_RECT_PAYLOAD,
   CANVAS_ADD_EXAMPLE_INLINE_TEXT_PAYLOAD,
 } from '../../../../src/plugins/cli/canvas-command.examples';
@@ -42,6 +44,16 @@ describe('canvas add help examples stay executable', () => {
     expectExitCode(textResult, 0);
     expectNoStderr(textResult);
     expect(parseJsonStdout<TAddJson>(textResult)).toMatchObject({ ok: true, command: 'canvas.add', addedCount: 1 });
+
+    const minimalRectResult = await context.runCanvasCli(['add', '--canvas', seeded.canvas.id, '--element', JSON.stringify(CANVAS_ADD_EXAMPLE_INLINE_MINIMAL_RECT_PAYLOAD), '--json']);
+    expectExitCode(minimalRectResult, 0);
+    expectNoStderr(minimalRectResult);
+    expect(parseJsonStdout<TAddJson>(minimalRectResult)).toMatchObject({ ok: true, command: 'canvas.add', addedCount: 1 });
+
+    const minimalTextResult = await context.runCanvasCli(['add', '--canvas', seeded.canvas.id, '--element', JSON.stringify(CANVAS_ADD_EXAMPLE_INLINE_MINIMAL_TEXT_PAYLOAD), '--json']);
+    expectExitCode(minimalTextResult, 0);
+    expectNoStderr(minimalTextResult);
+    expect(parseJsonStdout<TAddJson>(minimalTextResult)).toMatchObject({ ok: true, command: 'canvas.add', addedCount: 1 });
 
     const rectPayload = parseJsonStdout<TAddJson>(rectResult);
     const textPayload = parseJsonStdout<TAddJson>(textResult);

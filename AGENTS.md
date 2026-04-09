@@ -54,6 +54,13 @@ Do not guess. Use these rules.
 - fn is for pure functions
 - keep fn logic deterministic and state-free
 
+### Direct runtime global blocking
+- block free runtime global usage like `crypto.randomUUID()`, `window.location`, `fetch(...)`, `process.env`, `console.log(...)`
+- allow type-only references like `typeof crypto`, `typeof window`, `Request`, `Response` when they are only used in type positions
+- allow injected access like `portal.crypto.randomUUID()` and `portal.window.location`
+- allow portal field typing like `crypto: typeof crypto` and `window: typeof window`
+- rule is about direct runtime global access, not about naming a portal field or using the global in a type-only annotation
+
 ### fx.*.ts
 - ignore `fx.*.test.ts` files
 - exported functions must start with `fx`

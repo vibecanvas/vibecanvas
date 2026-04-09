@@ -16,6 +16,14 @@ const CANVAS_ADD_EXAMPLE_INLINE_TEXT_PAYLOAD = {
   data: { text: 'hello', originalText: 'hello', w: 120, h: 40 },
 };
 
+const CANVAS_ADD_EXAMPLE_INLINE_MINIMAL_RECT_PAYLOAD = {
+  type: 'rect',
+};
+
+const CANVAS_ADD_EXAMPLE_INLINE_MINIMAL_TEXT_PAYLOAD = {
+  type: 'text',
+};
+
 const CANVAS_ADD_EXAMPLE_FILE_PAYLOAD = [
   { type: 'rect', x: 20, y: 20, data: { w: 140, h: 80 } },
   { type: 'arrow', x: 160, y: 60, data: { points: [[0, 0], [100, 0]] } },
@@ -40,6 +48,8 @@ function stringifyExample(value: unknown): string {
 const CANVAS_ADD_HELP_EXAMPLES = {
   inlineRect: `vibecanvas add --canvas <canvas-id> --element '${stringifyExample(CANVAS_ADD_EXAMPLE_INLINE_RECT_PAYLOAD)}' --json`,
   inlineText: `vibecanvas add --canvas <canvas-id> --element '${stringifyExample(CANVAS_ADD_EXAMPLE_INLINE_TEXT_PAYLOAD)}' --json`,
+  inlineMinimalRect: `vibecanvas add --canvas <canvas-id> --element '${stringifyExample(CANVAS_ADD_EXAMPLE_INLINE_MINIMAL_RECT_PAYLOAD)}' --json`,
+  inlineMinimalText: `vibecanvas add --canvas <canvas-id> --element '${stringifyExample(CANVAS_ADD_EXAMPLE_INLINE_MINIMAL_TEXT_PAYLOAD)}' --json`,
   elementsFile: 'vibecanvas add --canvas <canvas-id> --elements-file ./elements.json --json',
   shorthandRect: 'vibecanvas add --canvas <canvas-id> --rect 40,20,160,90 --json',
   shorthandText: 'vibecanvas add --canvas <canvas-id> --text 240,32,hello --json',
@@ -53,6 +63,8 @@ const CANVAS_PATCH_HELP_EXAMPLES = {
 
 export {
   CANVAS_ADD_EXAMPLE_FILE_PAYLOAD,
+  CANVAS_ADD_EXAMPLE_INLINE_MINIMAL_RECT_PAYLOAD,
+  CANVAS_ADD_EXAMPLE_INLINE_MINIMAL_TEXT_PAYLOAD,
   CANVAS_ADD_EXAMPLE_INLINE_RECT_PAYLOAD,
   CANVAS_ADD_EXAMPLE_INLINE_TEXT_PAYLOAD,
   CANVAS_ADD_HELP_EXAMPLES,

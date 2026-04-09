@@ -1,9 +1,10 @@
 import type { IAutomergeService } from '@vibecanvas/service-automerge/IAutomergeService';
-import type { TArrowData, TCanvasDoc, TDiamondData, TEllipseData, TElement, TElementData, TElementStyle, TLineData, TRectData, TTextData } from '@vibecanvas/service-automerge/types/canvas-doc';
+import type { TCanvasDoc, TElement } from '@vibecanvas/service-automerge/types/canvas-doc';
 import type { IDbService } from '@vibecanvas/service-db/IDbService';
 import { fnNormalizeCanvas, fnResolveCanvasSelection, fnSortIds, type TCanvasSummary } from '../core/fn.canvas';
 import { fnIsPlainObject } from '../core/fn.guard';
 import { fxLoadCanvasHandleDoc } from '../core/fx.canvas';
+import { fxBuildCanvasAddData, fxDefaultCanvasAddStyle } from './fn.canvas-add-contract';
 import type { TCanvasCmdErrorDetails } from '../types';
 
 export type TAddPrimitiveType = 'rect' | 'ellipse' | 'diamond' | 'text' | 'line' | 'arrow';
@@ -20,11 +21,13 @@ export type TCanvasAddElementInput = {
   style?: Record<string, unknown>;
 };
 
-export type TCanvasAddInput = {
+export type TArgsCanvasAddInput = {
   canvasId?: string | null;
   canvasNameQuery?: string | null;
   elements?: TCanvasAddElementInput[];
 };
+
+export type TCanvasAddInput = TArgsCanvasAddInput;
 
 export type TCanvasAddSuccess = {
   ok: true;
@@ -35,10 +38,13 @@ export type TCanvasAddSuccess = {
   elements: Array<{ id: string; type: TAddPrimitiveType; parentGroupId: string | null; zIndex: string }>;
 };
 
-export type TPortal = {
+export type TPortalCanvasAdd = {
   dbService: IDbService;
   automergeService: IAutomergeService;
+  crypto: typeof crypto;
 };
+
+export type TPortal = TPortalCanvasAdd;
 
 function fnCreateOrderedZIndex(index: number): string {
   return `z${String(index).padStart(8, '0')}`;
@@ -49,26 +55,16 @@ function fnExtractZIndexNumber(zIndex: string): number {
   return match ? Number(match[1]) : -1;
 }
 
-function fnValidateInput(input: TCanvasAddInput): TCanvasAddElementInput[] {
-  const elements = input.elements ?? [];
-  if (elements.length === 0) throw { ok: false, command: 'canvas.add', code: 'CANVAS_ADD_ELEMENT_REQUIRED', message: 'Add requires at least one element payload.', canvasId: input.canvasId ?? null, canvasNameQuery: input.canvasNameQuery ?? null } satisfies TCanvasCmdErrorDetails;
+function fnValidateInput(args: TArgsCanvasAddInput): TCanvasAddElementInput[] {
+  const elements = args.elements ?? [];
+  if (elements.length === 0) throw { ok: false, command: 'canvas.add', code: 'CANVAS_ADD_ELEMENT_REQUIRED', message: 'Add requires at least one element payload.', canvasId: args.canvasId ?? null, canvasNameQuery: args.canvasNameQuery ?? null } satisfies TCanvasCmdErrorDetails;
   return elements;
 }
 
-function fnDefaultStyle(): TElementStyle {
-  return { backgroundColor: '#ffffff', strokeColor: '#111111', strokeWidth: 1, opacity: 1 };
-}
-
-function fnBuildData(type: TAddPrimitiveType, raw: Record<string, unknown>): TElementData {
-  if (type === 'rect') return { type: 'rect', w: 120, h: 80, ...(raw as Partial<TRectData>) };
-  if (type === 'ellipse') return { type: 'ellipse', rx: 60, ry: 40, ...(raw as Partial<TEllipseData>) };
-  if (type === 'diamond') return { type: 'diamond', w: 120, h: 80, ...(raw as Partial<TDiamondData>) };
-  if (type === 'text') return { type: 'text', w: 120, h: 40, text: 'hello', originalText: 'hello', fontSize: 16, fontFamily: 'Inter', textAlign: 'left', verticalAlign: 'top', lineHeight: 1.2, link: null, containerId: null, autoResize: false, ...(raw as Partial<TTextData>) };
-  if (type === 'line') return { type: 'line', lineType: 'straight', points: [[0, 0], [120, 0]], startBinding: null, endBinding: null, ...(raw as Partial<TLineData>) };
-  return { type: 'arrow', lineType: 'straight', points: [[0, 0], [120, 0]], startBinding: null, endBinding: null, startCap: 'none', endCap: 'arrow', ...(raw as Partial<TArrowData>) };
-}
-
 function fnValidateElementPayload(element: TCanvasAddElementInput, doc: TCanvasDoc): void {
+  if (typeof element.type !== 'string' || element.type.trim().length === 0) {
+    throw { ok: false, command: 'canvas.add', code: 'CANVAS_ADD_TYPE_REQUIRED', message: 'Element payload must include a supported type.' } satisfies TCanvasCmdErrorDetails;
+  }
   if (!['rect', 'ellipse', 'diamond', 'text', 'line', 'arrow'].includes(element.type)) {
     throw { ok: false, command: 'canvas.add', code: 'CANVAS_ADD_TYPE_INVALID', message: `Unsupported element type '${String(element.type)}'.` } satisfies TCanvasCmdErrorDetails;
   }
@@ -82,10 +78,10 @@ function fnValidateElementPayload(element: TCanvasAddElementInput, doc: TCanvasD
   }
 }
 
-function fnBuildElement(args: { input: TCanvasAddElementInput; zIndex: string }): TElement {
+function fnBuildElement(args: { input: TCanvasAddElementInput; zIndex: string; randomUUID: () => string }): TElement {
   const now = Date.now();
   return {
-    id: args.input.id ?? crypto.randomUUID(),
+    id: args.input.id ?? args.randomUUID(),
     x: args.input.x ?? 0,
     y: args.input.y ?? 0,
     rotation: args.input.rotation ?? 0,
@@ -95,21 +91,21 @@ function fnBuildElement(args: { input: TCanvasAddElementInput; zIndex: string })
     locked: args.input.locked ?? false,
     createdAt: now,
     updatedAt: now,
-    data: fnBuildData(args.input.type, args.input.data ?? {}),
-    style: { ...fnDefaultStyle(), ...(args.input.style ?? {}) },
+    data: fxBuildCanvasAddData(args.input.type, args.input.data ?? {}),
+    style: { ...fxDefaultCanvasAddStyle(), ...(args.input.style ?? {}) },
   };
 }
 
-export async function txExecuteCanvasAdd(portal: TPortal, input: TCanvasAddInput): Promise<TCanvasAddSuccess> {
+export async function txExecuteCanvasAdd(portal: TPortalCanvasAdd, args: TArgsCanvasAddInput): Promise<TCanvasAddSuccess> {
   try {
-    const requestedElements = fnValidateInput(input);
-    const selectedCanvas = fnResolveCanvasSelection({ rows: portal.dbService.canvas.listAll(), selector: input, command: 'canvas.add', actionLabel: 'Add' });
+    const requestedElements = fnValidateInput(args);
+    const selectedCanvas = fnResolveCanvasSelection({ rows: portal.dbService.canvas.listAll(), selector: args, command: 'canvas.add', actionLabel: 'Add' });
     const { handle, doc } = await fxLoadCanvasHandleDoc(portal, selectedCanvas);
 
     for (const element of requestedElements) fnValidateElementPayload(element, doc);
 
     const maxExistingIndex = Math.max(-1, ...Object.values(doc.elements).map((element) => fnExtractZIndexNumber(element.zIndex)), ...Object.values(doc.groups).map((group) => fnExtractZIndexNumber(group.zIndex)));
-    const builtElements = requestedElements.map((element, index) => fnBuildElement({ input: element, zIndex: fnCreateOrderedZIndex(maxExistingIndex + index + 1) }));
+    const builtElements = requestedElements.map((element, index) => fnBuildElement({ input: element, zIndex: fnCreateOrderedZIndex(maxExistingIndex + index + 1), randomUUID: () => portal.crypto.randomUUID() }));
     const builtIds = new Set<string>();
     for (const element of builtElements) {
       if (builtIds.has(element.id)) throw { ok: false, command: 'canvas.add', code: 'CANVAS_ADD_ID_CONFLICT', message: `Element id '${element.id}' already exists.` } satisfies TCanvasCmdErrorDetails;
@@ -135,8 +131,8 @@ export async function txExecuteCanvasAdd(portal: TPortal, input: TCanvasAddInput
       command: 'canvas.add',
       code: 'CANVAS_ADD_FAILED',
       message: error instanceof Error ? error.message : String(error),
-      canvasId: input.canvasId,
-      canvasNameQuery: input.canvasNameQuery ?? null,
+      canvasId: args.canvasId,
+      canvasNameQuery: args.canvasNameQuery ?? null,
     } satisfies TCanvasCmdErrorDetails;
   }
 }

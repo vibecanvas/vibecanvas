@@ -6,6 +6,7 @@ type TAddJson = {
   command: 'canvas.add';
   addedCount: number;
   addedIds: string[];
+  elements: Array<{ id: string; type: string }>;
 };
 
 const contexts: TCliTestContext[] = [];
@@ -62,6 +63,30 @@ describe('canvas CLI add', () => {
     expect(filteredHelpResult.stdout).toContain('rect');
     expect(filteredHelpResult.stdout).toContain('export type TRectData = {');
     expect(filteredHelpResult.stdout).not.toContain('export type TArrowData =');
+    expect(helpResult.stdout).toContain('Minimal JSON payloads and defaults:');
+    expect(helpResult.stdout).toContain('rect');
+    expect(helpResult.stdout).toContain('minimal: {"type":"rect"}');
+    expect(helpResult.stdout).toContain('text');
+    expect(helpResult.stdout).toContain('data.fontFamily="Inter"');
+  });
+
+  test('accepts minimal payloads and stores defaults', async () => {
+    const context = await createContext();
+    const seeded = await context.seedCanvasFixture({ name: 'add-minimal' });
+
+    const rectResult = await context.runCanvasCli(['add', '--canvas', seeded.canvas.id, '--element', '{"type":"rect"}', '--json']);
+    expectExitCode(rectResult, 0);
+    expectNoStderr(rectResult);
+    const rectPayload = parseJsonStdout<TAddJson>(rectResult);
+    expect(rectPayload).toMatchObject({ ok: true, command: 'canvas.add', addedCount: 1 });
+    expect(rectPayload.elements).toMatchObject([{ type: 'rect' }]);
+
+    const textResult = await context.runCanvasCli(['add', '--canvas', seeded.canvas.id, '--element', '{"type":"text"}', '--json']);
+    expectExitCode(textResult, 0);
+    expectNoStderr(textResult);
+    const textPayload = parseJsonStdout<TAddJson>(textResult);
+    expect(textPayload).toMatchObject({ ok: true, command: 'canvas.add', addedCount: 1 });
+    expect(textPayload.elements).toMatchObject([{ type: 'text' }]);
   });
 
   test('rejects malformed shorthand payloads with tighter grammar', async () => {
@@ -86,6 +111,16 @@ describe('canvas CLI add', () => {
       command: 'canvas.add',
       code: 'CANVAS_ADD_SHORTHAND_INVALID',
       message: '--text shorthand must be exactly x,y,text with non-empty single-line text.',
+    });
+
+    const missingType = await context.runCanvasCli(['add', '--canvas', seeded.canvas.id, '--element', '{}', '--json']);
+    expectExitCode(missingType, 1);
+    expect(missingType.stdout).toBe('');
+    expect(JSON.parse(missingType.stderr)).toMatchObject({
+      ok: false,
+      command: 'canvas.add',
+      code: 'CANVAS_ADD_TYPE_REQUIRED',
+      message: 'Element payload must include a supported type.',
     });
   });
 });
