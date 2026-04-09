@@ -116,7 +116,7 @@ Use the leaf files for execution history and local context.
 - [x]: [A21](a/A21.md) - canvas CLI: add `--dry-run` for add/patch/move/group/ungroup/delete
 - [ ]: [A22](a/A22.md) - canvas CLI: allow JSON array payloads for multi-element add and multi-target patch
 - [x]: [A23](a/A23.md) - canvas CLI: document minimal required add args per element type and default optional fields
-- [ ]: [A24](a/A24.md) - filetree: double click file opens preview beside tree inside camera view
+- [x]: [A24](a/A24.md) - filetree: double click file opens preview beside tree inside camera view
 
 ## S ubtractions
 - [ ]: [S1](s/S1.md) - double bun run dev -> find new port

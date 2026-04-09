@@ -391,6 +391,11 @@ export class HostedSolidWidgetPlugin implements IPlugin {
   }
 
   private openFilePreview(context: IPluginContext, node: Konva.Rect, path: string) {
+    if (!context.capabilities.file) {
+      context.capabilities.notification?.showError("File transport is not configured");
+      return;
+    }
+
     const anchor = this.toElement(node);
     const viewport = getViewportWorldBounds(context);
     const position = getHostedFilePreviewPosition(
