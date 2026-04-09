@@ -1,6 +1,7 @@
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
+import { RUNTIME_GLOBAL_BLOCK_NOTE, validateNoDirectRuntimeGlobals } from "./lib/runtime-global-usage";
 
 type TEditInput = {
   path: string;
@@ -33,32 +34,6 @@ const FX_CHECK_RULES = [
   "TArgs is usually serializable payload data",
   "fx is for impure reads; use brain and prefer tx for impure writes",
 ] as const;
-const FORBIDDEN_GLOBALS = [
-  "globalThis",
-  "window",
-  "document",
-  "navigator",
-  "location",
-  "localStorage",
-  "sessionStorage",
-  "fetch",
-  "Request",
-  "Response",
-  "Headers",
-  "WebSocket",
-  "EventSource",
-  "console",
-  "process",
-  "Bun",
-  "Deno",
-  "setTimeout",
-  "clearTimeout",
-  "setInterval",
-  "clearInterval",
-  "queueMicrotask",
-  "crypto",
-] as const;
-
 function stripToolPathPrefix(filePath: string): string {
   return filePath.startsWith("@") ? filePath.slice(1) : filePath;
 }
@@ -420,20 +395,7 @@ function validateExports(content: string): string[] {
 }
 
 function validateGlobals(content: string): string[] {
-  const errors: string[] = [];
-  const clean = maskCommentsAndStrings(content);
-
-  for (const globalName of FORBIDDEN_GLOBALS) {
-    const re = new RegExp(`(^|[^\\w$.])(${globalName})(?=\\s*(?:[.(:,;+*/?!=\\[\\-]|$))`, "g");
-
-    for (const match of clean.matchAll(re)) {
-      const index = (match.index ?? 0) + (match[1]?.length ?? 0);
-      const line = getLineNumber(clean, index);
-      errors.push(`line ${line}: direct global \"${globalName}\" not allowed in fx.*.ts`);
-    }
-  }
-
-  return Array.from(new Set(errors));
+  return validateNoDirectRuntimeGlobals(content, "fx.*.ts");
 }
 
 function splitTopLevelParams(paramText: string): string[] {
@@ -585,6 +547,7 @@ function formatViolations(filePath: string, violations: string[]): string {
     `fx-check blocked ${filePath}`,
     "what went wrong:",
     ...violations.map((violation) => `- ${violation}`),
+    RUNTIME_GLOBAL_BLOCK_NOTE,
     "rules:",
     ...FX_CHECK_RULES.map((rule) => `- ${rule}`),
   ].join("\n");
