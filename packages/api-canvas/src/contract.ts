@@ -1,10 +1,9 @@
 import { oc } from '@orpc/contract';
-import { ZCanvasSelect, ZFileTreeSelect } from '@vibecanvas/service-db/schema';
+import { ZCanvasSelect } from '@vibecanvas/service-db/schema';
 import { z } from 'zod';
 
 const getCanvasByIdResponseSchema = z.object({
   canvas: ZCanvasSelect.array(),
-  fileTrees: ZFileTreeSelect.array(),
 });
 
 const createCanvasInputSchema = z.object({

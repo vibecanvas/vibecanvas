@@ -35,7 +35,6 @@
     "@vibecanvas/api-db": "workspace:*",
     "@vibecanvas/api-file": "workspace:*",
     "@vibecanvas/api-filesystem": "workspace:*",
-    "@vibecanvas/api-filetree": "workspace:*",
     "@vibecanvas/api-notification": "workspace:*",
     "@vibecanvas/api-pty": "workspace:*",
     "@vibecanvas/canvas": "workspace:*",

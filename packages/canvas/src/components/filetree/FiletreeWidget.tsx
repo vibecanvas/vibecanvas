@@ -1,4 +1,4 @@
-import { createEffect, createMemo, onCleanup } from "solid-js";
+import { createEffect, createMemo, onCleanup, type Accessor } from "solid-js";
 import ArrowUp from "lucide-solid/icons/arrow-up";
 import ChevronDown from "lucide-solid/icons/chevron-down";
 import ChevronRight from "lucide-solid/icons/chevron-right";
@@ -9,23 +9,23 @@ import FolderSearch from "lucide-solid/icons/folder-search";
 import House from "lucide-solid/icons/house";
 import RefreshCw from "lucide-solid/icons/refresh-cw";
 import { For, Show } from "solid-js";
-import type { TFiletreeNode, TFiletreeSafeClient, THostedWidgetChrome } from "../../services/canvas/interface";
+import type { THostedWidgetElementMap, TFiletreeNode, TFiletreeSafeClient, THostedWidgetChrome } from "../../services/canvas/interface";
 import { PathPickerDialog } from "./PathPickerDialog";
 import { createFiletreeContextLogic } from "./createFiletreeContextLogic";
 import { toTildePath } from "./path-display";
 
 type TFiletreeWidgetProps = {
-  canvasId: string;
-  filetreeId: string;
+  element: Accessor<THostedWidgetElementMap["filetree"]>;
   safeClient: TFiletreeSafeClient;
   setWindowChrome?: (chrome: THostedWidgetChrome | null) => void;
+  onPathChange: (path: string) => void;
 };
 
 export function FiletreeWidget(props: TFiletreeWidgetProps) {
   const filetreeLogic = createFiletreeContextLogic({
-    canvasId: props.canvasId,
-    filetreeId: props.filetreeId,
+    element: props.element,
     safeClient: props.safeClient,
+    onPathChange: props.onPathChange,
   });
   const windowTitle = createMemo(() => {
     const path = filetreeLogic.currentPath();
@@ -33,7 +33,7 @@ export function FiletreeWidget(props: TFiletreeWidgetProps) {
       return toTildePath(path, filetreeLogic.homePath());
     }
 
-    return filetreeLogic.filetree()?.title || "files";
+    return "files";
   });
 
   createEffect(() => {

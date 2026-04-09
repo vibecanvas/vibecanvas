@@ -187,28 +187,14 @@ export class HostedSolidWidgetPlugin implements IPlugin {
       return;
     }
 
-    const lastFiletreePath = initialPath ?? localStorage.getItem(LAST_FILETREE_PATH_KEY) ?? undefined;
-    const [error, filetree] = await filetreeCapability.safeClient.api.filetree.create({
-      canvas_id: filetreeCapability.canvasId,
-      x: pointer.x,
-      y: pointer.y,
-      ...(lastFiletreePath ? { path: lastFiletreePath } : {}),
-    });
+    const path = initialPath ?? localStorage.getItem(LAST_FILETREE_PATH_KEY) ?? "";
+    if (path) localStorage.setItem(LAST_FILETREE_PATH_KEY, path);
 
-    if (error || !filetree) {
-      const message = error && "message" in (error as object)
-        ? (error as { message?: string }).message ?? "Failed to create file tree"
-        : "Failed to create file tree";
-      context.capabilities.notification?.showError("Failed to create file tree", message);
-      return;
-    }
-
-    if (filetree.path) localStorage.setItem(LAST_FILETREE_PATH_KEY, filetree.path);
     this.insertHostedElement(context, getDefaultWidgetElement(undefined, {
       type: "filetree",
       x: pointer.x,
       y: pointer.y,
-      id: filetree.id as any,
+      path,
     }));
   }
 

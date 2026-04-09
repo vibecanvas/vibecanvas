@@ -141,7 +141,7 @@ Use the leaf files for execution history and local context.
 - [x]: [S22] fix build and ci tests to use new apps/cli
 - [x]: [S23] Use global costs for dev and prod ports
 - [x]: [S24] rename @vibecanvas/service-db -> @vibecanvas/service.db and co
-- [~]: [S25](s/S25.md) - db: remove filetrees table/schema; canvas-doc fully owns filetree state
+- [x]: [S25](s/S25.md) - db: remove filetrees table/schema; canvas-doc fully owns filetree state
 - [ ]: [S26](s/S26.md) - db: add filesystems db table for local/remote machine identity
 - [x]: [S27](s/S27.md) - canvas CLI: remove unimplemented `render` command and help traces
 - [ ]: [S28] - use runtime package in canvas, like cli does
@@ -150,7 +150,7 @@ Use the leaf files for execution history and local context.
 - [ ]: [E1](e/E1.md) - Tauri Research
 - [ ]: [E5](e/E5.md) - how to implement state machine system?
 - [ ]: [E6](e/E6.md) - should we include a task management
-- [ ]: [E7](e/E7.md) - should we include agent
+- [ ]: [E7] - should we include agent
 - [x]: [E8](e/E8.md) - canvas CLI: query/edit surface exploration
 - [ ]: [E9] - tmux for persistant pty sessions
 - [ ]: [E10] - headless chrome to stream to canvas

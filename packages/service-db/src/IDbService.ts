@@ -3,34 +3,16 @@ import type * as schema from './schema';
 
 type TCanvasRecord = typeof schema.canvas.$inferSelect;
 type TCanvasInsertArgs = typeof schema.canvas.$inferInsert;
-type TFileTreeRecord = typeof schema.filetrees.$inferSelect;
 type TFileRecord = typeof schema.files.$inferSelect;
 type TFileFormat = typeof schema.files.$inferSelect['format'];
 
 type TGetFullCanvasResult = {
   canvas: TCanvasRecord;
-  fileTrees: TFileTreeRecord[];
 };
 
 type TUpdateCanvasArgs = {
   id: string;
   name?: string;
-};
-
-type TCreateFileTreeArgs = {
-  canvas_id: string;
-  title: string;
-  path: string;
-  locked?: boolean;
-  glob_pattern?: string | null;
-};
-
-type TUpdateFileTreeArgs = {
-  id: string;
-  title?: string;
-  path?: string;
-  locked?: boolean;
-  glob_pattern?: string | null;
 };
 
 type TCreateFileArgs = {
@@ -60,13 +42,6 @@ export interface IDbService extends IService, IStoppableService {
     renameById(args: { id: string, name: string }): TCanvasRecord;
     deleteById(args: { id: string }): TCanvasRecord[];
   };
-  fileTree: {
-    listAll(): TFileTreeRecord[];
-    listByCanvasId(canvas_id: string): TFileTreeRecord[];
-    create(args: TCreateFileTreeArgs): TFileTreeRecord;
-    update(args: TUpdateFileTreeArgs): TFileTreeRecord | null;
-    deleteById(args: { id: string }): boolean;
-  };
   file: {
     listAll(): TFileRecord[];
     create(args: TCreateFileArgs): TFileRecord;
@@ -79,13 +54,10 @@ export interface IDbService extends IService, IStoppableService {
 export type {
   TCanvasRecord,
   TCreateFileArgs,
-  TCreateFileTreeArgs,
   TFileFormat,
   TFileRecord,
-  TFileTreeRecord,
   TGetFileArgs,
   TGetFullCanvasResult,
   TUpdateCanvasArgs,
-  TUpdateFileTreeArgs,
   TCanvasInsertArgs
 };

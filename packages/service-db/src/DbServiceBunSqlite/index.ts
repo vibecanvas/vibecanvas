@@ -9,21 +9,13 @@ import type {
   TCanvasInsertArgs,
   TCanvasRecord,
   TCreateFileArgs,
-  TCreateFileTreeArgs,
   TFileRecord,
-  TFileTreeRecord,
   TGetFileArgs,
   TGetFullCanvasResult,
-  TUpdateFileTreeArgs,
 } from '../IDbService';
 import * as schema from '../schema';
 import { fxGetFile } from './fx.get-file';
-import { fxGetFullCanvas } from './fx.get-full-canvas';
 import { txCreateFile } from './tx.create-file';
-import { txCreateFileTree } from './tx.create-file-tree';
-import { txDeleteFileTree } from './tx.delete-file-tree';
-import { txUpdateCanvas } from './tx.update-canvas';
-import { txUpdateFileTree } from './tx.update-file-tree';
 
 export type TDbSchema = typeof schema;
 export type TDrizzleDb = BunSQLiteDatabase<TDbSchema>;
@@ -66,14 +58,6 @@ export class DbServiceBunSqlite implements IDbService {
     deleteById: (args: { id: string }) => this.drizzle.delete(schema.canvas).where(eq(schema.canvas.id, args.id)).returning().all(),
   };
 
-  fileTree = {
-    listAll: () => this.drizzle.query.filetrees.findMany().sync() as TFileTreeRecord[],
-    listByCanvasId: (canvas_id: string) => this.drizzle.query.filetrees.findMany({ where: eq(schema.filetrees.canvas_id, canvas_id) }).sync() as TFileTreeRecord[],
-    create: (args: TCreateFileTreeArgs) => txCreateFileTree(this, args),
-    update: (args: TUpdateFileTreeArgs) => txUpdateFileTree(this, args),
-    deleteById: (args: { id: string }) => txDeleteFileTree(this, args.id),
-  };
-
   file = {
     listAll: () => this.drizzle.query.files.findMany().sync() as TFileRecord[],
     create: (args: TCreateFileArgs) => txCreateFile(this, args),
@@ -86,7 +70,17 @@ export class DbServiceBunSqlite implements IDbService {
   }
 
   getFullCanvas(id: string): TGetFullCanvasResult | null {
-    return fxGetFullCanvas(this, id);
+    const canvas = this.drizzle.query.canvas.findFirst({
+      where: eq(schema.canvas.id, id),
+    }).sync();
+
+    if (!canvas) {
+      return null;
+    }
+
+    return {
+      canvas,
+    };
   }
 }
 

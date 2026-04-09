@@ -4,7 +4,6 @@ import { canvasContract } from '@vibecanvas/api-canvas/contract';
 import { dbContract } from '@vibecanvas/api-db/contract';
 import { fileContract } from '@vibecanvas/api-file/contract';
 import { filesystemContract } from '@vibecanvas/api-filesystem/contract';
-import { filetreeContract } from '@vibecanvas/api-filetree/contract';
 import { notificationContract } from '@vibecanvas/api-notification/contract';
 import { ptyContract } from '@vibecanvas/api-pty/contract';
 import type { IAutomergeService } from '@vibecanvas/service-automerge/IAutomergeService';
@@ -18,7 +17,6 @@ const contract = oc.router({
   db: dbContract,
   file: fileContract,
   filesystem: filesystemContract,
-  filetree: filetreeContract,
   notification: notificationContract,
   pty: ptyContract,
 });

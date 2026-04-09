@@ -1,5 +1,4 @@
 import type { TElement, TFileData, TFiletreeData, TTerminalData } from "@vibecanvas/service-automerge/types/canvas-doc";
-import type * as schema from "@vibecanvas/service-db/schema";
 import { Group } from "konva/lib/Group";
 import { Shape, ShapeConfig } from "konva/lib/Shape";
 import { CanvasMode, Theme } from "./enum";
@@ -31,10 +30,6 @@ export type THostedWidgetChrome = {
   title?: string | null;
   subtitle?: string | null;
 };
-
-export type TBackendFiletree = typeof schema.filetrees.$inferSelect;
-
-export type TFiletreeRow = TBackendFiletree;
 
 export type TFiletreeHomeResponse = {
   path: string;
@@ -118,17 +113,6 @@ type TFiletreeSafeResult<T> = Promise<[unknown, T | null | undefined]>;
 
 export type TFiletreeSafeClient = {
   api: {
-    canvas: {
-      get(args: { params: { id: string } }): TFiletreeSafeResult<{
-        canvas: unknown[];
-        fileTrees: TFiletreeRow[];
-      }>;
-    };
-    filetree: {
-      create(args: { canvas_id: string; path?: string; x: number; y: number }): TFiletreeSafeResult<TFiletreeRow>;
-      update(args: { params: { id: string }; body: { title?: string; path?: string; locked?: boolean } }): TFiletreeSafeResult<TFiletreeRow>;
-      remove(args: { params: { id: string } }): TFiletreeSafeResult<void>;
-    };
     filesystem: {
       home(): TFiletreeSafeResult<TFiletreeHomeResponse | TFiletreeErrorResponse>;
       list(args: { query: { path: string; omitFiles?: boolean } }): TFiletreeSafeResult<TFiletreeListResponse | TFiletreeErrorResponse>;

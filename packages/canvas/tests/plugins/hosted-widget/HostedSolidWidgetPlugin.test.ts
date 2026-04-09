@@ -158,73 +158,23 @@ function createTerminalSafeClientMock() {
 }
 
 function createFiletreeSafeClientMock(overrides?: {
-  fileTrees?: Array<{
-    id: string;
-    canvas_id: string;
-    path: string;
-    title: string;
-    locked: boolean;
-    glob_pattern: string | null;
-    created_at: Date;
-    updated_at: Date;
-  }>;
-  createdFiletree?: {
-    id: string;
-    canvas_id: string;
-    path: string;
-    title: string;
-    locked: boolean;
-    glob_pattern: string | null;
-    created_at: Date;
-    updated_at: Date;
-  };
+  initialPath?: string;
 }) {
-  const createdFiletree = overrides?.createdFiletree ?? {
-    id: "tree-created",
-    canvas_id: "canvas-1",
-    path: "/tmp/demo",
-    title: "File Tree",
-    locked: false,
-    glob_pattern: null,
-    created_at: new Date(1),
-    updated_at: new Date(1),
-  };
-  const fileTrees = overrides?.fileTrees ?? [createdFiletree];
+  const initialPath = overrides?.initialPath ?? "/tmp/demo";
 
   const safeClient: TFiletreeSafeClient = {
     api: {
-      canvas: {
-        get: vi.fn().mockResolvedValue([null, {
-          canvas: [],
-          fileTrees,
-        }]),
-      },
-      filetree: {
-        create: vi.fn().mockResolvedValue([null, createdFiletree]),
-        update: vi.fn().mockImplementation(async ({ params, body }) => {
-          const existing = fileTrees.find((candidate) => candidate.id === params.id) ?? createdFiletree;
-          const next = {
-            ...existing,
-            ...("title" in body ? { title: body.title ?? existing.title } : {}),
-            ...("path" in body ? { path: body.path ?? existing.path } : {}),
-            ...("locked" in body ? { locked: body.locked ?? existing.locked } : {}),
-            ...("glob_pattern" in body ? { glob_pattern: body.glob_pattern ?? null } : {}),
-          };
-          return [null, next];
-        }),
-        remove: vi.fn().mockResolvedValue([null, undefined]),
-      },
       filesystem: {
-        home: vi.fn().mockResolvedValue([null, { path: "/tmp/demo" }]),
+        home: vi.fn().mockResolvedValue([null, { path: initialPath }]),
         list: vi.fn().mockResolvedValue([null, {
-          current: "/tmp/demo",
+          current: initialPath,
           parent: "/tmp",
           children: [
             { name: "src", path: "/tmp/demo/src", isDir: true },
           ],
         }]),
         files: vi.fn().mockResolvedValue([null, {
-          root: "/tmp/demo",
+          root: initialPath,
           children: [
             {
               name: "src",
@@ -288,7 +238,7 @@ describe("HostedSolidWidgetPlugin", () => {
           createdAt: 1,
           updatedAt: 1,
           style: {},
-          data: { type: "filetree", w: 420, h: 320, isCollapsed: false },
+          data: { type: "filetree", w: 420, h: 320, isCollapsed: false, path: "/tmp/demo" },
         },
         tree1: {
           id: "tree1",
@@ -302,7 +252,7 @@ describe("HostedSolidWidgetPlugin", () => {
           createdAt: 1,
           updatedAt: 1,
           style: {},
-          data: { type: "filetree", w: 420, h: 340, isCollapsed: false },
+          data: { type: "filetree", w: 420, h: 340, isCollapsed: false, path: "/tmp/demo" },
         },
         terminal1: {
           id: "terminal1",
@@ -355,7 +305,7 @@ describe("HostedSolidWidgetPlugin", () => {
           createdAt: 1,
           updatedAt: 1,
           style: {},
-          data: { type: "filetree", w: 420, h: 320, isCollapsed: false },
+          data: { type: "filetree", w: 420, h: 320, isCollapsed: false, path: "/tmp/demo" },
         },
       },
     });
@@ -398,7 +348,7 @@ describe("HostedSolidWidgetPlugin", () => {
           createdAt: 1,
           updatedAt: 1,
           style: {},
-          data: { type: "filetree", w: 300, h: 240, isCollapsed: false },
+          data: { type: "filetree", w: 300, h: 240, isCollapsed: false, path: "/tmp/demo" },
         },
         early: {
           id: "early",
@@ -448,7 +398,7 @@ describe("HostedSolidWidgetPlugin", () => {
           createdAt: 1,
           updatedAt: 1,
           style: {},
-          data: { type: "filetree", w: 320, h: 220, isCollapsed: false },
+          data: { type: "filetree", w: 320, h: 220, isCollapsed: false, path: "/tmp/demo" },
         },
       },
     });
@@ -745,16 +695,7 @@ describe("HostedSolidWidgetPlugin", () => {
     try {
       let context!: IPluginContext;
       const filetreeClient = createFiletreeSafeClientMock({
-        fileTrees: [{
-          id: "tree1",
-          canvas_id: "canvas-1",
-          path: "/tmp/demo",
-          title: "Workspace",
-          locked: false,
-          glob_pattern: null,
-          created_at: new Date(1),
-          updated_at: new Date(1),
-        }],
+        initialPath: "/tmp/demo",
       });
       const docHandle = createMockDocHandle({
         elements: {
@@ -770,7 +711,7 @@ describe("HostedSolidWidgetPlugin", () => {
             createdAt: 1,
             updatedAt: 1,
             style: {},
-            data: { type: "filetree", w: 360, h: 460, isCollapsed: false },
+            data: { type: "filetree", w: 360, h: 460, isCollapsed: false, path: "/tmp/demo" },
           },
         },
       });
@@ -872,7 +813,7 @@ describe("HostedSolidWidgetPlugin", () => {
             style: {},
             data: args.type === "terminal"
               ? { type: "terminal", w: 320, h: 220, isCollapsed: false, workingDirectory: "." }
-              : { type: "filetree", w: 320, h: 220, isCollapsed: false },
+              : { type: "filetree", w: 320, h: 220, isCollapsed: false, path: "/tmp/demo" },
           },
         },
       });
@@ -1096,7 +1037,7 @@ describe("HostedSolidWidgetPlugin", () => {
     harness.destroy();
   });
 
-  test("creates hosted filetree through backend create route", async () => {
+  test("creates hosted filetree directly in canvas doc", async () => {
     let context!: IPluginContext;
     const filetreeClient = createFiletreeSafeClientMock();
     const docHandle = createMockDocHandle();
@@ -1125,30 +1066,22 @@ describe("HostedSolidWidgetPlugin", () => {
     context.hooks.pointerUp.call({} as any);
     await flushCanvasEffects();
 
-    expect(filetreeClient.api.filetree.create).toHaveBeenCalledWith({
-      canvas_id: "canvas-1",
-      x: 180,
-      y: 140,
-    });
-    expect(docHandle.doc().elements["tree-created"]).toBeDefined();
-    expect(harness.staticForegroundLayer.findOne("#tree-created")).toBeInstanceOf(Konva.Rect);
-    expect(harness.stage.container().querySelector('[data-hosted-widget-id="tree-created"]')).not.toBeNull();
+    const filetree = Object.values(docHandle.doc().elements).find((element) => element.data.type === "filetree");
+    expect(filetree).toBeDefined();
+    expect(filetree?.data.type).toBe("filetree");
+    if (!filetree || filetree.data.type !== "filetree") throw new Error("Expected filetree element");
+    expect(filetree.x).toBe(180);
+    expect(filetree.y).toBe(140);
+    expect(filetree.data.path).toBe("");
+    expect(harness.staticForegroundLayer.findOne(`#${filetree.id}`)).toBeInstanceOf(Konva.Rect);
+    expect(harness.stage.container().querySelector(`[data-hosted-widget-id="${filetree.id}"]`)).not.toBeNull();
 
     harness.destroy();
   });
 
-  test("close button removes hosted filetree and runs backend cleanup callback", async () => {
+  test("close button removes hosted filetree without backend cleanup callback", async () => {
     const filetreeClient = createFiletreeSafeClientMock({
-      fileTrees: [{
-        id: "tree1",
-        canvas_id: "canvas-1",
-        path: "/tmp/demo",
-        title: "File Tree",
-        locked: false,
-        glob_pattern: null,
-        created_at: new Date(1),
-        updated_at: new Date(1),
-      }],
+      initialPath: "/tmp/demo",
     });
     const docHandle = createMockDocHandle({
       elements: {
@@ -1164,7 +1097,7 @@ describe("HostedSolidWidgetPlugin", () => {
           createdAt: 1,
           updatedAt: 1,
           style: {},
-          data: { type: "filetree", w: 360, h: 460, isCollapsed: false },
+          data: { type: "filetree", w: 360, h: 460, isCollapsed: false, path: "/tmp/demo" },
         },
       },
     });
@@ -1188,7 +1121,6 @@ describe("HostedSolidWidgetPlugin", () => {
     await new Promise((resolve) => setTimeout(resolve, 0));
     await flushCanvasEffects();
 
-    expect(filetreeClient.api.filetree.remove).toHaveBeenCalledWith({ params: { id: "tree1" } });
     expect(docHandle.doc().elements.tree1).toBeUndefined();
     expect(harness.stage.container().querySelector('[data-hosted-widget-id="tree1"]')).toBeNull();
 
@@ -1197,16 +1129,7 @@ describe("HostedSolidWidgetPlugin", () => {
 
   test("lets the filetree widget drive the hosted shell title", async () => {
     const filetreeClient = createFiletreeSafeClientMock({
-      fileTrees: [{
-        id: "tree1",
-        canvas_id: "canvas-1",
-        path: "/tmp/demo",
-        title: "Workspace",
-        locked: false,
-        glob_pattern: null,
-        created_at: new Date(1),
-        updated_at: new Date(1),
-      }],
+      initialPath: "/tmp/demo",
     });
     const docHandle = createMockDocHandle({
       elements: {
@@ -1222,7 +1145,7 @@ describe("HostedSolidWidgetPlugin", () => {
           createdAt: 1,
           updatedAt: 1,
           style: {},
-          data: { type: "filetree", w: 360, h: 460, isCollapsed: false },
+          data: { type: "filetree", w: 360, h: 460, isCollapsed: false, path: "/tmp/demo" },
         },
       },
     });

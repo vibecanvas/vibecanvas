@@ -101,7 +101,7 @@ export function getDefaultWidgetChrome(element: THostedWidgetElement) {
 
 export function getDefaultWidgetElement(
   runtime: THostedWidgetFactoryRuntime = defaultFactoryRuntime,
-  payload: { type: THostedWidgetType; x: number; y: number; id?: string },
+  payload: { type: THostedWidgetType; x: number; y: number; id?: string; path?: string },
 ): THostedWidgetElement {
   const id = payload.id ?? runtime.randomUUID();
   const now = runtime.now();
@@ -129,6 +129,7 @@ export function getDefaultWidgetElement(
         w: 360,
         h: 460,
         isCollapsed: false,
+        path: payload.path ?? "",
       } satisfies TFiletreeData,
     };
   }

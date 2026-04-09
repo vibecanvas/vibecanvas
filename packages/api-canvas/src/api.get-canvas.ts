@@ -6,7 +6,6 @@ const apiGetCanvas = baseCanvasOs.get.handler(async ({ input, context }) => {
 
   return {
     canvas: [result.canvas],
-    fileTrees: result.fileTrees,
   };
 });
 

@@ -82,10 +82,26 @@ export function createHostedWidgetMount(
         <Show when={currentElement().data.type === "filetree"}>
           <FiletreeHostedWidget
             element={currentElement as () => THostedWidgetElementMap["filetree"]}
-            canvasId={context.capabilities.filetree?.canvasId}
             safeClient={context.capabilities.filetree?.safeClient}
             setWindowChrome={(chrome) => setWindowChrome(() => chrome)}
-            registerBeforeRemove={(handler) => setBeforeRemove(() => handler)}
+            onPathChange={(path) => {
+              const snapshot = structuredClone(node.getAttr(HOSTED_ELEMENT_ATTR) as THostedWidgetElement | undefined);
+              if (!snapshot || snapshot.data.type !== "filetree") return;
+              if (snapshot.data.path === path) return;
+
+              const nextElement: THostedWidgetElementMap["filetree"] = {
+                ...snapshot,
+                updatedAt: Date.now(),
+                data: {
+                  ...snapshot.data,
+                  path,
+                },
+              };
+
+              node.setAttr(HOSTED_ELEMENT_ATTR, structuredClone(nextElement));
+              runtime.mountWidgetFromUpdate(node, nextElement);
+              context.crdt.patch({ elements: [nextElement], groups: [] });
+            }}
           />
         </Show>
         <Show when={currentElement().data.type === "file"}>

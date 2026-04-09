@@ -154,6 +154,7 @@ export type TFiletreeData = {
   w: number
   h: number
   isCollapsed: boolean
+  path: string
 }
 
 export type TTerminalData = {

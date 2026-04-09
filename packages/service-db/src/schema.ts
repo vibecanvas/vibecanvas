@@ -27,19 +27,6 @@ export const canvas = sqliteTable('canvas', {
 
 export const ZCanvasSelect = createSelectSchema(canvas);
 
-export const filetrees = sqliteTable('filetrees', {
-  id: text('id').primaryKey(),
-  canvas_id: text('canvas_id').notNull().references(() => canvas.id, { onDelete: 'cascade' }),
-  path: text('path').notNull(),
-  title: text('title').notNull(),
-  locked: integer('locked', { mode: 'boolean' }).notNull().default(false),
-  glob_pattern: text('glob_pattern'),
-  created_at: integer('created_at', { mode: 'timestamp' }).notNull().default(sql`(unixepoch())`),
-  updated_at: integer('updated_at', { mode: 'timestamp' }).notNull().default(sql`(unixepoch())`),
-});
-
-export const ZFileTreeSelect = createSelectSchema(filetrees);
-
 export const files = sqliteTable('files', {
   id: text('id').primaryKey(),
   hash: text('hash').notNull(),

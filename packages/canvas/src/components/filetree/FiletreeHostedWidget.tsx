@@ -1,28 +1,16 @@
 import type { Accessor } from "solid-js";
-import { onCleanup } from "solid-js";
 import type { THostedWidgetChrome, THostedWidgetElementMap, TFiletreeSafeClient } from "../../services/canvas/interface";
 import { FiletreeWidget } from "./FiletreeWidget";
 
 type TFiletreeHostedWidgetProps = {
   element: Accessor<THostedWidgetElementMap["filetree"]>;
-  canvasId?: string;
   safeClient?: TFiletreeSafeClient;
   setWindowChrome?: (chrome: THostedWidgetChrome | null) => void;
-  registerBeforeRemove?: (handler: (() => void | Promise<void>) | null) => void;
+  onPathChange: (path: string) => void;
 };
 
 export function FiletreeHostedWidget(props: TFiletreeHostedWidgetProps) {
-  if (props.safeClient) {
-    props.registerBeforeRemove?.(async () => {
-      await props.safeClient?.api.filetree.remove({ params: { id: props.element().id } });
-    });
-
-    onCleanup(() => {
-      props.registerBeforeRemove?.(null);
-    });
-  }
-
-  if (!props.safeClient || !props.canvasId) {
+  if (!props.safeClient) {
     return (
       <div class="flex h-full w-full flex-1 items-center justify-center px-4 text-center text-xs text-muted-foreground">
         Filetree transport is not configured for this host.
@@ -33,10 +21,10 @@ export function FiletreeHostedWidget(props: TFiletreeHostedWidgetProps) {
   return (
     <div class="h-full w-full min-h-0 flex-1">
       <FiletreeWidget
-        canvasId={props.canvasId}
-        filetreeId={props.element().id}
+        element={props.element}
         safeClient={props.safeClient}
         setWindowChrome={props.setWindowChrome}
+        onPathChange={props.onPathChange}
       />
     </div>
   );
