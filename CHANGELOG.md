@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## 0.3.0-beta.1
+
+### Added
+- Added a full canvas CLI workflow for creating, listing, querying, adding, patching, moving, reordering, grouping, ungrouping, and deleting canvas elements.
+- Introduced plugin system for apps/cli
+
+### Changed
+- Replaces apps/server with apps/cli
+- Moved filetree ownership fully into the canvas document and removed the separate filetrees table/schema from the database.
+
 ## 0.2.2
 
 ### Fixed
