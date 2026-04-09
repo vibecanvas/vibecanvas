@@ -168,4 +168,22 @@ describe('canvas CLI delete', () => {
     });
   });
 
+
+  test('dry-run previews delete impact and leaves the doc untouched', async () => {
+    const context = await createContext();
+    const keep = createRectElement({ id: 'rect-keep-dry' });
+    const target = createRectElement({ id: 'rect-target-dry' });
+    const seeded = await context.seedCanvasFixture({ name: 'delete-dry-run', elements: { [keep.id]: keep, [target.id]: target } });
+
+    const result = await context.runCanvasCli(['delete', '--canvas', seeded.canvas.id, '--id', target.id, '--dry-run', '--json']);
+
+    expectExitCode(result, 0);
+    expectNoStderr(result);
+    expect(parseJsonStdout<TDeleteJson & { dryRun: boolean }>(result)).toMatchObject({ ok: true, command: 'canvas.delete', dryRun: true, deletedElementIds: ['rect-target-dry'] });
+
+    const doc = await context.readCanvasDoc(seeded.automergeUrl);
+    expect(doc.elements[target.id]).toBeDefined();
+    expect(doc.elements[keep.id]).toBeDefined();
+  });
+
 });

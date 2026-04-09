@@ -9,12 +9,14 @@ import type { TCanvasCmdErrorDetails } from '../types';
 export type TCanvasDeleteInput = {
   canvasId?: string | null;
   canvasNameQuery?: string | null;
+  dryRun?: boolean;
   ids?: string[];
 };
 
 export type TCanvasDeleteSuccess = {
   ok: true;
   command: 'canvas.delete';
+  dryRun: boolean;
   canvas: TCanvasSummary;
   matchedCount: number;
   matchedIds: string[];
@@ -71,20 +73,24 @@ function resolveDeletionPlan(doc: TCanvasDoc, ids: string[], canvasId: string, c
 
 export async function txExecuteCanvasDelete(portal: TPortal, input: TCanvasDeleteInput): Promise<TCanvasDeleteSuccess> {
   try {
+    const dryRun = input.dryRun === true;
     const ids = parseDeleteIds(input);
     const selectedCanvas = fnResolveCanvasSelection({ rows: portal.dbService.canvas.listAll(), selector: input, command: 'canvas.delete', actionLabel: 'Delete' });
     const { handle, doc } = await fxLoadCanvasHandleDoc(portal, selectedCanvas);
     const plan = resolveDeletionPlan(doc, ids, selectedCanvas.id, input.canvasNameQuery ?? null);
 
-    handle.change((nextDoc) => {
-      for (const elementId of plan.deletedElementIds) delete nextDoc.elements[elementId];
-      for (const groupId of plan.deletedGroupIds) delete nextDoc.groups[groupId];
-    });
-    await portal.automergeService.repo.flush([handle.documentId]);
+    if (!dryRun) {
+      handle.change((nextDoc) => {
+        for (const elementId of plan.deletedElementIds) delete nextDoc.elements[elementId];
+        for (const groupId of plan.deletedGroupIds) delete nextDoc.groups[groupId];
+      });
+      await portal.automergeService.repo.flush([handle.documentId]);
+    }
 
     return {
       ok: true,
       command: 'canvas.delete',
+      dryRun,
       canvas: fnNormalizeCanvas(selectedCanvas),
       matchedCount: plan.matchedIds.length,
       matchedIds: plan.matchedIds,

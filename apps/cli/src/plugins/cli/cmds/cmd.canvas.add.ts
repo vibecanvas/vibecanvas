@@ -50,6 +50,7 @@ ${fxRenderCanvasAddContracts()}
 
 Options:
   --db <path>               Optional explicit SQLite file override for the opened db
+  --dry-run                 Validate and preview add result without mutating the canvas
   --json                    Emit machine-readable success/error payloads
   --schema [type]           Print schema blocks sourced from canvas-doc.ts
                             Filters: ${listCanvasCommandSchemaFilters('add')}
@@ -234,7 +235,7 @@ export async function runCanvasAddCommand(services: { db: IDbService, automerge:
       },
       local: async () => {
         const result = await txExecuteCanvasAdd({ dbService: services.db, automergeService: services.automerge, crypto }, input);
-        await Bun.sleep(75);
+        if (!result.dryRun) await Bun.sleep(75);
         return result;
       },
     });

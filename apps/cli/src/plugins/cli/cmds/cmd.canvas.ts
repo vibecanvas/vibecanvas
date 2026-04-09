@@ -42,6 +42,7 @@ Examples:
 
 Options:
   --db <path>               Optional explicit SQLite file override for the opened db
+  --dry-run                 Validate and preview patch result without mutating the canvas
   --json                    Emit machine-readable success/error payloads
   --schema [type]           Print schema blocks sourced from canvas-doc.ts
                             Filters: ${listCanvasCommandSchemaFilters('patch')}
@@ -82,6 +83,7 @@ Dispatch order:
 
 Shared options:
   --db <path>   Optional explicit SQLite file override; otherwise falls back to configured/default storage
+  --dry-run     Validate and preview mutation results without mutating the canvas
   --json        Emit machine-readable errors/output
   --help, -h    Show this help message
 

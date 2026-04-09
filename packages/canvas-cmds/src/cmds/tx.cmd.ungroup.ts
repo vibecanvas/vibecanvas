@@ -9,12 +9,14 @@ import type { TCanvasCmdErrorDetails } from '../types';
 export type TCanvasUngroupInput = {
   canvasId?: string | null;
   canvasNameQuery?: string | null;
+  dryRun?: boolean;
   ids?: string[];
 };
 
 export type TCanvasUngroupSuccess = {
   ok: true;
   command: 'canvas.ungroup';
+  dryRun: boolean;
   canvas: TCanvasSummary;
   matchedCount: number;
   matchedIds: string[];
@@ -85,6 +87,7 @@ function resolveSurvivingParentGroupId(doc: TCanvasDoc, removedGroupIds: Set<str
 
 export async function txExecuteCanvasUngroup(portal: TPortal, input: TCanvasUngroupInput): Promise<TCanvasUngroupSuccess> {
   try {
+    const dryRun = input.dryRun === true;
     const ids = parseUngroupIds(input);
     const selectedCanvas = fnResolveCanvasSelection({ rows: portal.dbService.canvas.listAll(), selector: input, command: 'canvas.ungroup', actionLabel: 'Ungroup' });
     const { handle, doc } = await fxLoadCanvasHandleDoc(portal, selectedCanvas);
@@ -95,31 +98,34 @@ export async function txExecuteCanvasUngroup(portal: TPortal, input: TCanvasUngr
     const { releasedElementIds } = fnCollectDirectChildIds(doc, removedGroupIds);
     const now = Date.now();
 
-    handle.change((nextDoc) => {
-      for (const removedGroupId of removedGroupIds) {
-        const parentGroupId = groupParentMap.get(removedGroupId) ?? null;
+    if (!dryRun) {
+      handle.change((nextDoc) => {
+        for (const removedGroupId of removedGroupIds) {
+          const parentGroupId = groupParentMap.get(removedGroupId) ?? null;
 
-        for (const element of Object.values(nextDoc.elements)) {
-          if (element.parentGroupId !== removedGroupId) continue;
-          element.parentGroupId = parentGroupId;
-          element.updatedAt = now;
+          for (const element of Object.values(nextDoc.elements)) {
+            if (element.parentGroupId !== removedGroupId) continue;
+            element.parentGroupId = parentGroupId;
+            element.updatedAt = now;
+          }
+
+          for (const group of Object.values(nextDoc.groups)) {
+            if (group.id === removedGroupId) continue;
+            if (group.parentGroupId !== removedGroupId) continue;
+            if (groupParentMap.has(group.id)) continue;
+            group.parentGroupId = parentGroupId;
+          }
+
+          delete nextDoc.groups[removedGroupId];
         }
-
-        for (const group of Object.values(nextDoc.groups)) {
-          if (group.id === removedGroupId) continue;
-          if (group.parentGroupId !== removedGroupId) continue;
-          if (groupParentMap.has(group.id)) continue;
-          group.parentGroupId = parentGroupId;
-        }
-
-        delete nextDoc.groups[removedGroupId];
-      }
-    });
-    await portal.automergeService.repo.flush([handle.documentId]);
+      });
+      await portal.automergeService.repo.flush([handle.documentId]);
+    }
 
     return {
       ok: true,
       command: 'canvas.ungroup',
+      dryRun,
       canvas: fnNormalizeCanvas(selectedCanvas),
       matchedCount: removedGroupIds.length,
       matchedIds: removedGroupIds,

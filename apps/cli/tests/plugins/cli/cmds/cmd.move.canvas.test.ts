@@ -198,4 +198,22 @@ describe('canvas CLI move', () => {
       canvasNameQuery: null,
     });
   });
+
+  test('dry-run previews move without mutating element coordinates', async () => {
+    const context = await createContext();
+    const rect = createRectElement({ id: 'rect-dry', x: 40, y: 80, updatedAt: 100 });
+    const seeded = await context.seedCanvasFixture({ name: 'move-dry-run-canvas', elements: { [rect.id]: rect } });
+
+    const result = await context.runCanvasCli(['move', '--canvas', seeded.canvas.id, '--id', rect.id, '--relative', '--x', '15', '--y', '-5', '--dry-run', '--json']);
+
+    expectExitCode(result, 0);
+    expectNoStderr(result);
+    expect(parseJsonStdout<TMoveJson & { dryRun: boolean }>(result)).toMatchObject({ ok: true, command: 'canvas.move', dryRun: true, changedIds: ['rect-dry'] });
+
+    const doc = await context.readCanvasDoc(seeded.automergeUrl);
+    expect(doc.elements[rect.id]?.x).toBe(40);
+    expect(doc.elements[rect.id]?.y).toBe(80);
+    expect(doc.elements[rect.id]?.updatedAt).toBe(100);
+  });
+
 });

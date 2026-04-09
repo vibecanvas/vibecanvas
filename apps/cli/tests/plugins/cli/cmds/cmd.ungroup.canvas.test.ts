@@ -91,4 +91,23 @@ describe('canvas CLI ungroup', () => {
       canvasId: seeded.canvas.id,
     });
   });
+
+  test('dry-run previews ungroup without removing the group', async () => {
+    const context = await createContext();
+    const root = createGroup({ id: 'group-root-dry' });
+    const child = createGroup({ id: 'group-child-dry', parentGroupId: root.id });
+    const inside = createRectElement({ id: 'rect-inside-dry', parentGroupId: child.id });
+    const seeded = await context.seedCanvasFixture({ name: 'ungroup-dry-run', groups: { [root.id]: root, [child.id]: child }, elements: { [inside.id]: inside } });
+
+    const result = await context.runCanvasCli(['ungroup', '--canvas', seeded.canvas.id, '--id', child.id, '--dry-run', '--json']);
+
+    expectExitCode(result, 0);
+    expectNoStderr(result);
+    expect(parseJsonStdout<TUngroupJson & { dryRun: boolean }>(result)).toMatchObject({ ok: true, command: 'canvas.ungroup', dryRun: true, removedGroupIds: ['group-child-dry'] });
+
+    const doc = await context.readCanvasDoc(seeded.automergeUrl);
+    expect(doc.groups[child.id]).toBeDefined();
+    expect(doc.elements[inside.id]?.parentGroupId).toBe(child.id);
+  });
+
 });

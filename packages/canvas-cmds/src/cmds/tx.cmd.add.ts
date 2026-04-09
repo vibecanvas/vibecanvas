@@ -24,6 +24,7 @@ export type TCanvasAddElementInput = {
 export type TArgsCanvasAddInput = {
   canvasId?: string | null;
   canvasNameQuery?: string | null;
+  dryRun?: boolean;
   elements?: TCanvasAddElementInput[];
 };
 
@@ -32,6 +33,7 @@ export type TCanvasAddInput = TArgsCanvasAddInput;
 export type TCanvasAddSuccess = {
   ok: true;
   command: 'canvas.add';
+  dryRun: boolean;
   canvas: TCanvasSummary;
   addedCount: number;
   addedIds: string[];
@@ -45,6 +47,8 @@ export type TPortalCanvasAdd = {
 };
 
 export type TPortal = TPortalCanvasAdd;
+
+const CANVAS_ADD_DRY_RUN_PLACEHOLDER_ID = 'PLACEHOLDER-NO';
 
 function fnCreateOrderedZIndex(index: number): string {
   return `z${String(index).padStart(8, '0')}`;
@@ -61,7 +65,7 @@ function fnValidateInput(args: TArgsCanvasAddInput): TCanvasAddElementInput[] {
   return elements;
 }
 
-function fnValidateElementPayload(element: TCanvasAddElementInput, doc: TCanvasDoc): void {
+function fnValidateElementPayload(element: TCanvasAddElementInput, doc: TCanvasDoc, dryRun: boolean): void {
   if (typeof element.type !== 'string' || element.type.trim().length === 0) {
     throw { ok: false, command: 'canvas.add', code: 'CANVAS_ADD_TYPE_REQUIRED', message: 'Element payload must include a supported type.' } satisfies TCanvasCmdErrorDetails;
   }
@@ -73,7 +77,7 @@ function fnValidateElementPayload(element: TCanvasAddElementInput, doc: TCanvasD
   if (element.parentGroupId !== undefined && element.parentGroupId !== null && !doc.groups[element.parentGroupId]) {
     throw { ok: false, command: 'canvas.add', code: 'CANVAS_ADD_PARENT_GROUP_NOT_FOUND', message: `Parent group '${element.parentGroupId}' was not found.` } satisfies TCanvasCmdErrorDetails;
   }
-  if (element.id && (doc.elements[element.id] || doc.groups[element.id])) {
+  if (!dryRun && element.id && (doc.elements[element.id] || doc.groups[element.id])) {
     throw { ok: false, command: 'canvas.add', code: 'CANVAS_ADD_ID_CONFLICT', message: `Element id '${element.id}' already exists.` } satisfies TCanvasCmdErrorDetails;
   }
 }
@@ -99,29 +103,38 @@ function fnBuildElement(args: { input: TCanvasAddElementInput; zIndex: string; r
 export async function txExecuteCanvasAdd(portal: TPortalCanvasAdd, args: TArgsCanvasAddInput): Promise<TCanvasAddSuccess> {
   try {
     const requestedElements = fnValidateInput(args);
+    const dryRun = args.dryRun === true;
     const selectedCanvas = fnResolveCanvasSelection({ rows: portal.dbService.canvas.listAll(), selector: args, command: 'canvas.add', actionLabel: 'Add' });
     const { handle, doc } = await fxLoadCanvasHandleDoc(portal, selectedCanvas);
 
-    for (const element of requestedElements) fnValidateElementPayload(element, doc);
+    for (const element of requestedElements) fnValidateElementPayload(element, doc, dryRun);
 
     const maxExistingIndex = Math.max(-1, ...Object.values(doc.elements).map((element) => fnExtractZIndexNumber(element.zIndex)), ...Object.values(doc.groups).map((group) => fnExtractZIndexNumber(group.zIndex)));
-    const builtElements = requestedElements.map((element, index) => fnBuildElement({ input: element, zIndex: fnCreateOrderedZIndex(maxExistingIndex + index + 1), randomUUID: () => portal.crypto.randomUUID() }));
-    const builtIds = new Set<string>();
-    for (const element of builtElements) {
-      if (builtIds.has(element.id)) throw { ok: false, command: 'canvas.add', code: 'CANVAS_ADD_ID_CONFLICT', message: `Element id '${element.id}' already exists.` } satisfies TCanvasCmdErrorDetails;
-      builtIds.add(element.id);
-    }
+    const builtElements = requestedElements.map((element, index) => fnBuildElement({
+      input: dryRun ? { ...element, id: CANVAS_ADD_DRY_RUN_PLACEHOLDER_ID } : element,
+      zIndex: fnCreateOrderedZIndex(maxExistingIndex + index + 1),
+      randomUUID: () => dryRun ? CANVAS_ADD_DRY_RUN_PLACEHOLDER_ID : portal.crypto.randomUUID(),
+    }));
 
-    handle.change((nextDoc) => {
-      for (const element of builtElements) nextDoc.elements[element.id] = structuredClone(element);
-    });
+    if (!dryRun) {
+      const builtIds = new Set<string>();
+      for (const element of builtElements) {
+        if (builtIds.has(element.id)) throw { ok: false, command: 'canvas.add', code: 'CANVAS_ADD_ID_CONFLICT', message: `Element id '${element.id}' already exists.` } satisfies TCanvasCmdErrorDetails;
+        builtIds.add(element.id);
+      }
+
+      handle.change((nextDoc) => {
+        for (const element of builtElements) nextDoc.elements[element.id] = structuredClone(element);
+      });
+    }
 
     return {
       ok: true,
       command: 'canvas.add',
+      dryRun,
       canvas: fnNormalizeCanvas(selectedCanvas),
       addedCount: builtElements.length,
-      addedIds: fnSortIds(builtElements.map((element) => element.id)),
+      addedIds: builtElements.map((element) => element.id),
       elements: builtElements.map((element) => ({ id: element.id, type: element.data.type as TAddPrimitiveType, parentGroupId: element.parentGroupId, zIndex: element.zIndex })),
     };
   } catch (error) {

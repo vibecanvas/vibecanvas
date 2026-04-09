@@ -208,4 +208,21 @@ describe('canvas CLI patch', () => {
       hint: 'Choose one patch source only.',
     });
   });
+
+  test('dry-run previews patch changed ids and leaves the doc unchanged', async () => {
+    const context = await createContext();
+    const rect = createRectElement({ id: 'rect-dry', x: 40, y: 80, updatedAt: 100 });
+    const seeded = await context.seedCanvasFixture({ name: 'patch-dry-run-canvas', elements: { [rect.id]: rect } });
+
+    const result = await context.runCanvasCli(['patch', '--canvas', seeded.canvas.id, '--id', rect.id, '--patch', '{"element":{"x":55}}', '--dry-run', '--json']);
+
+    expectExitCode(result, 0);
+    expectNoStderr(result);
+    expect(parseJsonStdout<TPatchJson & { dryRun: boolean }>(result)).toMatchObject({ ok: true, command: 'canvas.patch', dryRun: true, changedIds: ['rect-dry'] });
+
+    const doc = await context.readCanvasDoc(seeded.automergeUrl);
+    expect(doc.elements[rect.id]?.x).toBe(40);
+    expect(doc.elements[rect.id]?.updatedAt).toBe(100);
+  });
+
 });

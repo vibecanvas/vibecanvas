@@ -11,6 +11,7 @@ export type TMoveMode = 'relative' | 'absolute';
 export type TCanvasMoveInput = {
   canvasId?: string | null;
   canvasNameQuery?: string | null;
+  dryRun?: boolean;
   ids?: string[];
   mode?: TMoveMode;
   x?: number;
@@ -20,6 +21,7 @@ export type TCanvasMoveInput = {
 export type TCanvasMoveSuccess = {
   ok: true;
   command: 'canvas.move';
+  dryRun: boolean;
   mode: TMoveMode;
   input: { x: number; y: number };
   delta: { dx: number; dy: number };
@@ -148,6 +150,7 @@ function resolveAbsoluteDelta(doc: TCanvasDoc, target: TMoveTarget, x: number, y
 
 export async function txExecuteCanvasMove(portal: TPortal, input: TCanvasMoveInput): Promise<TCanvasMoveSuccess> {
   try {
+    const dryRun = input.dryRun === true;
     const matchedIds = fnSortIds([...new Set((input.ids ?? []).map((id) => id.trim()).filter(Boolean))]);
     if (matchedIds.length === 0) throw { ok: false, command: 'canvas.move', code: 'CANVAS_MOVE_ID_REQUIRED', message: 'Move requires at least one id.', canvasId: input.canvasId ?? null, canvasNameQuery: input.canvasNameQuery ?? null } satisfies TCanvasCmdErrorDetails;
     const x = Number(input.x);
@@ -177,20 +180,23 @@ export async function txExecuteCanvasMove(portal: TPortal, input: TCanvasMoveInp
     const changedIds = collectChangedElementIds(doc, matchedTargets);
     const now = Date.now();
 
-    handle.change((nextDoc) => {
-      for (const changedId of changedIds) {
-        const element = nextDoc.elements[changedId];
-        if (!element) continue;
-        element.x += delta.dx;
-        element.y += delta.dy;
-        element.updatedAt = now;
-      }
-    });
-    await portal.automergeService.repo.flush([handle.documentId]);
+    if (!dryRun) {
+      handle.change((nextDoc) => {
+        for (const changedId of changedIds) {
+          const element = nextDoc.elements[changedId];
+          if (!element) continue;
+          element.x += delta.dx;
+          element.y += delta.dy;
+          element.updatedAt = now;
+        }
+      });
+      await portal.automergeService.repo.flush([handle.documentId]);
+    }
 
     return {
       ok: true,
       command: 'canvas.move',
+      dryRun,
       mode,
       input: { x, y },
       delta,

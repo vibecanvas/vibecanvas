@@ -155,6 +155,9 @@ export function fnPrintCommandResult(result: unknown, wantsJson: boolean, extraF
     return;
   }
 
+  if (typeof result === 'object' && result !== null && 'dryRun' in result && result.dryRun === true) {
+    process.stdout.write(`[dry-run] no mutation applied\n`);
+  }
   console.log(result);
   process.exitCode = 0;
 }

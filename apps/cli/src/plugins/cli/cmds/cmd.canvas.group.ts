@@ -20,12 +20,13 @@ Required target selector:
 
 Options:
   --db <path>               Optional explicit SQLite file override for the opened db
+  --dry-run                 Validate and preview group result without mutating the canvas
   --json                    Emit machine-readable success/error payloads
   --help, -h                Show this help message
 
 Output:
   Text mode prints the new group id and grouped child ids.
-  JSON mode prints { ok, command, canvas, matchedCount, matchedIds, group: { id, parentGroupId, childIds } }.
+  JSON mode prints { ok, command, dryRun, canvas, matchedCount, matchedIds, group: { id, parentGroupId, childIds } }.
 
 Notes:
   - grouping currently supports explicit element ids only.

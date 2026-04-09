@@ -8,7 +8,7 @@ function fnAssignFreshElementIds(input: TCanvasAddInput): TCanvasAddInput {
     ...input,
     elements: (input.elements ?? []).map((element): TCanvasAddElementInput => {
       const { id: _ignoredId, ...rest } = element;
-      return { ...rest, id: crypto.randomUUID() };
+      return { ...rest, id: input.dryRun ? 'PLACEHOLDER-NO' : crypto.randomUUID() };
     }),
   };
 }

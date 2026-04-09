@@ -123,4 +123,21 @@ describe('canvas CLI add', () => {
       message: 'Element payload must include a supported type.',
     });
   });
+
+  test('dry-run previews placeholder ids and leaves the doc unchanged', async () => {
+    const context = await createContext();
+    const seeded = await context.seedCanvasFixture({ name: 'add-dry-run' });
+
+    const result = await context.runCanvasCli(['add', '--canvas', seeded.canvas.id, '--element', '{"type":"rect","x":10,"y":20}', '--dry-run', '--json']);
+
+    expectExitCode(result, 0);
+    expectNoStderr(result);
+    const payload = parseJsonStdout<TAddJson & { dryRun: boolean }>(result);
+    expect(payload).toMatchObject({ ok: true, command: 'canvas.add', dryRun: true, addedCount: 1, addedIds: ['PLACEHOLDER-NO'] });
+    expect(payload.elements).toMatchObject([{ id: 'PLACEHOLDER-NO', type: 'rect' }]);
+
+    const doc = await context.readCanvasDoc(seeded.automergeUrl);
+    expect(Object.keys(doc.elements)).toHaveLength(0);
+  });
+
 });

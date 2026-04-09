@@ -6,6 +6,7 @@ type TCliCommand = 'serve' | 'canvas' | 'upgrade' | 'unknown';
 type TCanvasSubcommandOptions = {
   json?: boolean;
   schema?: boolean | string;
+  dryRun?: boolean;
   canvasId?: string;
   canvasNameQuery?: string;
   ids?: string[];
@@ -137,6 +138,7 @@ function parseCliArgv(rawArgv: readonly string[] = Bun.argv): TCliParsedArgv {
 
       json: { type: 'boolean', default: false },
       schema: { type: 'boolean', default: false },
+      'dry-run': { type: 'boolean', default: false },
       canvas: { type: 'string' },
       'canvas-name': { type: 'string' },
       id: { type: 'string', multiple: true },
@@ -214,6 +216,7 @@ function parseCliArgv(rawArgv: readonly string[] = Bun.argv): TCliParsedArgv {
     subcommandOptions: {
       json: values.json === true,
       schema,
+      dryRun: values['dry-run'] === true,
       canvasId: typeof values.canvas === 'string' ? values.canvas : undefined,
       canvasNameQuery: typeof values['canvas-name'] === 'string' ? values['canvas-name'] : undefined,
       ids,

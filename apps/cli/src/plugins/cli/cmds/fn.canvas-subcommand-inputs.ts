@@ -226,6 +226,7 @@ export function buildCanvasAddInput(options: TCanvasSubcommandOptions | undefine
   return {
     canvasId: options?.canvasId,
     canvasNameQuery: options?.canvasNameQuery,
+    dryRun: options?.dryRun,
     elements,
   };
 }
@@ -234,6 +235,7 @@ export function buildCanvasMoveInput(options?: TCanvasSubcommandOptions): TCanva
   return {
     canvasId: options?.canvasId,
     canvasNameQuery: options?.canvasNameQuery,
+    dryRun: options?.dryRun,
     ids: sortUnique(options?.ids),
     mode: options?.absolute ? 'absolute' : options?.relative ? 'relative' : undefined,
     x: parseOptionalNumber(options?.x),
@@ -245,6 +247,7 @@ export function buildCanvasGroupInput(options?: TCanvasSubcommandOptions): TCanv
   return {
     canvasId: options?.canvasId,
     canvasNameQuery: options?.canvasNameQuery,
+    dryRun: options?.dryRun,
     ids: sortUnique(options?.ids),
   };
 }
@@ -253,6 +256,7 @@ export function buildCanvasUngroupInput(options?: TCanvasSubcommandOptions): TCa
   return {
     canvasId: options?.canvasId,
     canvasNameQuery: options?.canvasNameQuery,
+    dryRun: options?.dryRun,
     ids: sortUnique(options?.ids),
   };
 }
@@ -275,6 +279,7 @@ export function buildCanvasPatchInput(options?: TCanvasSubcommandOptions, patch?
   return {
     canvasId: options?.canvasId,
     canvasNameQuery: options?.canvasNameQuery,
+    dryRun: options?.dryRun,
     ids: sortUnique(options?.ids),
     patch: patch ?? parsePatchEnvelope(options),
   };
@@ -284,6 +289,7 @@ export function buildCanvasDeleteInput(options?: TCanvasSubcommandOptions): TCan
   return {
     canvasId: options?.canvasId,
     canvasNameQuery: options?.canvasNameQuery,
+    dryRun: options?.dryRun,
     ids: sortUnique(options?.ids),
   };
 }

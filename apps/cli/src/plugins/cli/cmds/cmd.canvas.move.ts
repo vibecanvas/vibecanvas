@@ -28,12 +28,13 @@ Required coordinates:
 
 Options:
   --db <path>               Optional explicit SQLite file override for the opened db
+  --dry-run                 Validate and preview move result without mutating the canvas
   --json                    Emit machine-readable success/error payloads
   --help, -h                Show this help message
 
 Output:
   Text mode prints the move summary and changed ids.
-  JSON mode prints { ok, command, mode, input, delta, canvas, matchedCount, matchedIds, changedCount, changedIds }.
+  JSON mode prints { ok, command, dryRun, mode, input, delta, canvas, matchedCount, matchedIds, changedCount, changedIds }.
 
 Notes:
   - repeated --id values move many targets while preserving relative positions.

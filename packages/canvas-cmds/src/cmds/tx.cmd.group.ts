@@ -8,12 +8,14 @@ import type { TCanvasCmdErrorDetails } from '../types';
 export type TCanvasGroupInput = {
   canvasId?: string | null;
   canvasNameQuery?: string | null;
+  dryRun?: boolean;
   ids?: string[];
 };
 
 export type TCanvasGroupSuccess = {
   ok: true;
   command: 'canvas.group';
+  dryRun: boolean;
   canvas: TCanvasSummary;
   matchedCount: number;
   matchedIds: string[];
@@ -28,6 +30,8 @@ export type TPortal = {
   dbService: IDbService;
   automergeService: IAutomergeService;
 };
+
+const CANVAS_GROUP_DRY_RUN_PLACEHOLDER_ID = 'PLACEHOLDER-NO';
 
 function parseGroupIds(input: TCanvasGroupInput): string[] {
   const ids = fnSortIds([...new Set((input.ids ?? []).map((value) => value.trim()).filter(Boolean))]);
@@ -85,12 +89,13 @@ function ensureSameParentGroupId(elements: readonly TElement[], canvasId: string
 
 export async function txExecuteCanvasGroup(portal: TPortal, input: TCanvasGroupInput): Promise<TCanvasGroupSuccess> {
   try {
+    const dryRun = input.dryRun === true;
     const ids = parseGroupIds(input);
     const selectedCanvas = fnResolveCanvasSelection({ rows: portal.dbService.canvas.listAll(), selector: input, command: 'canvas.group', actionLabel: 'Group' });
     const { handle, doc } = await fxLoadCanvasHandleDoc(portal, selectedCanvas);
     const matchedElements = resolveElementsByIds(doc, ids, selectedCanvas.id, input.canvasNameQuery ?? null);
     const parentGroupId = ensureSameParentGroupId(matchedElements, selectedCanvas.id, input.canvasNameQuery ?? null);
-    const groupId = crypto.randomUUID();
+    const groupId = dryRun ? CANVAS_GROUP_DRY_RUN_PLACEHOLDER_ID : crypto.randomUUID();
     const childIds = fnSortIds(matchedElements.map((element) => element.id));
     const maxCreatedAt = matchedElements.reduce((max, element) => Math.max(max, element.createdAt ?? 0, element.updatedAt ?? 0), 0);
     const createdAt = Math.max(Date.now(), maxCreatedAt + 1);
@@ -98,20 +103,23 @@ export async function txExecuteCanvasGroup(portal: TPortal, input: TCanvasGroupI
     const newGroup: TGroup = { id: groupId, parentGroupId, zIndex, locked: false, createdAt };
     const now = Date.now();
 
-    handle.change((nextDoc) => {
-      nextDoc.groups[groupId] = structuredClone(newGroup);
-      for (const childId of childIds) {
-        const element = nextDoc.elements[childId];
-        if (!element) continue;
-        element.parentGroupId = groupId;
-        element.updatedAt = now;
-      }
-    });
-    await portal.automergeService.repo.flush([handle.documentId]);
+    if (!dryRun) {
+      handle.change((nextDoc) => {
+        nextDoc.groups[groupId] = structuredClone(newGroup);
+        for (const childId of childIds) {
+          const element = nextDoc.elements[childId];
+          if (!element) continue;
+          element.parentGroupId = groupId;
+          element.updatedAt = now;
+        }
+      });
+      await portal.automergeService.repo.flush([handle.documentId]);
+    }
 
     return {
       ok: true,
       command: 'canvas.group',
+      dryRun,
       canvas: fnNormalizeCanvas(selectedCanvas),
       matchedCount: childIds.length,
       matchedIds: childIds,

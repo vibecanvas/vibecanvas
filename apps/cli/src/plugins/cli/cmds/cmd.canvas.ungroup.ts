@@ -20,12 +20,13 @@ Required target selector:
 
 Options:
   --db <path>               Optional explicit SQLite file override for the opened db
+  --dry-run                 Validate and preview ungroup result without mutating the canvas
   --json                    Emit machine-readable success/error payloads
   --help, -h                Show this help message
 
 Output:
   Text mode prints removed group ids and released child ids.
-  JSON mode prints { ok, command, canvas, matchedCount, matchedIds, removedGroupCount, removedGroupIds, releasedChildCount, releasedChildIds }.
+  JSON mode prints { ok, command, dryRun, canvas, matchedCount, matchedIds, removedGroupCount, removedGroupIds, releasedChildCount, releasedChildIds }.
 
 Notes:
   - ungrouping currently supports explicit group ids only.

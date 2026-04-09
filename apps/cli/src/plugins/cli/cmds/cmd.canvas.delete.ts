@@ -20,6 +20,7 @@ Required target selector:
 
 Options:
   --db <path>               Optional explicit SQLite file override for the opened db
+  --dry-run                 Validate and preview delete result without mutating the canvas
   --json                    Emit machine-readable success/error payloads
   --help, -h                Show this help message
 `);

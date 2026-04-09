@@ -91,4 +91,24 @@ describe('canvas CLI group', () => {
       canvasId: seeded.canvas.id,
     });
   });
+
+  test('dry-run previews grouping without creating the group', async () => {
+    const context = await createContext();
+    const rectA = createRectElement({ id: 'rect-dry-a', zIndex: 'a0' });
+    const rectB = createRectElement({ id: 'rect-dry-b', zIndex: 'a1' });
+    const seeded = await context.seedCanvasFixture({ name: 'group-dry-run', elements: { [rectA.id]: rectA, [rectB.id]: rectB } });
+
+    const result = await context.runCanvasCli(['group', '--canvas', seeded.canvas.id, '--id', rectA.id, '--id', rectB.id, '--dry-run', '--json']);
+
+    expectExitCode(result, 0);
+    expectNoStderr(result);
+    const payload = parseJsonStdout<TGroupJson & { dryRun: boolean }>(result);
+    expect(payload).toMatchObject({ ok: true, command: 'canvas.group', dryRun: true, matchedIds: ['rect-dry-a', 'rect-dry-b'], group: { id: 'PLACEHOLDER-NO' } });
+
+    const doc = await context.readCanvasDoc(seeded.automergeUrl);
+    expect(Object.keys(doc.groups)).toHaveLength(0);
+    expect(doc.elements[rectA.id]?.parentGroupId ?? null).toBeNull();
+    expect(doc.elements[rectB.id]?.parentGroupId ?? null).toBeNull();
+  });
+
 });

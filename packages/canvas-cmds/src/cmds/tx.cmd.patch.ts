@@ -31,6 +31,7 @@ export type TCanvasPatchEnvelope = {
 export type TCanvasPatchInput = {
   canvasId?: string | null;
   canvasNameQuery?: string | null;
+  dryRun?: boolean;
   ids?: string[];
   patch?: TCanvasPatchEnvelope;
 };
@@ -38,6 +39,7 @@ export type TCanvasPatchInput = {
 export type TCanvasPatchSuccess = {
   ok: true;
   command: 'canvas.patch';
+  dryRun: boolean;
   patch: TCanvasPatchEnvelope;
   canvas: TCanvasSummary;
   matchedCount: number;
@@ -199,6 +201,7 @@ export async function txExecuteCanvasPatch(portal: TPortal, input: TCanvasPatchI
   const patch = input.patch;
 
   try {
+    const dryRun = input.dryRun === true;
     validatePatchEnvelope(patch);
     const ids = assertIds(input);
     const selectedCanvas = fnResolveCanvasSelection({ rows: portal.dbService.canvas.listAll(), selector: input, command: 'canvas.patch', actionLabel: 'Patch' });
@@ -239,24 +242,42 @@ export async function txExecuteCanvasPatch(portal: TPortal, input: TCanvasPatchI
     const now = Date.now();
     const changedIds = new Set<string>();
 
-    handle.change((nextDoc) => {
+    const previewDoc = dryRun ? structuredClone(doc) : null;
+    const targetDoc = dryRun ? previewDoc! : null;
+
+    if (dryRun) {
       for (const id of matchedIds) {
-        const nextElement = nextDoc.elements[id];
+        const nextElement = targetDoc.elements[id];
         if (nextElement && patch.element) {
           if (applyElementPatch(nextElement, patch.element, now)) changedIds.add(id);
           continue;
         }
-        const nextGroup = nextDoc.groups[id];
+        const nextGroup = targetDoc.groups[id];
         if (nextGroup && patch.group) {
           if (applyGroupPatch(nextGroup, patch.group)) changedIds.add(id);
         }
       }
-    });
-    await portal.automergeService.repo.flush([handle.documentId]);
+    } else {
+      handle.change((nextDoc) => {
+        for (const id of matchedIds) {
+          const nextElement = nextDoc.elements[id];
+          if (nextElement && patch.element) {
+            if (applyElementPatch(nextElement, patch.element, now)) changedIds.add(id);
+            continue;
+          }
+          const nextGroup = nextDoc.groups[id];
+          if (nextGroup && patch.group) {
+            if (applyGroupPatch(nextGroup, patch.group)) changedIds.add(id);
+          }
+        }
+      });
+      await portal.automergeService.repo.flush([handle.documentId]);
+    }
 
     return {
       ok: true,
       command: 'canvas.patch',
+      dryRun,
       patch,
       canvas: fnNormalizeCanvas(selectedCanvas),
       matchedCount: matchedIds.length,
