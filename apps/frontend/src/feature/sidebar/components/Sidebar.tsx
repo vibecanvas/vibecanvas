@@ -53,7 +53,7 @@ const Sidebar: Component<SidebarProps> = (props) => {
   const handleRename = async (newName: string) => {
     const canvas = canvasToRename();
     if (canvas) {
-      const [err, data] = await orpcWebsocketService.safeClient.api.canvas.update({ params: { id: canvas.id }, body: { name: newName } })
+      const [err, data] = await orpcWebsocketService.apiService.api.canvas.update({ params: { id: canvas.id }, body: { name: newName } })
       if (err) showErrorToast(err.message)
       if (data) {
         setStore("canvases", c => c.id === canvas.id, data)
@@ -65,7 +65,7 @@ const Sidebar: Component<SidebarProps> = (props) => {
     const canvas = canvasToDelete();
     if (canvas) {
       const isActive = activeCanvasId() === canvas.id;
-      const [err, data] = await orpcWebsocketService.safeClient.api.canvas.remove({ params: { id: canvas.id } })
+      const [err, data] = await orpcWebsocketService.apiService.api.canvas.remove({ params: { id: canvas.id } })
       if (err) showErrorToast(err.message)
       if (data) {
         removeFromCache(data.automerge_url)
@@ -76,7 +76,7 @@ const Sidebar: Component<SidebarProps> = (props) => {
   };
 
   const handleCreateCanvas = async (title: string) => {
-    const [err, data] = await orpcWebsocketService.safeClient.api.canvas.create({ name: title })
+    const [err, data] = await orpcWebsocketService.apiService.api.canvas.create({ name: title })
     if (err) showErrorToast(err.message)
     if (data) {
       setStore("canvases", prev => [...prev, data])

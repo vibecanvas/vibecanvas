@@ -1,5 +1,6 @@
+import type { TOrpcSafeClient } from "@vibecanvas/orpc-client";
 import { createEffect, createResource, createSignal, on, onCleanup, onMount, type Accessor } from "solid-js";
-import type { THostedWidgetElementMap, TFiletreeFilesResponse, TFiletreeNode, TFiletreeSafeClient } from "../../services/canvas/interface";
+import type { THostedWidgetElementMap, TFiletreeFilesResponse, TFiletreeNode } from "../../services/canvas/interface";
 
 export type TDraggedFiletreeNode = {
   path: string;
@@ -15,7 +16,7 @@ const LAST_FILETREE_PATH_KEY = "vibecanvas-filetree-last-path";
 
 type TCreateFiletreeContextLogicArgs = {
   element: Accessor<THostedWidgetElementMap["filetree"]>;
-  safeClient: TFiletreeSafeClient;
+  apiService: TOrpcSafeClient;
   onPathChange: (path: string) => void;
 };
 
@@ -54,7 +55,7 @@ export function createFiletreeContextLogic(args: TCreateFiletreeContextLogicArgs
     watchAbort = null;
 
     if (!watchId) return;
-    void args.safeClient.api.filesystem.unwatch({ watchId });
+    void args.apiService.api.filesystem.unwatch({ watchId });
   };
 
   const clearFolderAutoOpenTimer = () => {
@@ -73,7 +74,7 @@ export function createFiletreeContextLogic(args: TCreateFiletreeContextLogicArgs
   };
 
   const fetchTreeData = async (path: string) => {
-    const [listError, listResult] = await args.safeClient.api.filesystem.files({
+    const [listError, listResult] = await args.apiService.api.filesystem.files({
       query: {
         path,
         max_depth: 1,
@@ -89,7 +90,7 @@ export function createFiletreeContextLogic(args: TCreateFiletreeContextLogicArgs
   };
 
   const loadHomePath = async () => {
-    const [homeError, homeResult] = await args.safeClient.api.filesystem.home();
+    const [homeError, homeResult] = await args.apiService.api.filesystem.home();
     if (homeError || !homeResult || "type" in homeResult) return;
     setHomePath(homeResult.path);
   };
@@ -114,7 +115,7 @@ export function createFiletreeContextLogic(args: TCreateFiletreeContextLogicArgs
     watchAbort = abort;
     activeWatchId = watchId;
 
-    const [err, iterator] = await args.safeClient.api.filesystem.watch({ path, watchId }, { signal: abort.signal });
+    const [err, iterator] = await args.apiService.api.filesystem.watch({ path, watchId }, { signal: abort.signal });
     if (err || !iterator || abort.signal.aborted) {
       if (activeWatchId === watchId) {
         activeWatchId = null;
@@ -126,7 +127,7 @@ export function createFiletreeContextLogic(args: TCreateFiletreeContextLogicArgs
 
     keepaliveInterval = setInterval(async () => {
       if (activeWatchId !== watchId || abort.signal.aborted) return;
-      const [keepaliveError, keepaliveResult] = await args.safeClient.api.filesystem.keepaliveWatch({ watchId });
+      const [keepaliveError, keepaliveResult] = await args.apiService.api.filesystem.keepaliveWatch({ watchId });
       if (keepaliveError || !keepaliveResult) {
         if (activeWatchId === watchId) {
           stopWatching();
@@ -147,7 +148,7 @@ export function createFiletreeContextLogic(args: TCreateFiletreeContextLogicArgs
         activeWatchId = null;
         watchAbort = null;
         clearKeepaliveInterval();
-        void args.safeClient.api.filesystem.unwatch({ watchId });
+        void args.apiService.api.filesystem.unwatch({ watchId });
       }
     }
   };
@@ -271,7 +272,7 @@ export function createFiletreeContextLogic(args: TCreateFiletreeContextLogicArgs
   };
 
   const moveNodeIntoFolder = async (node: TDraggedFiletreeNode, destinationFolderPath: string) => {
-    const [moveError, moveResult] = await args.safeClient.api.filesystem.move({
+    const [moveError, moveResult] = await args.apiService.api.filesystem.move({
       body: {
         source_path: node.path,
         destination_dir_path: destinationFolderPath,
@@ -296,7 +297,7 @@ export function createFiletreeContextLogic(args: TCreateFiletreeContextLogicArgs
   };
 
   const handleSetHome = async () => {
-    const [homeError, homeResult] = await args.safeClient.api.filesystem.home();
+    const [homeError, homeResult] = await args.apiService.api.filesystem.home();
     if (homeError || !homeResult || "type" in homeResult) {
       setErrorMessage(homeError && "message" in (homeError as object) ? (homeError as { message?: string }).message ?? "Failed to resolve home directory" : (homeResult && "message" in homeResult ? homeResult.message : "Failed to resolve home directory"));
       return;
@@ -308,7 +309,7 @@ export function createFiletreeContextLogic(args: TCreateFiletreeContextLogicArgs
 
   const handleSetParentPath = async () => {
     if (!currentPath()) return;
-    const [listError, listResult] = await args.safeClient.api.filesystem.list({
+    const [listError, listResult] = await args.apiService.api.filesystem.list({
       query: { path: currentPath() },
     });
 

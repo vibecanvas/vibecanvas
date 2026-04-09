@@ -16,7 +16,7 @@ const [store, setStore, init] = makePersisted(createStore<TGlobalStore>({
 }), { name: "vibecanvas" });
 
 // Fetch canvas list on startup
-orpcWebsocketService.safeClient.api.canvas.list()
+orpcWebsocketService.apiService.api.canvas.list()
   .then(([err, result]) => {
     if (err) return;
     setStore("canvases", result);

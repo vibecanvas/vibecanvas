@@ -1,6 +1,6 @@
 import Konva from "konva";
 import { describe, expect, test, vi } from "vitest";
-import type { TFiletreeSafeClient, TTerminalSafeClient } from "../../../src/services/canvas/interface";
+import type { TOrpcSafeClient } from "@vibecanvas/orpc-client";
 
 vi.mock("ghostty-web", () => {
   class MockGhosttyTerminal {
@@ -126,7 +126,7 @@ async function flushTerminalSocketConnect() {
 }
 
 function createTerminalSafeClientMock() {
-  const safeClient: TTerminalSafeClient = {
+  const safeClient: TOrpcSafeClient = {
     api: {
       pty: {
         list: vi.fn().mockResolvedValue([null, []]),
@@ -162,7 +162,7 @@ function createFiletreeSafeClientMock(overrides?: {
 }) {
   const initialPath = overrides?.initialPath ?? "/tmp/demo";
 
-  const safeClient: TFiletreeSafeClient = {
+  const safeClient: TOrpcSafeClient = {
     api: {
       filesystem: {
         home: vi.fn().mockResolvedValue([null, { path: initialPath }]),
@@ -607,7 +607,7 @@ describe("HostedSolidWidgetPlugin", () => {
         docHandle,
         plugins: [new RenderOrderPlugin(), new HostedSolidWidgetPlugin(), new SceneHydratorPlugin()],
         appCapabilities: {
-          terminal: { safeClient },
+          terminal: { apiService: safeClient },
         },
         initializeScene: (ctx) => {
           context = ctx;
@@ -722,7 +722,7 @@ describe("HostedSolidWidgetPlugin", () => {
         appCapabilities: {
           filetree: {
             canvasId: "canvas-1",
-            safeClient: filetreeClient,
+            apiService: filetreeClient,
           },
         },
         initializeScene: (ctx) => {
@@ -773,7 +773,7 @@ describe("HostedSolidWidgetPlugin", () => {
         docHandle,
         plugins: [new RenderOrderPlugin(), new HostedSolidWidgetPlugin(), new SceneHydratorPlugin()],
         appCapabilities: {
-          file: { safeClient },
+          file: { apiService: safeClient },
         },
         initializeScene: (ctx) => {
           context = ctx;
@@ -889,7 +889,7 @@ describe("HostedSolidWidgetPlugin", () => {
       docHandle,
       plugins: [new RenderOrderPlugin(), new HostedSolidWidgetPlugin(), new SceneHydratorPlugin()],
       appCapabilities: {
-        terminal: { safeClient },
+        terminal: { apiService: safeClient },
       },
     });
 
@@ -953,7 +953,7 @@ describe("HostedSolidWidgetPlugin", () => {
       docHandle,
       plugins: [new RenderOrderPlugin(), new HostedSolidWidgetPlugin(), new SceneHydratorPlugin()],
       appCapabilities: {
-        terminal: { safeClient },
+        terminal: { apiService: safeClient },
       },
     });
 
@@ -1019,7 +1019,7 @@ describe("HostedSolidWidgetPlugin", () => {
       docHandle,
       plugins: [new RenderOrderPlugin(), new HostedSolidWidgetPlugin(), new SceneHydratorPlugin()],
       appCapabilities: {
-        terminal: { safeClient },
+        terminal: { apiService: safeClient },
       },
     });
 
@@ -1049,7 +1049,7 @@ describe("HostedSolidWidgetPlugin", () => {
       appCapabilities: {
         filetree: {
           canvasId: "canvas-1",
-          safeClient: filetreeClient,
+          apiService: filetreeClient,
         },
       },
       initializeScene: (ctx) => {
@@ -1108,7 +1108,7 @@ describe("HostedSolidWidgetPlugin", () => {
       appCapabilities: {
         filetree: {
           canvasId: "canvas-1",
-          safeClient: filetreeClient,
+          apiService: filetreeClient,
         },
       },
     });
@@ -1156,7 +1156,7 @@ describe("HostedSolidWidgetPlugin", () => {
       appCapabilities: {
         filetree: {
           canvasId: "canvas-1",
-          safeClient: filetreeClient,
+          apiService: filetreeClient,
         },
       },
     });
@@ -1197,7 +1197,7 @@ describe("HostedSolidWidgetPlugin", () => {
       docHandle,
       plugins: [new RenderOrderPlugin(), new HostedSolidWidgetPlugin(), new SceneHydratorPlugin()],
       appCapabilities: {
-        file: { safeClient },
+        file: { apiService: safeClient },
       },
     });
 
@@ -1247,7 +1247,7 @@ describe("HostedSolidWidgetPlugin", () => {
       docHandle,
       plugins: [new RenderOrderPlugin(), new HostedSolidWidgetPlugin(), new SceneHydratorPlugin()],
       appCapabilities: {
-        file: { safeClient },
+        file: { apiService: safeClient },
       },
     });
 
@@ -1276,9 +1276,9 @@ describe("HostedSolidWidgetPlugin", () => {
       appCapabilities: {
         filetree: {
           canvasId: "canvas-1",
-          safeClient,
+          apiService: safeClient,
         },
-        file: { safeClient },
+        file: { apiService: safeClient },
       },
     });
 
@@ -1333,7 +1333,7 @@ describe("HostedSolidWidgetPlugin", () => {
       docHandle,
       plugins: [new RenderOrderPlugin(), new HostedSolidWidgetPlugin(), new SceneHydratorPlugin()],
       appCapabilities: {
-        terminal: { safeClient },
+        terminal: { apiService: safeClient },
       },
     });
 
@@ -1406,10 +1406,10 @@ describe("HostedSolidWidgetPlugin", () => {
       docHandle,
       plugins: [new RenderOrderPlugin(), new HostedSolidWidgetPlugin(), new SceneHydratorPlugin()],
       appCapabilities: {
-        terminal: { safeClient },
+        terminal: { apiService: safeClient },
         filetree: {
           canvasId: "canvas-1",
-          safeClient: createFiletreeSafeClientMock(),
+          apiService: createFiletreeSafeClientMock(),
         },
       },
     });
@@ -1483,7 +1483,7 @@ describe("HostedSolidWidgetPlugin", () => {
       docHandle,
       plugins: [new RenderOrderPlugin(), new HostedSolidWidgetPlugin(), new SceneHydratorPlugin()],
       appCapabilities: {
-        terminal: { safeClient },
+        terminal: { apiService: safeClient },
       },
     });
 

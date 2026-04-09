@@ -1,3 +1,4 @@
+import type { TOrpcSafeClient } from "@vibecanvas/orpc-client";
 import { createEffect, createMemo, onCleanup, type Accessor } from "solid-js";
 import ArrowUp from "lucide-solid/icons/arrow-up";
 import ChevronDown from "lucide-solid/icons/chevron-down";
@@ -9,14 +10,14 @@ import FolderSearch from "lucide-solid/icons/folder-search";
 import House from "lucide-solid/icons/house";
 import RefreshCw from "lucide-solid/icons/refresh-cw";
 import { For, Show } from "solid-js";
-import type { THostedWidgetElementMap, TFiletreeNode, TFiletreeSafeClient, THostedWidgetChrome } from "../../services/canvas/interface";
+import type { THostedWidgetElementMap, TFiletreeNode, THostedWidgetChrome } from "../../services/canvas/interface";
 import { PathPickerDialog } from "./PathPickerDialog";
 import { createFiletreeContextLogic } from "./createFiletreeContextLogic";
 import { toTildePath } from "./path-display";
 
 type TFiletreeWidgetProps = {
   element: Accessor<THostedWidgetElementMap["filetree"]>;
-  safeClient: TFiletreeSafeClient;
+  apiService: TOrpcSafeClient;
   setWindowChrome?: (chrome: THostedWidgetChrome | null) => void;
   onPathChange: (path: string) => void;
   onOpenFile?: (path: string) => void;
@@ -25,7 +26,7 @@ type TFiletreeWidgetProps = {
 export function FiletreeWidget(props: TFiletreeWidgetProps) {
   const filetreeLogic = createFiletreeContextLogic({
     element: props.element,
-    safeClient: props.safeClient,
+    apiService: props.apiService,
     onPathChange: props.onPathChange,
   });
   const windowTitle = createMemo(() => {
@@ -181,7 +182,7 @@ export function FiletreeWidget(props: TFiletreeWidgetProps) {
       </div>
 
       <PathPickerDialog
-        safeClient={props.safeClient}
+        apiService={props.apiService}
         open={filetreeLogic.isPathDialogOpen()}
         onOpenChange={filetreeLogic.setIsPathDialogOpen}
         initialPath={filetreeLogic.currentPath() || null}

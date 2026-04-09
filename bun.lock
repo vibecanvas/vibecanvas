@@ -62,6 +62,7 @@
         "@vibecanvas/api-notification": "workspace:*",
         "@vibecanvas/api-pty": "workspace:*",
         "@vibecanvas/canvas": "workspace:*",
+        "@vibecanvas/orpc-client": "workspace:*",
         "@vibecanvas/service-automerge": "workspace:*",
         "@vibecanvas/service-db": "workspace:*",
         "konva": "^9.3.22",
@@ -211,6 +212,7 @@
         "@kobalte/core": "catalog:",
         "@orpc/contract": "catalog:",
         "@solid-primitives/scheduled": "^1.5.3",
+        "@vibecanvas/orpc-client": "workspace:*",
         "@vibecanvas/service-automerge": "workspace:*",
         "@vibecanvas/service-db": "workspace:*",
         "ghostty-web": "^0.4.0",
@@ -244,6 +246,21 @@
         "@automerge/automerge-repo": "catalog:",
         "@vibecanvas/service-automerge": "workspace:*",
         "@vibecanvas/service-db": "workspace:*",
+      },
+    },
+    "packages/orpc-client": {
+      "name": "@vibecanvas/orpc-client",
+      "version": "0.3.0-beta.1",
+      "dependencies": {
+        "@orpc/client": "catalog:",
+        "@orpc/contract": "catalog:",
+        "@vibecanvas/api-canvas": "workspace:*",
+        "@vibecanvas/api-db": "workspace:*",
+        "@vibecanvas/api-file": "workspace:*",
+        "@vibecanvas/api-filesystem": "workspace:*",
+        "@vibecanvas/api-notification": "workspace:*",
+        "@vibecanvas/api-pty": "workspace:*",
+        "partysocket": "^1.1.16",
       },
     },
     "packages/runtime": {
@@ -940,6 +957,8 @@
     "@vibecanvas/cli": ["@vibecanvas/cli@workspace:apps/cli"],
 
     "@vibecanvas/frontend": ["@vibecanvas/frontend@workspace:apps/frontend"],
+
+    "@vibecanvas/orpc-client": ["@vibecanvas/orpc-client@workspace:packages/orpc-client"],
 
     "@vibecanvas/runtime": ["@vibecanvas/runtime@workspace:packages/runtime"],
 

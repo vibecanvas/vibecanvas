@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## 0.3.0-beta.2
+
+### Added
+- Added PTY image upload API support for writing pasted clipboard images to remote temp storage and returning the absolute server path.
+- Added shared `@vibecanvas/orpc-client` package so frontend and canvas use the same ORPC websocket client and safe API types.
+
+### Changed
+- Replaced canvas-side handwritten ORPC safe client mirror types with the shared `@vibecanvas/orpc-client` types.
+- Renamed hosted widget transport wiring from `safeClient` to `apiService` across canvas/frontend integration for clearer ownership.
+
 ## 0.3.0-beta.1
 
 ### Added

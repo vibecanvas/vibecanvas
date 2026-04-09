@@ -1,10 +1,11 @@
+import type { TOrpcSafeClient } from "@vibecanvas/orpc-client";
 import type { Accessor } from "solid-js";
-import type { THostedWidgetChrome, THostedWidgetElementMap, TTerminalSafeClient } from "../../services/canvas/interface";
+import type { THostedWidgetChrome, THostedWidgetElementMap } from "../../services/canvas/interface";
 import { TerminalWidget } from "./TerminalWidget";
 
 type TTerminalHostedWidgetProps = {
   element: Accessor<THostedWidgetElementMap["terminal"]>;
-  safeClient?: TTerminalSafeClient;
+  apiService?: TOrpcSafeClient;
   setWindowChrome?: (chrome: THostedWidgetChrome | null) => void;
   registerBeforeRemove?: (handler: (() => void | Promise<void>) | null) => void;
   registerFocus?: (handler: (() => void) | null) => void;
@@ -19,7 +20,7 @@ export function TerminalHostedWidget(props: TTerminalHostedWidgetProps) {
         workingDirectory={props.element().data.workingDirectory}
         title="untitled"
         showChrome={false}
-        safeClient={props.safeClient}
+        apiService={props.apiService}
         setWindowChrome={props.setWindowChrome}
         registerBeforeRemove={props.registerBeforeRemove}
         registerFocus={props.registerFocus}

@@ -1,6 +1,7 @@
+import type { TOrpcSafeClient } from "@vibecanvas/orpc-client";
 import RefreshCw from "lucide-solid/icons/refresh-cw";
 import { createEffect, onCleanup, Show, createSignal } from "solid-js";
-import type { THostedWidgetChrome, TTerminalSafeClient } from "../../services/canvas/interface";
+import type { THostedWidgetChrome } from "../../services/canvas/interface";
 import { GhosttyTerminalMount } from "./GhosttyTerminalMount";
 import { createTerminalContextLogic } from "./createTerminalContextLogic";
 
@@ -9,7 +10,7 @@ type TTerminalWidgetProps = {
   workingDirectory: string;
   title?: string;
   showChrome?: boolean;
-  safeClient?: TTerminalSafeClient;
+  apiService?: TOrpcSafeClient;
   setWindowChrome?: (chrome: THostedWidgetChrome | null) => void;
   registerBeforeRemove?: (handler: (() => void | Promise<void>) | null) => void;
   registerReload?: (handler: (() => void | Promise<void>) | null) => void;
@@ -21,12 +22,12 @@ export function TerminalWidget(props: TTerminalWidgetProps) {
   const [mountRevision, setMountRevision] = createSignal(1);
   let rootRef: HTMLDivElement | undefined;
   const focusRetryTimerIds: number[] = [];
-  const terminalLogic = props.safeClient
+  const terminalLogic = props.apiService
     ? createTerminalContextLogic({
       terminalKey: props.terminalKey,
       workingDirectory: props.workingDirectory,
       title: props.title,
-      safeClient: props.safeClient,
+      apiService: props.apiService,
     })
     : null;
 

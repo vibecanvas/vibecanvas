@@ -1,4 +1,5 @@
-import type { TPty, TPtyCreateBody, TPtyUpdateBody, TTerminalSafeClient } from "../canvas/interface";
+import type { TOrpcSafeClient } from "@vibecanvas/orpc-client";
+import type { TPty, TPtyCreateBody, TPtyUpdateBody } from "../canvas/interface";
 import { WebSocket as PartySocketWebSocket } from "partysocket";
 
 export type TTerminalSessionState = {
@@ -130,29 +131,29 @@ function clearTerminalSessionState(terminalKey: string) {
 }
 
 class PtyService {
-  readonly #safeClient: TTerminalSafeClient;
+  readonly #apiService: TOrpcSafeClient;
 
-  constructor(safeClient: TTerminalSafeClient) {
-    this.#safeClient = safeClient;
+  constructor(apiService: TOrpcSafeClient) {
+    this.#apiService = apiService;
   }
 
   async list(workingDirectory: string) {
-    return this.#safeClient.api.pty.list({ workingDirectory });
+    return this.#apiService.api.pty.list({ workingDirectory });
   }
 
   async create(workingDirectory: string, body?: TPtyCreateBody) {
-    return this.#safeClient.api.pty.create({ workingDirectory, body });
+    return this.#apiService.api.pty.create({ workingDirectory, body });
   }
 
   async get(workingDirectory: string, ptyID: string) {
-    return this.#safeClient.api.pty.get({
+    return this.#apiService.api.pty.get({
       workingDirectory,
       path: { ptyID },
     });
   }
 
   async update(workingDirectory: string, ptyID: string, body: TPtyUpdateBody) {
-    return this.#safeClient.api.pty.update({
+    return this.#apiService.api.pty.update({
       workingDirectory,
       path: { ptyID },
       body,
@@ -160,7 +161,7 @@ class PtyService {
   }
 
   async remove(workingDirectory: string, ptyID: string) {
-    return this.#safeClient.api.pty.remove({
+    return this.#apiService.api.pty.remove({
       workingDirectory,
       path: { ptyID },
     });
@@ -196,8 +197,8 @@ class PtyService {
   }
 }
 
-function createPtyService(safeClient: TTerminalSafeClient) {
-  return new PtyService(safeClient);
+function createPtyService(apiService: TOrpcSafeClient) {
+  return new PtyService(apiService);
 }
 
 export type { TPty };

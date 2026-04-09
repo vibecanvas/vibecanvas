@@ -1,6 +1,13 @@
 import { oc } from '@orpc/contract';
 import { z } from 'zod';
 
+const ptyImageFormatSchema = z.union([
+  z.literal('image/jpeg'),
+  z.literal('image/png'),
+  z.literal('image/gif'),
+  z.literal('image/webp'),
+]);
+
 const ptySizeSchema = z.object({
   rows: z.number().int().positive(),
   cols: z.number().int().positive(),
@@ -60,13 +67,28 @@ const ptyUpdateInputSchema = z.object({
   body: ptyUpdateBodySchema,
 });
 
+const ptyUploadImageInputSchema = z.object({
+  workingDirectory: z.string(),
+  body: z.object({
+    base64: z.string(),
+    format: ptyImageFormatSchema,
+  }),
+});
+
+const ptyUploadImageOutputSchema = z.object({
+  path: z.string(),
+});
+
 type TPty = z.infer<typeof zPty>;
 type TPtyCreateBodySchema = z.infer<typeof ptyCreateBodySchema>;
+type TPtyImageFormat = z.infer<typeof ptyImageFormatSchema>;
 type TPtyUpdateBodySchema = z.infer<typeof ptyUpdateBodySchema>;
 type TPtyCreateInput = z.infer<typeof ptyCreateInputSchema>;
 type TPtyPathInput = z.infer<typeof ptyPathInputSchema>;
 type TPtyScopedInput = z.infer<typeof ptyScopedInputSchema>;
 type TPtyUpdateInput = z.infer<typeof ptyUpdateInputSchema>;
+type TPtyUploadImageInput = z.infer<typeof ptyUploadImageInputSchema>;
+type TPtyUploadImageOutput = z.infer<typeof ptyUploadImageOutputSchema>;
 
 const ptyContract = oc.router({
   list: oc
@@ -88,26 +110,36 @@ const ptyContract = oc.router({
   remove: oc
     .input(ptyPathInputSchema)
     .output(z.boolean()),
+
+  uploadImage: oc
+    .input(ptyUploadImageInputSchema)
+    .output(ptyUploadImageOutputSchema),
 });
 
 export {
   ptyContract,
   ptyCreateBodySchema,
   ptyCreateInputSchema,
+  ptyImageFormatSchema,
   ptyPathInputSchema,
   ptyScopedInputSchema,
   ptySizeSchema,
   ptyUpdateBodySchema,
   ptyUpdateInputSchema,
+  ptyUploadImageInputSchema,
+  ptyUploadImageOutputSchema,
   zPty,
 };
 export type {
   TPty,
   TPtyCreateBodySchema,
   TPtyCreateInput,
+  TPtyImageFormat,
   TPtyPathInput,
   TPtyScopedInput,
   TPtyUpdateBodySchema,
   TPtyUpdateInput,
+  TPtyUploadImageInput,
+  TPtyUploadImageOutput,
 };
 export default ptyContract;

@@ -1,3 +1,4 @@
+import type { TOrpcSafeClient } from "@vibecanvas/orpc-client";
 import type { TElement, TFileData, TFiletreeData, TTerminalData } from "@vibecanvas/service-automerge/types/canvas-doc";
 import { Group } from "konva/lib/Group";
 import { Shape, ShapeConfig } from "konva/lib/Shape";
@@ -109,26 +110,6 @@ export type TFileWriteResponse =
   }
   | TFiletreeErrorResponse;
 
-type TFiletreeSafeResult<T> = Promise<[unknown, T | null | undefined]>;
-
-export type TFiletreeSafeClient = {
-  api: {
-    filesystem: {
-      home(): TFiletreeSafeResult<TFiletreeHomeResponse | TFiletreeErrorResponse>;
-      list(args: { query: { path: string; omitFiles?: boolean } }): TFiletreeSafeResult<TFiletreeListResponse | TFiletreeErrorResponse>;
-      files(args: { query: { path: string; max_depth?: number } }): TFiletreeSafeResult<TFiletreeFilesResponse | TFiletreeErrorResponse>;
-      move(args: { body: { source_path: string; destination_dir_path: string } }): TFiletreeSafeResult<TFiletreeMoveResponse | TFiletreeErrorResponse>;
-      inspect(args: { query: { path: string } }): TFiletreeSafeResult<TFileInspectResponse | TFiletreeErrorResponse>;
-      read(args: { query: { path: string; maxBytes?: number; content?: "text" | "base64" | "binary" | "none" } }): TFiletreeSafeResult<TFileReadResponse>;
-      write(args: { query: { path: string; content: string } }): TFiletreeSafeResult<TFileWriteResponse>;
-      watch(args: { path: string; watchId: string }, options?: { signal?: AbortSignal }): Promise<[unknown, AsyncIterable<TFiletreeWatchEvent> | null | undefined]>;
-      keepaliveWatch(args: { watchId: string }): TFiletreeSafeResult<boolean>;
-      unwatch(args: { watchId: string }): TFiletreeSafeResult<unknown>;
-    };
-  };
-};
-
-export type TFileSafeClient = TFiletreeSafeClient;
 
 export type TPty = {
   id: string;
@@ -166,31 +147,17 @@ export type TPtyUpdateBody = {
   };
 };
 
-type TTerminalSafeResult<T> = Promise<[unknown, T | null | undefined]>;
-
-export type TTerminalSafeClient = {
-  api: {
-    pty: {
-      list(args: { workingDirectory: string }): TTerminalSafeResult<TPty[]>;
-      create(args: { workingDirectory: string; body?: TPtyCreateBody }): TTerminalSafeResult<TPty>;
-      get(args: { workingDirectory: string; path: { ptyID: string } }): TTerminalSafeResult<TPty>;
-      update(args: { workingDirectory: string; path: { ptyID: string }; body: TPtyUpdateBody }): TTerminalSafeResult<TPty>;
-      remove(args: { workingDirectory: string; path: { ptyID: string } }): TTerminalSafeResult<unknown>;
-    };
-  };
-};
-
 export type TTerminalCapability = {
-  safeClient: TTerminalSafeClient;
+  apiService: TOrpcSafeClient;
 };
 
 export type TFiletreeCapability = {
   canvasId: string;
-  safeClient: TFiletreeSafeClient;
+  apiService: TOrpcSafeClient;
 };
 
 export type TFileCapability = {
-  safeClient: TFileSafeClient;
+  apiService: TOrpcSafeClient;
 };
 
 export interface IState {

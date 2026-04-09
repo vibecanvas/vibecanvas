@@ -1,0 +1,21 @@
+{
+  "name": "@vibecanvas/orpc-client",
+  "version": "0.3.0-beta.1",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./*": "./src/*.ts"
+  },
+  "dependencies": {
+    "@orpc/client": "catalog:",
+    "@orpc/contract": "catalog:",
+    "@vibecanvas/api-canvas": "workspace:*",
+    "@vibecanvas/api-db": "workspace:*",
+    "@vibecanvas/api-file": "workspace:*",
+    "@vibecanvas/api-filesystem": "workspace:*",
+    "@vibecanvas/api-notification": "workspace:*",
+    "@vibecanvas/api-pty": "workspace:*",
+    "partysocket": "^1.1.16"
+  }
+}

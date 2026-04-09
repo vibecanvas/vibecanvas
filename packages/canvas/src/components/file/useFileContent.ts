@@ -1,5 +1,6 @@
+import type { TOrpcSafeClient } from "@vibecanvas/orpc-client";
 import { createSignal, type Accessor } from "solid-js";
-import type { TFileReadResponse, TFileSafeClient } from "../../services/canvas/interface";
+import type { TFileReadResponse } from "../../services/canvas/interface";
 
 export type TFileContent = Exclude<TFileReadResponse, { type: string; message: string }> | null;
 
@@ -24,7 +25,7 @@ function getErrorMessage(err: unknown, result: unknown, fallback: string) {
   return fallback;
 }
 
-export function useFileContent(safeClient: TFileSafeClient, path: Accessor<string>): TUseFileContent {
+export function useFileContent(apiService: TOrpcSafeClient, path: Accessor<string>): TUseFileContent {
   const [content, setContent] = createSignal<TFileContent>(null);
   const [loading, setLoading] = createSignal(false);
   const [error, setError] = createSignal<string | null>(null);
@@ -38,7 +39,7 @@ export function useFileContent(safeClient: TFileSafeClient, path: Accessor<strin
     if (!isBackgroundRefresh) setLoading(true);
     setError(null);
 
-    const [readError, readResult] = await safeClient.api.filesystem.read({
+    const [readError, readResult] = await apiService.api.filesystem.read({
       query: { path: path(), content: contentType },
     });
 
@@ -57,7 +58,7 @@ export function useFileContent(safeClient: TFileSafeClient, path: Accessor<strin
     setSaving(true);
     setError(null);
 
-    const [writeError, writeResult] = await safeClient.api.filesystem.write({
+    const [writeError, writeResult] = await apiService.api.filesystem.write({
       query: { path: path(), content: nextContent },
     });
 
