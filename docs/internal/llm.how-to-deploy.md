@@ -176,11 +176,32 @@ Rule:
 
 So beta and nightly show as prerelease on GitHub.
 
+## Version bump command
+
+Use the repo script for version bumps:
+
+```bash
+bun run version:update -- 0.2.3
+bun run version:update -- 0.3.0-beta.1
+bun run version:update -- 0.3.0-nightly.20260409
+```
+
+This runs `scripts/update-version.ts` and updates `package.json` files across the repo.
+
+For release flow, the important checks are still:
+- root `package.json` version
+- `apps/vibecanvas/package.json` version
+- release branch name
+- `CHANGELOG.md` heading
+
 ## How to cut a stable release
 
-1. Update both versions:
-   - `package.json`
-   - `apps/vibecanvas/package.json`
+1. Bump version:
+
+```bash
+bun run version:update -- 0.2.3
+```
+
 2. Use stable version format. Example:
    - `0.2.3`
 3. Add changelog section:
@@ -207,9 +228,15 @@ Result:
 
 ## How to cut a beta release
 
-1. Update both versions to beta form. Example:
+1. Bump version to beta form. Example:
+
+```bash
+bun run version:update -- 0.3.0-beta.1
+```
+
+2. Version should look like:
    - `0.3.0-beta.1`
-2. Add matching changelog section:
+3. Add matching changelog section:
 
 ```md
 ## 0.3.0-beta.1
@@ -232,6 +259,12 @@ Result:
 ## How to cut a nightly release
 
 Same flow.
+
+First bump version:
+
+```bash
+bun run version:update -- 0.3.0-nightly.20260409
+```
 
 Use nightly version format. Example:
 - `0.3.0-nightly.20260409`
