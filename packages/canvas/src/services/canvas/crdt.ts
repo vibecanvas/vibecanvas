@@ -15,17 +15,19 @@ type TElementPatch = TEntityPatch<TElement>;
 type TGroupPatch = TEntityPatch<TGroup>;
 
 export class Crdt {
+  #pendingLocalChangeEvents = 0;
+
   constructor(public readonly docHandle: DocHandle<TCanvasDoc>) { }
 
   patch(data: { elements: TElementPatch[]; groups: TGroupPatch[] }): void {
-    this.docHandle.change((doc) => {
+    this.runLocalChange((doc) => {
       this.patchCollection(doc.elements, data.elements);
       this.patchCollection(doc.groups, data.groups);
     });
   }
 
   deleteById(args: { elementIds?: string[]; groupIds?: string[] }): void {
-    this.docHandle.change((doc) => {
+    this.runLocalChange((doc) => {
       for (const id of args.elementIds ?? []) {
         delete doc.elements[id];
       }
@@ -34,6 +36,27 @@ export class Crdt {
         delete doc.groups[id];
       }
     });
+  }
+
+  consumePendingLocalChangeEvent(): boolean {
+    if (this.#pendingLocalChangeEvents <= 0) {
+      return false;
+    }
+
+    this.#pendingLocalChangeEvents -= 1;
+    return true;
+  }
+
+  private runLocalChange(callback: (doc: TCanvasDoc) => void): void {
+    this.#pendingLocalChangeEvents += 1;
+
+    try {
+      this.docHandle.change((doc) => {
+        callback(doc);
+      });
+    } finally {
+      this.#pendingLocalChangeEvents = Math.max(0, this.#pendingLocalChangeEvents - 1);
+    }
   }
 
   private patchCollection<TItem extends { id: string }>(

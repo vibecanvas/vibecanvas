@@ -232,4 +232,22 @@ describe("Crdt", () => {
     expect(doc!.groups[groupA.id]).toEqual(groupA);
     expect(doc!.groups[groupB.id]).toBeUndefined();
   });
+
+  test("marks own change events so scene reload can ignore local writes", async () => {
+    const handle = await createLocalHandle();
+    const crdt = new Crdt(handle);
+    const consumedStates: boolean[] = [];
+
+    handle.on("change", () => {
+      consumedStates.push(crdt.consumePendingLocalChangeEvent());
+    });
+
+    crdt.patch({
+      elements: [createImageElement()],
+      groups: [],
+    });
+
+    expect(consumedStates).toEqual([true]);
+    expect(crdt.consumePendingLocalChangeEvent()).toBe(false);
+  });
 });

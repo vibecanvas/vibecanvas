@@ -2,8 +2,8 @@ import type { DocHandle } from "@automerge/automerge-repo";
 import type { TCanvasDoc, TElement, TGroup } from "@vibecanvas/service-automerge/types/canvas-doc";
 import Konva from "konva";
 import { describe, expect, test } from "vitest";
-import { GroupPlugin, RenderOrderPlugin, SceneHydratorPlugin, Shape2dPlugin } from "../../../src/plugins";
-import { createCanvasTestHarness, createMockDocHandle } from "../../test-setup";
+import { GroupPlugin, RenderOrderPlugin, SceneHydratorPlugin, Shape2dPlugin, type IPluginContext } from "../../../src/plugins";
+import { createCanvasTestHarness, createMockDocHandle, flushCanvasEffects } from "../../test-setup";
 
 function createRectElement(overrides?: Partial<TElement>): TElement {
   return {
@@ -100,6 +100,58 @@ describe("SceneHydratorPlugin", () => {
     expect(doc.elements[validElement.id]).toEqual(validElement);
     expect(doc.elements[orphanElement.id]).toBeUndefined();
     expect(doc.elements[missingParentElement.id]).toBeUndefined();
+
+    harness.destroy();
+  });
+
+  test("rehydrates scene on doc change and keeps selection on surviving nodes", async () => {
+    let pluginContext: IPluginContext | null = null;
+    const selectedElement = createRectElement({ id: "element-selected" });
+    const remoteGroup = createGroup({ id: "group-live" });
+    const remoteElement = createRectElement({ id: "element-live", parentGroupId: remoteGroup.id });
+    const docHandle = createMockDocHandle({
+      elements: {
+        [selectedElement.id]: selectedElement,
+      },
+    }) as DocHandle<TCanvasDoc>;
+
+    const harness = await createCanvasTestHarness({
+      docHandle,
+      plugins: [new RenderOrderPlugin(), new Shape2dPlugin(), new GroupPlugin(), new SceneHydratorPlugin()],
+      initializeScene(context) {
+        pluginContext = context;
+      },
+    });
+
+    const selectedNode = harness.staticForegroundLayer.findOne<Konva.Rect>("#element-selected");
+    if (!selectedNode) throw new Error("missing selected node");
+    pluginContext?.setState("selection", [selectedNode]);
+    pluginContext?.setState("focusedId", selectedNode.id());
+
+    expect(harness.staticForegroundLayer.findOne<Konva.Group>("#group-live")).toBeFalsy();
+    expect(harness.staticForegroundLayer.findOne<Konva.Rect>("#element-live")).toBeFalsy();
+    expect(harness.service).toBeTruthy();
+
+    docHandle.change((doc) => {
+      doc.groups[remoteGroup.id] = remoteGroup;
+      doc.elements[remoteElement.id] = remoteElement;
+    });
+    (docHandle as DocHandle<TCanvasDoc> & { __emitChange: () => void }).__emitChange();
+    await flushCanvasEffects();
+
+    const hydratedSelectedNode = harness.staticForegroundLayer.findOne<Konva.Rect>("#element-selected");
+    const hydratedRemoteGroup = harness.staticForegroundLayer.findOne<Konva.Group>("#group-live");
+    const hydratedRemoteElement = harness.staticForegroundLayer.findOne<Konva.Rect>("#element-live");
+
+    expect(hydratedSelectedNode).toBeTruthy();
+    expect(harness.service).toBeTruthy();
+    expect(hydratedRemoteGroup).toBeTruthy();
+    expect(hydratedRemoteGroup?.getParent()).toBe(harness.staticForegroundLayer);
+    expect(hydratedRemoteElement).toBeTruthy();
+    expect(hydratedRemoteElement?.getParent()).toBe(hydratedRemoteGroup);
+    expect(pluginContext?.state.selection[0]).toBe(hydratedSelectedNode);
+    expect(pluginContext?.state.focusedId).toBe("element-selected");
+    expect(hydratedSelectedNode?.id()).toBe("element-selected");
 
     harness.destroy();
   });

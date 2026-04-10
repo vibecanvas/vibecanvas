@@ -87,13 +87,35 @@ export function createMockDocHandle(overrides?: Partial<TCanvasDoc>): DocHandle<
     groups: {},
     ...overrides,
   };
+  const changeListeners = new Set<(payload: { handle: DocHandle<TCanvasDoc>; doc: TCanvasDoc; patches: unknown[]; patchInfo: unknown }) => void>();
 
-  return {
+  const emitChange = () => {
+    const payload = {
+      handle: docHandle as DocHandle<TCanvasDoc>,
+      doc: docState,
+      patches: [],
+      patchInfo: { before: null, after: null, source: "change" },
+    };
+    changeListeners.forEach((listener) => listener(payload));
+  };
+
+  const docHandle = {
     doc: () => docState,
-    change: (callback) => {
+    change: (callback: (doc: TCanvasDoc) => void) => {
       callback(docState);
     },
-  } as DocHandle<TCanvasDoc>;
+    on: (event: string, callback: (payload: { handle: DocHandle<TCanvasDoc>; doc: TCanvasDoc; patches: unknown[]; patchInfo: unknown }) => void) => {
+      if (event === "change") changeListeners.add(callback);
+      return docHandle;
+    },
+    off: (event: string, callback: (payload: { handle: DocHandle<TCanvasDoc>; doc: TCanvasDoc; patches: unknown[]; patchInfo: unknown }) => void) => {
+      if (event === "change") changeListeners.delete(callback);
+      return docHandle;
+    },
+    __emitChange: emitChange,
+  };
+
+  return docHandle as DocHandle<TCanvasDoc>;
 }
 
 export function createTestContainer(args?: { width?: number; height?: number }) {

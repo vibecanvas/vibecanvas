@@ -120,7 +120,7 @@ Use the leaf files for execution history and local context.
 - [ ]: [A22](a/A22.md) - canvas CLI: allow JSON array payloads for multi-element add and multi-target patch
 - [x]: [A23](a/A23.md) - canvas CLI: document minimal required add args per element type and default optional fields
 - [x]: [A24](a/A24.md) - filetree: double click file opens preview beside tree inside camera view
-- [ ]: [A25](a/A25.md) - canvas: react to live Automerge doc changes without page refresh
+- [x]: [A25](a/A25.md) - canvas: react to live Automerge doc changes without page refresh
 
 ## S ubtractions
 - [ ]: [S1](s/S1.md) - double bun run dev -> find new port
