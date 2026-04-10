@@ -5,6 +5,7 @@ import type { IDbService } from '@vibecanvas/service-db/IDbService';
 import { txExecuteCanvasPatch, type TCanvasPatchEnvelope } from '@vibecanvas/canvas-cmds/cmds/tx.cmd.patch';
 import { fnPrintCommandError, fnPrintCommandResult } from '../core/fn.print-command-result';
 import { fxDispatchCanvasCommand } from '../core/fx.dispatch-canvas-command';
+import { renderCanvasCommandSchema } from '../core/canvas-command.docs';
 import { buildCanvasPatchInput } from './fn.canvas-subcommand-inputs';
 
 function buildPatchSourceError(options: ICliConfig['subcommandOptions'], code: string, message: string) {
@@ -54,8 +55,18 @@ async function readPatchEnvelope(config: ICliConfig): Promise<TCanvasPatchEnvelo
   }
 }
 
+export function printCanvasPatchSchema(args?: { schema?: boolean | string }): void {
+  console.log(renderCanvasCommandSchema({ doc: 'patch', filter: args?.schema }));
+}
+
 export async function runCanvasPatchCommand(services: { db: IDbService, automerge: IAutomergeService }, config: ICliConfig) {
   const wantsJson = config.subcommandOptions?.json === true;
+
+  if (config.subcommandOptions?.schema) {
+    printCanvasPatchSchema({ schema: config.subcommandOptions.schema });
+    process.exitCode = 0;
+    return;
+  }
 
   try {
     const patch = await readPatchEnvelope(config);

@@ -33,6 +33,7 @@ export function Canvas(props: CanvasPageProps) {
   let containerRef!: HTMLDivElement;
   let activeHandle: DocHandle<TCanvasDoc> | null = null;
   let canvasService: CanvasService | null = null;
+  let removeDocChangeListener: (() => void) | null = null;
   const [docHandle] = createResource(() => props.canvas.automerge_url as AutomergeUrl, async (url) => {
     try {
       return await findDocument(url);
@@ -48,10 +49,27 @@ export function Canvas(props: CanvasPageProps) {
     if (!nextHandle || nextHandle === activeHandle) return;
 
     activeHandle = nextHandle;
+    removeDocChangeListener?.();
+    removeDocChangeListener = null;
     if (canvasService) {
       canvasService.destroy();
       canvasService = null;
     }
+
+    const onDocChange = ({ doc, patches, patchInfo }: { doc: TCanvasDoc; patches: unknown; patchInfo: unknown }) => {
+      console.log("[CanvasPage] Automerge doc changed", {
+        canvasId: props.canvas.id,
+        canvasName: props.canvas.name,
+        elementCount: Object.keys(doc.elements ?? {}).length,
+        groupCount: Object.keys(doc.groups ?? {}).length,
+        patches,
+        patchInfo,
+      });
+    };
+    activeHandle.on("change", onDocChange);
+    removeDocChangeListener = () => {
+      activeHandle?.off("change", onDocChange);
+    };
 
     canvasService = new CanvasService(
       containerRef,
@@ -73,6 +91,8 @@ export function Canvas(props: CanvasPageProps) {
   });
 
   onCleanup(() => {
+    removeDocChangeListener?.();
+    removeDocChangeListener = null;
     canvasService?.destroy();
     canvasService = null;
     activeHandle = null;

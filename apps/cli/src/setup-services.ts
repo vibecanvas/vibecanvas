@@ -22,12 +22,20 @@ declare module '@vibecanvas/runtime' {
   }
 }
 
+function isCanvasSchemaOnlyRequest(config: ICliConfig): boolean {
+  return config.command === 'canvas'
+    && Boolean(config.subcommandOptions?.schema)
+    && (config.subcommand === 'add' || config.subcommand === 'patch');
+}
+
 function setupServices(config: ICliConfig) {
   const services = createServiceRegistry();
   const eventPublisher = new EventPublisherService();
   services.provide('eventPublisher', eventPublisher);
 
-  const shouldSetupStatefulServices = !config.helpRequested && !config.versionRequested && (config.command === 'serve' || config.command === 'canvas');
+  const shouldSetupStatefulServices = !config.helpRequested
+    && !config.versionRequested
+    && (config.command === 'serve' || (config.command === 'canvas' && !isCanvasSchemaOnlyRequest(config)));
 
   if (!shouldSetupStatefulServices) {
     return { services, eventPublisher };

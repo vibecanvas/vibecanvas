@@ -52,7 +52,7 @@ Options:
   --db <path>               Optional explicit SQLite file override for the opened db
   --dry-run                 Validate and preview add result without mutating the canvas
   --json                    Emit machine-readable success/error payloads
-  --schema [type]           Print schema blocks sourced from canvas-doc.ts
+  --schema [type]           Print schema blocks sourced from canvas-doc.zod.ts
                             Filters: ${listCanvasCommandSchemaFilters('add')}
   --help, -h                Show this help message
 
@@ -72,6 +72,10 @@ ${renderCanvasCommandSchema({ doc: 'add', filter: args.schema })}` : ''}
 
 export function printCanvasAddHelp(args?: { schema?: boolean | string }): void {
   console.log(fnBuildAddHelp(args));
+}
+
+export function printCanvasAddSchema(args?: { schema?: boolean | string }): void {
+  console.log(renderCanvasCommandSchema({ doc: 'add', filter: args?.schema }));
 }
 
 function buildAddSourceError(options: ICliConfig['subcommandOptions'], code: string, message: string) {
@@ -222,6 +226,12 @@ function printCanvasAddText(result: TCanvasAddSuccess): void {
 
 export async function runCanvasAddCommand(services: { db: IDbService, automerge: IAutomergeService }, config: ICliConfig) {
   const wantsJson = config.subcommandOptions?.json === true;
+
+  if (config.subcommandOptions?.schema) {
+    printCanvasAddSchema({ schema: config.subcommandOptions.schema });
+    process.exitCode = 0;
+    return;
+  }
 
   try {
     const elements = await readAddElements(config);

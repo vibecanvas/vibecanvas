@@ -4,6 +4,8 @@ import type { IPlugin } from '@vibecanvas/runtime';
 import type { ICliConfig } from '../../config';
 import type { ICliHooks } from '../../hooks';
 import { runCanvasCommand, printCanvasCommandHelp, printCanvasHelp } from './cmds/cmd.canvas';
+import { printCanvasAddSchema } from './cmds/cmd.canvas.add';
+import { printCanvasPatchSchema } from './cmds/cmd.canvas.patch';
 import { txCmdUpgrade } from './cmds/cmd.upgrade';
 import { CANVAS_SUBCOMMAND_SET } from './core/constants';
 import { fnBuildUnknownCommandError, fnPrintCommandError } from './core/fn.print-command-result';
@@ -59,6 +61,12 @@ Subcommand help:
   'vibecanvas canvas query --help' and 'vibecanvas query --help'
   show the same command help.
 `);
+}
+
+function isCanvasSchemaOnlyRequest(config: ICliConfig): boolean {
+  return config.command === 'canvas'
+    && Boolean(config.subcommandOptions?.schema)
+    && (config.subcommand === 'add' || config.subcommand === 'patch');
 }
 
 function createCliPlugin(): IPlugin<{ db: IDbService, automerge: IAutomergeService }, ICliHooks, ICliConfig> {
@@ -117,6 +125,20 @@ function createCliPlugin(): IPlugin<{ db: IDbService, automerge: IAutomergeServi
           if (!wantsJson) printCanvasHelp();
           process.exitCode = 1;
           return;
+        }
+
+        if (isCanvasSchemaOnlyRequest(ctx.config)) {
+          if (ctx.config.subcommand === 'add') {
+            printCanvasAddSchema({ schema: ctx.config.subcommandOptions?.schema });
+            process.exitCode = 0;
+            return;
+          }
+
+          if (ctx.config.subcommand === 'patch') {
+            printCanvasPatchSchema({ schema: ctx.config.subcommandOptions?.schema });
+            process.exitCode = 0;
+            return;
+          }
         }
 
         if (ctx.config.command === 'canvas') {

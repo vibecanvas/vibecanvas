@@ -52,22 +52,35 @@ describe('canvas CLI add', () => {
     const helpResult = await context.runCanvasCli(['add', '--help', '--schema']);
     expectExitCode(helpResult, 0);
     expectNoStderr(helpResult);
-    expect(helpResult.stdout).toContain('export type TRectData = {');
-    expect(helpResult.stdout).toContain('export type TArrowData =');
-    expect(helpResult.stdout).toContain('packages/service-automerge/src/types/canvas-doc.ts');
+    expect(helpResult.stdout).toContain('zRectData');
+    expect(helpResult.stdout).toContain('zArrowData');
+    expect(helpResult.stdout).toContain('packages/service-automerge/src/types/canvas-doc.zod.ts');
 
     const filteredHelpResult = await context.runCanvasCli(['add', '--help', '--schema', 'rect']);
     expectExitCode(filteredHelpResult, 0);
     expectNoStderr(filteredHelpResult);
     expect(filteredHelpResult.stdout).toContain('Schema filter:');
     expect(filteredHelpResult.stdout).toContain('rect');
-    expect(filteredHelpResult.stdout).toContain('export type TRectData = {');
-    expect(filteredHelpResult.stdout).not.toContain('export type TArrowData =');
+    expect(filteredHelpResult.stdout).toContain('zRectData');
+    expect(filteredHelpResult.stdout).not.toContain('zArrowData');
     expect(helpResult.stdout).toContain('Minimal JSON payloads and defaults:');
     expect(helpResult.stdout).toContain('rect');
     expect(helpResult.stdout).toContain('minimal: {"type":"rect"}');
     expect(helpResult.stdout).toContain('text');
     expect(helpResult.stdout).toContain('data.fontFamily="Inter"');
+  });
+
+  test('prints add schema without requiring canvas or element input', async () => {
+    const context = await createContext();
+
+    const result = await context.runCanvasCli(['add', '--schema', 'rect']);
+
+    expectExitCode(result, 0);
+    expectNoStderr(result);
+    expect(result.stdout).toContain('Schema filter:');
+    expect(result.stdout).toContain('rect');
+    expect(result.stdout).toContain('zRectData');
+    expect(result.stdout).not.toContain('Add requires exactly one element source');
   });
 
   test('accepts minimal payloads and stores defaults', async () => {

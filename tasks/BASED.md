@@ -91,9 +91,9 @@ Use the leaf files for execution history and local context.
 - [x]: [B14](b/B14.md) - canvas CLI: `canvas group --help` falls back to global help
 - [x]: [B15](b/B15.md) - canvas CLI: `--json` output is not real JSON
 - [ ]: [B16](b/B16.md) - ci: `@vibecanvas/canvas` tests load Konva node entry and require native `canvas` - only fails in ci
-- [ ]: [B17](b/B17.md) - canvas CLI: `add --schema rect` still requires an element source instead of printing schema
+- [x]: [B17](b/B17.md) - canvas CLI: `add --schema rect` still requires an element source instead of printing schema
 - [x]: [B18](b/B18.md) - terminal image paste not working in deploy version
-- [ ]: [B19](b/B19.md) - cli usage -> no realtime updates via automerge
+- [x]: [B19](b/B19.md) - cli usage -> no realtime updates via automerge
 - [x]: [B20](b/B20.md) - pen tool: after stroke commit, stay in pen mode instead of switching to selection
 
 ## A dditions
@@ -120,6 +120,7 @@ Use the leaf files for execution history and local context.
 - [ ]: [A22](a/A22.md) - canvas CLI: allow JSON array payloads for multi-element add and multi-target patch
 - [x]: [A23](a/A23.md) - canvas CLI: document minimal required add args per element type and default optional fields
 - [x]: [A24](a/A24.md) - filetree: double click file opens preview beside tree inside camera view
+- [ ]: [A25](a/A25.md) - canvas: react to live Automerge doc changes without page refresh
 
 ## S ubtractions
 - [ ]: [S1](s/S1.md) - double bun run dev -> find new port

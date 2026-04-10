@@ -30,6 +30,7 @@
     "@vibecanvas/service-pty": "workspace:*",
     "@vibecanvas/runtime": "workspace:*",
     "@vibecanvas/shared-functions": "workspace:*",
-    "@vibecanvas/tapable": "workspace:*"
+    "@vibecanvas/tapable": "workspace:*",
+    "zod": "catalog:"
   }
 }

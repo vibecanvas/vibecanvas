@@ -38,6 +38,7 @@
         "@vibecanvas/service-pty": "workspace:*",
         "@vibecanvas/shared-functions": "workspace:*",
         "@vibecanvas/tapable": "workspace:*",
+        "zod": "catalog:",
       },
     },
     "apps/frontend": {
@@ -278,6 +279,7 @@
         "@automerge/automerge-repo-network-websocket": "catalog:",
         "@vibecanvas/runtime": "workspace:*",
         "@vibecanvas/shared-functions": "workspace:*",
+        "zod": "catalog:",
       },
     },
     "packages/service-db": {

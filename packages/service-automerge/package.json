@@ -13,6 +13,7 @@
     "@automerge/automerge-repo": "catalog:",
     "@automerge/automerge-repo-network-websocket": "catalog:",
     "@vibecanvas/runtime": "workspace:*",
-    "@vibecanvas/shared-functions": "workspace:*"
+    "@vibecanvas/shared-functions": "workspace:*",
+    "zod": "catalog:"
   }
 }

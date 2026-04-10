@@ -1,17 +1,18 @@
 import type { IAutomergeService } from '@vibecanvas/service-automerge/IAutomergeService';
 import type { ICliConfig } from '@vibecanvas/cli/config';
 import type { IDbService } from '@vibecanvas/service-db/IDbService';
-import { runCanvasAddCommand, printCanvasAddHelp } from './cmd.canvas.add';
+import { runCanvasAddCommand, printCanvasAddHelp, printCanvasAddSchema } from './cmd.canvas.add';
 import { runCanvasDeleteCommand, printCanvasDeleteHelp } from './cmd.canvas.delete';
 import { runCanvasGroupCommand, printCanvasGroupHelp } from './cmd.canvas.group';
 import { runCanvasListCommand, printCanvasListHelp } from './cmd.canvas.list';
 import { runCanvasMoveCommand, printCanvasMoveHelp } from './cmd.canvas.move';
-import { runCanvasPatchCommand } from './cmd.canvas.patch';
+import { runCanvasPatchCommand, printCanvasPatchSchema } from './cmd.canvas.patch';
 import { runCanvasQueryCommand, printCanvasQueryHelp } from './cmd.canvas.query';
 import { runCanvasReorderCommand, printCanvasReorderHelp } from './cmd.canvas.reorder';
 import { CANVAS_PATCH_HELP_EXAMPLES } from '../canvas-command.examples';
 import { listCanvasCommandSchemaFilters, renderCanvasCommandSchema } from '../core/canvas-command.docs';
-import { runCanvasUngroupCommand, printCanvasUngroupHelp } from './cmd.canvas.ungroup';import { CANVAS_SUBCOMMAND_SET } from '../core/constants';
+import { runCanvasUngroupCommand, printCanvasUngroupHelp } from './cmd.canvas.ungroup';
+import { CANVAS_SUBCOMMAND_SET } from '../core/constants';
 import { fnBuildUnknownCommandError, fnPrintCommandError } from '../core/fn.print-command-result';
 
 export function printCanvasPatchHelp(args?: { schema?: boolean | string }): void {
@@ -44,7 +45,7 @@ Options:
   --db <path>               Optional explicit SQLite file override for the opened db
   --dry-run                 Validate and preview patch result without mutating the canvas
   --json                    Emit machine-readable success/error payloads
-  --schema [type]           Print schema blocks sourced from canvas-doc.ts
+  --schema [type]           Print schema blocks sourced from canvas-doc.zod.ts
                             Filters: ${listCanvasCommandSchemaFilters('patch')}
   --help, -h                Show this help message
 
@@ -164,6 +165,18 @@ export function printCanvasCommandHelp(subcommand?: string, args?: { schema?: bo
 export async function runCanvasCommand(services: { db: IDbService, automerge: IAutomergeService }, config: ICliConfig) {
   if (!config.subcommand) {
     printCanvasHelp();
+    return;
+  }
+
+  if (config.subcommandOptions?.schema && config.subcommand === 'add') {
+    printCanvasAddSchema({ schema: config.subcommandOptions.schema });
+    process.exitCode = 0;
+    return;
+  }
+
+  if (config.subcommandOptions?.schema && config.subcommand === 'patch') {
+    printCanvasPatchSchema({ schema: config.subcommandOptions.schema });
+    process.exitCode = 0;
     return;
   }
 
