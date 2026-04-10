@@ -175,7 +175,7 @@ Use the leaf files for execution history and local context.
 - [ ]: [E17](e/E17.md) - automerge authority: optimistic local writes with server validation/reject path
 
 ## D irections
-- [~]: [D1] - AI can edit the canvas directly
+- [x]: [D1] - AI can edit the canvas directly
 - [x]: [D2] - Server plugin system
 - [ ]: [D3] - Support pluggable filsystem architecture
 - [ ]: [D4] - Support sideloadable ui elements

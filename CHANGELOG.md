@@ -2,13 +2,17 @@
 
 All notable changes to this project will be documented in this file.
 
-## 0.3.0-beta.2
+## 0.3.0
 
 ### Added
+- Added a full canvas CLI workflow for creating, listing, querying, adding, patching, moving, reordering, grouping, ungrouping, and deleting canvas elements.
+- Introduced plugin system for apps/cli
 - Added PTY image upload API support for writing pasted clipboard images to remote temp storage and returning the absolute server path.
 - Added shared `@vibecanvas/orpc-client` package so frontend and canvas use the same ORPC websocket client and safe API types.
 
 ### Changed
+- Replaces apps/server with apps/cli
+- Moved filetree ownership fully into the canvas document and removed the separate filetrees table/schema from the database.
 - Replaced canvas-side handwritten ORPC safe client mirror types with the shared `@vibecanvas/orpc-client` types.
 - Renamed hosted widget transport wiring from `safeClient` to `apiService` across canvas/frontend integration for clearer ownership.
 
@@ -16,16 +20,6 @@ All notable changes to this project will be documented in this file.
 - Fixed hosted terminal image paste on deployed/remote setups by uploading clipboard images to PTY temp storage and inserting the returned shell-escaped remote path into the terminal.
 - Kept unsupported non-text terminal paste payloads on the existing Ctrl+V fallback path.
 - Fixed live canvas scene updates so Automerge changes from remote/CLI/server mutations now appear without a page refresh.
-
-## 0.3.0-beta.1
-
-### Added
-- Added a full canvas CLI workflow for creating, listing, querying, adding, patching, moving, reordering, grouping, ungrouping, and deleting canvas elements.
-- Introduced plugin system for apps/cli
-
-### Changed
-- Replaces apps/server with apps/cli
-- Moved filetree ownership fully into the canvas document and removed the separate filetrees table/schema from the database.
 
 ## 0.2.2
 
