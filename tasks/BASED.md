@@ -94,7 +94,7 @@ Use the leaf files for execution history and local context.
 - [ ]: [B17](b/B17.md) - canvas CLI: `add --schema rect` still requires an element source instead of printing schema
 - [x]: [B18](b/B18.md) - terminal image paste not working in deploy version
 - [ ]: [B19](b/B19.md) - cli usage -> no realtime updates via automerge
-- [ ]: [B20](b/B20.md) - pen tool: after stroke commit, stay in pen mode instead of switching to selection
+- [x]: [B20](b/B20.md) - pen tool: after stroke commit, stay in pen mode instead of switching to selection
 
 ## A dditions
 - [x]: [A1] - file: support common CodeMirror languages

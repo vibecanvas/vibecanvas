@@ -229,7 +229,7 @@ describe("PenPlugin", () => {
 
     const penNodes = harness.staticForegroundLayer.find((node: Konva.Node) => node instanceof Konva.Path) as Konva.Path[];
     expect(penNodes).toHaveLength(1);
-    expect(context.state.mode).toBe(CanvasMode.SELECT);
+    expect(context.state.mode).toBe(CanvasMode.DRAW_CREATE);
 
     const docElements = Object.values(docHandle.doc().elements);
     expect(docElements).toHaveLength(1);
@@ -313,6 +313,46 @@ describe("PenPlugin", () => {
     harness.destroy();
   });
 
+  test("pen commit stays in pen draw mode so next stroke can start right away", async () => {
+    let context!: IPluginContext;
+    const docHandle = createMockDocHandle();
+
+    const harness = await createCanvasTestHarness({
+      docHandle,
+      plugins: [new PenPlugin()],
+      initializeScene(ctx) {
+        context = ctx;
+      },
+    });
+
+    drawPenStroke(context, {
+      start: { x: 120, y: 80 },
+      moves: [
+        { x: 160, y: 110, pressure: 0.55 },
+        { x: 210, y: 140, pressure: 0.6 },
+      ],
+    });
+    await flushCanvasEffects();
+
+    expect(context.state.mode).toBe(CanvasMode.DRAW_CREATE);
+
+    withDynamicPointer(context, { x: 320, y: 220 }, () => {
+      context.hooks.pointerDown.call(createPointerEvent("pointerdown", 0.45));
+    });
+    withDynamicPointer(context, { x: 360, y: 245 }, () => {
+      context.hooks.pointerMove.call(createPointerEvent("pointermove", 0.5) as Konva.KonvaEventObject<MouseEvent>);
+    });
+    context.hooks.pointerUp.call(createPointerEvent("pointerup", 0.5));
+    await flushCanvasEffects();
+
+    const docElements = Object.values(docHandle.doc().elements);
+    expect(docElements).toHaveLength(2);
+    expect(docElements.every((element) => element.data.type === "pen")).toBe(true);
+    expect(context.state.mode).toBe(CanvasMode.DRAW_CREATE);
+
+    harness.destroy();
+  });
+
   test("pen pointerUp is not intercepted by Shape2dPlugin draw-create handler", async () => {
     let context!: IPluginContext;
     const docHandle = createMockDocHandle();
@@ -340,7 +380,7 @@ describe("PenPlugin", () => {
     const docElements = Object.values(docHandle.doc().elements);
     expect(docElements).toHaveLength(1);
     expect(docElements[0]?.data.type).toBe("pen");
-    expect(context.state.mode).toBe(CanvasMode.SELECT);
+    expect(context.state.mode).toBe(CanvasMode.DRAW_CREATE);
 
     harness.destroy();
   });

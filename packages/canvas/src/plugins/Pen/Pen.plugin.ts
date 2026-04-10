@@ -97,8 +97,6 @@ export class PenPlugin implements IPlugin {
       this.#points = [];
       this.resetPreview();
       this.#draftElementId = null;
-      context.setState("mode", CanvasMode.SELECT);
-      context.hooks.customEvent.call(CustomEvents.TOOL_SELECT, "select");
 
       if (!(node instanceof Konva.Path)) return;
 
