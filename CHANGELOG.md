@@ -12,6 +12,10 @@ All notable changes to this project will be documented in this file.
 - Replaced canvas-side handwritten ORPC safe client mirror types with the shared `@vibecanvas/orpc-client` types.
 - Renamed hosted widget transport wiring from `safeClient` to `apiService` across canvas/frontend integration for clearer ownership.
 
+### Fixed
+- Fixed hosted terminal image paste on deployed/remote setups by uploading clipboard images to PTY temp storage and inserting the returned shell-escaped remote path into the terminal.
+- Kept unsupported non-text terminal paste payloads on the existing Ctrl+V fallback path.
+
 ## 0.3.0-beta.1
 
 ### Added

@@ -127,4 +127,4 @@ function createOrpcWebsocketService(args?: TCreateOrpcWebsocketServiceArgs) {
 }
 
 export { apiContract, contract, createOrpcWebsocketService, getRpcWebsocketUrl, OrpcWebsocketService };
-export type { TCreateOrpcWebsocketServiceArgs, TNotificationEvent, TOrpcClient, TOrpcNotificationHandler, TOrpcSafeClient };
+export type { TCreateOrpcWebsocketServiceArgs, TNotificationEvent, TOrpcClient, TOrpcNotificationHandler, TOrpcSafeClient, TPtyImageFormat };

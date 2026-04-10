@@ -92,7 +92,7 @@ Use the leaf files for execution history and local context.
 - [x]: [B15](b/B15.md) - canvas CLI: `--json` output is not real JSON
 - [ ]: [B16](b/B16.md) - ci: `@vibecanvas/canvas` tests load Konva node entry and require native `canvas` - only fails in ci
 - [ ]: [B17](b/B17.md) - canvas CLI: `add --schema rect` still requires an element source instead of printing schema
-- [~]: [B18](b/B18.md) - terminal image paste not working in deploy version
+- [x]: [B18](b/B18.md) - terminal image paste not working in deploy version
 - [ ]: [B19](b/B19.md) - cli usage -> no realtime updates via automerge
 - [ ]: [B20](b/B20.md) - pen tool: after stroke commit, stay in pen mode instead of switching to selection
 
