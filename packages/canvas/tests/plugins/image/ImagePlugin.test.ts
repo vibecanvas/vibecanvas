@@ -1,5 +1,5 @@
 import Konva from "konva";
-import type { TElement } from "@vibecanvas/shell/automerge/index";
+import type { TElement } from "@vibecanvas/service-automerge/types/canvas-doc";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { CustomEvents } from "../../../src/custom-events";
 import { ImagePlugin, RenderOrderPlugin, SceneHydratorPlugin, SelectPlugin, type IPluginContext } from "../../../src/plugins";

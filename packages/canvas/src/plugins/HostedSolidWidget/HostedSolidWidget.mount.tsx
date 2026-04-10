@@ -21,6 +21,7 @@ export function createHostedWidgetMount(
     showTransformerForNode: (context: IPluginContext, node: Konva.Rect) => void;
     removeHostedNode: (context: IPluginContext, node: Konva.Rect) => Promise<void>;
     reloadHostedNode: (context: IPluginContext, node: Konva.Rect) => Promise<void>;
+    openFilePreview: (context: IPluginContext, node: Konva.Rect, path: string) => void;
     mountWidgetFromUpdate: (node: Konva.Rect, element: THostedWidgetElement) => void;
     syncMountedNode: (node: Konva.Rect) => void;
     toElement: (node: Konva.Rect) => THostedWidgetElement;
@@ -82,16 +83,35 @@ export function createHostedWidgetMount(
         <Show when={currentElement().data.type === "filetree"}>
           <FiletreeHostedWidget
             element={currentElement as () => THostedWidgetElementMap["filetree"]}
-            canvasId={context.capabilities.filetree?.canvasId}
-            safeClient={context.capabilities.filetree?.safeClient}
+            apiService={context.capabilities.filetree?.apiService}
             setWindowChrome={(chrome) => setWindowChrome(() => chrome)}
-            registerBeforeRemove={(handler) => setBeforeRemove(() => handler)}
+            onPathChange={(path) => {
+              const snapshot = structuredClone(node.getAttr(HOSTED_ELEMENT_ATTR) as THostedWidgetElement | undefined);
+              if (!snapshot || snapshot.data.type !== "filetree") return;
+              if (snapshot.data.path === path) return;
+
+              const nextElement: THostedWidgetElementMap["filetree"] = {
+                ...snapshot,
+                updatedAt: Date.now(),
+                data: {
+                  ...snapshot.data,
+                  path,
+                },
+              };
+
+              node.setAttr(HOSTED_ELEMENT_ATTR, structuredClone(nextElement));
+              runtime.mountWidgetFromUpdate(node, nextElement);
+              context.crdt.patch({ elements: [nextElement], groups: [] });
+            }}
+            onOpenFile={(path) => {
+              runtime.openFilePreview(context, node, path);
+            }}
           />
         </Show>
         <Show when={currentElement().data.type === "file"}>
           <FileHostedWidget
             element={currentElement as () => THostedWidgetElementMap["file"]}
-            safeClient={context.capabilities.file?.safeClient}
+            apiService={context.capabilities.file?.apiService}
             setWindowChrome={(chrome) => setWindowChrome(() => chrome)}
             requestInitialSize={(size) => autoSize()?.(size)}
           />
@@ -99,7 +119,7 @@ export function createHostedWidgetMount(
         <Show when={currentElement().data.type === "terminal"}>
           <TerminalHostedWidget
             element={currentElement as () => THostedWidgetElementMap["terminal"]}
-            safeClient={context.capabilities.terminal?.safeClient}
+            apiService={context.capabilities.terminal?.apiService}
             setWindowChrome={(chrome) => setWindowChrome(() => chrome)}
             registerBeforeRemove={(handler) => setBeforeRemove(() => handler)}
             registerFocus={(handler) => setFocus(() => handler)}

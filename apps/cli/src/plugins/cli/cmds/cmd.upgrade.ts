@@ -1,0 +1,824 @@
+import { chmodSync, copyFileSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync } from 'fs';
+import { tmpdir } from 'os';
+import { dirname, join } from 'path';
+import { parseArgs } from 'util';
+import { createHash } from 'crypto';
+import type { ICliConfig } from '../../../config';
+import fnCliUpdateResolvePolicy from '../core/fn.resolve-policy';
+import fnCliUpdateShouldUpgrade from '../core/fn.should-upgrade';
+import { resolveCliPaths } from '../../../resolve-paths';
+
+type TInstallMethod = 'curl' | 'npm' | 'unknown';
+
+type TUpdatePolicy = {
+  mode: 'disabled' | 'notify' | 'install';
+  reason: 'env' | 'config' | 'method' | 'default';
+};
+
+type TLatestVersion = {
+  version: string;
+  channel: string;
+};
+
+type TUpgradeProgressEvent = {
+  percent: number;
+  label: string;
+};
+
+type TUpgradeResult =
+  | { status: 'updated'; version: string; method: TInstallMethod }
+  | { status: 'up-to-date'; version: string; method: TInstallMethod }
+  | { status: 'update-available'; version: string; method: TInstallMethod; command?: string }
+  | { status: 'dry-run-ok'; version: string; method: TInstallMethod; message: string }
+  | { status: 'dry-run-failed'; version: string; method: TInstallMethod; message: string; command?: string }
+  | { status: 'disabled'; method: TInstallMethod; reason: TUpdatePolicy['reason'] }
+  | { status: 'error'; method: TInstallMethod; message: string };
+
+type TConfigFile = {
+  autoupdate?: boolean | 'notify';
+};
+
+type TRunUpgradeArgs = {
+  config: ICliConfig;
+};
+
+type TCheckForUpgradeArgs = {
+  config: ICliConfig;
+  checkOnly?: boolean;
+  dryRun?: boolean;
+  methodOverride?: TInstallMethod;
+  targetVersionOverride?: string;
+  onProgress?: (event: TUpgradeProgressEvent) => void;
+};
+
+type TApplyUpgradeArgs = {
+  method: TInstallMethod;
+  version: string;
+  channel: string;
+  onProgress?: (event: TUpgradeProgressEvent) => void;
+};
+
+type TApplyUpgradeResult = {
+  ok: boolean;
+  command?: string;
+  message?: string;
+};
+
+type TReleaseAssetDescriptor = {
+  packageName: string;
+  archiveName: string;
+  checksumName: string;
+  binaryName: string;
+  isWindows: boolean;
+};
+
+type TDryRunResult = {
+  ok: boolean;
+  message: string;
+};
+
+const ANSI_RESET = '\x1b[0m';
+const RELEASES_API = 'https://api.github.com/repos/vibecanvas/vibecanvas/releases' as const;
+const RELEASE_DOWNLOAD_BASE = 'https://github.com/vibecanvas/vibecanvas/releases/download' as const;
+const UPDATE_CHANNELS = ['stable', 'beta', 'nightly'] as const;
+const DOWNLOAD_PROGRESS_START = 85;
+const DOWNLOAD_PROGRESS_END = 96;
+
+function printUpgradeHelp(): void {
+  console.log(`Usage: vibecanvas upgrade [options]
+
+Options:
+  --check              Check for updates without installing
+  --dry-run            Download candidate build and validate startup + DB migration on a temp copy
+  --method <method>    Override install method (curl, npm, unknown)
+  --target-version <v> Target specific version (leading "v" optional)
+  --help, -h           Show this help message
+`);
+}
+
+function getServerVersion(config: ICliConfig): string {
+  return config.version;
+}
+
+function getUpdateChannel(): (typeof UPDATE_CHANNELS)[number] {
+  const channel =
+    (typeof VIBECANVAS_CHANNEL !== 'undefined' && VIBECANVAS_CHANNEL) ||
+    process.env.VIBECANVAS_CHANNEL;
+  if (channel === 'stable' || channel === 'beta' || channel === 'nightly') {
+    return channel;
+  }
+  return 'stable';
+}
+
+function getExecPath(): string {
+  return process.execPath;
+}
+
+function detectInstallMethod(): TInstallMethod {
+  const execPath = getExecPath().toLowerCase();
+
+  if (execPath.includes('.vibecanvas/bin') || execPath.includes('.vibecanvas\\bin')) {
+    return 'curl';
+  }
+
+  if (execPath.includes('node_modules') || execPath.includes('bunx') || execPath.includes('npm')) {
+    return 'npm';
+  }
+
+  return 'unknown';
+}
+
+function readConfigAutoupdate(config: ICliConfig): boolean | 'notify' | undefined {
+  const { configDir } = resolveCliPaths(config);
+  const configFilePath = join(configDir, 'config.json');
+  if (!existsSync(configFilePath)) return undefined;
+
+  try {
+    const raw = readFileSync(configFilePath, 'utf8');
+    const parsed = JSON.parse(raw) as TConfigFile;
+    return parsed.autoupdate;
+  } catch {
+    return undefined;
+  }
+}
+
+function resolveUpdatePolicy(config: ICliConfig, method: TInstallMethod): TUpdatePolicy {
+  const [policy] = fnCliUpdateResolvePolicy({
+    method,
+    configAutoupdate: readConfigAutoupdate(config),
+    envDisable: process.env.VIBECANVAS_DISABLE_AUTOUPDATE,
+  });
+
+  return policy ?? { mode: 'notify', reason: 'default' };
+}
+
+function extractVersionFromTag(tag: string): string {
+  return tag.replace(/^v/i, '');
+}
+
+async function fetchLatestVersion(targetVersionOverride?: string): Promise<TLatestVersion | null> {
+  const channel = getUpdateChannel();
+
+  if (targetVersionOverride) {
+    return { version: targetVersionOverride.replace(/^v/i, ''), channel };
+  }
+
+  if (channel === 'stable') {
+    const response = await fetch(`${RELEASES_API}/latest`);
+    if (!response.ok) return null;
+    const data = (await response.json()) as { tag_name?: string };
+    if (!data.tag_name) return null;
+    return { version: extractVersionFromTag(data.tag_name), channel };
+  }
+
+  const response = await fetch(`${RELEASES_API}?per_page=50`);
+  if (!response.ok) return null;
+
+  const releases = (await response.json()) as Array<{ tag_name?: string }>;
+  const match = releases.find((release) => release.tag_name?.toLowerCase().includes(channel));
+  if (!match?.tag_name) return null;
+
+  return { version: extractVersionFromTag(match.tag_name), channel };
+}
+
+function createUpgradeProgressRenderer() {
+  const isTTY = Boolean(process.stdout.isTTY);
+  const columns = process.stdout.columns ?? 80;
+  const updateColor = Bun.color('#60a5fa', 'ansi') ?? '';
+  const labelColor = Bun.color('#34d399', 'ansi') ?? '';
+  const barColor = Bun.color('#22c55e', 'ansi') ?? '';
+
+  let lastPercent = -1;
+  let lastLabel = '';
+
+  function clampPercent(value: number): number {
+    return Math.max(0, Math.min(100, Math.round(value)));
+  }
+
+  function renderBar(percent: number): string {
+    const barSize = 24;
+    const filled = Math.round((percent / 100) * barSize);
+    const empty = barSize - filled;
+    const fill = '#'.repeat(filled);
+    const rest = '-'.repeat(empty);
+    return `${barColor}[${fill}${rest}]${ANSI_RESET}`;
+  }
+
+  function renderLine(percent: number, label: string): string {
+    const line = `${updateColor}[Update]${ANSI_RESET} ${labelColor}${label}${ANSI_RESET} ${renderBar(percent)} ${percent}%`;
+    return Bun.wrapAnsi(line, columns, { hard: true, wordWrap: true, trim: true }).replaceAll('\n', ' ');
+  }
+
+  function update(event: TUpgradeProgressEvent): void {
+    const percent = clampPercent(event.percent);
+    const label = event.label;
+
+    if (!isTTY) {
+      if (percent === lastPercent && label === lastLabel) return;
+      console.log(`[Update] ${label} (${percent}%)`);
+      lastPercent = percent;
+      lastLabel = label;
+      return;
+    }
+
+    const line = renderLine(percent, label);
+    process.stdout.write(`\r\x1b[2K${line}`);
+    lastPercent = percent;
+    lastLabel = label;
+  }
+
+  function finish(): void {
+    if (!isTTY) return;
+    process.stdout.write('\n');
+  }
+
+  return { update, finish };
+}
+
+function mapDownloadPercentToOverall(downloadPercent: number): number {
+  const normalized = Math.max(0, Math.min(100, Math.round(downloadPercent)));
+  const span = DOWNLOAD_PROGRESS_END - DOWNLOAD_PROGRESS_START;
+  return DOWNLOAD_PROGRESS_START + Math.round((normalized / 100) * span);
+}
+
+function parsePercentsFromChunk(chunk: string): number[] {
+  const matches = chunk.matchAll(/(\d{1,3})(?:\.\d+)?%/g);
+  const percents: number[] = [];
+
+  for (const match of matches) {
+    const value = Number.parseInt(match[1] ?? '', 10);
+    if (Number.isFinite(value) && value >= 0 && value <= 100) {
+      percents.push(value);
+    }
+  }
+
+  return percents;
+}
+
+async function consumeStream(stream: ReadableStream<Uint8Array> | null | undefined, onChunk: (chunk: string) => void): Promise<void> {
+  if (!stream) return;
+
+  const reader = stream.getReader();
+  const decoder = new TextDecoder();
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    if (!value) continue;
+    onChunk(decoder.decode(value, { stream: true }));
+  }
+
+  const tail = decoder.decode();
+  if (tail) onChunk(tail);
+}
+
+function commandForMethod(method: TInstallMethod, version: string): string | undefined {
+  if (method === 'npm') return `npm install -g vibecanvas@${version}`;
+  return undefined;
+}
+
+async function runTextCommand(cmd: string[]): Promise<{ exitCode: number; stdout: string; stderr: string }> {
+  const proc = Bun.spawn({
+    cmd,
+    stdout: 'pipe',
+    stderr: 'pipe',
+    env: process.env,
+  });
+
+  const [stdout, stderr, exitCode] = await Promise.all([
+    new Response(proc.stdout).text(),
+    new Response(proc.stderr).text(),
+    proc.exited,
+  ]);
+
+  return { exitCode, stdout, stderr };
+}
+
+async function detectNeedsBaselineBinary(): Promise<boolean> {
+  if (process.arch !== 'x64') return false;
+
+  if (process.platform === 'linux') {
+    try {
+      const cpuInfo = await Bun.file('/proc/cpuinfo').text();
+      return !/\bavx2\b/i.test(cpuInfo);
+    } catch {
+      return false;
+    }
+  }
+
+  if (process.platform === 'darwin') {
+    try {
+      const result = await runTextCommand(['sysctl', '-n', 'hw.optional.avx2_0']);
+      return result.exitCode === 0 ? result.stdout.trim() !== '1' : false;
+    } catch {
+      return false;
+    }
+  }
+
+  return false;
+}
+
+async function detectMuslRuntime(): Promise<boolean> {
+  if (process.platform !== 'linux') return false;
+  if (existsSync('/etc/alpine-release')) return true;
+
+  try {
+    const result = await runTextCommand(['ldd', '--version']);
+    const output = `${result.stdout}\n${result.stderr}`;
+    return /musl/i.test(output);
+  } catch {
+    return false;
+  }
+}
+
+async function buildReleaseAssetDescriptor(): Promise<TReleaseAssetDescriptor> {
+  const osMap: Record<string, string> = {
+    darwin: 'darwin',
+    linux: 'linux',
+    win32: 'windows',
+  };
+  const archMap: Record<string, string> = {
+    arm64: 'arm64',
+    x64: 'x64',
+  };
+
+  const os = osMap[process.platform];
+  const arch = archMap[process.arch];
+  if (!os || !arch) {
+    throw new Error(`Unsupported platform for upgrade dry-run: ${process.platform}-${process.arch}`);
+  }
+
+  const parts = ['vibecanvas', os, arch];
+  if (await detectNeedsBaselineBinary()) {
+    parts.push('baseline');
+  }
+  if (await detectMuslRuntime()) {
+    parts.push('musl');
+  }
+
+  const packageName = parts.join('-');
+  const isWindows = process.platform === 'win32';
+  const archiveName = `${packageName}${isWindows ? '.zip' : '.tar.gz'}`;
+  const checksumName = `${packageName}.sha256`;
+  const binaryName = `vibecanvas${isWindows ? '.exe' : ''}`;
+
+  return { packageName, archiveName, checksumName, binaryName, isWindows };
+}
+
+async function downloadFile(url: string, destinationPath: string): Promise<void> {
+  const response = await fetch(url, {
+    headers: {
+      'user-agent': 'vibecanvas-upgrade',
+    },
+  });
+
+  if (!response.ok) {
+    throw new Error(`Download failed (${response.status}) for ${url}`);
+  }
+
+  await Bun.write(destinationPath, response);
+}
+
+async function verifyFileChecksum(filePath: string, checksumPath: string): Promise<void> {
+  const checksumText = (await Bun.file(checksumPath).text()).trim();
+  const expected = checksumText.split(/\s+/)[0]?.trim();
+  if (!expected) {
+    throw new Error(`Malformed checksum file: ${checksumPath}`);
+  }
+
+  const buffer = await Bun.file(filePath).arrayBuffer();
+  const actual = createHash('sha256').update(Buffer.from(buffer)).digest('hex');
+  if (actual !== expected) {
+    throw new Error(`Checksum mismatch for ${filePath}`);
+  }
+}
+
+async function extractArchive(archivePath: string, outputDir: string, isWindows: boolean): Promise<void> {
+  mkdirSync(outputDir, { recursive: true });
+  const cmd = isWindows
+    ? ['unzip', '-q', archivePath, '-d', outputDir]
+    : ['tar', '-xzf', archivePath, '-C', outputDir];
+  const result = await runTextCommand(cmd);
+  if (result.exitCode !== 0) {
+    throw new Error(`Failed to extract archive: ${(result.stderr || result.stdout).trim()}`);
+  }
+}
+
+function findExtractedBinary(extractDir: string, binaryName: string): string {
+  const candidates = [
+    join(extractDir, binaryName),
+    join(extractDir, 'bin', binaryName),
+    join(extractDir, 'package', 'bin', binaryName),
+  ];
+
+  for (const candidate of candidates) {
+    if (existsSync(candidate)) {
+      return candidate;
+    }
+  }
+
+  throw new Error(`Could not find ${binaryName} in extracted archive`);
+}
+
+function copyIfExists(sourcePath: string, destinationPath: string): void {
+  if (!existsSync(sourcePath)) return;
+  mkdirSync(dirname(destinationPath), { recursive: true });
+  copyFileSync(sourcePath, destinationPath);
+}
+
+function copyDatabaseForDryRun(sourceDbPath: string, tempDbPath: string): void {
+  mkdirSync(dirname(tempDbPath), { recursive: true });
+  if (existsSync(sourceDbPath)) {
+    copyFileSync(sourceDbPath, tempDbPath);
+  }
+  copyIfExists(`${sourceDbPath}-wal`, `${tempDbPath}-wal`);
+  copyIfExists(`${sourceDbPath}-shm`, `${tempDbPath}-shm`);
+}
+
+async function executeCandidateBinary(binaryPath: string, tempDbPath: string, tempConfigDir: string): Promise<{ exitCode: number; stdout: string; stderr: string }> {
+  const proc = Bun.spawn({
+    cmd: [binaryPath, 'canvas', 'list', '--json', '--db', tempDbPath],
+    stdout: 'pipe',
+    stderr: 'pipe',
+    env: {
+      ...process.env,
+      VIBECANVAS_CONFIG: tempConfigDir,
+      VIBECANVAS_DISABLE_AUTOUPDATE: '1',
+      XDG_DATA_HOME: join(tempConfigDir, 'xdg', 'data'),
+      XDG_CONFIG_HOME: join(tempConfigDir, 'xdg', 'config'),
+      XDG_STATE_HOME: join(tempConfigDir, 'xdg', 'state'),
+      XDG_CACHE_HOME: join(tempConfigDir, 'xdg', 'cache'),
+    },
+  });
+
+  const [stdout, stderr, exitCode] = await Promise.all([
+    new Response(proc.stdout).text(),
+    new Response(proc.stderr).text(),
+    proc.exited,
+  ]);
+
+  return { exitCode, stdout, stderr };
+}
+
+async function dryRunUpgradeCandidate(args: { config: ICliConfig; version: string; onProgress?: (event: TUpgradeProgressEvent) => void }): Promise<TDryRunResult> {
+  const releaseAsset = await buildReleaseAssetDescriptor();
+  const tempRoot = mkdtempSync(join(tmpdir(), 'vibecanvas-upgrade-dry-run-'));
+  const archivePath = join(tempRoot, releaseAsset.archiveName);
+  const checksumPath = join(tempRoot, releaseAsset.checksumName);
+  const extractDir = join(tempRoot, 'extract');
+  const tempConfigDir = join(tempRoot, 'config');
+  const tempDbPath = join(tempRoot, 'db', 'vibecanvas.sqlite');
+  const releaseTag = `v${args.version.replace(/^v/i, '')}`;
+
+  try {
+    args.onProgress?.({ percent: 72, label: `Downloading ${releaseAsset.archiveName}` });
+    await downloadFile(`${RELEASE_DOWNLOAD_BASE}/${releaseTag}/${releaseAsset.archiveName}`, archivePath);
+
+    args.onProgress?.({ percent: 78, label: `Downloading ${releaseAsset.checksumName}` });
+    await downloadFile(`${RELEASE_DOWNLOAD_BASE}/${releaseTag}/${releaseAsset.checksumName}`, checksumPath);
+
+    args.onProgress?.({ percent: 82, label: 'Verifying checksum' });
+    await verifyFileChecksum(archivePath, checksumPath);
+
+    args.onProgress?.({ percent: 86, label: 'Extracting archive' });
+    await extractArchive(archivePath, extractDir, releaseAsset.isWindows);
+
+    const binaryPath = findExtractedBinary(extractDir, releaseAsset.binaryName);
+    if (!releaseAsset.isWindows) {
+      chmodSync(binaryPath, 0o755);
+    }
+
+    args.onProgress?.({ percent: 90, label: 'Preparing temporary database' });
+    copyDatabaseForDryRun(args.config.dbPath, tempDbPath);
+    mkdirSync(tempConfigDir, { recursive: true });
+
+    args.onProgress?.({ percent: 95, label: 'Running startup + migration dry-run' });
+    const result = await executeCandidateBinary(binaryPath, tempDbPath, tempConfigDir);
+    if (result.exitCode !== 0) {
+      const details = (result.stderr || result.stdout).trim() || 'candidate binary exited with non-zero status';
+      return { ok: false, message: `Dry-run failed: ${details}` };
+    }
+
+    if (!existsSync(tempDbPath)) {
+      return { ok: false, message: 'Dry-run failed: candidate binary did not create or open the temporary database' };
+    }
+
+    return {
+      ok: true,
+      message: `Dry-run passed for ${releaseAsset.packageName}@${args.version}. Download, checksum, startup, and temp DB migration all succeeded.`,
+    };
+  } catch (error) {
+    return {
+      ok: false,
+      message: error instanceof Error ? error.message : String(error),
+    };
+  } finally {
+    rmSync(tempRoot, { recursive: true, force: true });
+  }
+}
+
+async function applyUpgrade(args: TApplyUpgradeArgs): Promise<TApplyUpgradeResult> {
+  if (args.method !== 'curl') {
+    const command = commandForMethod(args.method, args.version);
+    return { ok: false, command, message: 'Auto-install is only enabled for curl installs' };
+  }
+
+  args.onProgress?.({ percent: DOWNLOAD_PROGRESS_START, label: 'Downloading update (0%)' });
+
+  const script = `curl -fsSL https://vibecanvas.dev/install | bash -s -- --version ${args.version} --channel ${args.channel} --no-modify-path`;
+
+  try {
+    const proc = Bun.spawn(['bash', '-lc', script], {
+      stdout: 'pipe',
+      stderr: 'pipe',
+    });
+
+    let stderrText = '';
+    let trailingChunk = '';
+    let lastOverallPercent = DOWNLOAD_PROGRESS_START;
+    let lastDownloadPercent = 0;
+    let sawDownloadSignal = false;
+
+    const emitDownloadProgress = (downloadPercent: number): void => {
+      const normalized = Math.max(0, Math.min(100, Math.round(downloadPercent)));
+      const overallPercent = mapDownloadPercentToOverall(normalized);
+
+      if (overallPercent === lastOverallPercent && normalized === lastDownloadPercent) return;
+
+      lastDownloadPercent = normalized;
+      lastOverallPercent = overallPercent;
+      sawDownloadSignal = true;
+      args.onProgress?.({
+        percent: overallPercent,
+        label: `Downloading update (${normalized}%)`,
+      });
+    };
+
+    const fallbackTicker = setInterval(() => {
+      if (sawDownloadSignal) return;
+      if (lastOverallPercent >= DOWNLOAD_PROGRESS_END - 2) return;
+
+      lastOverallPercent += 1;
+      args.onProgress?.({
+        percent: lastOverallPercent,
+        label: 'Downloading update (waiting for progress data)',
+      });
+    }, 1200);
+
+    const onOutput = (chunk: string): void => {
+      const combined = `${trailingChunk}${chunk}`;
+      const percents = parsePercentsFromChunk(combined);
+      for (const percent of percents) {
+        emitDownloadProgress(percent);
+      }
+
+      trailingChunk = combined.slice(-32);
+    };
+
+    try {
+      await Promise.all([
+        consumeStream(proc.stdout, onOutput),
+        consumeStream(proc.stderr, (chunk) => {
+          stderrText += chunk;
+          onOutput(chunk);
+        }),
+        proc.exited,
+      ]);
+    } finally {
+      clearInterval(fallbackTicker);
+    }
+
+    if (proc.exitCode !== 0) {
+      return { ok: false, message: stderrText.trim() || 'Upgrade command failed' };
+    }
+
+    if (lastDownloadPercent < 100) {
+      emitDownloadProgress(100);
+    }
+
+    args.onProgress?.({ percent: 98, label: 'Finalizing upgrade' });
+    return { ok: true };
+  } catch (error) {
+    return { ok: false, message: error instanceof Error ? error.message : String(error) };
+  }
+}
+
+async function checkForUpgrade(args: TCheckForUpgradeArgs): Promise<TUpgradeResult> {
+  args.onProgress?.({ percent: 10, label: 'Parsing options' });
+  args.onProgress?.({ percent: 25, label: 'Resolving install method' });
+
+  const method = args.methodOverride ?? detectInstallMethod();
+  const policy = resolveUpdatePolicy(args.config, method);
+
+  if (policy.mode === 'disabled' && !args.dryRun) {
+    args.onProgress?.({ percent: 100, label: 'Done' });
+    return { status: 'disabled', method, reason: policy.reason };
+  }
+
+  args.onProgress?.({ percent: 45, label: 'Checking latest version' });
+  const latest = await fetchLatestVersion(args.targetVersionOverride);
+  if (!latest) {
+    args.onProgress?.({ percent: 100, label: 'Done' });
+    return { status: 'error', method, message: 'Failed to fetch latest version' };
+  }
+
+  const currentVersion = getServerVersion(args.config);
+  args.onProgress?.({ percent: 65, label: 'Evaluating upgrade decision' });
+  const [decision, decisionErr] = fnCliUpdateShouldUpgrade({
+    currentVersion,
+    latestVersion: latest.version,
+  });
+
+  if (decisionErr || !decision) {
+    args.onProgress?.({ percent: 100, label: 'Done' });
+    return {
+      status: 'error',
+      method,
+      message: decisionErr?.externalMessage?.en ?? 'Version check failed',
+    };
+  }
+
+  if (!decision.shouldUpgrade) {
+    args.onProgress?.({ percent: 100, label: 'Done' });
+    return { status: 'up-to-date', version: currentVersion, method };
+  }
+
+  const manualCommand = commandForMethod(method, latest.version) ?? undefined;
+
+  if (args.dryRun) {
+    const dryRun = await dryRunUpgradeCandidate({
+      config: args.config,
+      version: latest.version,
+      onProgress: args.onProgress,
+    });
+
+    args.onProgress?.({ percent: 100, label: 'Done' });
+    if (dryRun.ok) {
+      return {
+        status: 'dry-run-ok',
+        version: latest.version,
+        method,
+        message: dryRun.message,
+      };
+    }
+
+    return {
+      status: 'dry-run-failed',
+      version: latest.version,
+      method,
+      message: dryRun.message,
+      command: manualCommand,
+    };
+  }
+
+  if (args.checkOnly || policy.mode === 'notify') {
+    args.onProgress?.({ percent: 100, label: 'Done' });
+    return {
+      status: 'update-available',
+      version: latest.version,
+      method,
+      command: manualCommand,
+    };
+  }
+
+  const upgraded = await applyUpgrade({
+    method,
+    version: latest.version,
+    channel: latest.channel,
+    onProgress: args.onProgress,
+  });
+
+  if (!upgraded.ok) {
+    args.onProgress?.({ percent: 100, label: 'Done' });
+    return {
+      status: 'update-available',
+      version: latest.version,
+      method,
+      command: upgraded.command ?? manualCommand,
+    };
+  }
+
+  args.onProgress?.({ percent: 100, label: 'Done' });
+  return { status: 'updated', version: latest.version, method };
+}
+
+async function txCmdUpgrade(args: TRunUpgradeArgs): Promise<void> {
+  const { values } = parseArgs({
+    args: args.config.rawArgv,
+    strict: false,
+    allowPositionals: true,
+    options: {
+      check: {
+        type: 'boolean',
+        default: false,
+      },
+      'dry-run': {
+        type: 'boolean',
+        default: false,
+      },
+      method: {
+        type: 'string',
+      },
+      'target-version': {
+        type: 'string',
+      },
+      help: {
+        type: 'boolean',
+        short: 'h',
+        default: false,
+      },
+    },
+  });
+
+  if (values.help) {
+    printUpgradeHelp();
+    process.exit(0);
+  }
+
+  const methodValue = values.method as string | undefined;
+  const methodOverride = methodValue === 'curl' || methodValue === 'npm' || methodValue === 'unknown'
+    ? methodValue
+    : undefined;
+
+  if (methodValue && !methodOverride) {
+    console.error('[Update] Invalid --method. Allowed: curl, npm, unknown');
+    process.exit(1);
+  }
+
+  const dryRun = Boolean(values['dry-run']);
+  const progress = createUpgradeProgressRenderer();
+  const result = await checkForUpgrade({
+    config: args.config,
+    checkOnly: Boolean(values.check),
+    dryRun,
+    methodOverride,
+    targetVersionOverride: args.config.upgradeTarget ?? values['target-version'] as string | undefined,
+    onProgress: progress.update,
+  }).finally(() => {
+    progress.finish();
+  });
+  const currentVersion = getServerVersion(args.config);
+
+  if (result.status === 'updated') {
+    console.log(`[Update] Current: v${currentVersion}`);
+    console.log(`[Update] Method: ${result.method}`);
+    console.log(`[Update] Updated to v${result.version}`);
+    process.exit(0);
+  }
+
+  if (result.status === 'up-to-date') {
+    console.log(`[Update] Current: v${currentVersion}`);
+    console.log(`[Update] Latest:  v${result.version}`);
+    console.log(`[Update] Method: ${result.method}`);
+    console.log(`[Update] Already up to date (v${result.version})`);
+    process.exit(0);
+  }
+
+  if (result.status === 'dry-run-ok') {
+    console.log(`[Update] Current: v${currentVersion}`);
+    console.log(`[Update] Latest:  v${result.version}`);
+    console.log(`[Update] Method: ${result.method}`);
+    console.log(`[Update] Dry-run: ${result.message}`);
+    process.exit(0);
+  }
+
+  if (result.status === 'dry-run-failed') {
+    console.log(`[Update] Current: v${currentVersion}`);
+    console.log(`[Update] Latest:  v${result.version}`);
+    console.log(`[Update] Method: ${result.method}`);
+    console.error(`[Update] Dry-run failed: ${result.message}`);
+    if (result.command) {
+      console.log(`[Update] Manual fallback: ${result.command}`);
+    }
+    process.exit(1);
+  }
+
+  if (result.status === 'update-available') {
+    console.log(`[Update] Current: v${currentVersion}`);
+    console.log(`[Update] Latest:  v${result.version}`);
+    console.log(`[Update] Method: ${result.method}`);
+    if (values.check) {
+      console.log('[Update] Check-only mode, no changes applied');
+    }
+    console.log(`[Update] New version available: v${result.version}`);
+    if (result.command) {
+      console.log(`[Update] Run: ${result.command}`);
+    }
+    process.exit(0);
+  }
+
+  if (result.status === 'disabled') {
+    console.log(`[Update] Auto-update disabled (${result.reason})`);
+    process.exit(0);
+  }
+
+  if (result.status === 'error') {
+    console.error(`[Update] ${result.message}`);
+    process.exit(1);
+  }
+
+  console.error('[Update] Unexpected upgrade state');
+  process.exit(1);
+}
+
+export { checkForUpgrade, txCmdUpgrade };

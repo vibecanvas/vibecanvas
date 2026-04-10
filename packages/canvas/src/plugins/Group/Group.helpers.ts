@@ -1,5 +1,5 @@
 import Konva from "konva";
-import type { TGroup } from "@vibecanvas/shell/automerge/index";
+import type { TGroup } from "@vibecanvas/service-automerge/types/canvas-doc";
 import type { IPluginContext } from "../shared/interface";
 import { getNodeZIndex } from "../shared/render-order.shared";
 import type { GroupSelectionNode } from "./Group.shared";

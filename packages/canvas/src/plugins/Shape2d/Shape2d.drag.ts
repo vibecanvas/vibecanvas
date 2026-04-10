@@ -1,4 +1,4 @@
-import { TElement, TTextData } from "@vibecanvas/shell/automerge/index";
+import { TElement, TTextData } from "@vibecanvas/service-automerge/types/canvas-doc";
 import { throttle } from "@solid-primitives/scheduled";
 import Konva from "konva";
 import { CustomEvents } from "../../custom-events";
@@ -42,7 +42,16 @@ export function setupShapeListeners(deps: { context: IPluginContext }, shape: Ko
   shape.on("pointerdblclick", (e) => {
     if (context.state.mode !== CanvasMode.SELECT) return;
     const earlyExit = context.hooks.customEvent.call(CustomEvents.ELEMENT_POINTERDBLCLICK, e);
-    if (earlyExit) e.cancelBubble = true;
+    if (earlyExit) {
+      e.cancelBubble = true;
+      return;
+    }
+
+    if (shape instanceof Konva.Rect) {
+      if (openAttachedTextEditMode(deps, shape)) {
+        e.cancelBubble = true;
+      }
+    }
   });
 
   const applyElement = (element: TElement) => {
@@ -275,6 +284,22 @@ export function finalizePreviewClone(
   return newShape;
 }
 
+function openAttachedTextEditMode(deps: { context: IPluginContext }, rect: Konva.Rect) {
+  const { context } = deps;
+  if (context.state.mode !== CanvasMode.SELECT) return false;
+  if (context.state.editingTextId !== null) return false;
+
+  let textNode = getAttachedTextNode(deps, rect);
+  const isNew = textNode === null;
+  if (textNode === null) {
+    textNode = createAttachedTextNode(deps, rect);
+  }
+
+  syncAttachedTextToRect(deps, { rect, textNode });
+  TextPlugin.enterEditMode(context, textNode, isNew);
+  return true;
+}
+
 export function handleAttachedTextShortcut(deps: { context: IPluginContext }, event: KeyboardEvent) {
   const { context } = deps;
   if (event.key !== "Enter") return;
@@ -293,13 +318,5 @@ export function handleAttachedTextShortcut(deps: { context: IPluginContext }, ev
 
   event.preventDefault();
   event.stopPropagation();
-
-  let textNode = getAttachedTextNode(deps, rect);
-  const isNew = textNode === null;
-  if (textNode === null) {
-    textNode = createAttachedTextNode(deps, rect);
-  }
-
-  syncAttachedTextToRect(deps, { rect, textNode });
-  TextPlugin.enterEditMode(context, textNode, isNew);
+  openAttachedTextEditMode(deps, rect);
 }

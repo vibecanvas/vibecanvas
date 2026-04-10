@@ -1,6 +1,6 @@
 import type Konva from "konva";
 import type { Setter } from "solid-js";
-import type { TElement, TIframeBrowserData } from "@vibecanvas/shell/automerge/index";
+import type { TElement, TIframeBrowserData } from "@vibecanvas/service-automerge/types/canvas-doc";
 
 export type TBrowserElement = TElement & { data: TIframeBrowserData };
 

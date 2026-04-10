@@ -1,4 +1,4 @@
-import type { TElement } from "@vibecanvas/shell/automerge/index";
+import type { TElement } from "@vibecanvas/service-automerge/types/canvas-doc";
 import Konva from "konva";
 import type { IPluginContext } from "../shared/interface";
 import type { TShape1dNode } from "./Shape1d.shared";

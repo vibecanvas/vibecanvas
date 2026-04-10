@@ -1,8 +1,17 @@
-import type { TFileData, TFiletreeData, TTerminalData } from "@vibecanvas/shell/automerge/index";
+import type { TFileData, TFiletreeData, TTerminalData } from "@vibecanvas/service-automerge/types/canvas-doc";
 import { getFileName, getFileRenderer } from "../../components/file/utils";
 import type { IPluginContext } from "../shared/interface";
 import { FILETREE_CHAT_DND_MIME, HOSTED_TYPES, TOOL_TO_WIDGET_TYPE } from "./HostedSolidWidget.constants";
 import type { TDroppedNode, THostedWidgetElement, THostedWidgetTool, THostedWidgetType } from "./HostedSolidWidget.types";
+
+export type TWorldViewportBounds = {
+  left: number;
+  top: number;
+  right: number;
+  bottom: number;
+  width: number;
+  height: number;
+};
 
 type THostedWidgetFactoryRuntime = {
   now: () => number;
@@ -52,15 +61,15 @@ export function toShellEscapedPathText(path: string): string {
   return `'${path.replaceAll("'", `'\\''`)}' `;
 }
 
-export function createFileElementFromDrop(
+export function createFileElement(
   runtime: THostedWidgetFactoryRuntime = defaultFactoryRuntime,
   payload: { id?: string; x: number; y: number; path: string },
 ): THostedWidgetElement {
   const now = runtime.now();
   return {
     id: payload.id ?? runtime.randomUUID(),
-    x: payload.x - 280,
-    y: payload.y - 250,
+    x: payload.x,
+    y: payload.y,
     rotation: 0,
     zIndex: "",
     parentGroupId: null,
@@ -85,6 +94,63 @@ export function createFileElementFromDrop(
   };
 }
 
+export function createFileElementFromDrop(
+  runtime: THostedWidgetFactoryRuntime = defaultFactoryRuntime,
+  payload: { id?: string; x: number; y: number; path: string },
+): THostedWidgetElement {
+  return createFileElement(runtime, {
+    id: payload.id,
+    x: payload.x - 280,
+    y: payload.y - 250,
+    path: payload.path,
+  });
+}
+
+export function getViewportWorldBounds(context: IPluginContext): TWorldViewportBounds {
+  const topLeft = screenToWorld(context, { x: 0, y: 0 });
+  const bottomRight = screenToWorld(context, {
+    x: context.stage.width(),
+    y: context.stage.height(),
+  });
+
+  const left = Math.min(topLeft.x, bottomRight.x);
+  const right = Math.max(topLeft.x, bottomRight.x);
+  const top = Math.min(topLeft.y, bottomRight.y);
+  const bottom = Math.max(topLeft.y, bottomRight.y);
+
+  return {
+    left,
+    top,
+    right,
+    bottom,
+    width: right - left,
+    height: bottom - top,
+  };
+}
+
+export function getHostedFilePreviewPosition(
+  anchor: { x: number; y: number; width: number; height: number },
+  viewport: TWorldViewportBounds,
+  panel: { width: number; height: number },
+  layout: { gap?: number; padding?: number } = {},
+) {
+  const gap = layout.gap ?? 24;
+  const padding = layout.padding ?? 24;
+  const rightX = anchor.x + anchor.width + gap;
+  const leftX = anchor.x - panel.width - gap;
+  const minX = viewport.left + padding;
+  const maxX = Math.max(minX, viewport.right - padding - panel.width);
+  const minY = viewport.top + padding;
+  const maxY = Math.max(minY, viewport.bottom - padding - panel.height);
+  const fitsRight = rightX + panel.width <= viewport.right - padding;
+  const fitsLeft = leftX >= minX;
+
+  const x = fitsRight ? rightX : fitsLeft ? leftX : Math.min(Math.max(rightX, minX), maxX);
+  const y = Math.min(Math.max(anchor.y, minY), maxY);
+
+  return { x, y };
+}
+
 export function getWidgetHeaderLabel(element: THostedWidgetElement) {
   if (element.data.type === "terminal") return "untitled";
   if (element.data.type === "filetree") return "files";
@@ -101,7 +167,7 @@ export function getDefaultWidgetChrome(element: THostedWidgetElement) {
 
 export function getDefaultWidgetElement(
   runtime: THostedWidgetFactoryRuntime = defaultFactoryRuntime,
-  payload: { type: THostedWidgetType; x: number; y: number; id?: string },
+  payload: { type: THostedWidgetType; x: number; y: number; id?: string; path?: string },
 ): THostedWidgetElement {
   const id = payload.id ?? runtime.randomUUID();
   const now = runtime.now();
@@ -129,7 +195,7 @@ export function getDefaultWidgetElement(
         w: 360,
         h: 460,
         isCollapsed: false,
-        globPattern: null,
+        path: payload.path ?? "",
       } satisfies TFiletreeData,
     };
   }

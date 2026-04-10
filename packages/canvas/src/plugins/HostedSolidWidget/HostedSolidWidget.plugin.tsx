@@ -1,4 +1,4 @@
-import type { TElement } from "@vibecanvas/shell/automerge/index";
+import type { TElement } from "@vibecanvas/service-automerge/types/canvas-doc";
 import Konva from "konva";
 import type { TTool } from "../../components/FloatingCanvasToolbar/toolbar.types";
 import { CustomEvents } from "../../custom-events";
@@ -13,8 +13,11 @@ import { TransformPlugin } from "../Transform/Transform.plugin";
 import { FILETREE_CHAT_DND_MIME, HOSTED_ELEMENT_ATTR, LAST_FILETREE_PATH_KEY } from "./HostedSolidWidget.constants";
 import { beginHostedDomDrag } from "./HostedSolidWidget.drag";
 import {
+  createFileElement,
   createFileElementFromDrop,
   getDefaultWidgetElement,
+  getHostedFilePreviewPosition,
+  getViewportWorldBounds,
   getWidgetTypeFromTool,
   isHostedType,
   parseDroppedNode,
@@ -134,7 +137,7 @@ export class HostedSolidWidgetPlugin implements IPlugin {
     const mount = this.findTerminalMountAtPoint(event.clientX, event.clientY);
     if (!mount) return false;
 
-      const insertedText = toShellEscapedPathText(path);
+    const insertedText = toShellEscapedPathText(path);
     context.setState("mode", CanvasMode.SELECT);
     context.hooks.customEvent.call(CustomEvents.TOOL_SELECT, "select");
     context.setState("selection", [mount.node]);
@@ -187,28 +190,14 @@ export class HostedSolidWidgetPlugin implements IPlugin {
       return;
     }
 
-    const lastFiletreePath = initialPath ?? localStorage.getItem(LAST_FILETREE_PATH_KEY) ?? undefined;
-    const [error, filetree] = await filetreeCapability.safeClient.api.filetree.create({
-      canvas_id: filetreeCapability.canvasId,
-      x: pointer.x,
-      y: pointer.y,
-      ...(lastFiletreePath ? { path: lastFiletreePath } : {}),
-    });
+    const path = initialPath ?? localStorage.getItem(LAST_FILETREE_PATH_KEY) ?? "";
+    if (path) localStorage.setItem(LAST_FILETREE_PATH_KEY, path);
 
-    if (error || !filetree) {
-      const message = error && "message" in (error as object)
-        ? (error as { message?: string }).message ?? "Failed to create file tree"
-        : "Failed to create file tree";
-      context.capabilities.notification?.showError("Failed to create file tree", message);
-      return;
-    }
-
-    if (filetree.path) localStorage.setItem(LAST_FILETREE_PATH_KEY, filetree.path);
     this.insertHostedElement(context, getDefaultWidgetElement(undefined, {
       type: "filetree",
       x: pointer.x,
       y: pointer.y,
-      id: filetree.id as any,
+      path,
     }));
   }
 
@@ -313,6 +302,7 @@ export class HostedSolidWidgetPlugin implements IPlugin {
       showTransformerForNode: (nextContext, nextNode) => this.showTransformerForNode(nextContext, nextNode),
       removeHostedNode: (nextContext, nextNode) => this.removeHostedNode(nextContext, nextNode),
       reloadHostedNode: (nextContext, nextNode) => this.reloadHostedNode(nextContext, nextNode),
+      openFilePreview: (nextContext, nextNode, path) => this.openFilePreview(nextContext, nextNode, path),
       mountWidgetFromUpdate: (nextNode, nextElement) => this.mountWidgetFromUpdate(nextNode, nextElement),
       syncMountedNode: (nextNode) => this.syncMountedNode(nextNode),
       toElement: (nextNode) => this.toElement(nextNode),
@@ -398,6 +388,32 @@ export class HostedSolidWidgetPlugin implements IPlugin {
     this.mountWidget(context, node, snapshot);
     this.syncMountedNode(node);
     this.syncDomOrder();
+  }
+
+  private openFilePreview(context: IPluginContext, node: Konva.Rect, path: string) {
+    if (!context.capabilities.file) {
+      context.capabilities.notification?.showError("File transport is not configured");
+      return;
+    }
+
+    const anchor = this.toElement(node);
+    const viewport = getViewportWorldBounds(context);
+    const position = getHostedFilePreviewPosition(
+      {
+        x: anchor.x,
+        y: anchor.y,
+        width: anchor.data.w,
+        height: anchor.data.h,
+      },
+      viewport,
+      { width: 560, height: 500 },
+    );
+
+    this.insertHostedElement(context, createFileElement(undefined, {
+      x: position.x,
+      y: position.y,
+      path,
+    }));
   }
 
   private beginDomDrag(context: IPluginContext, node: Konva.Rect, event: PointerEvent | MouseEvent) {

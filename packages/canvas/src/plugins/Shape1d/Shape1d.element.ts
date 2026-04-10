@@ -1,4 +1,4 @@
-import type { TElement, TElementStyle } from "@vibecanvas/shell/automerge/index";
+import type { TElement, TElementStyle } from "@vibecanvas/service-automerge/types/canvas-doc";
 import Konva from "konva";
 import { getWorldPosition, setWorldPosition } from "../shared/node-space";
 import { getNodeZIndex, setNodeZIndex } from "../shared/render-order.shared";

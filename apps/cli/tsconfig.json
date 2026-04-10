@@ -1,0 +1,13 @@
+{
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    "strict": true,
+    "outDir": "dist",
+    "baseUrl": ".",
+    "paths": {
+      "@vibecanvas/cli/*": ["./src/*"]
+    },
+    "types": ["bun-types"]
+  },
+  "include": ["src", "tests", "../../global.d.ts"]
+}

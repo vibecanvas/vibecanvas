@@ -1,3 +1,4 @@
+import type { TOrpcSafeClient } from "@vibecanvas/orpc-client";
 import { Button } from "@kobalte/core/button";
 import { Dialog } from "@kobalte/core/dialog";
 import ArrowUp from "lucide-solid/icons/arrow-up";
@@ -5,7 +6,6 @@ import ChevronRight from "lucide-solid/icons/chevron-right";
 import Folder from "lucide-solid/icons/folder";
 import House from "lucide-solid/icons/house";
 import { For, Show, createEffect, createSignal } from "solid-js";
-import type { TFiletreeSafeClient } from "../../services/canvas/interface";
 
 type TDirChild = {
   name: string;
@@ -13,7 +13,7 @@ type TDirChild = {
 };
 
 type TPathPickerDialogProps = {
-  safeClient: TFiletreeSafeClient;
+  apiService: TOrpcSafeClient;
   open: boolean;
   initialPath: string | null;
   onOpenChange: (open: boolean) => void;
@@ -34,7 +34,7 @@ export function PathPickerDialog(props: TPathPickerDialogProps) {
     setIsLoading(true);
     setErrorMessage(null);
 
-    const [listError, listResult] = await props.safeClient.api.filesystem.list({
+    const [listError, listResult] = await props.apiService.api.filesystem.list({
       query: { path, omitFiles: true },
     });
 
@@ -56,7 +56,7 @@ export function PathPickerDialog(props: TPathPickerDialogProps) {
     setIsLoading(true);
     setErrorMessage(null);
 
-    const [homeError, homeResult] = await props.safeClient.api.filesystem.home();
+    const [homeError, homeResult] = await props.apiService.api.filesystem.home();
     if (homeError || !homeResult || "type" in homeResult) {
       setIsLoading(false);
       setErrorMessage(homeError && "message" in (homeError as object) ? (homeError as { message?: string }).message ?? "Failed to load home folder" : (homeResult && "message" in homeResult ? homeResult.message : "Failed to load home folder"));

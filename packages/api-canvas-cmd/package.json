@@ -1,0 +1,16 @@
+{
+  "name": "@vibecanvas/api-canvas-cmd",
+  "version": "0.3.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./*": "./src/*.ts"
+  },
+  "dependencies": {
+    "@orpc/contract": "catalog:",
+    "@orpc/server": "catalog:",
+    "@vibecanvas/service-automerge": "workspace:*",
+    "@vibecanvas/canvas-cmds": "workspace:*",
+    "@vibecanvas/service-db": "workspace:*"
+  }
+}

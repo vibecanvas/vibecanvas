@@ -1,6 +1,6 @@
 import Konva from "konva";
 import type { DocHandle } from "@automerge/automerge-repo";
-import type { TCanvasDoc, TElement } from "@vibecanvas/shell/automerge/index";
+import type { TCanvasDoc, TElement } from "@vibecanvas/service-automerge/types/canvas-doc";
 import { describe, expect, test } from "vitest";
 import { GroupPlugin, RenderOrderPlugin, SceneHydratorPlugin, SelectPlugin, Shape1dPlugin, Shape2dPlugin, type IPluginContext } from "../../../src/plugins";
 import { createCanvasTestHarness, createMockDocHandle, flushCanvasEffects } from "../../test-setup";
@@ -29,21 +29,21 @@ function createLineOrArrowElement(args: {
     },
     data: args.type === "arrow"
       ? {
-          type: "arrow",
-          lineType: "curved",
-          points: [[0, 0], [50, 20], [120, 10]],
-          startBinding: null,
-          endBinding: null,
-          startCap: "dot",
-          endCap: "arrow",
-        }
+        type: "arrow",
+        lineType: "curved",
+        points: [[0, 0], [50, 20], [120, 10]],
+        startBinding: null,
+        endBinding: null,
+        startCap: "dot",
+        endCap: "arrow",
+      }
       : {
-          type: "line",
-          lineType: "curved",
-          points: [[0, 0], [40, 30], [110, 0]],
-          startBinding: null,
-          endBinding: null,
-        },
+        type: "line",
+        lineType: "curved",
+        points: [[0, 0], [40, 30], [110, 0]],
+        startBinding: null,
+        endBinding: null,
+      },
   };
 }
 

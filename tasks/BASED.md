@@ -2,7 +2,7 @@
 
 ## Introduction
 
-Building software is explorative, creative sometimes dull and repetitive.
+Building software is explorative, creative and sometimes dull and repetitive.
 This document outline the how build software in a highly technical,
 small and motivated team. The goal is to minimize management
 and maximize throughput. The idea behind Based is that programming is 90% context loading and 10% actual solving and coding. Therefore we should batch work for context loading and minimize context switching.
@@ -33,14 +33,14 @@ Remember to keep the codebase small. Small is clean, small is fast. Delete often
 
 ## Structure
 
-Based now lives at the repository root in `based/`.
+Based now lives at the repository root in `tasks/`.
 
-- `based/BASED.md`: overview, active index, and conventions.
-- `based/b/`: bug files.
-- `based/a/`: addition files.
-- `based/s/`: subtraction files.
-- `based/e/`: exploration files.
-- `based/d/`: direction files.
+- `tasks/BASED.md`: overview, active index, and conventions.
+- `tasks/b/`: bug files.
+- `tasks/a/`: addition files.
+- `tasks/s/`: subtraction files.
+- `tasks/e/`: exploration files.
+- `tasks/d/`: direction files.
 
 Each line in the overview stays short and links to one dedicated file.
 Each dedicated file stores the task context, TODOs, notes, and logs.
@@ -51,22 +51,32 @@ Overview entries use this format:
 
 `- [x]: [B1](b/B1.md) - text: edit jumping`
 
+Humans usually don't create leaf files. But agents do.
+
 Leaf files use this format:
 
 ```md
 # B1 - text: edit jumping
+[Overview](../../BASED.md)
+
+<Short summary - This is read by humans. Keep it short>
+
+## Context
+<Longer explanation of the problem. Must link all relevent files.>
 
 ## Plan
-...
+<What you plan to do. Step by step plan. Use subsections>
 
 ## TODOS
+<Checklist - derived from plan>
 - [ ] ...
 
 ## NOTES
+<Notes - Anything non trivial you discovered or want to remember>
 ...
 
 ### LOGS
-- what the agent has done
+<Logs - log any action you take>
 
 ---
 ```
@@ -85,14 +95,40 @@ Use the leaf files for execution history and local context.
 - [x]: [B10](b/B10.md) - style menu: drag then style jumps selection back to old position
 - [x]: [B11] - terminal after resize is not focuable anymore
 - [x]: [B12](b/B12.md) - terminal: ctrl+c echoes ^C but does not interrupt process
-
-
+- [x]: [B13](b/B13.md) - canvas CLI: top-level alias docs lie; `vibecanvas query ...` is rejected
+- [x]: [B14](b/B14.md) - canvas CLI: `canvas group --help` falls back to global help
+- [x]: [B15](b/B15.md) - canvas CLI: `--json` output is not real JSON
+- [ ]: [B16](b/B16.md) - ci: `@vibecanvas/canvas` tests load Konva node entry and require native `canvas` - only fails in ci
+- [x]: [B17](b/B17.md) - canvas CLI: `add --schema rect` still requires an element source instead of printing schema
+- [x]: [B18](b/B18.md) - terminal image paste not working in deploy version
+- [x]: [B19](b/B19.md) - cli usage -> no realtime updates via automerge
+- [x]: [B20](b/B20.md) - pen tool: after stroke commit, stay in pen mode instead of switching to selection
 
 ## A dditions
 - [x]: [A1] - file: support common CodeMirror languages
 - [ ]: [A2] - add inline text support to diamond and ellipse
 - [ ]: [A3] - copy paste elements/groups
 - [x]: [A4](a/A4.md) - terminal: use PartySocket for resilient PTY connection
+- [x]: [A5](a/A5.md) - canvas CLI: explicit --db path override
+- [x]: [A6](a/A6.md) - canvas CLI: end-to-end test harness
+- [x]: [A7](a/A7.md) - canvas CLI: `list` command
+- [x]: [A8](a/A8.md) - canvas CLI: `inspect` command (removed; use `query --id`)
+- [x]: [A9](a/A9.md) - canvas CLI: `query` command
+- [x]: [A10](a/A10.md) - canvas CLI: `patch` command
+- [x]: [A11](a/A11.md) - canvas CLI: `move` command
+- [x]: [A12](a/A12.md) - canvas CLI: `group` command
+- [x]: [A13](a/A13.md) - canvas CLI: `ungroup` command
+- [x]: [A14](a/A14.md) - canvas CLI: `delete` command
+- [x]: [A15](a/A15.md) - canvas CLI: `reorder` command
+- [x]: [A17](a/A17.md) - rect dbl click -> enter edit mode (inline text)
+- [x]: [A18] - lift cmds to be api to allow live changes via crdt
+- [x]: [A19](a/A19.md) - canvas CLI: `add` command
+- [x]: [A20](a/A20.md) - canvas CLI: agent-friendly help, discovery, and forgiving errors
+- [x]: [A21](a/A21.md) - canvas CLI: add `--dry-run` for add/patch/move/group/ungroup/delete
+- [ ]: [A22](a/A22.md) - canvas CLI: allow JSON array payloads for multi-element add and multi-target patch
+- [x]: [A23](a/A23.md) - canvas CLI: document minimal required add args per element type and default optional fields
+- [x]: [A24](a/A24.md) - filetree: double click file opens preview beside tree inside camera view
+- [x]: [A25](a/A25.md) - canvas: react to live Automerge doc changes without page refresh
 
 ## S ubtractions
 - [ ]: [S1](s/S1.md) - double bun run dev -> find new port
@@ -109,22 +145,43 @@ Use the leaf files for execution history and local context.
 - [x]: [S14](s/S14.md) - canvas: keep recorder plugin in development only
 - [ ]: [S15] - inline text support -> fix position (use pretext lib?)
 - [x]: [S16](s/S16.md) - canvas: fix broken TypeScript typings in packages/canvas
+- [x]: [S17](s/S17.md) - extract apps/server into apps/cli + shared packages
+- [x]: [S18](s/S18.md) - cli server: migrate http file/static/spa serving from apps/server
+- [x]: [S19](s/S19.md) - cli orpc: expose db events stream and remove apps/server api.db
+- [x]: [S20](s/S20.md) - cli server: restore compiled-mode port fallback when preferred port is busy
+- [x]: [S21] remove apps/server and packages/functional-core and shell
+- [x]: [S22] fix build and ci tests to use new apps/cli
+- [x]: [S23] Use global costs for dev and prod ports
+- [x]: [S24] rename @vibecanvas/service-db -> @vibecanvas/service.db and co
+- [x]: [S25](s/S25.md) - db: remove filetrees table/schema; canvas-doc fully owns filetree state
+- [ ]: [S26](s/S26.md) - db: add filesystems db table for local/remote machine identity
+- [x]: [S27](s/S27.md) - canvas CLI: remove unimplemented `render` command and help traces
+- [ ]: [S28](s/S28.md) - use runtime package in canvas, like cli does
 
 ## E xplorations
 - [ ]: [E1](e/E1.md) - Tauri Research
 - [ ]: [E5](e/E5.md) - how to implement state machine system?
 - [ ]: [E6](e/E6.md) - should we include a task management
-- [ ]: [E7](e/E7.md) - should we include agent
-- [ ]: [E8](e/E8.md) - canvas CLI: query/edit surface exploration
+- [ ]: [E7] - should we include agent
+- [x]: [E8](e/E8.md) - canvas CLI: query/edit surface exploration
 - [ ]: [E9] - tmux for persistant pty sessions
 - [ ]: [E10] - headless chrome to stream to canvas
 - [ ]: [E11] - https://github.com/cr0hn/dockerscan
 - [ ]: [E12] - https://github.com/superradcompany/microsandbox
-- [ ]: [E13] - Research Pluginsystem for server
+- [x]: [E13](e/E13.md) - Research Pluginsystem for server
+- [x]: [E14] - do we need packages/functional-core
+- [ ]: [E15](e/E15.md) - canvas UI extensions: sideloadable community widgets and ArrowJS exploration
+- [x]: [E16] - filewatch performance. -> on big folders are slow
+- [ ]: [E17](e/E17.md) - automerge authority: optimistic local writes with server validation/reject path
 
 ## D irections
-- [ ]: [D1] - AI can edit the canvas directly
-- [ ]: [D2] - Server plugin system
+- [x]: [D1] - AI can edit the canvas directly
+- [x]: [D2] - Server plugin system
+- [ ]: [D3] - Support pluggable filsystem architecture
+- [ ]: [D4] - Support sideloadable ui elements
+- [ ]: [D5] - AI Canvas Element, attachable to other elements
+- [ ]: [D6] - Gateway support
+- [ ]: [D7] - Auth support
 
 ## Pragmatic Code Style
 

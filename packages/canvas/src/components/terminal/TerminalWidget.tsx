@@ -1,6 +1,7 @@
+import type { TPtyImageFormat, TOrpcSafeClient } from "@vibecanvas/orpc-client";
 import RefreshCw from "lucide-solid/icons/refresh-cw";
 import { createEffect, onCleanup, Show, createSignal } from "solid-js";
-import type { THostedWidgetChrome, TTerminalSafeClient } from "../../services/canvas/interface";
+import type { THostedWidgetChrome } from "../../services/canvas/interface";
 import { GhosttyTerminalMount } from "./GhosttyTerminalMount";
 import { createTerminalContextLogic } from "./createTerminalContextLogic";
 
@@ -9,7 +10,7 @@ type TTerminalWidgetProps = {
   workingDirectory: string;
   title?: string;
   showChrome?: boolean;
-  safeClient?: TTerminalSafeClient;
+  apiService?: TOrpcSafeClient;
   setWindowChrome?: (chrome: THostedWidgetChrome | null) => void;
   registerBeforeRemove?: (handler: (() => void | Promise<void>) | null) => void;
   registerReload?: (handler: (() => void | Promise<void>) | null) => void;
@@ -17,16 +18,41 @@ type TTerminalWidgetProps = {
   registerInsertText?: (handler: ((text: string) => void) | null) => void;
 };
 
+function fileToDataUrl(file: Blob): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (typeof reader.result !== "string") {
+        reject(new Error("Failed to read clipboard image"));
+        return;
+      }
+      resolve(reader.result);
+    };
+    reader.onerror = () => {
+      reject(reader.error ?? new Error("Failed to read clipboard image"));
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+function toPtyImageFormat(type: string): TPtyImageFormat | null {
+  if (type === "image/jpeg") return type;
+  if (type === "image/png") return type;
+  if (type === "image/gif") return type;
+  if (type === "image/webp") return type;
+  return null;
+}
+
 export function TerminalWidget(props: TTerminalWidgetProps) {
   const [mountRevision, setMountRevision] = createSignal(1);
   let rootRef: HTMLDivElement | undefined;
   const focusRetryTimerIds: number[] = [];
-  const terminalLogic = props.safeClient
+  const terminalLogic = props.apiService
     ? createTerminalContextLogic({
       terminalKey: props.terminalKey,
       workingDirectory: props.workingDirectory,
       title: props.title,
-      safeClient: props.safeClient,
+      apiService: props.apiService,
     })
     : null;
 
@@ -48,6 +74,32 @@ export function TerminalWidget(props: TTerminalWidgetProps) {
 
   const clearFocusRetryTimers = () => {
     focusRetryTimerIds.splice(0).forEach((timerId) => window.clearTimeout(timerId));
+  };
+
+  const uploadClipboardImage = async (file: File | Blob) => {
+    if (!props.apiService) {
+      throw new Error("Terminal transport is not configured for this host.");
+    }
+
+    const format = toPtyImageFormat(file.type);
+    if (!format) {
+      throw new Error(`Unsupported clipboard image type: ${file.type || "unknown"}`);
+    }
+
+    const base64 = await fileToDataUrl(file);
+    const [error, result] = await props.apiService.api.pty.uploadImage({
+      workingDirectory: props.workingDirectory,
+      body: {
+        base64,
+        format,
+      },
+    });
+
+    if (error || !result?.path) {
+      throw new Error(error instanceof Error ? error.message : "Failed to upload clipboard image");
+    }
+
+    return result.path;
   };
 
   const focusTerminalInputSurface = (attempt = 0) => {
@@ -141,6 +193,7 @@ export function TerminalWidget(props: TTerminalWidgetProps) {
               onData={terminalLogic.handleTerminalData}
               onResize={terminalLogic.handleTerminalResize}
               onCleanup={terminalLogic.handleTerminalCleanup}
+              onUploadClipboardImage={uploadClipboardImage}
             />
           </>
         </Show>

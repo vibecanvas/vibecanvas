@@ -3,7 +3,7 @@ import RefreshCw from "lucide-solid/icons/refresh-cw";
 import XIcon from "lucide-solid/icons/x";
 import type { JSX } from "solid-js";
 import { children, Show } from "solid-js";
-import type { TTerminalData } from "@vibecanvas/shell/automerge/index";
+import type { TTerminalData } from "@vibecanvas/service-automerge/types/canvas-doc";
 import { getDefaultWidgetChrome, getWidgetHeaderLabel } from "./HostedSolidWidget.helpers";
 import type { THostedWidgetChrome, THostedWidgetElement } from "./HostedSolidWidget.types";
 

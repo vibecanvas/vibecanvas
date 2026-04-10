@@ -1,6 +1,6 @@
 import Konva from "konva";
 import { describe, expect, test, vi } from "vitest";
-import type { TTerminalSafeClient } from "../../../src/services/canvas/interface";
+import type { TOrpcSafeClient } from "@vibecanvas/orpc-client";
 
 vi.mock("ghostty-web", () => {
   class MockGhosttyTerminal {
@@ -109,7 +109,7 @@ import {
 } from "../../test-setup";
 
 function createTerminalSafeClientMock() {
-  const safeClient: TTerminalSafeClient = {
+  const safeClient: TOrpcSafeClient = {
     api: {
       pty: {
         list: vi.fn().mockResolvedValue([null, []]),
@@ -175,7 +175,7 @@ describe("HostedSolidWidget resize focus regression", () => {
         docHandle,
         plugins: [new RenderOrderPlugin(), new HostedSolidWidgetPlugin(), new TransformPlugin(), new SceneHydratorPlugin()],
         appCapabilities: {
-          terminal: { safeClient },
+          terminal: { apiService: safeClient },
         },
         initializeScene: (ctx) => {
           context = ctx;

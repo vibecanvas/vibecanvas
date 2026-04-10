@@ -55,6 +55,7 @@ type TGhosttyTerminalMountProps = {
   onData?: (data: string) => void;
   onResize?: (next: { cols: number; rows: number }, term: TGhosttyTerminalInstance | null) => void;
   onCleanup?: (term: TGhosttyTerminalInstance | null) => void;
+  onUploadClipboardImage?: (file: File | Blob) => Promise<string>;
 };
 
 let ghosttyInitPromise: Promise<void> | null = null;
@@ -96,8 +97,8 @@ type TTerminalCellCoordinates = {
 type TClipboardLike = {
   getData?: (type: string) => string;
   types?: Iterable<string> | ArrayLike<string>;
-  items?: Iterable<{ kind?: string; type?: string }> | ArrayLike<{ kind?: string; type?: string }>;
-  files?: ArrayLike<unknown>;
+  items?: Iterable<{ kind?: string; type?: string; getAsFile?: () => File | null }> | ArrayLike<{ kind?: string; type?: string; getAsFile?: () => File | null }>;
+  files?: Iterable<File> | ArrayLike<File>;
 };
 
 type TClipboardSummary = {
@@ -242,8 +243,29 @@ function getClipboardText(clipboardData: TClipboardLike | null | undefined) {
   return clipboardData.getData("text/plain") || clipboardData.getData("text") || "";
 }
 
+function isSupportedClipboardImageType(type: string) {
+  return type === "image/jpeg" || type === "image/png" || type === "image/gif" || type === "image/webp";
+}
+
 function isNonTextClipboardType(type: string) {
   return type === "Files" || (!type.startsWith("text/") && type !== "text");
+}
+
+function toShellEscapedPathText(path: string) {
+  return `'${path.replaceAll("'", `'\\''`)}' `;
+}
+
+function getFirstClipboardImageFile(clipboardData: TClipboardLike | null | undefined) {
+  const directFile = clipboardData?.files ? Array.from(clipboardData.files).find((file) => isSupportedClipboardImageType(file.type)) : null;
+  if (directFile) return directFile;
+
+  const itemFile = clipboardData?.items
+    ? Array.from(clipboardData.items)
+      .map((item) => item?.getAsFile?.() ?? null)
+      .find((file): file is File => Boolean(file) && isSupportedClipboardImageType(file.type))
+    : null;
+
+  return itemFile ?? null;
 }
 
 function summarizeClipboardData(clipboardData: TClipboardLike | null | undefined): TClipboardSummary {
@@ -302,6 +324,16 @@ async function readClipboardFallback() {
 
   try {
     const items = await clipboard.read?.();
+    if (items) {
+      for (const item of items) {
+        const imageType = item.types.find(isSupportedClipboardImageType);
+        if (imageType) {
+          const file = await item.getType(imageType);
+          return { kind: "image" as const, file };
+        }
+      }
+    }
+
     const hasNonText = items?.some((item) => item.types.some(isNonTextClipboardType)) ?? false;
     if (hasNonText) {
       return { kind: "non-text" as const };
@@ -460,6 +492,31 @@ export function GhosttyTerminalMount(props: TGhosttyTerminalMountProps) {
         return;
       }
 
+      const imageFile = getFirstClipboardImageFile(clipboardEvent.clipboardData);
+      if (imageFile && props.onUploadClipboardImage) {
+        clipboardEvent.preventDefault();
+        clipboardEvent.stopPropagation();
+        void props.onUploadClipboardImage(imageFile)
+          .then((path) => {
+            if (disposed || !term) return;
+            const text = toShellEscapedPathText(path);
+            const method = pasteText(text);
+            debugTerminalPaste("handled image paste via upload", {
+              method,
+              path,
+              fileType: imageFile.type,
+            });
+          })
+          .catch((error) => {
+            const method = sendTerminalInput("\x16");
+            debugTerminalPaste("image upload failed, fell back to ctrl-v", {
+              method,
+              error: error instanceof Error ? error.message : String(error),
+            });
+          });
+        return;
+      }
+
       if (summary.hasNonText) {
         clipboardEvent.preventDefault();
         clipboardEvent.stopPropagation();
@@ -481,6 +538,28 @@ export function GhosttyTerminalMount(props: TGhosttyTerminalMountProps) {
               method,
               textLength: result.text.length,
             });
+            return;
+          }
+
+          if (result.kind === "image" && props.onUploadClipboardImage) {
+            void props.onUploadClipboardImage(result.file)
+              .then((path) => {
+                if (disposed || !term) return;
+                const text = toShellEscapedPathText(path);
+                const method = pasteText(text);
+                debugTerminalPaste("handled fallback image paste via upload", {
+                  method,
+                  path,
+                  fileType: result.file.type,
+                });
+              })
+              .catch((error) => {
+                const method = sendTerminalInput("\x16");
+                debugTerminalPaste("fallback image upload failed, fell back to ctrl-v", {
+                  method,
+                  error: error instanceof Error ? error.message : String(error),
+                });
+              });
             return;
           }
 

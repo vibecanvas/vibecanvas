@@ -1,16 +1,12 @@
 {
   "$schema": "https://opencode.ai/config.json",
   "instructions": [
-    "specs/inst.*.md"
+    "tasks/BASED.md"
   ],
   "plugin": [
     "@mohak34/opencode-notifier@latest",
   ],
-  "agent": {
-    "build": {
-      "disable": true
-    },
-  },
+  "agent": {},
   "mcp": {
     "chrome-devtools": {
       "type": "local",

@@ -1,4 +1,4 @@
-import { TElement } from "@vibecanvas/shell/automerge/index";
+import { TElement } from "@vibecanvas/service-automerge/types/canvas-doc";
 import Konva from "konva";
 import type { IPluginContext } from "../shared/interface";
 import { TextPlugin } from "../Text/Text.plugin";

@@ -1,5 +1,5 @@
 import Konva from "konva";
-import type { TElement, TGroup } from "@vibecanvas/shell/automerge/index";
+import type { TElement, TGroup } from "@vibecanvas/service-automerge/types/canvas-doc";
 import { PenPlugin } from "../Pen/Pen.plugin";
 import { Shape1dPlugin } from "../Shape1d/Shape1d.plugin";
 import { Shape2dPlugin } from "../Shape2d/Shape2d.plugin";

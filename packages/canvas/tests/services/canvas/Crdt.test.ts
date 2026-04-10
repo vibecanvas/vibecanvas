@@ -1,5 +1,5 @@
 import { Repo, type DocHandle, type PeerId } from "@automerge/automerge-repo";
-import type { TCanvasDoc, TElement, TGroup, TImageData } from "@vibecanvas/shell/automerge/index";
+import type { TCanvasDoc, TElement, TGroup, TImageData } from "@vibecanvas/service-automerge/types/canvas-doc";
 import { describe, expect, test } from "vitest";
 import { Crdt } from "../../../src/services/canvas/crdt";
 
@@ -231,5 +231,23 @@ describe("Crdt", () => {
     expect(doc!.elements[elementB.id]).toEqual(elementB);
     expect(doc!.groups[groupA.id]).toEqual(groupA);
     expect(doc!.groups[groupB.id]).toBeUndefined();
+  });
+
+  test("marks own change events so scene reload can ignore local writes", async () => {
+    const handle = await createLocalHandle();
+    const crdt = new Crdt(handle);
+    const consumedStates: boolean[] = [];
+
+    handle.on("change", () => {
+      consumedStates.push(crdt.consumePendingLocalChangeEvent());
+    });
+
+    crdt.patch({
+      elements: [createImageElement()],
+      groups: [],
+    });
+
+    expect(consumedStates).toEqual([true]);
+    expect(crdt.consumePendingLocalChangeEvent()).toBe(false);
   });
 });

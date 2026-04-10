@@ -8,6 +8,23 @@ if (!newVersion) {
   process.exit(1);
 }
 
+function isValidVersion(version: string): boolean {
+  const stablePattern = /^\d+\.\d+\.\d+$/;
+  const betaPattern = /^\d+\.\d+\.\d+-beta\.\d+$/;
+  const nightlyPattern = /^\d+\.\d+\.\d+-nightly\.(\d+|\d{8})$/;
+
+  return stablePattern.test(version) || betaPattern.test(version) || nightlyPattern.test(version);
+}
+
+if (!isValidVersion(newVersion)) {
+  console.error(`Invalid version: ${newVersion}`);
+  console.error("Allowed formats:");
+  console.error("- stable:  0.3.0");
+  console.error("- beta:    0.3.0-beta.1");
+  console.error("- nightly: 0.3.0-nightly.20260409");
+  process.exit(1);
+}
+
 const rootDir = join(import.meta.dir, "..");
 const dirsToScan = ["apps", "packages"];
 

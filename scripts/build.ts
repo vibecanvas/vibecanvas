@@ -30,11 +30,11 @@ import { inferReleaseChannelFromVersion, readWrapperVersion, type TReleaseChanne
 
 const __dirname = path.dirname(new URL(import.meta.url).pathname)
 const rootDir = path.join(__dirname, "..")
-const serverDir = path.join(rootDir, "apps/server")
+const cliDir = path.join(rootDir, "apps/cli")
 const frontendDir = path.join(rootDir, "apps/frontend")
 const wrapperDir = path.join(rootDir, "apps/vibecanvas")
 const wrapperBinPath = path.join(wrapperDir, "bin/vibecanvas")
-const shellMigrationsDir = path.join(rootDir, "packages/imperative-shell/database-migrations")
+const serviceDbMigrationsDir = path.join(rootDir, "packages/service-db/database-migrations")
 const forbiddenBinaryMarkers = [
   "wasm_bindgen_output/nodejs/automerge_wasm_bg.wasm",
 ] as const
@@ -155,7 +155,7 @@ async function assertPortableBinary(binaryPath: string): Promise<void> {
 
 async function bundleSpaAssets(): Promise<string[]> {
   const frontendDistDir = path.join(frontendDir, "dist")
-  const publicDir = path.join(serverDir, "public")
+  const publicDir = path.join(cliDir, "public")
 
   // Build frontend using Vite (SolidJS needs Vite's plugin system)
   console.log("   Running frontend build...")
@@ -219,7 +219,7 @@ export function getSpaFallbackAsset(): string | null {
 }
 `
 
-  await Bun.write(path.join(serverDir, "embedded-assets.ts"), embeddedAssetsCode)
+  await Bun.write(path.join(cliDir, "embedded-assets.ts"), embeddedAssetsCode)
   console.log(`   Generated embedded-assets.ts (${bundledFiles.length} files)`)
 }
 
@@ -227,8 +227,8 @@ async function collectMigrationFiles(): Promise<string[]> {
   const migrationFiles: string[] = []
   const migrationGlob = new Glob("**/*")
 
-  for await (const file of migrationGlob.scan(shellMigrationsDir)) {
-    const filePath = path.join(shellMigrationsDir, file)
+  for await (const file of migrationGlob.scan(serviceDbMigrationsDir)) {
+    const filePath = path.join(serviceDbMigrationsDir, file)
     const stat = await Bun.file(filePath).stat()
     if (stat.isFile()) {
       migrationFiles.push(file)
@@ -241,7 +241,7 @@ async function collectMigrationFiles(): Promise<string[]> {
 
 async function generateEmbeddedMigrations(migrationFiles: string[]): Promise<void> {
   const imports = migrationFiles
-    .map((f, i) => `import migration${i} from '../../database-migrations/${f}' with { type: "file" };`)
+    .map((f, i) => `import migration${i} from '../database-migrations/${f}' with { type: "file" };`)
     .join("\n");
 
   const embeddedMigrationsCode = `// Auto-generated file - do not edit
@@ -260,7 +260,7 @@ export function getEmbeddedMigrationPath(relativePath: string): string | null {
 }
 `
 
-  await Bun.write(path.join(rootDir, "packages/imperative-shell/src/database/embedded-migrations.ts"), embeddedMigrationsCode)
+  await Bun.write(path.join(rootDir, "packages/service-db/src/embedded-migrations.ts"), embeddedMigrationsCode)
   console.log(`   Generated embedded-migrations.ts (${migrationFiles.length} files)`)
 }
 
@@ -269,7 +269,7 @@ export function getEmbeddedMigrationPath(relativePath: string): string | null {
 // ============================================================
 
 async function main() {
-  const automergeResolvedEntrypoint = Bun.resolveSync("@automerge/automerge", path.join(serverDir, "src/main.ts"))
+  const automergeResolvedEntrypoint = Bun.resolveSync("@automerge/automerge", path.join(frontendDir, "package.json"))
   const automergeBase64Entrypoint = path.join(path.dirname(automergeResolvedEntrypoint), "fullfat_base64.js")
   if (!existsSync(automergeBase64Entrypoint)) {
     throw new Error(`Automerge base64 entrypoint not found: ${automergeBase64Entrypoint}`)
@@ -289,6 +289,10 @@ async function main() {
   const skipWrapperFlag = process.argv.includes("--skip-wrapper")
   const inferredChannel = inferReleaseChannelFromVersion(version)
   const channel = parseChannelArg(process.argv, inferredChannel)
+
+  process.env.VIBECANVAS_VERSION = version
+  process.env.VIBECANVAS_COMPILED = "true"
+  process.env.VIBECANVAS_CHANNEL = channel
 
   // Filter targets
   const filteredTargets = singleFlag
@@ -342,9 +346,9 @@ async function main() {
     try {
       const outputPath = `${distDir}/bin/vibecanvas${target.os === "win32" ? ".exe" : ""}`
 
-      // Compile server with Bun using build-time constants via --define
+      // Compile cli with Bun using build-time constants via --define
       const result = await Bun.build({
-        entrypoints: [`${rootDir}/apps/server/src/main.ts`],
+        entrypoints: [`${rootDir}/apps/cli/src/main.ts`],
         compile: {
           target: bunTarget as any,
           outfile: outputPath,

@@ -1,5 +1,6 @@
+import type { TOrpcSafeClient } from "@vibecanvas/orpc-client";
 import { createMemo, createSignal } from "solid-js";
-import type { TTerminalSafeClient, TPty } from "../../services/canvas/interface";
+import type { TPty } from "../../services/canvas/interface";
 import {
   clearTerminalSessionState,
   createPtyService,
@@ -14,7 +15,7 @@ type TCreateTerminalContextArgs = {
   terminalKey: string;
   workingDirectory: string;
   title?: string;
-  safeClient: TTerminalSafeClient;
+  apiService: TOrpcSafeClient;
 };
 
 const DEFAULT_ROWS = 24;
@@ -26,6 +27,9 @@ const FALLBACK_CELL_HEIGHT = 18;
 // Temporary flag while terminal lifecycle sizing is still being tuned.
 const ENABLE_TERMINAL_LIFECYCLE_DEBUG_LOGS = false;
 const terminalLogicOwnership = new Map<string, symbol>();
+const RECONNECT_BASE_DELAY_MS = 400;
+const RECONNECT_MAX_DELAY_MS = 10_000;
+const RECONNECT_JITTER_RATIO = 0.2;
 
 function debugTerminalLifecycle(message: string, payload?: Record<string, unknown>) {
   if (!ENABLE_TERMINAL_LIFECYCLE_DEBUG_LOGS) return;
@@ -90,7 +94,7 @@ function calculateTerminalSize(
 
 export function createTerminalContextLogic(args: TCreateTerminalContextArgs) {
   const logicInstanceToken = Symbol(args.terminalKey);
-  const ptyService = createPtyService(args.safeClient);
+  const ptyService = createPtyService(args.apiService);
   const [status, setStatus] = createSignal<"idle" | "connecting" | "connected" | "error">("idle");
   const [errorMessage, setErrorMessage] = createSignal<string | null>(null);
   const [pty, setPty] = createSignal<TPty | null>(null);
@@ -102,12 +106,15 @@ export function createTerminalContextLogic(args: TCreateTerminalContextArgs) {
   let resizeObserver: ResizeObserver | null = null;
   let resizeTimer: ReturnType<typeof setTimeout> | null = null;
   let sizePushTimer: ReturnType<typeof setTimeout> | null = null;
+  let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
   let term: TGhosttyTerminalInstance | null = null;
   let connection: ReturnType<typeof ptyService.connect> | null = null;
   let pendingInputBuffer = "";
   let hasAuthoritativeCursor = false;
   let activeMountSessionId = 0;
   let bootstrappedMountSessionId = 0;
+  let reconnectAttempt = 0;
+  let shouldReconnect = true;
   let suppressedResizeSourceTerm: TGhosttyTerminalInstance | null = null;
 
   const terminalTitle = createMemo(() => pty()?.title ?? args.title ?? "Terminal");
@@ -132,8 +139,24 @@ export function createTerminalContextLogic(args: TCreateTerminalContextArgs) {
     resizeObserver = null;
     if (resizeTimer) clearTimeout(resizeTimer);
     if (sizePushTimer) clearTimeout(sizePushTimer);
+    if (reconnectTimer) clearTimeout(reconnectTimer);
     resizeTimer = null;
     sizePushTimer = null;
+    reconnectTimer = null;
+  };
+
+  const clearReconnectTimer = () => {
+    if (!reconnectTimer) return;
+    clearTimeout(reconnectTimer);
+    reconnectTimer = null;
+  };
+
+  const getReconnectDelay = (attempt: number) => {
+    const unclampedDelay = RECONNECT_BASE_DELAY_MS * (2 ** Math.max(0, attempt));
+    const baseDelay = Math.min(RECONNECT_MAX_DELAY_MS, unclampedDelay);
+    const jitterWindow = Math.floor(baseDelay * RECONNECT_JITTER_RATIO);
+    const jitter = jitterWindow > 0 ? Math.floor(Math.random() * (jitterWindow + 1)) : 0;
+    return Math.max(0, baseDelay + jitter);
   };
 
   const syncSizeToBackendNow = async (ptyID: string, rows: number, cols: number, reason: string) => {
@@ -209,14 +232,54 @@ export function createTerminalContextLogic(args: TCreateTerminalContextArgs) {
     debugTerminalLifecycle("persisted terminal session state", nextState);
   };
 
-  const closeConnection = () => {
+  const closeConnection = (options?: { intentional?: boolean }) => {
+    if (options?.intentional) {
+      shouldReconnect = false;
+      clearReconnectTimer();
+    }
     if (!connection) return;
     debugTerminalLifecycle("closing websocket connection", {
       ptyID: pty()?.id ?? null,
       readyState: connection.socket.readyState,
+      intentional: options?.intentional ?? false,
     });
     connection.close();
     connection = null;
+  };
+
+  const scheduleReconnect = (mountSessionId: number, reason: string) => {
+    const current = pty();
+    if (!current) return;
+    if (!canControlTerminal(mountSessionId)) return;
+    if (!shouldReconnect) return;
+    if (reconnectTimer) return;
+
+    const attempt = reconnectAttempt;
+    const delayMs = getReconnectDelay(attempt);
+    reconnectAttempt += 1;
+    setStatus("connecting");
+    setErrorMessage(`Terminal disconnected. Reconnecting in ${Math.ceil(delayMs / 1000)}s…`);
+    debugTerminalLifecycle("scheduled websocket reconnect", {
+      ptyID: current.id,
+      mountSessionId,
+      attempt,
+      delayMs,
+      reason,
+      cursor: cursor(),
+    });
+
+    reconnectTimer = setTimeout(async () => {
+      reconnectTimer = null;
+      if (!canControlTerminal(mountSessionId)) return;
+      if (!shouldReconnect) return;
+
+      const reconnectSize = getAuthoritativeTerminalSize();
+      setSize({ rows: reconnectSize.rows, cols: reconnectSize.cols });
+      await syncSizeToBackendNow(current.id, reconnectSize.rows, reconnectSize.cols, `reconnect-${reason}`);
+      if (!canControlTerminal(mountSessionId)) return;
+      if (!shouldReconnect) return;
+      connect(current.id, cursor(), mountSessionId);
+    }, delayMs);
   };
 
   const flushPendingInput = () => {
@@ -232,7 +295,7 @@ export function createTerminalContextLogic(args: TCreateTerminalContextArgs) {
       status: status(),
     });
     persistState();
-    closeConnection();
+    closeConnection({ intentional: true });
     setErrorMessage(null);
     setStatus("idle");
   };
@@ -366,7 +429,9 @@ export function createTerminalContextLogic(args: TCreateTerminalContextArgs) {
 
   const connect = (ptyID: string, cursorValue: number, mountSessionId: number) => {
     if (!canControlTerminal(mountSessionId)) return;
-    closeConnection();
+    closeConnection({ intentional: true });
+    shouldReconnect = true;
+    clearReconnectTimer();
     setStatus("connecting");
     debugTerminalLifecycle("connecting to pty websocket", {
       ptyID,
@@ -375,30 +440,50 @@ export function createTerminalContextLogic(args: TCreateTerminalContextArgs) {
       cols: term?.cols ?? size().cols,
     });
 
-    connection = ptyService.connect({
+    const nextConnection = ptyService.connect({
       workingDirectory: args.workingDirectory,
       ptyID,
       cursor: cursorValue,
       onOpen: () => {
         if (!canControlTerminal(mountSessionId)) return;
+        if (connection !== nextConnection) return;
+        reconnectAttempt = 0;
         setStatus("connected");
         setErrorMessage(null);
         flushPendingInput();
         debugTerminalLifecycle("pty websocket opened", { ptyID, cursor: cursorValue });
       },
-      onClose: () => {
+      onClose: (event) => {
         if (!canControlTerminal(mountSessionId)) return;
-        setStatus("idle");
-        debugTerminalLifecycle("pty websocket closed cleanly", { ptyID });
+        if (connection === nextConnection) {
+          connection = null;
+        }
+        debugTerminalLifecycle("pty websocket closed", {
+          ptyID,
+          code: event.code,
+          reason: event.reason,
+          wasClean: event.wasClean,
+          shouldReconnect,
+          isActiveConnection: connection === nextConnection,
+        });
+        if (!shouldReconnect) {
+          setStatus("idle");
+          return;
+        }
+        if (connection && connection !== nextConnection) return;
+        scheduleReconnect(mountSessionId, `close-${event.code}`);
       },
       onError: () => {
         if (!canControlTerminal(mountSessionId)) return;
+        if (connection && connection !== nextConnection) return;
         setStatus("error");
-        setErrorMessage("Terminal stream failed");
-        debugTerminalLifecycle("pty websocket error", { ptyID });
+        setErrorMessage("Terminal stream failed. Retrying…");
+        debugTerminalLifecycle("pty websocket error", { ptyID, shouldReconnect });
+        scheduleReconnect(mountSessionId, "error");
       },
       onMessage: (event) => {
         if (!canControlTerminal(mountSessionId)) return;
+        if (connection !== nextConnection) return;
         if (!term) return;
 
         if (event.data instanceof ArrayBuffer) {
@@ -408,6 +493,7 @@ export function createTerminalContextLogic(args: TCreateTerminalContextArgs) {
 
         if (event.data instanceof Blob) {
           void asArrayBufferFromBlob(event.data).then((arrayBuffer) => {
+            if (connection !== nextConnection) return;
             handleBinaryFrame(arrayBuffer);
           });
           return;
@@ -428,15 +514,14 @@ export function createTerminalContextLogic(args: TCreateTerminalContextArgs) {
       },
     });
 
-    connection.socket.addEventListener("close", (event) => {
+    nextConnection.socket.addEventListener("close", (event) => {
       if (!canControlTerminal(mountSessionId)) return;
-      if (event.code !== 1000) {
-        setErrorMessage(`Terminal disconnected (${event.code}${event.reason ? `: ${event.reason}` : ""})`);
-      }
       if (event.code !== 1000) {
         console.warn("[terminal] websocket closed", { code: event.code, reason: event.reason });
       }
     });
+
+    connection = nextConnection;
   };
 
   const ensurePty = async (mountSessionId: number) => {
@@ -553,7 +638,7 @@ export function createTerminalContextLogic(args: TCreateTerminalContextArgs) {
     const current = pty();
     if (!current) return;
 
-    closeConnection();
+    closeConnection({ intentional: true });
     await ptyService.remove(args.workingDirectory, current.id);
     clearTerminalSessionState(args.terminalKey);
     term?.clear();
@@ -566,8 +651,9 @@ export function createTerminalContextLogic(args: TCreateTerminalContextArgs) {
     activeMountSessionId += 1;
     const mountSessionId = activeMountSessionId;
     bootstrappedMountSessionId = 0;
+    shouldReconnect = true;
     resetMountTimersAndObservers();
-    closeConnection();
+    closeConnection({ intentional: true });
     term = nextTerm;
     terminalRootRef = root;
     terminalHostRef = host;
@@ -708,7 +794,7 @@ export function createTerminalContextLogic(args: TCreateTerminalContextArgs) {
       status: status(),
     });
     persistState();
-    closeConnection();
+    closeConnection({ intentional: true });
     resetMountTimersAndObservers();
     term = null;
     terminalRootRef = undefined;

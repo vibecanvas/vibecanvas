@@ -6,7 +6,7 @@ import type { History } from "../../services/canvas/History";
 import type { IState, TCloneImage, TDeleteImage, TFileCapability, TFiletreeCapability, TTerminalCapability, TUploadImage } from '../../services/canvas/interface';
 import type { AsyncParallelHook, SyncExitHook, SyncHook } from '../../tapable';
 import type { Crdt } from "../../services/canvas/crdt";
-import type { TElement, TGroup } from "@vibecanvas/shell/automerge/index";
+import type { TElement, TGroup } from "@vibecanvas/service-automerge/types/canvas-doc";
 
 export type TRenderOrderSnapshot = {
   parentId: string;
@@ -70,24 +70,24 @@ export interface IPluginContext {
     toElement?: (node: Konva.Shape) => TElement | null;
     toGroup?: (node: Konva.Group) => TGroup | null;
     getReorderBundle?: (node: Konva.Group | Konva.Shape) => Array<Konva.Group | Konva.Shape>;
-     uploadImage?: TUploadImage;
-      cloneImage?: TCloneImage;
-       deleteImage?: TDeleteImage;
-       terminal?: TTerminalCapability;
-       filetree?: TFiletreeCapability;
-       file?: TFileCapability;
-       notification?: {
-        showSuccess(title: string, description?: string): void;
-        showError(title: string, description?: string): void;
-       showInfo(title: string, description?: string): void;
-     };
-     hostedWidgets?: {
-       isHostedNode: (node: Konva.Node | null | undefined) => boolean;
-       syncNode: (node: Konva.Shape) => void;
-       removeNode: (id: string) => void;
-       syncDomOrder: () => void;
-     };
-     renderOrder?: {
+    uploadImage?: TUploadImage;
+    cloneImage?: TCloneImage;
+    deleteImage?: TDeleteImage;
+    terminal?: TTerminalCapability;
+    filetree?: TFiletreeCapability;
+    file?: TFileCapability;
+    notification?: {
+      showSuccess(title: string, description?: string): void;
+      showError(title: string, description?: string): void;
+      showInfo(title: string, description?: string): void;
+    };
+    hostedWidgets?: {
+      isHostedNode: (node: Konva.Node | null | undefined) => boolean;
+      syncNode: (node: Konva.Shape) => void;
+      removeNode: (id: string) => void;
+      syncDomOrder: () => void;
+    };
+    renderOrder?: {
       getNodeZIndex: (node: Konva.Group | Konva.Shape) => string;
       setNodeZIndex: (node: Konva.Group | Konva.Shape, zIndex: string) => void;
       getOrderBundle: (node: Konva.Group | Konva.Shape) => Array<Konva.Group | Konva.Shape>;

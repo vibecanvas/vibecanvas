@@ -1,19 +1,63 @@
+import type { DocHandleChangePayload } from "@automerge/automerge-repo";
 import Konva from "konva";
-import type { TElement, TGroup } from "@vibecanvas/shell/automerge/types/canvas-doc";
+import type { TElement, TGroup } from "@vibecanvas/service-automerge/types/canvas-doc";
 import type { IPlugin, IPluginContext } from "../shared/interface";
 
 type TMountedGroups = Map<string, Konva.Group>;
+type TSceneNode = Konva.Group | Konva.Shape;
+type TSceneStateSnapshot = {
+  selectionIds: string[];
+  focusedId: string | null;
+  editingTextId: string | null;
+  editingShape1dId: string | null;
+};
 
 const CLEAN_ON_LOAD = true;
 
 export class SceneHydratorPlugin implements IPlugin {
   apply(context: IPluginContext): void {
+    let isReloading = false;
+    let reloadQueued = false;
+
+    const reloadCanvas = async () => {
+      if (isReloading) {
+        reloadQueued = true;
+        return;
+      }
+
+      isReloading = true;
+
+      try {
+        this.reloadCanvas(context);
+      } finally {
+        isReloading = false;
+      }
+
+      if (reloadQueued) {
+        reloadQueued = false;
+        await reloadCanvas();
+      }
+    };
+
+    const onDocChange = async (_payload: DocHandleChangePayload<unknown>) => {
+      if (context.crdt.consumePendingLocalChangeEvent()) {
+        return;
+      }
+
+      await reloadCanvas();
+    };
+
     context.hooks.initAsync.tapPromise(async () => {
-      await this.loadCanvas(context);
+      this.loadCanvas(context);
+      context.crdt.docHandle.on("change", onDocChange as (payload: DocHandleChangePayload<any>) => void);
+    });
+
+    context.hooks.destroy.tap(() => {
+      context.crdt.docHandle.off("change", onDocChange as (payload: DocHandleChangePayload<any>) => void);
     });
   }
 
-  async loadCanvas(context: IPluginContext) {
+  loadCanvas(context: IPluginContext) {
     const doc = context.crdt.docHandle.doc();
     const groupsById = new Map(Object.entries(doc.groups));
     const elementsById = new Map(Object.entries(doc.elements));
@@ -40,8 +84,51 @@ export class SceneHydratorPlugin implements IPlugin {
     });
 
     this.applyPersistedOrdering(context, context.staticForegroundLayer);
+    context.stage.batchDraw();
   }
 
+  private reloadCanvas(context: IPluginContext) {
+    const snapshot = this.captureSceneState(context);
+
+    context.staticForegroundLayer.destroyChildren();
+    this.loadCanvas(context);
+    this.restoreSceneState(context, snapshot);
+  }
+
+  private captureSceneState(context: IPluginContext): TSceneStateSnapshot {
+    return {
+      selectionIds: context.state.selection.map((node) => node.id()),
+      focusedId: context.state.focusedId,
+      editingTextId: context.state.editingTextId,
+      editingShape1dId: context.state.editingShape1dId,
+    };
+  }
+
+  private restoreSceneState(context: IPluginContext, snapshot: TSceneStateSnapshot) {
+    const selection = snapshot.selectionIds
+      .map((id) => this.findSceneNodeById(context, id))
+      .filter((node): node is TSceneNode => node !== null);
+
+    context.setState("selection", selection);
+    context.setState("focusedId", this.findSceneNodeById(context, snapshot.focusedId)?.id() ?? null);
+    context.setState("editingTextId", this.findSceneNodeById(context, snapshot.editingTextId)?.id() ?? null);
+    context.setState("editingShape1dId", this.findSceneNodeById(context, snapshot.editingShape1dId)?.id() ?? null);
+  }
+
+  private findSceneNodeById(context: IPluginContext, id: string | null): TSceneNode | null {
+    if (!id) return null;
+
+    const node = context.staticForegroundLayer.findOne((candidate: Konva.Node) => {
+      return (candidate instanceof Konva.Group || candidate instanceof Konva.Shape) && candidate.id() === id;
+    });
+
+    if (!(node instanceof Konva.Group) && !(node instanceof Konva.Shape)) {
+      return null;
+    }
+
+    return node;
+  }
+ 
   private applyPersistedOrdering(context: IPluginContext, parent: Konva.Layer | Konva.Group) {
     context.capabilities.renderOrder?.sortChildren(parent);
 

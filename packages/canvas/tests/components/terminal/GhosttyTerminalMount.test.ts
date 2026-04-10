@@ -78,23 +78,25 @@ import { GhosttyTerminalMount } from "../../../src/components/terminal/GhosttyTe
 type TClipboardEventInit = {
   text?: string;
   types?: string[];
-  items?: Array<{ kind?: string; type?: string }>;
-  files?: unknown[];
+  items?: Array<{ kind?: string; type?: string; getAsFile?: () => File | null }>;
+  files?: File[];
 };
 
 async function flushTerminalMount() {
   await Promise.resolve();
   await Promise.resolve();
   await Promise.resolve();
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  await Promise.resolve();
 }
 
-async function mountTerminal(args?: { onData?: (data: string) => void }) {
+async function mountTerminal(args?: { onData?: (data: string) => void; onUploadClipboardImage?: (file: File | Blob) => Promise<string> }) {
   const container = document.createElement("div");
   document.body.appendChild(container);
 
   const onData = args?.onData ?? vi.fn();
   const onReady = vi.fn();
-  const dispose = render(() => GhosttyTerminalMount({ onReady, onData }), container);
+  const dispose = render(() => GhosttyTerminalMount({ onReady, onData, onUploadClipboardImage: args?.onUploadClipboardImage }), container);
   await flushTerminalMount();
 
   const host = container.querySelector("[data-ghostty-terminal-host='true']") as HTMLDivElement | null;
@@ -158,30 +160,37 @@ afterEach(() => {
 });
 
 describe("GhosttyTerminalMount", () => {
-  test("emits ctrl-v input for direct non-text paste", async () => {
-    const mounted = await mountTerminal();
+  test("uploads direct image paste and inserts shell-escaped path", async () => {
+    const onUploadClipboardImage = vi.fn().mockResolvedValue("/tmp/demo/it's here.png");
+    const mounted = await mountTerminal({ onUploadClipboardImage });
 
+    const file = new File([new Uint8Array([1, 2, 3])], "image.png", { type: "image/png" });
     const event = dispatchPaste(mounted.textarea, {
       types: ["Files", "image/png"],
-      items: [{ kind: "file", type: "image/png" }],
-      files: [{ name: "image.png" }],
+      items: [{ kind: "file", type: "image/png", getAsFile: () => file }],
+      files: [file],
     });
 
+    await flushTerminalMount();
+
     expect(event.defaultPrevented).toBe(true);
-    expect(mounted.term.input).toHaveBeenCalledWith("\x16", true);
-    expect(mounted.term.paste).not.toHaveBeenCalled();
+    expect(onUploadClipboardImage).toHaveBeenCalledWith(file);
+    expect(mounted.term.paste).toHaveBeenCalledWith("'/tmp/demo/it'\\''s here.png' ");
+    expect(mounted.term.input).not.toHaveBeenCalled();
 
     mounted.dispose();
   });
 
-  test("uses clipboard fallback to emit ctrl-v for non-text paste", async () => {
-    const mounted = await mountTerminal();
+  test("uses clipboard fallback to upload image and insert shell-escaped path", async () => {
+    const onUploadClipboardImage = vi.fn().mockResolvedValue("/tmp/demo/folder with spaces/image.png");
+    const mounted = await mountTerminal({ onUploadClipboardImage });
 
+    const blob = new Blob([new Uint8Array([1, 2, 3])], { type: "image/png" });
     Object.defineProperty(navigator, "clipboard", {
       configurable: true,
       value: {
         readText: vi.fn().mockResolvedValue(""),
-        read: vi.fn().mockResolvedValue([{ types: ["image/png"] }]),
+        read: vi.fn().mockResolvedValue([{ types: ["image/png"], getType: vi.fn().mockResolvedValue(blob) }]),
       },
     });
 
@@ -194,6 +203,24 @@ describe("GhosttyTerminalMount", () => {
     await flushTerminalMount();
 
     expect(event.defaultPrevented).toBe(false);
+    expect(onUploadClipboardImage).toHaveBeenCalledWith(blob);
+    expect(mounted.term.paste).toHaveBeenCalledWith("'/tmp/demo/folder with spaces/image.png' ");
+    expect(mounted.term.input).not.toHaveBeenCalled();
+
+    mounted.dispose();
+  });
+
+  test("falls back to ctrl-v for unsupported non-text paste", async () => {
+    const mounted = await mountTerminal();
+
+    const file = new File([new Uint8Array([1, 2, 3])], "doc.pdf", { type: "application/pdf" });
+    const event = dispatchPaste(mounted.textarea, {
+      types: ["Files", "application/pdf"],
+      items: [{ kind: "file", type: "application/pdf", getAsFile: () => file }],
+      files: [file],
+    });
+
+    expect(event.defaultPrevented).toBe(true);
     expect(mounted.term.input).toHaveBeenCalledWith("\x16", true);
     expect(mounted.term.paste).not.toHaveBeenCalled();
 

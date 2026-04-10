@@ -2,7 +2,7 @@ import Konva from "konva";
 import { mkdir, writeFile } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
 import type { DocHandle } from "@automerge/automerge-repo";
-import type { TCanvasDoc } from "@vibecanvas/shell/automerge/index";
+import type { TCanvasDoc } from "@vibecanvas/service-automerge/types/canvas-doc";
 import { createRoot } from "solid-js";
 import { vi } from "vitest";
 import type { IPlugin, IPluginContext } from "../src/plugins";
@@ -23,8 +23,8 @@ export function ensureResizeObserver() {
   }
 
   class MockResizeObserver {
-    observe() {}
-    disconnect() {}
+    observe() { }
+    disconnect() { }
   }
 
   vi.stubGlobal("ResizeObserver", MockResizeObserver);
@@ -87,13 +87,35 @@ export function createMockDocHandle(overrides?: Partial<TCanvasDoc>): DocHandle<
     groups: {},
     ...overrides,
   };
+  const changeListeners = new Set<(payload: { handle: DocHandle<TCanvasDoc>; doc: TCanvasDoc; patches: unknown[]; patchInfo: unknown }) => void>();
 
-  return {
+  const emitChange = () => {
+    const payload = {
+      handle: docHandle as DocHandle<TCanvasDoc>,
+      doc: docState,
+      patches: [],
+      patchInfo: { before: null, after: null, source: "change" },
+    };
+    changeListeners.forEach((listener) => listener(payload));
+  };
+
+  const docHandle = {
     doc: () => docState,
-    change: (callback) => {
+    change: (callback: (doc: TCanvasDoc) => void) => {
       callback(docState);
     },
-  } as DocHandle<TCanvasDoc>;
+    on: (event: string, callback: (payload: { handle: DocHandle<TCanvasDoc>; doc: TCanvasDoc; patches: unknown[]; patchInfo: unknown }) => void) => {
+      if (event === "change") changeListeners.add(callback);
+      return docHandle;
+    },
+    off: (event: string, callback: (payload: { handle: DocHandle<TCanvasDoc>; doc: TCanvasDoc; patches: unknown[]; patchInfo: unknown }) => void) => {
+      if (event === "change") changeListeners.delete(callback);
+      return docHandle;
+    },
+    __emitChange: emitChange,
+  };
+
+  return docHandle as DocHandle<TCanvasDoc>;
 }
 
 export function createTestContainer(args?: { width?: number; height?: number }) {
@@ -116,7 +138,7 @@ export async function createCanvasTestHarness(args: {
   width?: number;
   height?: number;
   appCapabilities?: Pick<IPluginContext["capabilities"], "uploadImage" | "cloneImage" | "deleteImage" | "notification" | "terminal" | "filetree" | "file">;
-}) : Promise<TCanvasTestHarness> {
+}): Promise<TCanvasTestHarness> {
   ensureResizeObserver();
   ensureRangeGeometryMocks();
 

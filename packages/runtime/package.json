@@ -1,0 +1,16 @@
+{
+  "name": "@vibecanvas/runtime",
+  "version": "0.3.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./*": "./src/*"
+  },
+  "scripts": {
+    "test": "bun test"
+  },
+  "dependencies": {
+    "@vibecanvas/tapable": "workspace:*"
+  }
+}

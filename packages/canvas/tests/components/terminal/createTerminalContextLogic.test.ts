@@ -2,7 +2,7 @@ import { createRoot } from "solid-js";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { createTerminalContextLogic } from "../../../src/components/terminal/createTerminalContextLogic";
 import type { TGhosttyTerminalInstance } from "../../../src/components/terminal/GhosttyTerminalMount";
-import type { TTerminalSafeClient } from "../../../src/services/canvas/interface";
+import type { TOrpcSafeClient } from "@vibecanvas/orpc-client";
 
 const storage = new Map<string, string>();
 
@@ -92,7 +92,7 @@ function createTerminalSafeClientMock(overrides?: {
   onGet?: () => void;
   onUpdate?: (size: { rows: number; cols: number }) => void;
 }) {
-  const safeClient: TTerminalSafeClient = {
+  const safeClient: TOrpcSafeClient = {
     api: {
       pty: {
         list: vi.fn().mockResolvedValue([null, []]),
@@ -195,7 +195,7 @@ describe("createTerminalContextLogic", () => {
         terminalKey: "terminal-1",
         workingDirectory: ".",
         title: "Terminal",
-        safeClient,
+        apiService: safeClient,
       });
       return rootDispose;
     });
@@ -266,7 +266,7 @@ describe("createTerminalContextLogic", () => {
         terminalKey: "terminal-1",
         workingDirectory: ".",
         title: "Terminal",
-        safeClient,
+        apiService: safeClient,
       });
       return rootDispose;
     });
@@ -323,7 +323,7 @@ describe("createTerminalContextLogic", () => {
         terminalKey: "terminal-1",
         workingDirectory: ".",
         title: "Terminal",
-        safeClient,
+        apiService: safeClient,
       });
       return rootDispose;
     });
@@ -394,7 +394,7 @@ describe("createTerminalContextLogic", () => {
         terminalKey: "terminal-1",
         workingDirectory: ".",
         title: "Terminal",
-        safeClient,
+        apiService: safeClient,
       });
       return rootDispose;
     });
@@ -405,7 +405,7 @@ describe("createTerminalContextLogic", () => {
         terminalKey: "terminal-1",
         workingDirectory: ".",
         title: "Terminal",
-        safeClient,
+        apiService: safeClient,
       });
       return rootDispose;
     });

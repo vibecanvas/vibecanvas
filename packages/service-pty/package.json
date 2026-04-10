@@ -1,0 +1,17 @@
+{
+  "name": "@vibecanvas/service-pty",
+  "version": "0.3.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/IPtyService.ts",
+    "./*": "./src/*.ts"
+  },
+  "scripts": {
+    "test": "bun test"
+  },
+  "dependencies": {
+    "@vibecanvas/runtime": "workspace:*",
+    "bun-pty": "^0.4.8"
+  }
+}

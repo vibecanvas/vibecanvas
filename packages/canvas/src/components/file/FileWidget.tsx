@@ -1,5 +1,6 @@
+import type { TOrpcSafeClient } from "@vibecanvas/orpc-client";
 import { createEffect, createMemo, createResource, createSignal, Match, onCleanup, onMount, Show, Suspense, Switch, lazy } from "solid-js";
-import type { TFileSafeClient, THostedWidgetChrome, THostedWidgetElementMap } from "../../services/canvas/interface";
+import type { THostedWidgetChrome, THostedWidgetElementMap } from "../../services/canvas/interface";
 import { getFileName, toDataUrlFromBinaryContent } from "./utils";
 import { useFileContent } from "./useFileContent";
 import { CodeEditor } from "./viewers/CodeEditor";
@@ -12,7 +13,7 @@ const WATCH_KEEPALIVE_INTERVAL_MS = 10_000;
 
 type TFileWidgetProps = {
   element: () => THostedWidgetElementMap["file"];
-  safeClient: TFileSafeClient;
+  apiService: TOrpcSafeClient;
   setWindowChrome?: (chrome: THostedWidgetChrome | null) => void;
   requestInitialSize?: (size: { width: number; height: number }) => void;
 };
@@ -25,12 +26,12 @@ export function FileWidget(props: TFileWidgetProps) {
     () => (["pdf", "audio", "video", "unknown"].includes(renderer()) ? path() : null),
     async (nextPath) => {
       if (!nextPath) return null;
-      const [err, result] = await props.safeClient.api.filesystem.inspect({ query: { path: nextPath } });
+      const [err, result] = await props.apiService.api.filesystem.inspect({ query: { path: nextPath } });
       if (err || !result || "type" in result) return null;
       return result;
     },
   );
-  const { content, loading, error, dirty, saving, setDirty, refetch, save } = useFileContent(props.safeClient, path);
+  const { content, loading, error, dirty, saving, setDirty, refetch, save } = useFileContent(props.apiService, path);
 
   let watchAbort: AbortController | null = null;
   let activeWatchId: string | null = null;
@@ -68,7 +69,7 @@ export function FileWidget(props: TFileWidgetProps) {
     watchAbort?.abort();
     watchAbort = null;
     if (!watchId) return;
-    void props.safeClient.api.filesystem.unwatch({ watchId });
+    void props.apiService.api.filesystem.unwatch({ watchId });
   };
 
   const startWatching = async () => {
@@ -79,7 +80,7 @@ export function FileWidget(props: TFileWidgetProps) {
     watchAbort = abort;
     activeWatchId = watchId;
 
-    const [err, iterator] = await props.safeClient.api.filesystem.watch({ path: path(), watchId }, { signal: abort.signal });
+    const [err, iterator] = await props.apiService.api.filesystem.watch({ path: path(), watchId }, { signal: abort.signal });
     if (err || !iterator || abort.signal.aborted) {
       if (activeWatchId === watchId) {
         activeWatchId = null;
@@ -91,7 +92,7 @@ export function FileWidget(props: TFileWidgetProps) {
 
     keepaliveInterval = setInterval(async () => {
       if (activeWatchId !== watchId || abort.signal.aborted) return;
-      const [keepaliveError, keepaliveResult] = await props.safeClient.api.filesystem.keepaliveWatch({ watchId });
+      const [keepaliveError, keepaliveResult] = await props.apiService.api.filesystem.keepaliveWatch({ watchId });
       if (keepaliveError || !keepaliveResult) {
         if (activeWatchId === watchId) stopWatching();
       }
@@ -119,7 +120,7 @@ export function FileWidget(props: TFileWidgetProps) {
         activeWatchId = null;
         watchAbort = null;
         clearKeepaliveInterval();
-        void props.safeClient.api.filesystem.unwatch({ watchId });
+        void props.apiService.api.filesystem.unwatch({ watchId });
       }
     }
   };

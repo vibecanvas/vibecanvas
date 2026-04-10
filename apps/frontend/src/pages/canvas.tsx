@@ -16,7 +16,7 @@ const CanvasPage: Component<CanvasPageProps> = (props) => {
       canvas={props.canvas}
       image={{
         uploadImage: async ({ base64, format }) => {
-          const [error, result] = await orpcWebsocketService.safeClient.api.file.put({
+          const [error, result] = await orpcWebsocketService.apiService.api.file.put({
             body: {
               base64,
               format,
@@ -30,7 +30,7 @@ const CanvasPage: Component<CanvasPageProps> = (props) => {
           return result;
         },
         cloneImage: async ({ url }) => {
-          const [error, result] = await orpcWebsocketService.safeClient.api.file.clone({
+          const [error, result] = await orpcWebsocketService.apiService.api.file.clone({
             body: { url },
           });
 
@@ -41,7 +41,7 @@ const CanvasPage: Component<CanvasPageProps> = (props) => {
           return result;
         },
         deleteImage: async ({ url }) => {
-          const [error, result] = await orpcWebsocketService.safeClient.api.file.remove({
+          const [error, result] = await orpcWebsocketService.apiService.api.file.remove({
             body: { url },
           });
 
@@ -52,9 +52,9 @@ const CanvasPage: Component<CanvasPageProps> = (props) => {
           return result;
         },
       }}
-      filetree={{ canvasId: props.canvas.id, safeClient: orpcWebsocketService.safeClient }}
-      file={{ safeClient: orpcWebsocketService.safeClient }}
-      terminal={{ safeClient: orpcWebsocketService.safeClient }}
+      filetree={{ canvasId: props.canvas.id, apiService: orpcWebsocketService.apiService }}
+      file={{ apiService: orpcWebsocketService.apiService }}
+      terminal={{ apiService: orpcWebsocketService.apiService }}
       notification={{ showError: showErrorToast, showSuccess: showSuccessToast, showInfo: showToast }}
       store={{ sidebarVisible: () => store.sidebarVisible, onToggleSidebar: () => setStore('sidebarVisible', v => !v) }}
     />

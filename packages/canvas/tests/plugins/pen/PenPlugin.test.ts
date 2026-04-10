@@ -5,7 +5,7 @@ import { PenPlugin, SceneHydratorPlugin, SelectionStyleMenuPlugin, Shape2dPlugin
 import { CanvasMode } from "../../../src/services/canvas/enum";
 import { createPenDataFromStrokePoints, type TStrokePoint } from "../../../src/plugins/shared/pen.math";
 import { createCanvasTestHarness, createMockDocHandle, flushCanvasEffects } from "../../test-setup";
-import type { TElement, TPenData } from "@vibecanvas/shell/automerge/index";
+import type { TElement, TPenData } from "@vibecanvas/service-automerge/types/canvas-doc";
 
 function createPenElement(args?: {
   id?: string;
@@ -229,7 +229,7 @@ describe("PenPlugin", () => {
 
     const penNodes = harness.staticForegroundLayer.find((node: Konva.Node) => node instanceof Konva.Path) as Konva.Path[];
     expect(penNodes).toHaveLength(1);
-    expect(context.state.mode).toBe(CanvasMode.SELECT);
+    expect(context.state.mode).toBe(CanvasMode.DRAW_CREATE);
 
     const docElements = Object.values(docHandle.doc().elements);
     expect(docElements).toHaveLength(1);
@@ -313,6 +313,46 @@ describe("PenPlugin", () => {
     harness.destroy();
   });
 
+  test("pen commit stays in pen draw mode so next stroke can start right away", async () => {
+    let context!: IPluginContext;
+    const docHandle = createMockDocHandle();
+
+    const harness = await createCanvasTestHarness({
+      docHandle,
+      plugins: [new PenPlugin()],
+      initializeScene(ctx) {
+        context = ctx;
+      },
+    });
+
+    drawPenStroke(context, {
+      start: { x: 120, y: 80 },
+      moves: [
+        { x: 160, y: 110, pressure: 0.55 },
+        { x: 210, y: 140, pressure: 0.6 },
+      ],
+    });
+    await flushCanvasEffects();
+
+    expect(context.state.mode).toBe(CanvasMode.DRAW_CREATE);
+
+    withDynamicPointer(context, { x: 320, y: 220 }, () => {
+      context.hooks.pointerDown.call(createPointerEvent("pointerdown", 0.45));
+    });
+    withDynamicPointer(context, { x: 360, y: 245 }, () => {
+      context.hooks.pointerMove.call(createPointerEvent("pointermove", 0.5) as Konva.KonvaEventObject<MouseEvent>);
+    });
+    context.hooks.pointerUp.call(createPointerEvent("pointerup", 0.5));
+    await flushCanvasEffects();
+
+    const docElements = Object.values(docHandle.doc().elements);
+    expect(docElements).toHaveLength(2);
+    expect(docElements.every((element) => element.data.type === "pen")).toBe(true);
+    expect(context.state.mode).toBe(CanvasMode.DRAW_CREATE);
+
+    harness.destroy();
+  });
+
   test("pen pointerUp is not intercepted by Shape2dPlugin draw-create handler", async () => {
     let context!: IPluginContext;
     const docHandle = createMockDocHandle();
@@ -340,7 +380,7 @@ describe("PenPlugin", () => {
     const docElements = Object.values(docHandle.doc().elements);
     expect(docElements).toHaveLength(1);
     expect(docElements[0]?.data.type).toBe("pen");
-    expect(context.state.mode).toBe(CanvasMode.SELECT);
+    expect(context.state.mode).toBe(CanvasMode.DRAW_CREATE);
 
     harness.destroy();
   });
@@ -493,12 +533,14 @@ describe("PenPlugin", () => {
   test("alt-dragging one pen in a top-level multi-selection should clone both selected pens", async () => {
     let context!: IPluginContext;
     const elementA = createPenElement({ id: "pen-a" });
-    const elementB = createPenElement({ id: "pen-b", points: [
-      { x: 320, y: 180, pressure: 0.5 },
-      { x: 350, y: 200, pressure: 0.55 },
-      { x: 385, y: 210, pressure: 0.6 },
-      { x: 420, y: 235, pressure: 0.5 },
-    ] });
+    const elementB = createPenElement({
+      id: "pen-b", points: [
+        { x: 320, y: 180, pressure: 0.5 },
+        { x: 350, y: 200, pressure: 0.55 },
+        { x: 385, y: 210, pressure: 0.6 },
+        { x: 420, y: 235, pressure: 0.5 },
+      ]
+    });
     const docHandle = createMockDocHandle({
       elements: {
         [elementA.id]: structuredClone(elementA),

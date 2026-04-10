@@ -1,5 +1,5 @@
 import Konva from "konva";
-import type { TArrowData, TElement, TLineData } from "@vibecanvas/shell/automerge/index";
+import type { TArrowData, TElement, TLineData } from "@vibecanvas/service-automerge/types/canvas-doc";
 import { describe, expect, test } from "vitest";
 import { CustomEvents } from "../../../src/custom-events";
 import { SceneHydratorPlugin, SelectPlugin, Shape1dPlugin, TransformPlugin, type IPluginContext } from "../../../src/plugins";
@@ -40,21 +40,21 @@ function createShape1dElement(args?: {
   const type = args?.type ?? "line";
   const data: TLineData | TArrowData = type === "arrow"
     ? {
-        type: "arrow",
-        lineType: args?.lineType ?? "curved",
-        points: args?.points ?? [[0, 0], [50, 15], [110, -10], [180, 30]],
-        startBinding: null,
-        endBinding: null,
-        startCap: "dot",
-        endCap: "arrow",
-      }
+      type: "arrow",
+      lineType: args?.lineType ?? "curved",
+      points: args?.points ?? [[0, 0], [50, 15], [110, -10], [180, 30]],
+      startBinding: null,
+      endBinding: null,
+      startCap: "dot",
+      endCap: "arrow",
+    }
     : {
-        type: "line",
-        lineType: args?.lineType ?? "straight",
-        points: args?.points ?? [[0, 0], [150, 40]],
-        startBinding: null,
-        endBinding: null,
-      };
+      type: "line",
+      lineType: args?.lineType ?? "straight",
+      points: args?.points ?? [[0, 0], [150, 40]],
+      startBinding: null,
+      endBinding: null,
+    };
 
   return {
     id: args?.id ?? `${type}-1`,

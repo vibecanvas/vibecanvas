@@ -1,4 +1,4 @@
-import type { TElement } from "@vibecanvas/shell/automerge/index";
+import type { TElement } from "@vibecanvas/service-automerge/types/canvas-doc";
 import Konva from "konva";
 import type { TTool } from "../../components/FloatingCanvasToolbar/toolbar.types";
 import { CustomEvents } from "../../custom-events";
@@ -97,8 +97,6 @@ export class PenPlugin implements IPlugin {
       this.#points = [];
       this.resetPreview();
       this.#draftElementId = null;
-      context.setState("mode", CanvasMode.SELECT);
-      context.hooks.customEvent.call(CustomEvents.TOOL_SELECT, "select");
 
       if (!(node instanceof Konva.Path)) return;
 

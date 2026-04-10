@@ -1,5 +1,5 @@
-import type { TElement, TFileData, TFiletreeData, TTerminalData } from "@vibecanvas/shell/automerge/index";
-import type * as schema from "@vibecanvas/shell/database/schema";
+import type { TOrpcSafeClient } from "@vibecanvas/orpc-client";
+import type { TElement, TFileData, TFiletreeData, TTerminalData } from "@vibecanvas/service-automerge/types/canvas-doc";
 import { Group } from "konva/lib/Group";
 import { Shape, ShapeConfig } from "konva/lib/Shape";
 import { CanvasMode, Theme } from "./enum";
@@ -31,10 +31,6 @@ export type THostedWidgetChrome = {
   title?: string | null;
   subtitle?: string | null;
 };
-
-export type TBackendFiletree = typeof schema.filetrees.$inferSelect;
-
-export type TFiletreeRow = TBackendFiletree;
 
 export type TFiletreeHomeResponse = {
   path: string;
@@ -91,60 +87,29 @@ export type TFileInspectResponse = {
 
 export type TFileReadResponse =
   | {
-      kind: "text";
-      content: string;
-      truncated: boolean;
-    }
+    kind: "text";
+    content: string;
+    truncated: boolean;
+  }
   | {
-      kind: "binary";
-      content: string | null;
-      size: number;
-      mime?: string;
-      encoding?: "base64" | "hex";
-    }
+    kind: "binary";
+    content: string | null;
+    size: number;
+    mime?: string;
+    encoding?: "base64" | "hex";
+  }
   | {
-      kind: "none";
-      size: number;
-    }
+    kind: "none";
+    size: number;
+  }
   | TFiletreeErrorResponse;
 
 export type TFileWriteResponse =
   | {
-      success: true;
-    }
+    success: true;
+  }
   | TFiletreeErrorResponse;
 
-type TFiletreeSafeResult<T> = Promise<[unknown, T | null | undefined]>;
-
-export type TFiletreeSafeClient = {
-  api: {
-    canvas: {
-      get(args: { params: { id: string } }): TFiletreeSafeResult<{
-        canvas: unknown[];
-        fileTrees: TFiletreeRow[];
-      }>;
-    };
-    filetree: {
-      create(args: { canvas_id: string; path?: string; x: number; y: number }): TFiletreeSafeResult<TFiletreeRow>;
-      update(args: { params: { id: string }; body: { title?: string; path?: string; locked?: boolean; glob_pattern?: string | null } }): TFiletreeSafeResult<TFiletreeRow>;
-      remove(args: { params: { id: string } }): TFiletreeSafeResult<void>;
-    };
-    filesystem: {
-      home(): TFiletreeSafeResult<TFiletreeHomeResponse | TFiletreeErrorResponse>;
-      list(args: { query: { path: string; omitFiles?: boolean } }): TFiletreeSafeResult<TFiletreeListResponse | TFiletreeErrorResponse>;
-      files(args: { query: { path: string; glob_pattern?: string; max_depth?: number } }): TFiletreeSafeResult<TFiletreeFilesResponse | TFiletreeErrorResponse>;
-      move(args: { body: { source_path: string; destination_dir_path: string } }): TFiletreeSafeResult<TFiletreeMoveResponse | TFiletreeErrorResponse>;
-      inspect(args: { query: { path: string } }): TFiletreeSafeResult<TFileInspectResponse | TFiletreeErrorResponse>;
-      read(args: { query: { path: string; maxBytes?: number; content?: "text" | "base64" | "binary" | "none" } }): TFiletreeSafeResult<TFileReadResponse>;
-      write(args: { query: { path: string; content: string } }): TFiletreeSafeResult<TFileWriteResponse>;
-      watch(args: { path: string; watchId: string }, options?: { signal?: AbortSignal }): Promise<[unknown, AsyncIterable<TFiletreeWatchEvent> | null | undefined]>;
-      keepaliveWatch(args: { watchId: string }): TFiletreeSafeResult<boolean>;
-      unwatch(args: { watchId: string }): TFiletreeSafeResult<unknown>;
-    };
-  };
-};
-
-export type TFileSafeClient = TFiletreeSafeClient;
 
 export type TPty = {
   id: string;
@@ -182,31 +147,17 @@ export type TPtyUpdateBody = {
   };
 };
 
-type TTerminalSafeResult<T> = Promise<[unknown, T | null | undefined]>;
-
-export type TTerminalSafeClient = {
-  api: {
-    pty: {
-      list(args: { workingDirectory: string }): TTerminalSafeResult<TPty[]>;
-      create(args: { workingDirectory: string; body?: TPtyCreateBody }): TTerminalSafeResult<TPty>;
-      get(args: { workingDirectory: string; path: { ptyID: string } }): TTerminalSafeResult<TPty>;
-      update(args: { workingDirectory: string; path: { ptyID: string }; body: TPtyUpdateBody }): TTerminalSafeResult<TPty>;
-      remove(args: { workingDirectory: string; path: { ptyID: string } }): TTerminalSafeResult<unknown>;
-    };
-  };
-};
-
 export type TTerminalCapability = {
-  safeClient: TTerminalSafeClient;
+  apiService: TOrpcSafeClient;
 };
 
 export type TFiletreeCapability = {
   canvasId: string;
-  safeClient: TFiletreeSafeClient;
+  apiService: TOrpcSafeClient;
 };
 
 export type TFileCapability = {
-  safeClient: TFileSafeClient;
+  apiService: TOrpcSafeClient;
 };
 
 export interface IState {

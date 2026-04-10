@@ -1,0 +1,16 @@
+{
+  "name": "@vibecanvas/service-event-publisher",
+  "version": "0.3.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./*": "./src/*.ts"
+  },
+  "dependencies": {
+    "@orpc/server": "catalog:",
+    "@vibecanvas/api-db": "workspace:*",
+    "@vibecanvas/api-notification": "workspace:*",
+    "@vibecanvas/runtime": "workspace:*",
+    "zod": "catalog:"
+  }
+}

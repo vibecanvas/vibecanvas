@@ -1,4 +1,5 @@
-import { createEffect, createMemo, onCleanup } from "solid-js";
+import type { TOrpcSafeClient } from "@vibecanvas/orpc-client";
+import { createEffect, createMemo, onCleanup, type Accessor } from "solid-js";
 import ArrowUp from "lucide-solid/icons/arrow-up";
 import ChevronDown from "lucide-solid/icons/chevron-down";
 import ChevronRight from "lucide-solid/icons/chevron-right";
@@ -9,23 +10,24 @@ import FolderSearch from "lucide-solid/icons/folder-search";
 import House from "lucide-solid/icons/house";
 import RefreshCw from "lucide-solid/icons/refresh-cw";
 import { For, Show } from "solid-js";
-import type { TFiletreeNode, TFiletreeSafeClient, THostedWidgetChrome } from "../../services/canvas/interface";
+import type { THostedWidgetElementMap, TFiletreeNode, THostedWidgetChrome } from "../../services/canvas/interface";
 import { PathPickerDialog } from "./PathPickerDialog";
 import { createFiletreeContextLogic } from "./createFiletreeContextLogic";
 import { toTildePath } from "./path-display";
 
 type TFiletreeWidgetProps = {
-  canvasId: string;
-  filetreeId: string;
-  safeClient: TFiletreeSafeClient;
+  element: Accessor<THostedWidgetElementMap["filetree"]>;
+  apiService: TOrpcSafeClient;
   setWindowChrome?: (chrome: THostedWidgetChrome | null) => void;
+  onPathChange: (path: string) => void;
+  onOpenFile?: (path: string) => void;
 };
 
 export function FiletreeWidget(props: TFiletreeWidgetProps) {
   const filetreeLogic = createFiletreeContextLogic({
-    canvasId: props.canvasId,
-    filetreeId: props.filetreeId,
-    safeClient: props.safeClient,
+    element: props.element,
+    apiService: props.apiService,
+    onPathChange: props.onPathChange,
   });
   const windowTitle = createMemo(() => {
     const path = filetreeLogic.currentPath();
@@ -33,7 +35,7 @@ export function FiletreeWidget(props: TFiletreeWidgetProps) {
       return toTildePath(path, filetreeLogic.homePath());
     }
 
-    return filetreeLogic.filetree()?.title || "files";
+    return "files";
   });
 
   createEffect(() => {
@@ -80,6 +82,10 @@ export function FiletreeWidget(props: TFiletreeWidgetProps) {
           }}
           onClick={() => {
             filetreeLogic.handleNodeClick(node);
+          }}
+          onDblClick={() => {
+            if (node.is_dir) return;
+            props.onOpenFile?.(node.path);
           }}
         >
           <Show when={node.is_dir} fallback={<span class="w-3" />}>
@@ -149,14 +155,6 @@ export function FiletreeWidget(props: TFiletreeWidgetProps) {
           </button>
         </div>
 
-        <input
-          class="h-7 border border-border bg-background px-2 text-xs"
-          value={filetreeLogic.globInput()}
-          onInput={(event) => {
-            filetreeLogic.handleGlobInput(event.currentTarget.value);
-          }}
-          placeholder="Glob pattern (optional)"
-        />
       </div>
 
       <div
@@ -184,7 +182,7 @@ export function FiletreeWidget(props: TFiletreeWidgetProps) {
       </div>
 
       <PathPickerDialog
-        safeClient={props.safeClient}
+        apiService={props.apiService}
         open={filetreeLogic.isPathDialogOpen()}
         onOpenChange={filetreeLogic.setIsPathDialogOpen}
         initialPath={filetreeLogic.currentPath() || null}
