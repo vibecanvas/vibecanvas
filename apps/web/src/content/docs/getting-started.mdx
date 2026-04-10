@@ -4,7 +4,7 @@ description: Install Vibecanvas and run your first session.
 order: 1
 ---
 
-Vibecanvas is a visual development workspace where you can sketch flows, add project widgets, and iterate in one place.
+Vibecanvas is a visual development workspace where you can sketch flows, add project widgets, and iterate in one place. You can also edit canvases through the CLI, which means agents can do canvas mutations too.
 
 ## Prerequisites
 
@@ -46,6 +46,16 @@ vibecanvas serve --port 3001
 
 Once launched, open the canvas and start creating frames, notes, and task flows.
 
+You can also inspect or mutate canvas state from the CLI:
+
+```bash
+vibecanvas canvas --help
+```
+
+The Vibecanvas skill for agents lives here:
+
+- https://github.com/vibecanvas/skills
+
 ## Check the CLI
 
 ```bash
@@ -75,4 +85,5 @@ vibecanvas --upgrade 0.2.0-beta.3
 1. Create one canvas for your feature.
 2. Add wireframes or flow boxes.
 3. Add terminal and filesystem widgets for the project you are working in.
-4. Keep docs open while implementing.
+4. Use the canvas CLI when you want repeatable or agent-driven canvas edits.
+5. Keep docs open while implementing.

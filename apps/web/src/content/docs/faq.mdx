@@ -20,9 +20,19 @@ Current limitations:
 
 ## Can the AI edit the canvas for me?
 
-Not yet. Right now the AI can help through chat and terminal-driven workflows, but it cannot directly edit the canvas itself.
+Yes. Vibecanvas now has a canvas CLI, so agents can edit the canvas by calling CLI commands.
 
-Direct AI canvas editing is planned and should arrive soon.
+Typical flow:
+
+1. `vibecanvas canvas list`
+2. `vibecanvas canvas query`
+3. `vibecanvas canvas add|patch|move|group|ungroup|delete|reorder`
+
+Use `--json` when another tool or agent will parse the result.
+
+The Vibecanvas skill for agents lives here:
+
+- https://github.com/vibecanvas/skills
 
 ## How do I upgrade Vibecanvas?
 

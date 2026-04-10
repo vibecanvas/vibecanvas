@@ -11,6 +11,8 @@ The project is organized as a monorepo and follows a **Functional Core / Imperat
 ## Features
 
 - Infinite canvas UI for drawing, selecting, transforming, and grouping elements
+- Canvas CLI for list/query/add/patch/move/group/ungroup/delete/reorder flows
+- Agents can edit canvases too by calling the same CLI commands
 - Real-time CRDT sync with Automerge for conflict-free collaboration
 - Unified WebSocket API endpoint for app RPC (`/api`)
 - Dedicated Automerge sync endpoint (`/automerge`)
@@ -43,6 +45,11 @@ vibecanvas
 
 Open [http://localhost:7496](http://localhost:7496) to use the app.
 
+You can edit the canvas from the UI, or from the CLI. Agents can use the same canvas CLI surface for scripted canvas changes.
+
+The Vibecanvas skill for agents lives here:
+- https://github.com/vibecanvas/skills
+
 For common setup/runtime questions, see the FAQ:
 
 - https://vibecanvas.dev/docs/faq
@@ -64,6 +71,7 @@ Useful related commands:
 ```bash
 vibecanvas --version
 vibecanvas --help
+vibecanvas canvas --help
 ```
 
 ### Uninstall
