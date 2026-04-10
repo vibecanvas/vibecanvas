@@ -2,7 +2,7 @@
 
 ## Introduction
 
-Building software is explorative, creative sometimes dull and repetitive.
+Building software is explorative, creative and sometimes dull and repetitive.
 This document outline the how build software in a highly technical,
 small and motivated team. The goal is to minimize management
 and maximize throughput. The idea behind Based is that programming is 90% context loading and 10% actual solving and coding. Therefore we should batch work for context loading and minimize context switching.
@@ -57,18 +57,26 @@ Leaf files use this format:
 
 ```md
 # B1 - text: edit jumping
+[Overview](../../BASED.md)
+
+<Short summary - This is read by humans. Keep it short>
+
+## Context
+<Longer explanation of the problem. Must link all relevent files.>
 
 ## Plan
-...
+<What you plan to do. Step by step plan. Use subsections>
 
 ## TODOS
+<Checklist - derived from plan>
 - [ ] ...
 
 ## NOTES
+<Notes - Anything non trivial you discovered or want to remember>
 ...
 
 ### LOGS
-- what the agent has done
+<Logs - log any action you take>
 
 ---
 ```
@@ -148,7 +156,7 @@ Use the leaf files for execution history and local context.
 - [x]: [S25](s/S25.md) - db: remove filetrees table/schema; canvas-doc fully owns filetree state
 - [ ]: [S26](s/S26.md) - db: add filesystems db table for local/remote machine identity
 - [x]: [S27](s/S27.md) - canvas CLI: remove unimplemented `render` command and help traces
-- [ ]: [S28] - use runtime package in canvas, like cli does
+- [ ]: [S28](s/S28.md) - use runtime package in canvas, like cli does
 
 ## E xplorations
 - [ ]: [E1](e/E1.md) - Tauri Research
