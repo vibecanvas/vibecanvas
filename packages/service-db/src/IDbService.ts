@@ -52,6 +52,7 @@ export interface IDbService extends IService, IStoppableService {
   };
   filesystem: {
     listAll(): TFilesystemRecord[];
+    findById(id: string): TFilesystemRecord | null;
     findByMachineId(machineId: string): TFilesystemRecord | null;
     create(args: TFilesystemInsertArgs): TFilesystemRecord;
     updateById(args: { id: string; label?: string; kind?: 'local' | 'remote'; home_path?: string | null }): TFilesystemRecord;

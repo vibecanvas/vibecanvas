@@ -69,6 +69,7 @@ export class DbServiceBunSqlite implements IDbService {
 
   filesystem = {
     listAll: () => this.drizzle.query.filesystems.findMany().sync() as TFilesystemRecord[],
+    findById: (id: string) => this.drizzle.query.filesystems.findFirst({ where: eq(schema.filesystems.id, id) }).sync() as TFilesystemRecord | null,
     findByMachineId: (machineId: string) => this.drizzle.query.filesystems.findFirst({ where: eq(schema.filesystems.machine_id, machineId) }).sync() as TFilesystemRecord | null,
     create: (args: TFilesystemInsertArgs) => this.drizzle.insert(schema.filesystems).values(args).returning().all()[0]!,
     updateById: (args: { id: string; label?: string; kind?: 'local' | 'remote'; home_path?: string | null }) => this.drizzle

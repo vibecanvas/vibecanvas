@@ -11,6 +11,16 @@ const dirHomeSchema = z.object({
   path: z.string(),
 });
 
+const registeredFilesystemSchema = z.object({
+  id: z.string(),
+  label: z.string(),
+  kind: z.enum(['local', 'remote']),
+  machine_id: z.string(),
+  home_path: z.string().nullable(),
+  created_at: z.date(),
+  updated_at: z.date(),
+});
+
 const dirListSchema = z.object({
   current: z.string(),
   parent: z.string().nullable(),
@@ -111,10 +121,14 @@ type TFileKind = z.infer<typeof fileKindSchema>;
 type TContentType = z.infer<typeof contentTypeSchema>;
 type TInspectOutput = z.infer<typeof inspectOutputSchema>;
 type TReadOutput = z.infer<typeof readOutputSchema>;
+type TRegisteredFilesystem = z.infer<typeof registeredFilesystemSchema>;
 type TWriteOutput = z.infer<typeof writeOutputSchema>;
 type TWatchEvent = z.infer<typeof watchEventSchema>;
 
 const filesystemContract = oc.router({
+  listRegisteredFilesystems: oc
+    .output(z.array(registeredFilesystemSchema)),
+
   home: oc
     .output(z.union([dirHomeSchema, projectDirErrorSchema])),
 
@@ -163,6 +177,7 @@ export {
   filesystemContract,
   fileKindSchema,
   inspectOutputSchema,
+  registeredFilesystemSchema,
   moveFileInputSchema,
   moveFileOutputSchema,
   projectDirErrorSchema,
@@ -182,6 +197,7 @@ export type {
   TMoveFileInput,
   TMoveFileOutput,
   TReadOutput,
+  TRegisteredFilesystem,
   TWatchEvent,
   TWriteOutput,
 };
