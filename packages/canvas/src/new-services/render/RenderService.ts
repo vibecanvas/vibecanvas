@@ -1,18 +1,41 @@
 import type { DocHandle } from "@automerge/automerge-repo";
 import type { IService, IStartableService, IStoppableService } from "@vibecanvas/runtime";
 import type { TCanvasDoc } from "@vibecanvas/service-automerge/types/canvas-doc.types";
+import { SyncHook } from "@vibecanvas/tapable";
 import Konva from "konva";
 
-export type TKonvaServiceArgs = {
+export type TRenderServiceArgs = {
   container: HTMLDivElement;
   docHandle: DocHandle<TCanvasDoc>;
 };
 
-export class KonvaService implements IService, IStartableService, IStoppableService {
-  readonly name = "konva";
+export interface TRenderServiceHooks {
+  resize: SyncHook<[number, number]>;
+}
+
+export class RenderService implements IService<TRenderServiceHooks>, IStartableService, IStoppableService {
+  readonly name = "render";
 
   readonly container: HTMLDivElement;
   readonly docHandle: DocHandle<TCanvasDoc>;
+  readonly hooks: TRenderServiceHooks = {
+    resize: new SyncHook(),
+  };
+
+  readonly Node = Konva.Node;
+  readonly Shape = Konva.Shape;
+  readonly Text = Konva.Text;
+  readonly Rect = Konva.Rect;
+  readonly Circle = Konva.Circle;
+  readonly Line = Konva.Line;
+  readonly Ellipse = Konva.Ellipse;
+  readonly Path = Konva.Path;
+  readonly Group = Konva.Group;
+  readonly Transformer = Konva.Transformer;
+  readonly Image = Konva.Image;
+  readonly Layer = Konva.Layer;
+  readonly Stage = Konva.Stage;
+  readonly Util = Konva.Util;
 
   stage!: Konva.Stage;
   staticBackgroundLayer!: Konva.Layer;
@@ -22,7 +45,7 @@ export class KonvaService implements IService, IStartableService, IStoppableServ
 
   started = false;
 
-  constructor(args: TKonvaServiceArgs) {
+  constructor(args: TRenderServiceArgs) {
     this.container = args.container;
     this.docHandle = args.docHandle;
   }
@@ -84,10 +107,11 @@ export class KonvaService implements IService, IStartableService, IStoppableServ
   }
 
   #resizeStageToContainer() {
-    this.stage.size({
-      width: this.container.clientWidth,
-      height: this.container.clientHeight,
-    });
+    const width = this.container.clientWidth;
+    const height = this.container.clientHeight;
+
+    this.stage.size({ width, height });
     this.stage.batchDraw();
+    this.hooks.resize.call(width, height);
   }
 }

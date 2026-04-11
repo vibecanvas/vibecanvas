@@ -3,9 +3,8 @@ import { TCanvasDoc } from "@vibecanvas/service-automerge/types/canvas-doc.types
 import type * as schema from "@vibecanvas/service-db/schema";
 import { createEffect, createResource, Match, onCleanup, Switch } from "solid-js";
 import { findDocument } from "../services/automerge";
-import { CanvasService, defaultPlugins } from "../services/canvas/Canvas.service";
 import type { TCloneImage, TDeleteImage, TFileCapability, TFiletreeCapability, TTerminalCapability, TUploadImage } from "../services/canvas/interface";
-import { createRuntime, IRuntime } from "@vibecanvas/runtime";
+import type { IRuntime } from "@vibecanvas/runtime";
 import { buildRuntime } from "../runtime";
 
 export type TBackendCanvas = typeof schema.canvas.$inferSelect;
@@ -35,7 +34,7 @@ type CanvasPageProps = {
 export function Canvas(props: CanvasPageProps) {
   let containerRef!: HTMLDivElement;
   let activeHandle: DocHandle<TCanvasDoc> | null = null;
-  let runtime: IRuntime<never[]> | null = null;
+  let runtime: IRuntime | null = null;
   const [docHandle] = createResource(() => props.canvas.automerge_url as AutomergeUrl, async (url) => {
     try {
       return await findDocument(url);
@@ -64,9 +63,7 @@ export function Canvas(props: CanvasPageProps) {
       }
     })
 
-
-
-
+    void runtime.boot();
   });
 
   onCleanup(() => {

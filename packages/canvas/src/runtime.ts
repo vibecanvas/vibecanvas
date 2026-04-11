@@ -1,14 +1,13 @@
 import type { DocHandle } from "@automerge/automerge-repo";
 import { createRuntime, createServiceRegistry } from "@vibecanvas/runtime";
 import type { TCanvasDoc } from "@vibecanvas/service-automerge/types/canvas-doc.types";
-import { TCloneImage, TDeleteImage, TFileCapability, TFiletreeCapability, TTerminalCapability, TUploadImage } from "./services/canvas/interface";
 import type Konva from "konva";
-import type { SetStoreFunction } from 'solid-js/store';
-import type { TElement, TGroup } from "@vibecanvas/service-automerge/types/canvas-doc.types";
-import type { AsyncParallelHook, SyncExitHook, SyncHook } from "@vibecanvas/tapable"
+import { AsyncParallelHook, SyncExitHook, SyncHook } from "@vibecanvas/tapable";
 import type { TCustomEvent } from "./custom-events";
+import { createGridPlugin } from "./new-plugins";
+import { CameraService } from "./new-services/camera/CameraService";
 import { EditorService } from "./new-services/editor/EditorService";
-import { KonvaService } from "./new-services/konva/KonvaService";
+import { RenderService } from "./new-services/render/RenderService";
 import { SelectionService } from "./new-services/selection/SelectionService";
 import { ThemeService } from "./new-services/theme/ThemeService";
 
@@ -59,10 +58,6 @@ export interface IHooks {
    * Called at the destruction stage.
    */
   destroy: SyncHook<[]>;
-  /**
-   * Called when the canvas is resized.
-   */
-  resize: SyncHook<[number, number]>;
   pointerDown: SyncHook<[TPointerEvent]>;
   pointerUp: SyncHook<[TPointerEvent]>;
   pointerOut: SyncHook<[TPointerEvent]>;
@@ -72,33 +67,65 @@ export interface IHooks {
   pointerCancel: SyncHook<[TPointerEvent]>;
   keydown: SyncHook<[KeyboardEvent]>;
   keyup: SyncHook<[KeyboardEvent]>;
-  cameraChange: SyncHook<[]>;
   customEvent: SyncExitHook<TCustomEvent>;
 }
 
 declare module "@vibecanvas/runtime" {
   interface IServiceMap {
+    camera: CameraService;
     editor: EditorService;
-    konva: KonvaService;
+    render: RenderService;
     selection: SelectionService;
     theme: ThemeService;
   }
 }
 
+function createHooks(): IHooks {
+  return {
+    init: new SyncHook(),
+    initAsync: new AsyncParallelHook(),
+    destroy: new SyncHook(),
+    pointerDown: new SyncHook(),
+    pointerUp: new SyncHook(),
+    pointerOut: new SyncHook(),
+    pointerOver: new SyncHook(),
+    pointerMove: new SyncHook(),
+    pointerWheel: new SyncHook(),
+    pointerCancel: new SyncHook(),
+    keydown: new SyncHook(),
+    keyup: new SyncHook(),
+    customEvent: new SyncExitHook(),
+  };
+}
+
 export function buildRuntime(config: IRuntimeConfig) {
   const services = createServiceRegistry();
-  services.provide("editor", new EditorService());
-  services.provide("konva", new KonvaService({
+  const render = new RenderService({
     container: config.container,
     docHandle: config.docHandle,
-  }));
+  });
+
+  services.provide("camera", new CameraService({ render }));
+  services.provide("editor", new EditorService());
+  services.provide("render", render);
   services.provide("selection", new SelectionService());
   services.provide("theme", new ThemeService());
 
-  return createRuntime({
+  return createRuntime<IHooks, IRuntimeConfig>({
     config,
-    hooks: [],
-    plugins: [],
+    hooks: createHooks(),
+    plugins: [createGridPlugin()],
     services,
+    boot: async ({ services, hooks }) => {
+      services.require("render").start();
+      services.require("camera").start();
+      hooks.init.call();
+      await hooks.initAsync.promise();
+    },
+    shutdown: async ({ services, hooks }) => {
+      hooks.destroy.call();
+      services.require("camera").stop();
+      services.require("render").stop();
+    },
   })
 }

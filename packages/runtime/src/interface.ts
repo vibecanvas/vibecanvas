@@ -1,8 +1,9 @@
 // eslint-disable-next-line @typescript-eslint/no-empty-object-type
 export interface IServiceMap { }
 
-export interface IService {
+export interface IService<THooks extends object = object> {
   readonly name: string;
+  readonly hooks?: THooks
 }
 
 export interface IStartableService {
