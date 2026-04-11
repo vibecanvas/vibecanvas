@@ -13,8 +13,6 @@ export interface IStoppableService {
   stop(): void | Promise<void>;
 }
 
-export interface IManagedService extends IService, IStartableService, IStoppableService { }
-
 export interface IEventSource<TEvent = unknown> {
   subscribe(listener: (event: TEvent) => void): () => void;
 }
