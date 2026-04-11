@@ -5,8 +5,6 @@ import { createEffect, createResource, Match, onCleanup, Switch } from "solid-js
 import { findDocument } from "../services/automerge";
 import { CanvasService, defaultPlugins } from "../services/canvas/Canvas.service";
 import type { TCloneImage, TDeleteImage, TFileCapability, TFiletreeCapability, TTerminalCapability, TUploadImage } from "../services/canvas/interface";
-import { createRuntime, IRuntime } from "@vibecanvas/runtime";
-import { buildRuntime } from "../runtime";
 
 export type TBackendCanvas = typeof schema.canvas.$inferSelect;
 
@@ -31,11 +29,10 @@ type CanvasPageProps = {
   }
 };
 
-
 export function Canvas(props: CanvasPageProps) {
   let containerRef!: HTMLDivElement;
   let activeHandle: DocHandle<TCanvasDoc> | null = null;
-  let runtime: IRuntime<never[]> | null = null;
+  let canvasService: CanvasService | null = null;
   const [docHandle] = createResource(() => props.canvas.automerge_url as AutomergeUrl, async (url) => {
     try {
       return await findDocument(url);
@@ -51,27 +48,31 @@ export function Canvas(props: CanvasPageProps) {
     if (!nextHandle || nextHandle === activeHandle) return;
 
     activeHandle = nextHandle;
-    if (runtime) {
-      runtime.shutdown()
-      runtime = null;
+    if (canvasService) {
+      canvasService.destroy();
+      canvasService = null;
     }
-    runtime = buildRuntime({
-      container: containerRef,
-      docHandle: nextHandle,
-      onToggleSidebar: props.store.onToggleSidebar,
-      env: {
-        DEV: import.meta.env.DEV,
-      }
-    })
 
 
-
-
+    canvasService = new CanvasService(
+      containerRef,
+      activeHandle,
+      defaultPlugins({ onToggleSidebar: props.store.onToggleSidebar }),
+      {
+        uploadImage: props.image?.uploadImage,
+        cloneImage: props.image?.cloneImage,
+        deleteImage: props.image?.deleteImage,
+        filetree: props.filetree,
+        file: props.file,
+        terminal: props.terminal,
+        notification: props.notification,
+      },
+    );
   });
 
   onCleanup(() => {
-    runtime?.shutdown();
-    runtime = null;
+    canvasService?.destroy();
+    canvasService = null;
     activeHandle = null;
   });
 
