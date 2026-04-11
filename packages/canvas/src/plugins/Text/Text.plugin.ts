@@ -1,4 +1,4 @@
-import { TElement } from "@vibecanvas/service-automerge/types/canvas-doc";
+import { TElement } from "@vibecanvas/service-automerge/types/canvas-doc.types";
 import Konva from "konva";
 import type { TTool } from "../../components/FloatingCanvasToolbar/toolbar.types";
 import { CustomEvents } from "../../custom-events";

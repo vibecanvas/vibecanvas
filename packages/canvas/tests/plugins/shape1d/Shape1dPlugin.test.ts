@@ -1,5 +1,5 @@
 import Konva from "konva";
-import type { TArrowData, TElement, TLineData } from "@vibecanvas/service-automerge/types/canvas-doc";
+import type { TArrowData, TElement, TLineData } from "@vibecanvas/service-automerge/types/canvas-doc.types";
 import { describe, expect, test } from "vitest";
 import { CustomEvents } from "../../../src/custom-events";
 import { SceneHydratorPlugin, SelectPlugin, Shape1dPlugin, TransformPlugin, type IPluginContext } from "../../../src/plugins";

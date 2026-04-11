@@ -1,5 +1,5 @@
 import { getStroke, type StrokeOptions } from "perfect-freehand";
-import type { TElement, TPenData, TPoint2D } from "@vibecanvas/service-automerge/types/canvas-doc";
+import type { TElement, TPenData, TPoint2D } from "@vibecanvas/service-automerge/types/canvas-doc.types";
 
 type TStrokePoint = {
   x: number;

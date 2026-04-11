@@ -1,5 +1,5 @@
 import type { DocHandle } from "@automerge/automerge-repo";
-import type { TCanvasDoc } from "@vibecanvas/service-automerge/types/canvas-doc";
+import type { TCanvasDoc } from "@vibecanvas/service-automerge/types/canvas-doc.types";
 import Konva from "konva";
 import type { Group } from "konva/lib/Group";
 import type { Shape, ShapeConfig } from "konva/lib/Shape";

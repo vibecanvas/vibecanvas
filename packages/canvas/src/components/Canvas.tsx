@@ -1,5 +1,5 @@
 import { AutomergeUrl, DocHandle } from "@automerge/automerge-repo";
-import { TCanvasDoc } from "@vibecanvas/service-automerge/types/canvas-doc";
+import { TCanvasDoc } from "@vibecanvas/service-automerge/types/canvas-doc.types";
 import type * as schema from "@vibecanvas/service-db/schema";
 import { createEffect, createResource, Match, onCleanup, Switch } from "solid-js";
 import { findDocument } from "../services/automerge";

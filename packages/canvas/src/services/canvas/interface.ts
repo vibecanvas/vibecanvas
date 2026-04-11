@@ -1,5 +1,5 @@
 import type { TOrpcSafeClient } from "@vibecanvas/orpc-client";
-import type { TElement, TFileData, TFiletreeData, TTerminalData } from "@vibecanvas/service-automerge/types/canvas-doc";
+import type { TElement, TFileData, TFiletreeData, TTerminalData } from "@vibecanvas/service-automerge/types/canvas-doc.types";
 import { Group } from "konva/lib/Group";
 import { Shape, ShapeConfig } from "konva/lib/Shape";
 import { CanvasMode, Theme } from "./enum";

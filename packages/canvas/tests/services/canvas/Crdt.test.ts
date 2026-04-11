@@ -1,5 +1,5 @@
 import { Repo, type DocHandle, type PeerId } from "@automerge/automerge-repo";
-import type { TCanvasDoc, TElement, TGroup, TImageData } from "@vibecanvas/service-automerge/types/canvas-doc";
+import type { TCanvasDoc, TElement, TGroup, TImageData } from "@vibecanvas/service-automerge/types/canvas-doc.types";
 import { describe, expect, test } from "vitest";
 import { Crdt } from "../../../src/services/canvas/crdt";
 

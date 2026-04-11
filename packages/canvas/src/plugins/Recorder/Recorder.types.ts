@@ -1,4 +1,4 @@
-import type { TCanvasDoc } from "@vibecanvas/service-automerge/types/canvas-doc";
+import type { TCanvasDoc } from "@vibecanvas/service-automerge/types/canvas-doc.types";
 
 export const REDUCED_EVENTS = true;
 

@@ -1,4 +1,4 @@
-import type { TArrowData, TElement } from "@vibecanvas/service-automerge/types/canvas-doc";
+import type { TArrowData, TElement } from "@vibecanvas/service-automerge/types/canvas-doc.types";
 import Konva from "konva";
 import { setNodeZIndex } from "../shared/render-order.shared";
 import { DEFAULT_OPACITY, EDIT_HANDLE_STROKE, MIN_HIT_STROKE_WIDTH, type TPoint, type TShape1dData, type TShape1dNode, getStrokeColorFromStyle, getStrokeWidthFromStyle, isSupportedElementType } from "./Shape1d.shared";
@@ -86,7 +86,7 @@ function drawScene(context: Konva.Context, node: TShape1dNode) {
 
 function getSelfRect(node: TShape1dNode) {
   const data = node.getAttr("vcElementData") as TShape1dData | undefined;
-  const strokeWidth = getStrokeWidthFromStyle((node.getAttr("vcElementStyle") as import("@vibecanvas/service-automerge/types/canvas-doc").TElementStyle | undefined) ?? {});
+  const strokeWidth = getStrokeWidthFromStyle((node.getAttr("vcElementStyle") as import("@vibecanvas/service-automerge/types/canvas-doc.types").TElementStyle | undefined) ?? {});
   if (!data || data.points.length === 0) return { x: -strokeWidth, y: -strokeWidth, width: strokeWidth * 2, height: strokeWidth * 2 };
   const xs = data.points.map((point) => point[0]);
   const ys = data.points.map((point) => point[1]);

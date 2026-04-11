@@ -1,6 +1,6 @@
 import type { DocHandleChangePayload } from "@automerge/automerge-repo";
 import Konva from "konva";
-import type { TElement, TGroup } from "@vibecanvas/service-automerge/types/canvas-doc";
+import type { TElement, TGroup } from "@vibecanvas/service-automerge/types/canvas-doc.types";
 import type { IPlugin, IPluginContext } from "../shared/interface";
 
 type TMountedGroups = Map<string, Konva.Group>;
@@ -128,7 +128,7 @@ export class SceneHydratorPlugin implements IPlugin {
 
     return node;
   }
- 
+
   private applyPersistedOrdering(context: IPluginContext, parent: Konva.Layer | Konva.Group) {
     context.capabilities.renderOrder?.sortChildren(parent);
 

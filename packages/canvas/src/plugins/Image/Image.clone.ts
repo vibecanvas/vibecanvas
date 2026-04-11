@@ -1,4 +1,4 @@
-import type { TElement } from "@vibecanvas/service-automerge/types/canvas-doc";
+import type { TElement } from "@vibecanvas/service-automerge/types/canvas-doc.types";
 import Konva from "konva";
 import { setNodeZIndex } from "../shared/render-order.shared";
 import type { IPluginContext } from "../shared/interface";

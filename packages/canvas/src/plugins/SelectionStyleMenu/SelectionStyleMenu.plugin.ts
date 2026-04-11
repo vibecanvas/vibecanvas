@@ -1,4 +1,4 @@
-import type { TArrowData, TElement, TElementStyle, TLineData } from "@vibecanvas/service-automerge/types/canvas-doc";
+import type { TArrowData, TElement, TElementStyle, TLineData } from "@vibecanvas/service-automerge/types/canvas-doc.types";
 import Konva from "konva";
 import { createComponent, createMemo, createSignal } from "solid-js";
 import { render } from "solid-js/web";

@@ -1,4 +1,4 @@
-import type { TFileData } from "@vibecanvas/service-automerge/types/canvas-doc";
+import type { TFileData } from "@vibecanvas/service-automerge/types/canvas-doc.types";
 
 function bytesToBase64(bytes: Uint8Array) {
   let binary = "";

@@ -1,4 +1,4 @@
-import type { TFileData, TFiletreeData, TTerminalData } from "@vibecanvas/service-automerge/types/canvas-doc";
+import type { TFileData, TFiletreeData, TTerminalData } from "@vibecanvas/service-automerge/types/canvas-doc.types";
 import { getFileName, getFileRenderer } from "../../components/file/utils";
 import type { IPluginContext } from "../shared/interface";
 import { FILETREE_CHAT_DND_MIME, HOSTED_TYPES, TOOL_TO_WIDGET_TYPE } from "./HostedSolidWidget.constants";

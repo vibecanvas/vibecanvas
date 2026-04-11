@@ -1,5 +1,5 @@
 import type { DocHandle } from "@automerge/automerge-repo";
-import type { TCanvasDoc, TElement, TGroup } from "@vibecanvas/service-automerge/types/canvas-doc";
+import type { TCanvasDoc, TElement, TGroup } from "@vibecanvas/service-automerge/types/canvas-doc.types";
 import Konva from "konva";
 import { describe, expect, test } from "vitest";
 import { GroupPlugin, RenderOrderPlugin, SceneHydratorPlugin, Shape2dPlugin, type IPluginContext } from "../../../src/plugins";
