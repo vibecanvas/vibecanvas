@@ -53,7 +53,7 @@ Current new-runtime snapshot:
 - `editor` service now owns tool registry, active tool, and transient editor state
 - `selection` service still owns mode, selection, and focused id
 - `theme` service exists but is still minimal
-- migrated runtime plugins so far: `event-listener`, `grid`, `camera-control`, `toolbar`, `visual-debug`
+- migrated runtime plugins so far: `event-listener`, `grid`, `camera-control`, `toolbar`, `select`, `visual-debug`
 - new toolbar currently registers base tools (`hand`, `select`) and renders from the editor registry
 - `grid` is now also a registered toolbar action tool (`g`) instead of legacy custom-event wiring
 

@@ -1,5 +1,5 @@
 import type { IService } from "@vibecanvas/runtime";
-import { Theme } from "../../services/canvas/enum";
+import { Theme } from "./enum";
 
 /**
  * Holds canvas theme state.

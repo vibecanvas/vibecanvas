@@ -1,16 +1,44 @@
 import type { IService } from "@vibecanvas/runtime";
-import { CanvasMode } from "../../services/canvas/enum";
+import { SyncHook } from "@vibecanvas/tapable";
+import { CanvasMode } from "./enum";
 import type { Group } from "konva/lib/Group";
 import type { Shape, ShapeConfig } from "konva/lib/Shape";
+
+export interface TSelectionServiceHooks {
+  change: SyncHook<[]>;
+}
 
 /**
  * Holds selection and tool state.
  * Owns mode, active selection, and focused node id.
  */
-export class SelectionService implements IService {
+export class SelectionService implements IService<TSelectionServiceHooks> {
   readonly name = "selection";
+  readonly hooks: TSelectionServiceHooks = {
+    change: new SyncHook(),
+  };
 
   mode = CanvasMode.SELECT;
   selection: Array<Group | Shape<ShapeConfig>> = [];
   focusedId: string | null = null;
+
+  setSelection(selection: Array<Group | Shape<ShapeConfig>>) {
+    this.selection = selection;
+    this.hooks.change.call();
+  }
+
+  setFocusedId(focusedId: string | null) {
+    this.focusedId = focusedId;
+    this.hooks.change.call();
+  }
+
+  setFocusedNode(node: Group | Shape<ShapeConfig> | null) {
+    this.setFocusedId(node?.id() ?? null);
+  }
+
+  clear() {
+    this.selection = [];
+    this.focusedId = null;
+    this.hooks.change.call();
+  }
 }

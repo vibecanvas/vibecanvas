@@ -32,7 +32,7 @@
 - [ ] `HelpPlugin`
 - [ ] `RecorderPlugin` (`DEV` only)
 - [ ] `RenderOrderPlugin`
-- [ ] `SelectPlugin`
+- [x] `SelectPlugin`
 - [ ] `TransformPlugin`
 - [ ] `Shape1dPlugin`
 - [ ] `Shape2dPlugin`

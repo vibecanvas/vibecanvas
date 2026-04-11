@@ -1,9 +1,18 @@
 import type { IPlugin } from "@vibecanvas/runtime";
 import type { RenderService } from "../../new-services/render/RenderService";
-import type { IHooks, TMouseEvent, TPointerEvent, TWheelEvent } from "../../runtime";
+import type { IHooks, TElementPointerEvent, TMouseEvent, TPointerEvent, TWheelEvent } from "../../runtime";
 
 function isInsideHostedWidget(target: EventTarget | null) {
   return target instanceof HTMLElement && target.closest('[data-hosted-widget-root="true"]') !== null;
+}
+
+function getElementPointerEvent(render: RenderService, event: TPointerEvent) {
+  const target = event.target;
+  if (!(target instanceof render.Group || target instanceof render.Shape)) {
+    return null;
+  }
+
+  return event as TElementPointerEvent;
 }
 
 /**
@@ -49,6 +58,39 @@ export function createEventListenerPlugin(): IPlugin<{
           ctx.hooks.pointerWheel.call(event);
         };
 
+        const onElementPointerClick = (event: TPointerEvent) => {
+          const elementEvent = getElementPointerEvent(render, event);
+          if (!elementEvent) {
+            return;
+          }
+
+          ctx.hooks.elementPointerClick.call(elementEvent);
+        };
+
+        const onElementPointerDown = (event: TPointerEvent) => {
+          const elementEvent = getElementPointerEvent(render, event);
+          if (!elementEvent) {
+            return;
+          }
+
+          const didHandle = ctx.hooks.elementPointerDown.call(elementEvent);
+          if (didHandle) {
+            event.cancelBubble = true;
+          }
+        };
+
+        const onElementPointerDoubleClick = (event: TPointerEvent) => {
+          const elementEvent = getElementPointerEvent(render, event);
+          if (!elementEvent) {
+            return;
+          }
+
+          const didHandle = ctx.hooks.elementPointerDoubleClick.call(elementEvent);
+          if (didHandle) {
+            event.cancelBubble = true;
+          }
+        };
+
         const onKeyDown = (event: KeyboardEvent) => {
           if (isInsideHostedWidget(event.target)) return;
           ctx.hooks.keydown.call(event);
@@ -66,6 +108,9 @@ export function createEventListenerPlugin(): IPlugin<{
         stage.on("pointerover", onPointerOver);
         stage.on("pointercancel", onPointerCancel);
         stage.on("wheel", onPointerWheel);
+        stage.on("pointerclick", onElementPointerClick);
+        stage.on("pointerdown", onElementPointerDown);
+        stage.on("pointerdblclick", onElementPointerDoubleClick);
 
         container.addEventListener("keydown", onKeyDown);
         container.addEventListener("keyup", onKeyUp);
@@ -81,6 +126,9 @@ export function createEventListenerPlugin(): IPlugin<{
           stage.off("pointerover", onPointerOver);
           stage.off("pointercancel", onPointerCancel);
           stage.off("wheel", onPointerWheel);
+          stage.off("pointerclick", onElementPointerClick);
+          stage.off("pointerdown", onElementPointerDown);
+          stage.off("pointerdblclick", onElementPointerDoubleClick);
           container.removeEventListener("keydown", onKeyDown);
           container.removeEventListener("keyup", onKeyUp);
         });

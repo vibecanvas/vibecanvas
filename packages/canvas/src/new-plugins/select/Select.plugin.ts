@@ -1,0 +1,170 @@
+import type { IPlugin } from "@vibecanvas/runtime";
+import type { Node } from "konva/lib/Node";
+import type { RenderService } from "../../new-services/render/RenderService";
+import type { SelectionService } from "../../new-services/selection/SelectionService";
+import type { IHooks } from "../../runtime";
+import { CanvasMode } from "../../new-services/selection/enum";
+import { txHandleElementPointerDoubleClick } from "./tx.handle-element-pointer-double-click";
+import { txHandleElementPointerDown } from "./tx.handle-element-pointer-down";
+import { txHandleStagePointerMove } from "./tx.handle-stage-pointer-move";
+
+function hasSameSelectionOrder(
+  currentSelection: Array<{ id(): string }>,
+  nextSelection: Array<{ id(): string }>,
+) {
+  if (currentSelection.length !== nextSelection.length) {
+    return false;
+  }
+
+  return currentSelection.every((node, index) => node.id() === nextSelection[index]?.id());
+}
+
+function getSelectionLayerPointerPosition(render: RenderService) {
+  return render.dynamicLayer.getRelativePointerPosition();
+}
+
+function isEditableTarget(target: EventTarget | null) {
+  if (target instanceof HTMLInputElement) {
+    return true;
+  }
+
+  if (target instanceof HTMLTextAreaElement) {
+    return true;
+  }
+
+  if (target instanceof HTMLElement && target.isContentEditable) {
+    return true;
+  }
+
+  return false;
+}
+
+function txHandleStagePointerDown(args: {
+  render: RenderService;
+  selection: SelectionService;
+  selectionRectangle: InstanceType<RenderService["Rect"]>;
+  event: { target: Node };
+}) {
+  const pointer = getSelectionLayerPointerPosition(args.render);
+  if (!pointer) {
+    return;
+  }
+
+  if (args.event.target !== args.render.stage) {
+    return;
+  }
+
+  args.selectionRectangle.visible(true);
+  args.selectionRectangle.position(pointer);
+  args.selectionRectangle.size({ width: 0, height: 0 });
+  args.selectionRectangle.moveToTop();
+  args.selection.clear();
+}
+
+
+/**
+ * Owns selection rules for click, drill-down, and marquee selection.
+ * Uses SelectionService as the shared runtime state.
+ */
+export function createSelectPlugin(): IPlugin<{
+  render: RenderService;
+  selection: SelectionService;
+}, IHooks> {
+  return {
+    name: "select",
+    apply(ctx) {
+      const render = ctx.services.require("render");
+      const selection = ctx.services.require("selection");
+      const selectionRectangle = new render.Rect({
+        visible: false,
+        fill: "rgba(59, 130, 246, 0.12)",
+        stroke: "#3b82f6",
+        strokeWidth: 1,
+        dash: [6, 4],
+        listening: false,
+      });
+
+      ctx.hooks.init.tap(() => {
+        render.dynamicLayer.add(selectionRectangle);
+      });
+
+      ctx.hooks.elementPointerDown.tap((event) => {
+        if (selection.mode !== CanvasMode.SELECT) {
+          return false;
+        }
+
+        return txHandleElementPointerDown({ render, selection, hasSameSelectionOrder }, { event });
+      });
+
+      ctx.hooks.elementPointerDoubleClick.tap((event) => {
+        if (selection.mode !== CanvasMode.SELECT) {
+          return false;
+        }
+
+        return txHandleElementPointerDoubleClick({ render, selection, hasSameSelectionOrder }, { event });
+      });
+
+      ctx.hooks.pointerDown.tap((event) => {
+        if (selection.mode !== CanvasMode.SELECT) {
+          return;
+        }
+
+        txHandleStagePointerDown({
+          render,
+          selection,
+          selectionRectangle,
+          event,
+        });
+      });
+
+      ctx.hooks.pointerMove.tap((event) => {
+        if (selection.mode !== CanvasMode.SELECT) {
+          return;
+        }
+
+        if (!selectionRectangle.visible()) {
+          return;
+        }
+
+        txHandleStagePointerMove(
+          {
+            render,
+            selection,
+            selectionRectangle,
+            hasSameSelectionOrder,
+          },
+          { pointer: getSelectionLayerPointerPosition(render) },
+        );
+      });
+
+      ctx.hooks.pointerUp.tap(() => {
+        if (selection.mode !== CanvasMode.SELECT) {
+          return;
+        }
+
+        selectionRectangle.visible(false);
+      });
+
+      ctx.hooks.keydown.tap((event) => {
+        if (selection.mode !== CanvasMode.SELECT) {
+          return;
+        }
+
+        if (selection.selection.length === 0) {
+          return;
+        }
+
+        if (event.key !== "Backspace" && event.key !== "Delete") {
+          return;
+        }
+
+        if (isEditableTarget(event.target)) {
+          return;
+        }
+
+        event.preventDefault();
+        event.stopPropagation();
+      });
+    },
+  };
+}
