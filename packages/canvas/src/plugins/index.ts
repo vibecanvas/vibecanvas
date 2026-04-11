@@ -1,3 +1,4 @@
+export * from './ArrowJs/ArrowJs.plugin'
 export * from './CameraControl/CameraControl.plugin'
 export * from './ContextMenu/ContextMenu.plugin'
 export * from './EventListener/EventListener.plugin'

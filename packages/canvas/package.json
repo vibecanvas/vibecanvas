@@ -24,6 +24,9 @@
     "test": "vitest --run"
   },
   "dependencies": {
+    "@arrow-js/core": "^1.0.6",
+    "@arrow-js/framework": "^1.0.6",
+    "@arrow-js/sandbox": "^1.0.6",
     "@automerge/automerge": "catalog:",
     "@automerge/automerge-repo": "catalog:",
     "@automerge/automerge-repo-network-broadcastchannel": "catalog:",
@@ -55,8 +58,8 @@
     "konva": "^9.3.22",
     "lucide-solid": "catalog:",
     "microdiff": "^1.5.0",
-    "pdfjs-dist": "^4.10.38",
     "partysocket": "^1.1.16",
+    "pdfjs-dist": "^4.10.38",
     "perfect-freehand": "^1.2.2",
     "solid-js": "catalog:",
     "zod": "catalog:"

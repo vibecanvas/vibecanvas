@@ -7,6 +7,7 @@ import { createRoot } from "solid-js";
 import { createStore, SetStoreFunction } from 'solid-js/store';
 import type { TCustomEvent } from "../../custom-events";
 import {
+  ArrowJsPlugin,
   CameraControlPlugin, ContextMenuPlugin, EventListenerPlugin, ExampleScenePlugin,
   GridPlugin, GroupPlugin, HelpPlugin, HistoryControlPlugin, HostedSolidWidgetPlugin, IframeBrowserWidgetPlugin, ImagePlugin, PenPlugin, RecorderPlugin, RenderOrderPlugin, SceneHydratorPlugin,
   SelectPlugin, SelectionStyleMenuPlugin, Shape1dPlugin, Shape2dPlugin, TextPlugin, ToolbarPlugin, TransformPlugin, VisualDebugPlugin
@@ -45,6 +46,7 @@ export function defaultPlugins(
     new IframeBrowserWidgetPlugin(),
     groupPlugin,
     new ContextMenuPlugin(),
+    new ArrowJsPlugin(),
     // new ExampleScenePlugin(groupPlugin)
     new SceneHydratorPlugin()
   ];
