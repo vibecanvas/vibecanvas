@@ -20,6 +20,31 @@
 
 ## Overview
 
+`@vibecanvas/canvas` is in active refactor.
+
+Old system still exists and is still the main behavior reference:
+- `src/services/canvas/Canvas.service.ts`
+- `src/plugins/`
+- `src/custom-events.ts`
+
+New system is being built beside it:
+- `src/runtime.ts`
+- `src/new-services/`
+- `src/new-plugins/`
+
+When working here:
+- do not delete old system unless migration is proven
+- use old system as behavior reference
+- prefer implementing new work in the new runtime path when task is part of the refactor
+
+Current refactor direction:
+- services are the main effectful interface
+- plugins should stay thin and mostly contain logic
+- runtime hooks are for broad lifecycle/app wiring
+- service hooks are for service-specific events
+- avoid new use of legacy `CustomEvents` in the new path
+- prefer `render` service instead of direct engine imports in migrated plugins
+
 `@vibecanvas/canvas` is a reusable Konva-based canvas runtime with:
 
 - a thin Solid host component for document loading
