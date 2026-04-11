@@ -37,6 +37,7 @@ export type TPtyUpdateBody = {
 };
 
 export type TPtyAttachArgs = {
+  filesystemId?: string;
   workingDirectory: string;
   ptyID: string;
   cursor?: number;

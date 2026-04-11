@@ -22,15 +22,15 @@ export class FilesystemServiceNode implements IFilesystemService {
   constructor(private eventPublisher: IEventPublisherService) {
   }
 
-  homeDir(): string {
+  homeDir(_filesystemId: string): string {
     return homedir();
   }
 
-  exists(path: string): boolean {
+  exists(_filesystemId: string, path: string): boolean {
     return existsSync(path);
   }
 
-  readdir(path: string): TErrTuple<import('fs').Dirent[]> {
+  readdir(_filesystemId: string, path: string): TErrTuple<import('fs').Dirent[]> {
     try {
       return [readdirSync(path, { withFileTypes: true }), null];
     } catch (error) {
@@ -43,7 +43,7 @@ export class FilesystemServiceNode implements IFilesystemService {
     }
   }
 
-  stat(path: string): TErrTuple<import('fs').Stats> {
+  stat(_filesystemId: string, path: string): TErrTuple<import('fs').Stats> {
     try {
       return [statSync(path), null];
     } catch (error) {
@@ -56,7 +56,7 @@ export class FilesystemServiceNode implements IFilesystemService {
     }
   }
 
-  readFile(path: string): TErrTuple<Buffer> {
+  readFile(_filesystemId: string, path: string): TErrTuple<Buffer> {
     try {
       return [readFileSync(path), null];
     } catch (error) {
@@ -69,7 +69,7 @@ export class FilesystemServiceNode implements IFilesystemService {
     }
   }
 
-  writeFile(path: string, content: string): TErrTuple<void> {
+  writeFile(_filesystemId: string, path: string, content: string): TErrTuple<void> {
     try {
       writeFileSync(path, content, 'utf8');
       return [undefined, null];
@@ -83,7 +83,7 @@ export class FilesystemServiceNode implements IFilesystemService {
     }
   }
 
-  rename(sourcePath: string, targetPath: string): TErrTuple<void> {
+  rename(_filesystemId: string, sourcePath: string, targetPath: string): TErrTuple<void> {
     try {
       renameSync(sourcePath, targetPath);
       return [undefined, null];
@@ -97,7 +97,7 @@ export class FilesystemServiceNode implements IFilesystemService {
     }
   }
 
-  watch(path: string, watchId: string): AsyncIterable<TFilesystemWatchEvent> | null {
+  watch(_filesystemId: string, path: string, watchId: string): AsyncIterable<TFilesystemWatchEvent> | null {
     if (this.#watchIdToPath.has(watchId)) return null;
 
     let entry = this.#watchersByPath.get(path);
@@ -135,7 +135,7 @@ export class FilesystemServiceNode implements IFilesystemService {
     return this.eventPublisher.subscribeFilesystemEvents(path);
   }
 
-  keepalive(watchId: string): boolean {
+  keepalive(_filesystemId: string, watchId: string): boolean {
     const path = this.#watchIdToPath.get(watchId);
     if (!path) return false;
     if (!this.#watchersByPath.has(path)) return false;
@@ -143,7 +143,7 @@ export class FilesystemServiceNode implements IFilesystemService {
     return true;
   }
 
-  unwatch(watchId: string): void {
+  unwatch(_filesystemId: string, watchId: string): void {
     const path = this.#watchIdToPath.get(watchId);
     if (!path) return;
 
@@ -184,7 +184,7 @@ export class FilesystemServiceNode implements IFilesystemService {
     if (existingTimeout) clearTimeout(existingTimeout);
 
     entry.timeouts.set(watchId, setTimeout(() => {
-      this.unwatch(watchId);
+      this.unwatch('__local__', watchId);
     }, WATCH_TTL_MS));
   }
 

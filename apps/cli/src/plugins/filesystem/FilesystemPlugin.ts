@@ -7,6 +7,7 @@ import { txEnsureLocalFilesystemRow } from './tx.ensure-local-filesystem-row';
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { hostname } from 'node:os';
 import { join } from 'node:path';
+import { homedir } from 'os';
 
 
 function createFilesystemPlugin(): IPlugin<{ db: IDbService; filesystem: IFilesystemService }, ICliHooks, ICliConfig> {
@@ -29,6 +30,7 @@ function createFilesystemPlugin(): IPlugin<{ db: IDbService; filesystem: IFilesy
           writeFileSync,
           hostname,
           randomUUID: () => crypto.randomUUID(),
+          homedir,
         }, { config: ctx.config });
       });
     },

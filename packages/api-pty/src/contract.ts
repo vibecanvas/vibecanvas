@@ -44,15 +44,18 @@ const zPty = z.object({
 });
 
 const ptyScopedInputSchema = z.object({
+  filesystemId: z.string().optional(),
   workingDirectory: z.string(),
 });
 
 const ptyCreateInputSchema = z.object({
+  filesystemId: z.string().optional(),
   workingDirectory: z.string(),
   body: ptyCreateBodySchema.optional(),
 });
 
 const ptyPathInputSchema = z.object({
+  filesystemId: z.string().optional(),
   workingDirectory: z.string(),
   path: z.object({
     ptyID: z.string(),
@@ -60,6 +63,7 @@ const ptyPathInputSchema = z.object({
 });
 
 const ptyUpdateInputSchema = z.object({
+  filesystemId: z.string().optional(),
   workingDirectory: z.string(),
   path: z.object({
     ptyID: z.string(),
@@ -68,6 +72,7 @@ const ptyUpdateInputSchema = z.object({
 });
 
 const ptyUploadImageInputSchema = z.object({
+  filesystemId: z.string().optional(),
   workingDirectory: z.string(),
   body: z.object({
     base64: z.string(),

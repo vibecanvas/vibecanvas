@@ -1,8 +1,8 @@
 import type { IDbService } from '@vibecanvas/service-db/IDbService';
 import type { IFilesystemService } from '@vibecanvas/service-filesystem/IFilesystemService';
 import type { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
-import { type hostname } from 'node:os';
-import { type join } from 'node:path';
+import type { hostname, homedir } from 'node:os';
+import type { join } from 'node:path';
 import type { ICliConfig } from '../../config';
 
 type TMachineConfig = {
@@ -34,7 +34,7 @@ function resolveMachineId(
     mkdirSync: typeof mkdirSync,
     readFileSync: typeof readFileSync,
     writeFileSync: typeof writeFileSync,
-    randomUUID: () => string,
+    randomUUID: () => string
   },
   configPath: string,
 ): string {
@@ -62,6 +62,7 @@ type TPortalFilesystem = {
   writeFileSync: typeof writeFileSync,
   hostname: typeof hostname,
   randomUUID: () => string,
+  homedir: typeof homedir,
 }
 
 type TArgsFilesystem = {
@@ -77,7 +78,7 @@ export async function txEnsureLocalFilesystemRow(portal: TPortalFilesystem, args
     randomUUID: portal.randomUUID,
   }, args.config.configPath);
   const label = resolveFilesystemLabel({ hostname: portal.hostname });
-  const homePath = portal.filesystem.homeDir();
+  const homePath = portal.homedir();
   const existing = portal.db.filesystem.findByMachineId(machineId);
 
   if (!existing) {

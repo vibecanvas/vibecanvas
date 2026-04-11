@@ -1,13 +1,17 @@
+import { ORPCError } from '@orpc/server';
 import { resolve } from 'path';
 import { fnCreateFilesystemError } from './core/fn.create-filesystem-error';
 import { fnDetectFileKind } from './core/fn.detect-file-kind';
 import { fnDetectMime } from './core/fn.detect-mime';
+import { fxResolveFilesystemId } from './core/fx.resolve-filesystem-id';
 import { fnToApiFilesystemError } from './core/fn.to-api-filesystem-error';
 import { baseFilesystemOs } from './orpc';
 
 const apiReadFilesystem = baseFilesystemOs.read.handler(async ({ input, context }) => {
+  const filesystemId = fxResolveFilesystemId({ db: context.db }, { filesystemId: input.query.filesystemId });
+  if (!filesystemId) throw new ORPCError('NOT_FOUND', { message: 'No local filesystem registered' });
   const path = resolve(input.query.path);
-  const [buffer, error] = context.filesystem.readFile(path);
+  const [buffer, error] = context.filesystem.readFile(filesystemId, path);
   if (error || !buffer) {
     return fnToApiFilesystemError(error ?? fnCreateFilesystemError('FX.FILESYSTEM.READ.NOT_FOUND', `Path not found: ${path}`, 404), 'Failed to read file');
   }

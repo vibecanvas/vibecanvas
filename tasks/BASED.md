@@ -154,7 +154,7 @@ Use the leaf files for execution history and local context.
 - [x]: [S23] Use global costs for dev and prod ports
 - [x]: [S24] rename @vibecanvas/service-db -> @vibecanvas/service.db and co
 - [x]: [S25](s/S25.md) - db: remove filetrees table/schema; canvas-doc fully owns filetree state
-- [ ]: [S26](s/S26.md) - db: add filesystems db table for local/remote machine identity
+- [~]: [S26](s/S26.md) - db: add filesystems db table for local/remote machine identity
 - [x]: [S27](s/S27.md) - canvas CLI: remove unimplemented `render` command and help traces
 - [ ]: [S28](s/S28.md) - use runtime package in canvas, like cli does
 

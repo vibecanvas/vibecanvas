@@ -38,35 +38,35 @@ describe('FilesystemServiceNode', () => {
     const filePath = join(sourceDir, 'hello.txt');
     const movedPath = join(destinationDir, 'hello.txt');
 
-    const [writeResult, writeError] = service.writeFile(filePath, 'hello world');
+    const [writeResult, writeError] = service.writeFile('fs-local', filePath, 'hello world');
     expect(writeError).toBeNull();
     expect(writeResult).toBeUndefined();
 
     expect(typeof service.homeDir()).toBe('string');
-    expect(service.exists(filePath)).toBe(true);
+    expect(service.exists('fs-local', filePath)).toBe(true);
 
-    const [entries, entriesError] = service.readdir(sourceDir);
+    const [entries, entriesError] = service.readdir('fs-local', sourceDir);
     expect(entriesError).toBeNull();
     expect(entries?.map((entry) => entry.name)).toEqual(['hello.txt']);
 
-    const [stats, statsError] = service.stat(filePath);
+    const [stats, statsError] = service.stat('fs-local', filePath);
     expect(statsError).toBeNull();
     expect(stats?.isFile()).toBe(true);
 
-    const [contents, contentsError] = service.readFile(filePath);
+    const [contents, contentsError] = service.readFile('fs-local', filePath);
     expect(contentsError).toBeNull();
     expect(contents?.toString('utf8')).toBe('hello world');
 
-    const [renameResult, renameError] = service.rename(filePath, movedPath);
+    const [renameResult, renameError] = service.rename('fs-local', filePath, movedPath);
     expect(renameError).toBeNull();
     expect(renameResult).toBeUndefined();
-    expect(service.exists(movedPath)).toBe(true);
+    expect(service.exists('fs-local', movedPath)).toBe(true);
   });
 
   test('watch, keepalive, unwatch, and stop manage watcher lifecycle', async () => {
-    const iterator = service.watch(root, 'watch-1');
+    const iterator = service.watch('fs-local', root, 'watch-1');
     expect(iterator).not.toBeNull();
-    expect(service.watch(root, 'watch-1')).toBeNull();
+    expect(service.watch('fs-local', root, 'watch-1')).toBeNull();
 
     const pendingEvent = nextEvent(iterator!);
     writeFileSync(join(root, 'created.txt'), 'watch me', 'utf8');
@@ -75,14 +75,14 @@ describe('FilesystemServiceNode', () => {
     expect(['rename', 'change']).toContain(event.eventType);
     expect(event.fileName).toBe('created.txt');
 
-    expect(service.keepalive('watch-1')).toBe(true);
+    expect(service.keepalive('fs-local', 'watch-1')).toBe(true);
 
-    service.unwatch('watch-1');
-    expect(service.keepalive('watch-1')).toBe(false);
+    service.unwatch('fs-local', 'watch-1');
+    expect(service.keepalive('fs-local', 'watch-1')).toBe(false);
 
-    const secondIterator = service.watch(root, 'watch-2');
+    const secondIterator = service.watch('fs-local', root, 'watch-2');
     expect(secondIterator).not.toBeNull();
     service.stop();
-    expect(service.keepalive('watch-2')).toBe(false);
+    expect(service.keepalive('fs-local', 'watch-2')).toBe(false);
   });
 });

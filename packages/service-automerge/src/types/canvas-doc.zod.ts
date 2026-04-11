@@ -114,6 +114,7 @@ export const zFiletreeData = z.object({
   h: z.number(),
   isCollapsed: z.boolean(),
   path: z.string(),
+  id: z.string().optional()
 });
 
 export const zTerminalData = z.object({

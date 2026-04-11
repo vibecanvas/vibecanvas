@@ -11,6 +11,10 @@ const dirHomeSchema = z.object({
   path: z.string(),
 });
 
+const filesystemScopeSchema = z.object({
+  filesystemId: z.string().optional(),
+});
+
 const registeredFilesystemSchema = z.object({
   id: z.string(),
   label: z.string(),
@@ -48,6 +52,7 @@ const dirFilesSchema = z.object({
 
 const moveFileInputSchema = z.object({
   body: z.object({
+    filesystemId: z.string().optional(),
     source_path: z.string(),
     destination_dir_path: z.string(),
   }),
@@ -130,14 +135,15 @@ const filesystemContract = oc.router({
     .output(z.array(registeredFilesystemSchema)),
 
   home: oc
+    .input(filesystemScopeSchema.optional())
     .output(z.union([dirHomeSchema, projectDirErrorSchema])),
 
   list: oc
-    .input(z.object({ query: z.object({ path: z.string(), omitFiles: z.boolean().optional() }) }))
+    .input(z.object({ query: z.object({ filesystemId: z.string().optional(), path: z.string(), omitFiles: z.boolean().optional() }) }))
     .output(z.union([dirListSchema, projectDirErrorSchema])),
 
   files: oc
-    .input(z.object({ query: z.object({ path: z.string(), max_depth: z.number().optional() }) }))
+    .input(z.object({ query: z.object({ filesystemId: z.string().optional(), path: z.string(), max_depth: z.number().optional() }) }))
     .output(z.union([dirFilesSchema, projectDirErrorSchema])),
 
   move: oc
@@ -145,27 +151,27 @@ const filesystemContract = oc.router({
     .output(z.union([moveFileOutputSchema, projectDirErrorSchema])),
 
   inspect: oc
-    .input(z.object({ query: z.object({ path: z.string() }) }))
+    .input(z.object({ query: z.object({ filesystemId: z.string().optional(), path: z.string() }) }))
     .output(z.union([inspectOutputSchema, projectDirErrorSchema])),
 
   read: oc
-    .input(z.object({ query: z.object({ path: z.string(), maxBytes: z.number().optional(), content: z.enum(['text', 'base64', 'binary', 'none']).optional() }) }))
+    .input(z.object({ query: z.object({ filesystemId: z.string().optional(), path: z.string(), maxBytes: z.number().optional(), content: z.enum(['text', 'base64', 'binary', 'none']).optional() }) }))
     .output(readOutputSchema),
 
   write: oc
-    .input(z.object({ query: z.object({ path: z.string(), content: z.string() }) }))
+    .input(z.object({ query: z.object({ filesystemId: z.string().optional(), path: z.string(), content: z.string() }) }))
     .output(writeOutputSchema),
 
   watch: oc
-    .input(z.object({ path: z.string(), watchId: z.string() }))
+    .input(z.object({ filesystemId: z.string().optional(), path: z.string(), watchId: z.string() }))
     .output(eventIterator(watchEventSchema)),
 
   keepaliveWatch: oc
-    .input(z.object({ watchId: z.string() }))
+    .input(z.object({ filesystemId: z.string().optional(), watchId: z.string() }))
     .output(z.boolean()),
 
   unwatch: oc
-    .input(z.object({ watchId: z.string() })),
+    .input(z.object({ filesystemId: z.string().optional(), watchId: z.string() })),
 });
 
 export {
@@ -176,6 +182,7 @@ export {
   dirListSchema,
   filesystemContract,
   fileKindSchema,
+  filesystemScopeSchema,
   inspectOutputSchema,
   registeredFilesystemSchema,
   moveFileInputSchema,

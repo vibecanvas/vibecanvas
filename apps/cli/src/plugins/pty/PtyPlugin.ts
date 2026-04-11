@@ -62,9 +62,11 @@ function createPtyPlugin(): IPlugin<{ pty: IPtyService }, ICliHooks, ICliConfig>
           return;
         }
 
+        const filesystemId = query.get('filesystemId') ?? undefined;
         const rawCursor = query.get('cursor');
         const cursor = rawCursor === null ? undefined : Number.parseInt(rawCursor, 10);
         const attachment = pty.attach({
+          filesystemId,
           workingDirectory,
           ptyID,
           cursor: Number.isFinite(cursor) ? cursor : undefined,
