@@ -42,7 +42,7 @@ describe('FilesystemServiceNode', () => {
     expect(writeError).toBeNull();
     expect(writeResult).toBeUndefined();
 
-    expect(typeof service.homeDir()).toBe('string');
+    expect(typeof service.homeDir('fs-local')).toBe('string');
     expect(service.exists('fs-local', filePath)).toBe(true);
 
     const [entries, entriesError] = service.readdir('fs-local', sourceDir);

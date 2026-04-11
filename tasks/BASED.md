@@ -99,6 +99,7 @@ Use the leaf files for execution history and local context.
 - [x]: [B14](b/B14.md) - canvas CLI: `canvas group --help` falls back to global help
 - [x]: [B15](b/B15.md) - canvas CLI: `--json` output is not real JSON
 - [ ]: [B16](b/B16.md) - ci: `@vibecanvas/canvas` tests load Konva node entry and require native `canvas` - only fails in ci
+- [x]: [B21](b/B21.md) - filesystem: recursive filetree scan dies on EPERM/EACCES folders like `~/.Trash`
 - [x]: [B17](b/B17.md) - canvas CLI: `add --schema rect` still requires an element source instead of printing schema
 - [x]: [B18](b/B18.md) - terminal image paste not working in deploy version
 - [x]: [B19](b/B19.md) - cli usage -> no realtime updates via automerge
@@ -177,7 +178,7 @@ Use the leaf files for execution history and local context.
 ## D irections
 - [x]: [D1] - AI can edit the canvas directly
 - [x]: [D2] - Server plugin system
-- [ ]: [D3] - Support pluggable filsystem architecture
+- [x]: [D3] - Support pluggable filsystem architecture
 - [ ]: [D4] - Support sideloadable ui elements
 - [ ]: [D5] - AI Canvas Element, attachable to other elements
 - [ ]: [D6] - Gateway support

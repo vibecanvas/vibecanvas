@@ -51,10 +51,14 @@ export type TFiletreeListResponse = {
   }>;
 };
 
+export type TFiletreeUnreadableReason = "permission_denied";
+
 export type TFiletreeNode = {
   name: string;
   path: string;
   is_dir: boolean;
+  is_unreadable?: boolean;
+  unreadable_reason?: TFiletreeUnreadableReason;
   children: TFiletreeNode[];
 };
 

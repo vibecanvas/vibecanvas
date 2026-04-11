@@ -35,6 +35,8 @@ const baseDirNodeSchema = z.object({
   name: z.string(),
   path: z.string(),
   is_dir: z.boolean(),
+  is_unreadable: z.boolean().optional(),
+  unreadable_reason: z.enum(['permission_denied']).optional(),
 });
 
 type TDirNode = z.infer<typeof baseDirNodeSchema> & {

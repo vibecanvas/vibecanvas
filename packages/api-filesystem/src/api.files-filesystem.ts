@@ -44,7 +44,22 @@ function walkDirectory(
 
     if (entry.isDirectory()) {
       const [children, childError] = depthRemaining > 0 ? walkDirectory(filesystem, filesystemId, entryPath, depthRemaining - 1) : [[], null];
-      if (childError) return [null, childError];
+      if (childError) {
+        if (fnIsPermissionDeniedError(childError)) {
+          nodes.push({
+            name: entry.name,
+            path: entryPath,
+            is_dir: true,
+            is_unreadable: true,
+            unreadable_reason: 'permission_denied',
+            children: [],
+          });
+          continue;
+        }
+
+        return [null, childError];
+      }
+
       nodes.push({ name: entry.name, path: entryPath, is_dir: true, children: children ?? [] });
       continue;
     }
@@ -53,6 +68,10 @@ function walkDirectory(
   }
 
   return [nodes, null];
+}
+
+function fnIsPermissionDeniedError(error: TErrorEntry | null | undefined): boolean {
+  return error?.statusCode === 403 || error?.code.endsWith('.PERMISSION_DENIED') === true;
 }
 
 export { apiFilesFilesystem, walkDirectory };

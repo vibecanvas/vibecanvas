@@ -1,4 +1,5 @@
 import type { TOrpcSafeClient } from "@vibecanvas/orpc-client";
+import { Tooltip } from "@kobalte/core/tooltip";
 import { createEffect, createMemo, onCleanup, type Accessor } from "solid-js";
 import ArrowUp from "lucide-solid/icons/arrow-up";
 import ChevronDown from "lucide-solid/icons/chevron-down";
@@ -50,58 +51,79 @@ export function FiletreeWidget(props: TFiletreeWidgetProps) {
     const isOpen = () => filetreeLogic.openFolders().has(node.path);
     const isSelected = () => filetreeLogic.selectedRowPath() === node.path;
     const isDropTarget = () => filetreeLogic.dragOverTargetPath() === node.path;
+    const isUnreadable = () => node.is_unreadable === true;
+    const unreadableMessage = () => node.unreadable_reason === "permission_denied" ? "Permission denied" : null;
+
+    const row = (
+      <button
+        type="button"
+        draggable={true}
+        class="flex w-full items-center gap-1 border-b border-border/60 px-2 py-1 text-left text-xs hover:bg-accent"
+        classList={{
+          "bg-accent": isSelected(),
+          "bg-amber-200/60": isDropTarget(),
+          "text-destructive hover:bg-destructive/10": isUnreadable(),
+        }}
+        style={{ "padding-left": `${depth * 12 + 8}px` }}
+        onDragStart={(event) => {
+          filetreeLogic.handleNodeDragStart(node, event);
+        }}
+        onDragEnd={() => {
+          filetreeLogic.handleNodeDragEnd();
+        }}
+        onDragEnter={(event) => {
+          filetreeLogic.handleNodeDragEnter(node, parentPath, event);
+        }}
+        onDragOver={(event) => {
+          filetreeLogic.handleNodeDragOver(node, parentPath, event);
+        }}
+        onDragLeave={(event) => {
+          filetreeLogic.handleNodeDragLeave(node.path, event);
+        }}
+        onDrop={(event) => {
+          filetreeLogic.handleNodeDrop(node, parentPath, event);
+        }}
+        onClick={() => {
+          filetreeLogic.handleNodeClick(node);
+        }}
+        onDblClick={() => {
+          if (node.is_dir) return;
+          props.onOpenFile?.(node.path);
+        }}
+      >
+        <Show when={node.is_dir && !isUnreadable()} fallback={<span class="w-3" />}>
+          <Show when={isOpen()} fallback={<ChevronRight size={12} class="text-muted-foreground" />}>
+            <ChevronDown size={12} class="text-muted-foreground" />
+          </Show>
+        </Show>
+
+        <Show when={node.is_dir} fallback={<FileIcon size={12} class="text-muted-foreground" />}>
+          <Show when={isUnreadable()} fallback={<Show when={isOpen()} fallback={<Folder size={12} class="text-muted-foreground" />}><FolderOpen size={12} class="text-muted-foreground" /></Show>}>
+            <Folder size={12} class="text-destructive" />
+          </Show>
+        </Show>
+
+        <span class="truncate">{node.name}</span>
+      </button>
+    );
 
     return (
       <div>
-        <button
-          type="button"
-          draggable={true}
-          class="flex w-full items-center gap-1 border-b border-border/60 px-2 py-1 text-left text-xs hover:bg-accent"
-          classList={{
-            "bg-accent": isSelected(),
-            "bg-amber-200/60": isDropTarget(),
-          }}
-          style={{ "padding-left": `${depth * 12 + 8}px` }}
-          onDragStart={(event) => {
-            filetreeLogic.handleNodeDragStart(node, event);
-          }}
-          onDragEnd={() => {
-            filetreeLogic.handleNodeDragEnd();
-          }}
-          onDragEnter={(event) => {
-            filetreeLogic.handleNodeDragEnter(node, parentPath, event);
-          }}
-          onDragOver={(event) => {
-            filetreeLogic.handleNodeDragOver(node, parentPath, event);
-          }}
-          onDragLeave={(event) => {
-            filetreeLogic.handleNodeDragLeave(node.path, event);
-          }}
-          onDrop={(event) => {
-            filetreeLogic.handleNodeDrop(node, parentPath, event);
-          }}
-          onClick={() => {
-            filetreeLogic.handleNodeClick(node);
-          }}
-          onDblClick={() => {
-            if (node.is_dir) return;
-            props.onOpenFile?.(node.path);
-          }}
+        <Show
+          when={isUnreadable() && unreadableMessage()}
+          fallback={row}
         >
-          <Show when={node.is_dir} fallback={<span class="w-3" />}>
-            <Show when={isOpen()} fallback={<ChevronRight size={12} class="text-muted-foreground" />}>
-              <ChevronDown size={12} class="text-muted-foreground" />
-            </Show>
-          </Show>
-
-          <Show when={node.is_dir} fallback={<FileIcon size={12} class="text-muted-foreground" />}>
-            <Show when={isOpen()} fallback={<Folder size={12} class="text-muted-foreground" />}>
-              <FolderOpen size={12} class="text-muted-foreground" />
-            </Show>
-          </Show>
-
-          <span class="truncate">{node.name}</span>
-        </button>
+          <Tooltip openDelay={200} closeDelay={0} placement="right">
+            <Tooltip.Trigger as="div">
+              {row}
+            </Tooltip.Trigger>
+            <Tooltip.Portal>
+              <Tooltip.Content class="z-50 max-w-64 rounded border border-border bg-popover px-2 py-1 text-xs text-popover-foreground shadow-md">
+                {unreadableMessage()}
+              </Tooltip.Content>
+            </Tooltip.Portal>
+          </Tooltip>
+        </Show>
 
         <Show when={node.is_dir && isOpen()}>
           <For each={node.children}>{(child) => renderTree(child, depth + 1, node.path)}</For>

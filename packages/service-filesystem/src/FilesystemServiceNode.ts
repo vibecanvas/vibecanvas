@@ -34,12 +34,7 @@ export class FilesystemServiceNode implements IFilesystemService {
     try {
       return [readdirSync(path, { withFileTypes: true }), null];
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Failed to read directory';
-      return [null, {
-        code: 'SRV.FILESYSTEM.READDIR.FAILED',
-        statusCode: 500,
-        externalMessage: { en: message },
-      }];
+      return [null, this.#toFilesystemError(error, 'SRV.FILESYSTEM.READDIR.FAILED', 'Failed to read directory')];
     }
   }
 
@@ -47,12 +42,7 @@ export class FilesystemServiceNode implements IFilesystemService {
     try {
       return [statSync(path), null];
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Failed to stat path';
-      return [null, {
-        code: 'SRV.FILESYSTEM.STAT.FAILED',
-        statusCode: 500,
-        externalMessage: { en: message },
-      }];
+      return [null, this.#toFilesystemError(error, 'SRV.FILESYSTEM.STAT.FAILED', 'Failed to stat path')];
     }
   }
 
@@ -174,6 +164,25 @@ export class FilesystemServiceNode implements IFilesystemService {
 
     this.#watchersByPath.clear();
     this.#watchIdToPath.clear();
+  }
+
+  #toFilesystemError(error: unknown, fallbackCode: TErrorCode, fallbackMessage: string): TErrorEntry {
+    const message = error instanceof Error ? error.message : fallbackMessage;
+    const errorCode = typeof error === 'object' && error !== null && 'code' in error ? (error.code as unknown) : null;
+
+    if (errorCode === 'EPERM' || errorCode === 'EACCES') {
+      return {
+        code: `${fallbackCode.replace(/\.FAILED$/, '')}.PERMISSION_DENIED` as TErrorCode,
+        statusCode: 403,
+        externalMessage: { en: message },
+      };
+    }
+
+    return {
+      code: fallbackCode,
+      statusCode: 500,
+      externalMessage: { en: message },
+    };
   }
 
   #resetTimeout(path: string, watchId: string) {
