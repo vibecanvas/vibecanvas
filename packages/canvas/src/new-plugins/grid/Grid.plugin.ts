@@ -1,5 +1,4 @@
 import type { IPlugin } from "@vibecanvas/runtime";
-import { CustomEvents } from "../../custom-events";
 import type { CameraService } from "../../new-services/camera/CameraService";
 import type { RenderService } from "../../new-services/render/RenderService";
 import type { IHooks } from "../../runtime";
@@ -52,11 +51,9 @@ export function createGridPlugin(): IPlugin<{
           render.staticBackgroundLayer.batchDraw();
         });
 
-        ctx.hooks.customEvent.tap((event, value) => {
-          if (event !== CustomEvents.GRID_VISIBLE) return false;
+        ctx.hooks.gridVisible.tap((value) => {
           visible = value;
           render.staticBackgroundLayer.batchDraw();
-          return false;
         });
       });
     },

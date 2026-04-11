@@ -2,8 +2,11 @@ import type { DocHandle } from "@automerge/automerge-repo";
 import { createRuntime, createServiceRegistry } from "@vibecanvas/runtime";
 import type { TCanvasDoc } from "@vibecanvas/service-automerge/types/canvas-doc.types";
 import type Konva from "konva";
+import type { Group } from "konva/lib/Group";
+import type { KonvaEventObject } from "konva/lib/Node";
+import type { Shape, ShapeConfig } from "konva/lib/Shape";
 import { AsyncParallelHook, SyncExitHook, SyncHook } from "@vibecanvas/tapable";
-import type { TCustomEvent } from "./custom-events";
+import type { TTool } from "./components/FloatingCanvasToolbar/toolbar.types";
 import { createGridPlugin } from "./new-plugins";
 import { CameraService } from "./new-services/camera/CameraService";
 import { EditorService } from "./new-services/editor/EditorService";
@@ -45,6 +48,8 @@ export type TPointerEvent = Konva.KonvaEventObject<PointerEvent>;
 export type TMouseEvent = Konva.KonvaEventObject<MouseEvent>;
 export type TWheelEvent = Konva.KonvaEventObject<WheelEvent>;
 
+export type TElementPointerEvent = KonvaEventObject<PointerEvent, Shape<ShapeConfig> | Group>;
+
 export interface IHooks {
   /**
    * Called at the initialization stage.
@@ -67,7 +72,11 @@ export interface IHooks {
   pointerCancel: SyncHook<[TPointerEvent]>;
   keydown: SyncHook<[KeyboardEvent]>;
   keyup: SyncHook<[KeyboardEvent]>;
-  customEvent: SyncExitHook<TCustomEvent>;
+  gridVisible: SyncHook<[boolean]>;
+  toolSelect: SyncHook<[TTool]>;
+  elementPointerClick: SyncExitHook<[TElementPointerEvent]>;
+  elementPointerDown: SyncExitHook<[TElementPointerEvent]>;
+  elementPointerDoubleClick: SyncExitHook<[TElementPointerEvent]>;
 }
 
 declare module "@vibecanvas/runtime" {
@@ -94,7 +103,11 @@ function createHooks(): IHooks {
     pointerCancel: new SyncHook(),
     keydown: new SyncHook(),
     keyup: new SyncHook(),
-    customEvent: new SyncExitHook(),
+    gridVisible: new SyncHook(),
+    toolSelect: new SyncHook(),
+    elementPointerClick: new SyncExitHook(),
+    elementPointerDown: new SyncExitHook(),
+    elementPointerDoubleClick: new SyncExitHook(),
   };
 }
 
