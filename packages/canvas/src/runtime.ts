@@ -6,9 +6,10 @@ import type { Group } from "konva/lib/Group";
 import type { KonvaEventObject } from "konva/lib/Node";
 import type { Shape, ShapeConfig } from "konva/lib/Shape";
 import { AsyncParallelHook, SyncExitHook, SyncHook } from "@vibecanvas/tapable";
-import { createCameraControlPlugin, createEventListenerPlugin, createGridPlugin, createToolbarPlugin, createVisualDebugPlugin } from "./new-plugins";
+import { createCameraControlPlugin, createEventListenerPlugin, createGridPlugin, createHistoryControlPlugin, createSelectPlugin, createToolbarPlugin, createVisualDebugPlugin } from "./new-plugins";
 import { CameraService } from "./new-services/camera/CameraService";
 import { EditorService } from "./new-services/editor/EditorService";
+import { HistoryService } from "./new-services/history/HistoryService";
 import { RenderService } from "./new-services/render/RenderService";
 import { SelectionService } from "./new-services/selection/SelectionService";
 import { ThemeService } from "./new-services/theme/ThemeService";
@@ -82,6 +83,7 @@ declare module "@vibecanvas/runtime" {
   interface IServiceMap {
     camera: CameraService;
     editor: EditorService;
+    history: HistoryService;
     render: RenderService;
     selection: SelectionService;
     theme: ThemeService;
@@ -119,6 +121,7 @@ export function buildRuntime(config: IRuntimeConfig) {
 
   services.provide("camera", new CameraService({ render }));
   services.provide("editor", new EditorService());
+  services.provide("history", new HistoryService());
   services.provide("render", render);
   services.provide("selection", new SelectionService());
   services.provide("theme", new ThemeService());
@@ -126,7 +129,7 @@ export function buildRuntime(config: IRuntimeConfig) {
   return createRuntime<IHooks, IRuntimeConfig>({
     config,
     hooks: createHooks(),
-    plugins: [createEventListenerPlugin(), createGridPlugin(), createToolbarPlugin(), createVisualDebugPlugin(), createCameraControlPlugin()],
+    plugins: [createEventListenerPlugin(), createGridPlugin(), createToolbarPlugin(), createHistoryControlPlugin(), createSelectPlugin(), createVisualDebugPlugin(), createCameraControlPlugin()],
     services,
     boot: async ({ services, hooks }) => {
       services.require("render").start();
