@@ -100,8 +100,12 @@ Also remove any PATH line you added for `~/.vibecanvas/bin` in your shell profil
 
 ## Database
 
-- Primary local SQLite DB path: `~/.vibecanvas/vibecanvas.sqlite`
-- Schema source: `packages/imperative-shell/src/database/`
+- Default installed/compiled SQLite DB path: `~/.local/share/vibecanvas/vibecanvas.sqlite`
+- Respects `XDG_DATA_HOME` on Linux/macOS-style XDG setups, so effective path is `"$XDG_DATA_HOME"/vibecanvas/vibecanvas.sqlite` when set
+- `VIBECANVAS_CONFIG=/some/dir` changes DB path to `/some/dir/vibecanvas.sqlite`
+- `VIBECANVAS_DB=/some/file.sqlite` sets an explicit SQLite file path
+- Dev monorepo default DB path: `./local-volume/data/vibecanvas.sqlite`
+- Schema source: `packages/service-db/src/schema.ts`
 
 
 ## Contributing

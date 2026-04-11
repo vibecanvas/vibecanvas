@@ -11,6 +11,20 @@ const dirHomeSchema = z.object({
   path: z.string(),
 });
 
+const filesystemScopeSchema = z.object({
+  filesystemId: z.string().optional(),
+});
+
+const registeredFilesystemSchema = z.object({
+  id: z.string(),
+  label: z.string(),
+  kind: z.enum(['local', 'remote']),
+  machine_id: z.string(),
+  home_path: z.string().nullable(),
+  created_at: z.date(),
+  updated_at: z.date(),
+});
+
 const dirListSchema = z.object({
   current: z.string(),
   parent: z.string().nullable(),
@@ -21,6 +35,8 @@ const baseDirNodeSchema = z.object({
   name: z.string(),
   path: z.string(),
   is_dir: z.boolean(),
+  is_unreadable: z.boolean().optional(),
+  unreadable_reason: z.enum(['permission_denied']).optional(),
 });
 
 type TDirNode = z.infer<typeof baseDirNodeSchema> & {
@@ -38,6 +54,7 @@ const dirFilesSchema = z.object({
 
 const moveFileInputSchema = z.object({
   body: z.object({
+    filesystemId: z.string().optional(),
     source_path: z.string(),
     destination_dir_path: z.string(),
   }),
@@ -111,19 +128,24 @@ type TFileKind = z.infer<typeof fileKindSchema>;
 type TContentType = z.infer<typeof contentTypeSchema>;
 type TInspectOutput = z.infer<typeof inspectOutputSchema>;
 type TReadOutput = z.infer<typeof readOutputSchema>;
+type TRegisteredFilesystem = z.infer<typeof registeredFilesystemSchema>;
 type TWriteOutput = z.infer<typeof writeOutputSchema>;
 type TWatchEvent = z.infer<typeof watchEventSchema>;
 
 const filesystemContract = oc.router({
+  listRegisteredFilesystems: oc
+    .output(z.array(registeredFilesystemSchema)),
+
   home: oc
+    .input(filesystemScopeSchema.optional())
     .output(z.union([dirHomeSchema, projectDirErrorSchema])),
 
   list: oc
-    .input(z.object({ query: z.object({ path: z.string(), omitFiles: z.boolean().optional() }) }))
+    .input(z.object({ query: z.object({ filesystemId: z.string().optional(), path: z.string(), omitFiles: z.boolean().optional() }) }))
     .output(z.union([dirListSchema, projectDirErrorSchema])),
 
   files: oc
-    .input(z.object({ query: z.object({ path: z.string(), max_depth: z.number().optional() }) }))
+    .input(z.object({ query: z.object({ filesystemId: z.string().optional(), path: z.string(), max_depth: z.number().optional() }) }))
     .output(z.union([dirFilesSchema, projectDirErrorSchema])),
 
   move: oc
@@ -131,27 +153,27 @@ const filesystemContract = oc.router({
     .output(z.union([moveFileOutputSchema, projectDirErrorSchema])),
 
   inspect: oc
-    .input(z.object({ query: z.object({ path: z.string() }) }))
+    .input(z.object({ query: z.object({ filesystemId: z.string().optional(), path: z.string() }) }))
     .output(z.union([inspectOutputSchema, projectDirErrorSchema])),
 
   read: oc
-    .input(z.object({ query: z.object({ path: z.string(), maxBytes: z.number().optional(), content: z.enum(['text', 'base64', 'binary', 'none']).optional() }) }))
+    .input(z.object({ query: z.object({ filesystemId: z.string().optional(), path: z.string(), maxBytes: z.number().optional(), content: z.enum(['text', 'base64', 'binary', 'none']).optional() }) }))
     .output(readOutputSchema),
 
   write: oc
-    .input(z.object({ query: z.object({ path: z.string(), content: z.string() }) }))
+    .input(z.object({ query: z.object({ filesystemId: z.string().optional(), path: z.string(), content: z.string() }) }))
     .output(writeOutputSchema),
 
   watch: oc
-    .input(z.object({ path: z.string(), watchId: z.string() }))
+    .input(z.object({ filesystemId: z.string().optional(), path: z.string(), watchId: z.string() }))
     .output(eventIterator(watchEventSchema)),
 
   keepaliveWatch: oc
-    .input(z.object({ watchId: z.string() }))
+    .input(z.object({ filesystemId: z.string().optional(), watchId: z.string() }))
     .output(z.boolean()),
 
   unwatch: oc
-    .input(z.object({ watchId: z.string() })),
+    .input(z.object({ filesystemId: z.string().optional(), watchId: z.string() })),
 });
 
 export {
@@ -162,7 +184,9 @@ export {
   dirListSchema,
   filesystemContract,
   fileKindSchema,
+  filesystemScopeSchema,
   inspectOutputSchema,
+  registeredFilesystemSchema,
   moveFileInputSchema,
   moveFileOutputSchema,
   projectDirErrorSchema,
@@ -182,6 +206,7 @@ export type {
   TMoveFileInput,
   TMoveFileOutput,
   TReadOutput,
+  TRegisteredFilesystem,
   TWatchEvent,
   TWriteOutput,
 };

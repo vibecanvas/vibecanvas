@@ -200,7 +200,7 @@ export function createFiletreeContextLogic(args: TCreateFiletreeContextLogicArgs
   };
 
   const ensureFolderAutoOpen = (node: TFiletreeNode) => {
-    if (!node.is_dir) return;
+    if (!node.is_dir || node.is_unreadable) return;
     if (openFolders().has(node.path)) return;
     if (folderAutoOpenTargetPath === node.path && folderAutoOpenTimer) return;
 
@@ -378,6 +378,7 @@ export function createFiletreeContextLogic(args: TCreateFiletreeContextLogicArgs
     const currentDraggedNode = draggedNode();
     if (!currentDraggedNode) return;
     const destinationPath = node.is_dir ? node.path : parentPath;
+    if (node.is_dir && node.is_unreadable) return;
     if (!canDropNodeIntoDestination(currentDraggedNode, destinationPath)) return;
 
     setDragOverTargetPath(node.path);
@@ -390,6 +391,7 @@ export function createFiletreeContextLogic(args: TCreateFiletreeContextLogicArgs
     const currentDraggedNode = draggedNode();
     if (!currentDraggedNode) return;
     const destinationPath = node.is_dir ? node.path : parentPath;
+    if (node.is_dir && node.is_unreadable) return;
     if (!canDropNodeIntoDestination(currentDraggedNode, destinationPath)) return;
 
     event.preventDefault();
@@ -422,6 +424,7 @@ export function createFiletreeContextLogic(args: TCreateFiletreeContextLogicArgs
     const droppedNode = parseDraggedMoveNode(event) ?? draggedNode();
     if (!droppedNode) return;
     const destinationPath = node.is_dir ? node.path : parentPath;
+    if (node.is_dir && node.is_unreadable) return;
     if (!canDropNodeIntoDestination(droppedNode, destinationPath)) return;
 
     event.preventDefault();
@@ -430,7 +433,7 @@ export function createFiletreeContextLogic(args: TCreateFiletreeContextLogicArgs
 
   const handleNodeClick = (node: TFiletreeNode) => {
     setSelectedRowPath(node.path);
-    if (!node.is_dir) return;
+    if (!node.is_dir || node.is_unreadable) return;
     const isCurrentlyOpen = openFolders().has(node.path);
     toggleFolder(node.path);
     if (!isCurrentlyOpen && node.children.length === 0) {

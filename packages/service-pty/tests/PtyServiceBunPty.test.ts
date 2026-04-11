@@ -30,7 +30,7 @@ describe('PtyServiceBunPty', () => {
 
   test('create/list/get/update/remove manages PTY sessions', async () => {
     const workingDirectory = process.cwd();
-    const created = await service.create(workingDirectory, {
+    const created = await service.create('fs-local', workingDirectory, {
       command: '/bin/sh',
       title: 'Test Terminal',
       size: { rows: 30, cols: 120 },
@@ -43,14 +43,14 @@ describe('PtyServiceBunPty', () => {
     expect(created.cols).toBe(120);
     expect(created.status).toBe('running');
 
-    const listed = service.list(workingDirectory);
+    const listed = service.list('fs-local', workingDirectory);
     expect(listed.some((pty) => pty.id === created.id)).toBe(true);
 
-    const fetched = service.get(workingDirectory, created.id);
+    const fetched = service.get('fs-local', workingDirectory, created.id);
     expect(fetched?.id).toBe(created.id);
     expect(fetched?.title).toBe('Test Terminal');
 
-    const updated = service.update(workingDirectory, created.id, {
+    const updated = service.update('fs-local', workingDirectory, created.id, {
       title: 'Renamed Terminal',
       size: { rows: 40, cols: 140 },
     });
@@ -58,14 +58,14 @@ describe('PtyServiceBunPty', () => {
     expect(updated?.rows).toBe(40);
     expect(updated?.cols).toBe(140);
 
-    const removed = await service.remove(workingDirectory, created.id);
+    const removed = await service.remove('fs-local', workingDirectory, created.id);
     expect(removed).toBe(true);
-    expect(service.get(workingDirectory, created.id)).toBeNull();
+    expect(service.get('fs-local', workingDirectory, created.id)).toBeNull();
   });
 
   test('attach sends input and receives live output', async () => {
     const workingDirectory = process.cwd();
-    const created = await service.create(workingDirectory, {
+    const created = await service.create('fs-local', workingDirectory, {
       command: '/bin/sh',
       title: 'Interactive Terminal',
     });
@@ -94,7 +94,7 @@ describe('PtyServiceBunPty', () => {
 
   test('ctrl+c sent through the PTY interrupts the foreground process', async () => {
     const workingDirectory = process.cwd();
-    const created = await service.create(workingDirectory, {
+    const created = await service.create('fs-local', workingDirectory, {
       command: '/bin/sh',
       title: 'Signal Terminal',
     });
@@ -126,7 +126,7 @@ describe('PtyServiceBunPty', () => {
 
   test('replays buffered output on reconnect from cursor zero', async () => {
     const workingDirectory = process.cwd();
-    const created = await service.create(workingDirectory, {
+    const created = await service.create('fs-local', workingDirectory, {
       command: '/bin/sh',
       title: 'Replay Terminal',
     });
@@ -168,6 +168,6 @@ describe('PtyServiceBunPty', () => {
   test('rejects new PTY creation after stop', async () => {
     await service.stop();
 
-    await expect(service.create(process.cwd())).rejects.toThrow('PTY service has been stopped');
+    await expect(service.create('fs-local', process.cwd())).rejects.toThrow('PTY service has been stopped');
   });
 });

@@ -25,10 +25,14 @@ export type TFilesystemFilesArgs = {
   max_depth?: number;
 };
 
+export type TFilesystemUnreadableReason = 'permission_denied';
+
 export type TFilesystemDirNode = {
   name: string;
   path: string;
   is_dir: boolean;
+  is_unreadable?: boolean;
+  unreadable_reason?: TFilesystemUnreadableReason;
   children: TFilesystemDirNode[];
 };
 

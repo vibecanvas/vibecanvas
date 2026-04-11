@@ -1,6 +1,6 @@
 {
   "name": "@vibecanvas/api-pty",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "private": true,
   "type": "module",
   "exports": {
@@ -10,6 +10,7 @@
   "dependencies": {
     "@orpc/contract": "catalog:",
     "@orpc/server": "catalog:",
+    "@vibecanvas/service-db": "workspace:*",
     "@vibecanvas/service-pty": "workspace:*",
     "zod": "catalog:"
   }

@@ -3,6 +3,7 @@ import { apiHomeFilesystem } from './api.home-filesystem';
 import { apiInspectFilesystem } from './api.inspect-filesystem';
 import { apiKeepaliveWatchFilesystem } from './api.keepalive-watch-filesystem';
 import { apiListFilesystem } from './api.list-filesystem';
+import { apiListRegisteredFilesystems } from './api.list-registered-filesystems';
 import { apiMoveFilesystem } from './api.move-filesystem';
 import { apiReadFilesystem } from './api.read-filesystem';
 import { apiUnwatchFilesystem } from './api.unwatch-filesystem';
@@ -11,6 +12,7 @@ import { apiWriteFilesystem } from './api.write-filesystem';
 import { baseFilesystemOs } from './orpc';
 
 const filesystemHandlers = {
+  listRegisteredFilesystems: apiListRegisteredFilesystems,
   home: apiHomeFilesystem,
   list: apiListFilesystem,
   files: apiFilesFilesystem,

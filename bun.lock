@@ -16,7 +16,7 @@
     },
     "apps/cli": {
       "name": "@vibecanvas/cli",
-      "version": "0.3.0-beta.1",
+      "version": "0.3.0",
       "dependencies": {
         "@automerge/automerge-repo": "catalog:",
         "@orpc/client": "catalog:",
@@ -43,7 +43,7 @@
     },
     "apps/frontend": {
       "name": "@vibecanvas/frontend",
-      "version": "0.3.0-beta.1",
+      "version": "0.3.0",
       "dependencies": {
         "@automerge/automerge": "catalog:",
         "@automerge/automerge-repo": "catalog:",
@@ -88,7 +88,7 @@
     },
     "apps/vibecanvas": {
       "name": "vibecanvas",
-      "version": "0.3.0-beta.1",
+      "version": "0.3.0",
       "bin": {
         "vibecanvas": "./bin/vibecanvas",
       },
@@ -106,7 +106,7 @@
     },
     "apps/web": {
       "name": "@vibecanvas/web",
-      "version": "0.3.0-beta.1",
+      "version": "0.3.0",
       "dependencies": {
         "@astrojs/mdx": "^4.2.2",
         "@astrojs/solid-js": "^5.0.6",
@@ -116,7 +116,7 @@
     },
     "packages/api-canvas": {
       "name": "@vibecanvas/api-canvas",
-      "version": "0.3.0-beta.1",
+      "version": "0.3.0",
       "dependencies": {
         "@orpc/contract": "catalog:",
         "@orpc/server": "catalog:",
@@ -126,7 +126,7 @@
     },
     "packages/api-canvas-cmd": {
       "name": "@vibecanvas/api-canvas-cmd",
-      "version": "0.3.0-beta.1",
+      "version": "0.3.0",
       "dependencies": {
         "@orpc/contract": "catalog:",
         "@orpc/server": "catalog:",
@@ -137,7 +137,7 @@
     },
     "packages/api-db": {
       "name": "@vibecanvas/api-db",
-      "version": "0.3.0-beta.1",
+      "version": "0.3.0",
       "dependencies": {
         "@orpc/contract": "catalog:",
         "@orpc/server": "catalog:",
@@ -147,7 +147,7 @@
     },
     "packages/api-file": {
       "name": "@vibecanvas/api-file",
-      "version": "0.3.0-beta.1",
+      "version": "0.3.0",
       "dependencies": {
         "@orpc/contract": "catalog:",
         "@orpc/server": "catalog:",
@@ -157,17 +157,18 @@
     },
     "packages/api-filesystem": {
       "name": "@vibecanvas/api-filesystem",
-      "version": "0.3.0-beta.1",
+      "version": "0.3.0",
       "dependencies": {
         "@orpc/contract": "catalog:",
         "@orpc/server": "catalog:",
+        "@vibecanvas/service-db": "workspace:*",
         "@vibecanvas/service-filesystem": "workspace:*",
         "zod": "catalog:",
       },
     },
     "packages/api-notification": {
       "name": "@vibecanvas/api-notification",
-      "version": "0.3.0-beta.1",
+      "version": "0.3.0",
       "dependencies": {
         "@orpc/contract": "catalog:",
         "@orpc/server": "catalog:",
@@ -177,7 +178,7 @@
     },
     "packages/api-pty": {
       "name": "@vibecanvas/api-pty",
-      "version": "0.3.0-beta.1",
+      "version": "0.3.0",
       "dependencies": {
         "@orpc/contract": "catalog:",
         "@orpc/server": "catalog:",
@@ -187,7 +188,7 @@
     },
     "packages/canvas": {
       "name": "@vibecanvas/canvas",
-      "version": "0.3.0-beta.1",
+      "version": "0.3.0",
       "dependencies": {
         "@automerge/automerge": "catalog:",
         "@automerge/automerge-repo": "catalog:",
@@ -242,7 +243,7 @@
     },
     "packages/canvas-cmds": {
       "name": "@vibecanvas/canvas-cmds",
-      "version": "0.3.0-beta.1",
+      "version": "0.3.0",
       "dependencies": {
         "@automerge/automerge-repo": "catalog:",
         "@vibecanvas/service-automerge": "workspace:*",
@@ -251,7 +252,7 @@
     },
     "packages/orpc-client": {
       "name": "@vibecanvas/orpc-client",
-      "version": "0.3.0-beta.1",
+      "version": "0.3.0",
       "dependencies": {
         "@orpc/client": "catalog:",
         "@orpc/contract": "catalog:",
@@ -266,14 +267,14 @@
     },
     "packages/runtime": {
       "name": "@vibecanvas/runtime",
-      "version": "0.3.0-beta.1",
+      "version": "0.3.0",
       "dependencies": {
         "@vibecanvas/tapable": "workspace:*",
       },
     },
     "packages/service-automerge": {
       "name": "@vibecanvas/service-automerge",
-      "version": "0.3.0-beta.1",
+      "version": "0.3.0",
       "dependencies": {
         "@automerge/automerge-repo": "catalog:",
         "@automerge/automerge-repo-network-websocket": "catalog:",
@@ -284,7 +285,7 @@
     },
     "packages/service-db": {
       "name": "@vibecanvas/service-db",
-      "version": "0.3.0-beta.1",
+      "version": "0.3.0",
       "dependencies": {
         "@vibecanvas/runtime": "workspace:*",
         "@vibecanvas/shared-functions": "workspace:*",
@@ -296,7 +297,7 @@
     },
     "packages/service-event-publisher": {
       "name": "@vibecanvas/service-event-publisher",
-      "version": "0.3.0-beta.1",
+      "version": "0.3.0",
       "dependencies": {
         "@orpc/server": "catalog:",
         "@vibecanvas/api-db": "workspace:*",
@@ -307,7 +308,7 @@
     },
     "packages/service-filesystem": {
       "name": "@vibecanvas/service-filesystem",
-      "version": "0.3.0-beta.1",
+      "version": "0.3.0",
       "dependencies": {
         "@vibecanvas/runtime": "workspace:*",
         "@vibecanvas/service-event-publisher": "workspace:*",
@@ -315,7 +316,7 @@
     },
     "packages/service-pty": {
       "name": "@vibecanvas/service-pty",
-      "version": "0.3.0-beta.1",
+      "version": "0.3.0",
       "dependencies": {
         "@vibecanvas/runtime": "workspace:*",
         "bun-pty": "^0.4.8",
@@ -323,11 +324,11 @@
     },
     "packages/shared-functions": {
       "name": "@vibecanvas/shared-functions",
-      "version": "0.3.0-beta.1",
+      "version": "0.3.0",
     },
     "packages/tapable": {
       "name": "@vibecanvas/tapable",
-      "version": "0.3.0-beta.1",
+      "version": "0.3.0",
     },
   },
   "overrides": {

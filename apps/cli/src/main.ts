@@ -8,6 +8,7 @@ import { CliArgvError, parseCliArgv } from './parse-argv';
 import { createAutomergePlugin } from './plugins/automerge/AutomergePlugin';
 import { createCliPlugin } from './plugins/cli/CliPlugin';
 import { fnPrintCommandError } from './plugins/cli/core/fn.print-command-result';
+import { createFilesystemPlugin } from './plugins/filesystem/FilesystemPlugin';
 import { createOrpcPlugin } from './plugins/orpc/OrpcPlugin';
 import { createPtyPlugin } from './plugins/pty/PtyPlugin';
 import { createServerPlugin } from './plugins/server/ServerPlugin';
@@ -49,7 +50,7 @@ if (config.command === 'canvas') {
 const { services } = setupServices(config);
 
 const runtime = createRuntime<any, ICliConfig>({
-  plugins: [createCliPlugin(), createOrpcPlugin(), createPtyPlugin(), createAutomergePlugin(), createServerPlugin()],
+  plugins: [createFilesystemPlugin(), createCliPlugin(), createOrpcPlugin(), createPtyPlugin(), createAutomergePlugin(), createServerPlugin()],
   services,
   hooks: createCliHooks(),
   config,

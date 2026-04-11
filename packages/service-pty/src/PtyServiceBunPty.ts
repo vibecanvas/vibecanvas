@@ -86,20 +86,20 @@ export class PtyServiceBunPty implements IPtyService {
   #stopPromise: Promise<void> | null = null;
   #stopped = false;
 
-  list(workingDirectory: string): TPty[] {
+  list(_filesystemId: string, workingDirectory: string): TPty[] {
     return [...this.#sessions.values()]
       .filter((session) => session.pty.cwd === workingDirectory)
       .map((session) => ({ ...session.pty }));
   }
 
-  get(workingDirectory: string, ptyID: string): TPty | null {
+  get(_filesystemId: string, workingDirectory: string, ptyID: string): TPty | null {
     const session = this.#sessions.get(ptyID);
     if (!session) return null;
     if (session.pty.cwd !== workingDirectory) return null;
     return { ...session.pty };
   }
 
-  async create(workingDirectory: string, body?: TPtyCreateBody): Promise<TPty> {
+  async create(_filesystemId: string, workingDirectory: string, body?: TPtyCreateBody): Promise<TPty> {
     if (this.#stopped) {
       throw new Error('PTY service has been stopped');
     }
@@ -180,7 +180,7 @@ export class PtyServiceBunPty implements IPtyService {
     return { ...pty };
   }
 
-  update(workingDirectory: string, ptyID: string, body: TPtyUpdateBody): TPty | null {
+  update(_filesystemId: string, workingDirectory: string, ptyID: string, body: TPtyUpdateBody): TPty | null {
     const session = this.#sessions.get(ptyID);
     if (!session) return null;
     if (session.pty.cwd !== workingDirectory) return null;
@@ -200,7 +200,7 @@ export class PtyServiceBunPty implements IPtyService {
     return { ...session.pty };
   }
 
-  async remove(workingDirectory: string, ptyID: string): Promise<boolean> {
+  async remove(_filesystemId: string, workingDirectory: string, ptyID: string): Promise<boolean> {
     const session = this.#sessions.get(ptyID);
     if (!session) return false;
     if (session.pty.cwd !== workingDirectory) return false;

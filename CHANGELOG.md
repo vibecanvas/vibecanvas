@@ -2,6 +2,19 @@
 
 All notable changes to this project will be documented in this file.
 
+## 0.3.1
+
+### Added
+- Added registered filesystem discovery via the filesystem API so clients can list available filesystem identities.
+- Added CLI filesystem bootstrapping that persists a machine identity and ensures a local filesystem row exists on startup.
+
+### Changed
+- Threaded optional `filesystemId` through filesystem and PTY API contracts to prepare local/remote machine routing.
+- Updated filesystem and PTY service interfaces so service-layer calls now operate on an explicit filesystem identity.
+
+### Fixed
+- Filetree permission errors: Now shows permission errors instead of crashing.
+
 ## 0.3.0
 
 ### Added
