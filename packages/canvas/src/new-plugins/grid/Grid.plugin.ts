@@ -1,5 +1,6 @@
 import type { IPlugin } from "@vibecanvas/runtime";
 import type { CameraService } from "../../new-services/camera/CameraService";
+import type { EditorService } from "../../new-services/editor/EditorService";
 import type { RenderService } from "../../new-services/render/RenderService";
 import type { IHooks } from "../../runtime";
 import { txDrawGrid } from "./tx.draw";
@@ -9,6 +10,7 @@ const majorGridColor = "rgba(71, 85, 105, 0.28)";
 
 export function createGridPlugin(): IPlugin<{
   camera: CameraService;
+  editor: EditorService;
   render: RenderService;
 }, IHooks> {
   let visible = true;
@@ -16,6 +18,24 @@ export function createGridPlugin(): IPlugin<{
   return {
     name: "grid",
     apply(ctx) {
+      const editor = ctx.services.require("editor");
+
+      const syncGridTool = () => {
+        editor.registerTool({
+          id: "grid",
+          label: "Grid",
+          shortcuts: ["g"],
+          priority: 9000,
+          active: visible,
+          onSelect: () => {
+            ctx.hooks.gridVisible.call(!visible);
+          },
+          behavior: { type: "action" },
+        });
+      };
+
+      syncGridTool();
+
       ctx.hooks.init.tap(() => {
         const render = ctx.services.require("render");
         const camera = ctx.services.require("camera");
@@ -53,8 +73,13 @@ export function createGridPlugin(): IPlugin<{
 
         ctx.hooks.gridVisible.tap((value) => {
           visible = value;
+          syncGridTool();
           render.staticBackgroundLayer.batchDraw();
         });
+      });
+
+      ctx.hooks.destroy.tap(() => {
+        editor.unregisterTool("grid");
       });
     },
   };

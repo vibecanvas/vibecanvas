@@ -1,5 +1,4 @@
 import type { IPlugin } from "@vibecanvas/runtime";
-import type { TTool } from "../../components/FloatingCanvasToolbar/toolbar.types";
 import type { CameraService } from "../../new-services/camera/CameraService";
 import type { RenderService } from "../../new-services/render/RenderService";
 import type { IHooks } from "../../runtime";
@@ -21,7 +20,7 @@ export function createCameraControlPlugin(): IPlugin<{
   let isHandDragging = false;
   let activePointerId: number | null = null;
   let lastPointer: { x: number; y: number } | null = null;
-  let activeTool: TTool = "select";
+  let activeTool = "select";
 
   function isHandTool() {
     return activeTool === "hand";

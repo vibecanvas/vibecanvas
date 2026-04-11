@@ -6,8 +6,7 @@ import type { Group } from "konva/lib/Group";
 import type { KonvaEventObject } from "konva/lib/Node";
 import type { Shape, ShapeConfig } from "konva/lib/Shape";
 import { AsyncParallelHook, SyncExitHook, SyncHook } from "@vibecanvas/tapable";
-import type { TTool } from "./components/FloatingCanvasToolbar/toolbar.types";
-import { createCameraControlPlugin, createEventListenerPlugin, createGridPlugin, createVisualDebugPlugin } from "./new-plugins";
+import { createCameraControlPlugin, createEventListenerPlugin, createGridPlugin, createToolbarPlugin, createVisualDebugPlugin } from "./new-plugins";
 import { CameraService } from "./new-services/camera/CameraService";
 import { EditorService } from "./new-services/editor/EditorService";
 import { RenderService } from "./new-services/render/RenderService";
@@ -73,7 +72,7 @@ export interface IHooks {
   keydown: SyncHook<[KeyboardEvent]>;
   keyup: SyncHook<[KeyboardEvent]>;
   gridVisible: SyncHook<[boolean]>;
-  toolSelect: SyncHook<[TTool]>;
+  toolSelect: SyncHook<[string]>;
   elementPointerClick: SyncExitHook<[TElementPointerEvent]>;
   elementPointerDown: SyncExitHook<[TElementPointerEvent]>;
   elementPointerDoubleClick: SyncExitHook<[TElementPointerEvent]>;
@@ -127,7 +126,7 @@ export function buildRuntime(config: IRuntimeConfig) {
   return createRuntime<IHooks, IRuntimeConfig>({
     config,
     hooks: createHooks(),
-    plugins: [createEventListenerPlugin(), createGridPlugin(), createVisualDebugPlugin(), createCameraControlPlugin()],
+    plugins: [createEventListenerPlugin(), createGridPlugin(), createToolbarPlugin(), createVisualDebugPlugin(), createCameraControlPlugin()],
     services,
     boot: async ({ services, hooks }) => {
       services.require("render").start();
