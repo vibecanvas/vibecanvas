@@ -7,7 +7,7 @@ import { walkDirectory } from './api.files-filesystem';
 
 function createTestFilesystem() {
   return {
-    readdir(path: string): TErrTuple<Dirent[]> {
+    readdir(_: string, path: string): TErrTuple<Dirent[]> {
       try {
         return [readdirSync(path, { withFileTypes: true }), null];
       } catch (error) {
@@ -29,14 +29,14 @@ describe('api.files-filesystem helpers', () => {
       writeFileSync(join(root, 'alpha', 'nested', 'deep.txt'), 'deep', 'utf8');
       writeFileSync(join(root, 'top.txt'), 'top', 'utf8');
 
-      const [depthZeroNodes, depthZeroError] = walkDirectory(service, root, 0);
+      const [depthZeroNodes, depthZeroError] = walkDirectory(service, 'fs-local', root, 0);
       expect(depthZeroError).toBeNull();
       expect(depthZeroNodes?.map((node) => ({ name: node.name, is_dir: node.is_dir, childCount: node.children.length }))).toEqual([
         { name: 'alpha', is_dir: true, childCount: 0 },
         { name: 'top.txt', is_dir: false, childCount: 0 },
       ]);
 
-      const [depthOneNodes, depthOneError] = walkDirectory(service, root, 1);
+      const [depthOneNodes, depthOneError] = walkDirectory(service, 'fs-local', root, 1);
       expect(depthOneError).toBeNull();
       expect(depthOneNodes?.[0]?.name).toBe('alpha');
       expect(depthOneNodes?.[0]?.children.map((node) => ({ name: node.name, is_dir: node.is_dir, childCount: node.children.length }))).toEqual([
@@ -57,7 +57,7 @@ describe('api.files-filesystem helpers', () => {
       writeFileSync(join(root, 'src', 'skip.md'), 'skip', 'utf8');
       writeFileSync(join(root, 'readme.md'), 'root', 'utf8');
 
-      const [nodes, error] = walkDirectory(service, root, 3);
+      const [nodes, error] = walkDirectory(service, 'fs-local', root, 3);
       expect(error).toBeNull();
       expect(nodes?.map((node) => node.name)).toEqual(['src', 'readme.md']);
       expect(nodes?.[0]?.children.map((node) => node.name)).toEqual(['keep.ts', 'skip.md']);
