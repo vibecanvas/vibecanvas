@@ -5,6 +5,8 @@ type TCanvasRecord = typeof schema.canvas.$inferSelect;
 type TCanvasInsertArgs = typeof schema.canvas.$inferInsert;
 type TFileRecord = typeof schema.files.$inferSelect;
 type TFileFormat = typeof schema.files.$inferSelect['format'];
+type TFilesystemRecord = typeof schema.filesystems.$inferSelect;
+type TFilesystemInsertArgs = typeof schema.filesystems.$inferInsert;
 
 type TGetFullCanvasResult = {
   canvas: TCanvasRecord;
@@ -48,6 +50,12 @@ export interface IDbService extends IService, IStoppableService {
     get(args: TGetFileArgs): TFileRecord | null;
     deleteById(args: { id: string }): void;
   };
+  filesystem: {
+    listAll(): TFilesystemRecord[];
+    findByMachineId(machineId: string): TFilesystemRecord | null;
+    create(args: TFilesystemInsertArgs): TFilesystemRecord;
+    updateById(args: { id: string; label?: string; kind?: 'local' | 'remote'; home_path?: string | null }): TFilesystemRecord;
+  };
   getFullCanvas(id: string): TGetFullCanvasResult | null;
 }
 
@@ -56,6 +64,8 @@ export type {
   TCreateFileArgs,
   TFileFormat,
   TFileRecord,
+  TFilesystemInsertArgs,
+  TFilesystemRecord,
   TGetFileArgs,
   TGetFullCanvasResult,
   TUpdateCanvasArgs,

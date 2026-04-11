@@ -10,6 +10,8 @@ import type {
   TCanvasRecord,
   TCreateFileArgs,
   TFileRecord,
+  TFilesystemInsertArgs,
+  TFilesystemRecord,
   TGetFileArgs,
   TGetFullCanvasResult,
 } from '../IDbService';
@@ -63,6 +65,23 @@ export class DbServiceBunSqlite implements IDbService {
     create: (args: TCreateFileArgs) => txCreateFile(this, args),
     get: (args: TGetFileArgs) => fxGetFile(this, args),
     deleteById: (args: { id: string }) => this.drizzle.delete(schema.files).where(eq(schema.files.id, args.id)).run(),
+  };
+
+  filesystem = {
+    listAll: () => this.drizzle.query.filesystems.findMany().sync() as TFilesystemRecord[],
+    findByMachineId: (machineId: string) => this.drizzle.query.filesystems.findFirst({ where: eq(schema.filesystems.machine_id, machineId) }).sync() as TFilesystemRecord | null,
+    create: (args: TFilesystemInsertArgs) => this.drizzle.insert(schema.filesystems).values(args).returning().all()[0]!,
+    updateById: (args: { id: string; label?: string; kind?: 'local' | 'remote'; home_path?: string | null }) => this.drizzle
+      .update(schema.filesystems)
+      .set({
+        ...(args.label !== undefined ? { label: args.label } : {}),
+        ...(args.kind !== undefined ? { kind: args.kind } : {}),
+        ...(args.home_path !== undefined ? { home_path: args.home_path } : {}),
+        updated_at: new Date(),
+      })
+      .where(eq(schema.filesystems.id, args.id))
+      .returning()
+      .all()[0]!,
   };
 
   stop() {

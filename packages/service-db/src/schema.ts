@@ -18,6 +18,18 @@ import { sql } from 'drizzle-orm';
  * @see https://orm.drizzle.team/docs/guides/empty-array-default-value
  */
 
+export const filesystems = sqliteTable('filesystems', {
+  id: text('id').primaryKey(),
+  label: text('label').notNull(),
+  kind: text('kind', { enum: ['local', 'remote'] }).notNull(),
+  machine_id: text('machine_id').notNull(),
+  home_path: text('home_path'),
+  created_at: integer('created_at', { mode: 'timestamp' }).notNull().default(sql`(unixepoch())`),
+  updated_at: integer('updated_at', { mode: 'timestamp' }).notNull().default(sql`(unixepoch())`),
+}, (table) => [
+  index('filesystems_machine_id_idx').on(table.machine_id),
+]);
+
 export const canvas = sqliteTable('canvas', {
   id: text('id').primaryKey(),
   name: text('name').notNull().unique(),
