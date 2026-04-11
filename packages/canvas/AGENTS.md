@@ -44,6 +44,23 @@ Current refactor direction:
 - service hooks are for service-specific events
 - avoid new use of legacy `CustomEvents` in the new path
 - prefer `render` service instead of direct engine imports in migrated plugins
+- tools are now moving into `EditorService` as registry state, not hardcoded toolbar lists
+- migrated toolbar behavior should use registered tools + registered shortcuts
+
+Current new-runtime snapshot:
+- `render` service exists and owns stage, layers, resize, and low-level engine refs
+- `camera` service exists and owns x/y/zoom plus `camera.hooks.change`
+- `editor` service now owns tool registry, active tool, and transient editor state
+- `selection` service still owns mode, selection, and focused id
+- `theme` service exists but is still minimal
+- migrated runtime plugins so far: `event-listener`, `grid`, `camera-control`, `toolbar`, `visual-debug`
+- new toolbar currently registers base tools (`hand`, `select`) and renders from the editor registry
+- `grid` is now also a registered toolbar action tool (`g`) instead of legacy custom-event wiring
+
+Important current migration rule:
+- if a new feature plugin exposes a user tool, register that tool through `EditorService`
+- do not add new hardcoded tool lists in toolbar code
+- keyboard shortcuts for migrated tools should come from the registered tool metadata
 
 `@vibecanvas/canvas` is a reusable Konva-based canvas runtime with:
 

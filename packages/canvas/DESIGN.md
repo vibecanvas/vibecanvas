@@ -4,9 +4,9 @@
 
 - [x] `render` - stage, layers, low-level engine refs, resize hook
 - [x] `camera` - x/y/zoom, pan/zoom ops, change hook
-- [x] `theme` - current theme
+- [x] `editor` - tool registry, active tool, editing state, previews, transform refs
 - [x] `selection` - mode, selection, focused id
-- [x] `editor` - editing state, previews, transform refs
+- [x] `theme` - current theme
 - [ ] `history`
 - [ ] `crdt`
 - [ ] `canvasDocument`
@@ -22,12 +22,12 @@
 
 ## Plugins
 
-- [ ] `EventListenerPlugin`
+- [x] `EventListenerPlugin`
 - [x] `GridPlugin`
-- [ ] `VisualDebugPlugin`
-- [ ] `CameraControlPlugin`
+- [x] `CameraControlPlugin`
+- [x] `ToolbarPlugin`
+- [x] `VisualDebugPlugin`
 - [ ] `HistoryControlPlugin`
-- [ ] `ToolbarPlugin`
 - [ ] `SelectionStyleMenuPlugin`
 - [ ] `HelpPlugin`
 - [ ] `RecorderPlugin` (`DEV` only)
@@ -49,12 +49,15 @@
 ## Note
 
 High-level next direction only.
-This may change often.
+This changes often.
 
-- keep moving old plugin-context behavior into small services + thin runtime plugins
+- keep old `Canvas.service` + old `plugins/` as behavior reference until replacement is proven
+- build new path around `runtime.ts`, `new-services/`, and `new-plugins/`
+- keep services as main effectful interface
+- keep plugins thin; move logic to `fn.*` / `fx.*` / `tx.*` helpers when it helps
 - prefer service-local hooks over global runtime hooks for service-specific events
-- keep `render` low-level and dumb; plugins own behavior
-- move input and pointer wiring out of legacy custom events into runtime hooks/services
-- migrate next core plugins around camera/view/input behavior first
+- keep `render` low-level and dumb; plugins decide behavior
+- avoid new legacy `CustomEvents` usage in migrated code
+- move tool state and tool registry through `EditorService`; toolbar should render from registry, not hardcoded tool lists
+- migrate next feature plugins by moving tool registration + feature logic one plugin at a time
 - reduce direct engine type leakage from state services over time
-- keep old plugins/services as behavior reference until new path is proven
