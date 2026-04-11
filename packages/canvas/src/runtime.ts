@@ -8,6 +8,7 @@ import type { Shape, ShapeConfig } from "konva/lib/Shape";
 import { AsyncParallelHook, SyncExitHook, SyncHook } from "@vibecanvas/tapable";
 import { createCameraControlPlugin, createEventListenerPlugin, createGridPlugin, createHistoryControlPlugin, createSelectPlugin, createToolbarPlugin, createVisualDebugPlugin } from "./new-plugins";
 import { CameraService } from "./new-services/camera/CameraService";
+import { CrdtService } from "./new-services/crdt/CrdtService";
 import { EditorService } from "./new-services/editor/EditorService";
 import { HistoryService } from "./new-services/history/HistoryService";
 import { RenderService } from "./new-services/render/RenderService";
@@ -82,6 +83,7 @@ export interface IHooks {
 declare module "@vibecanvas/runtime" {
   interface IServiceMap {
     camera: CameraService;
+    crdt: CrdtService;
     editor: EditorService;
     history: HistoryService;
     render: RenderService;
@@ -120,6 +122,7 @@ export function buildRuntime(config: IRuntimeConfig) {
   });
 
   services.provide("camera", new CameraService({ render }));
+  services.provide("crdt", new CrdtService({ docHandle: config.docHandle }));
   services.provide("editor", new EditorService());
   services.provide("history", new HistoryService());
   services.provide("render", render);
@@ -133,6 +136,7 @@ export function buildRuntime(config: IRuntimeConfig) {
     services,
     boot: async ({ services, hooks }) => {
       services.require("render").start();
+      services.require("crdt").start();
       services.require("camera").start();
       hooks.init.call();
       await hooks.initAsync.promise();
@@ -140,6 +144,7 @@ export function buildRuntime(config: IRuntimeConfig) {
     shutdown: async ({ services, hooks }) => {
       hooks.destroy.call();
       services.require("camera").stop();
+      services.require("crdt").stop();
       services.require("render").stop();
     },
   })
