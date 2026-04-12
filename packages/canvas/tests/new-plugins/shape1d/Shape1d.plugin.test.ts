@@ -93,6 +93,47 @@ function getTransformDragProxy(harness: Awaited<ReturnType<typeof createNewCanva
   return proxy;
 }
 
+function getShape1dHandle(
+  harness: Awaited<ReturnType<typeof createNewCanvasHarness>>,
+  args: { kind: "anchor" | "insert"; pointIndex?: number; segmentIndex?: number },
+) {
+  const handle = harness.dynamicLayer.findOne((node: Konva.Node) => {
+    if (!(node instanceof Konva.Circle)) {
+      return false;
+    }
+
+    if (node.getAttr("vcShape1dHandleKind") !== args.kind) {
+      return false;
+    }
+
+    if (args.pointIndex !== undefined) {
+      return node.getAttr("vcShape1dPointIndex") === args.pointIndex;
+    }
+
+    if (args.segmentIndex !== undefined) {
+      return node.getAttr("vcShape1dSegmentIndex") === args.segmentIndex;
+    }
+
+    return true;
+  });
+
+  if (!(handle instanceof Konva.Circle)) {
+    throw new Error("Expected shape1d edit handle");
+  }
+
+  return handle;
+}
+
+function enterShape1dEditModeWithEnter(
+  harness: Awaited<ReturnType<typeof createNewCanvasHarness>>,
+  node: Konva.Node,
+) {
+  const selection = harness.runtime.services.require("selection");
+  selection.setSelection([node as Konva.Shape]);
+  selection.setFocusedNode(node as Konva.Shape);
+  harness.runtime.hooks.keydown.call(new KeyboardEvent("keydown", { key: "Enter", bubbles: true, cancelable: true }));
+}
+
 describe("new Shape1d plugin", () => {
   test("registers arrow and line tools in editor registry", async () => {
     const harness = await createNewCanvasHarness();
@@ -206,6 +247,108 @@ describe("new Shape1d plugin", () => {
     await flushCanvasEffects();
     expect(node.absolutePosition().x).toBeCloseTo(before.x + 40, 6);
     expect(node.absolutePosition().y).toBeCloseTo(before.y + 25, 6);
+
+    await harness.destroy();
+  });
+
+  test("Enter enters edit mode and handle drag updates shape1d point", async () => {
+    const element = createArrowElement();
+    const docHandle = createMockDocHandle({
+      elements: {
+        [element.id]: structuredClone(element),
+      },
+    });
+
+    const harness = await createNewCanvasHarness({ docHandle });
+    const editor = harness.runtime.services.require("editor");
+    const sourceNode = harness.staticForegroundLayer.findOne((candidate: Konva.Node) => {
+      return isShape1dNode(candidate) && candidate.id() === element.id;
+    });
+    if (!sourceNode || !isShape1dNode(sourceNode)) {
+      throw new Error("Expected source shape1d node");
+    }
+
+    enterShape1dEditModeWithEnter(harness, sourceNode);
+    await flushCanvasEffects();
+
+    expect(editor.editingShape1dId).toBe(sourceNode.id());
+
+    const handle = getShape1dHandle(harness, { kind: "anchor", pointIndex: 1 });
+    expect(handle.getAttr("vcInteractionOverlay")).toBe(true);
+
+    withDynamicPointer(harness, { x: 250, y: 170 }, () => {
+      handle.fire("dragstart", {
+        target: handle,
+        currentTarget: handle,
+        evt: new MouseEvent("dragstart", { bubbles: true }),
+      });
+      handle.fire("dragmove", {
+        target: handle,
+        currentTarget: handle,
+        evt: new MouseEvent("dragmove", { bubbles: true }),
+      });
+      handle.fire("dragend", {
+        target: handle,
+        currentTarget: handle,
+        evt: new MouseEvent("dragend", { bubbles: true }),
+      });
+    });
+    await flushCanvasEffects();
+
+    const updated = docHandle.doc().elements[element.id];
+    expect(updated?.data.type).toBe("arrow");
+    if (!updated || updated.data.type !== "arrow") {
+      throw new Error("Expected updated arrow element");
+    }
+
+    expect(updated.data.points[1]).toEqual([130, 90]);
+
+    await harness.destroy();
+  });
+
+  test("edit mode insert handle click adds point", async () => {
+    const element = createArrowElement();
+    const docHandle = createMockDocHandle({
+      elements: {
+        [element.id]: structuredClone(element),
+      },
+    });
+
+    const harness = await createNewCanvasHarness({ docHandle });
+    const editor = harness.runtime.services.require("editor");
+    const sourceNode = harness.staticForegroundLayer.findOne((candidate: Konva.Node) => {
+      return isShape1dNode(candidate) && candidate.id() === element.id;
+    });
+    if (!sourceNode || !isShape1dNode(sourceNode)) {
+      throw new Error("Expected source shape1d node");
+    }
+
+    sourceNode.fire("pointerdblclick", {
+      target: sourceNode,
+      currentTarget: sourceNode,
+      evt: new MouseEvent("pointerdblclick", { bubbles: true }),
+      cancelBubble: false,
+    }, true);
+    await flushCanvasEffects();
+
+    expect(editor.editingShape1dId).toBe(sourceNode.id());
+
+    const insertHandle = getShape1dHandle(harness, { kind: "insert", segmentIndex: 0 });
+    insertHandle.fire("pointerclick", {
+      target: insertHandle,
+      currentTarget: insertHandle,
+      evt: new MouseEvent("pointerclick", { bubbles: true }),
+      cancelBubble: false,
+    }, true);
+    await flushCanvasEffects();
+
+    const updated = docHandle.doc().elements[element.id];
+    expect(updated?.data.type).toBe("arrow");
+    if (!updated || updated.data.type !== "arrow") {
+      throw new Error("Expected updated arrow element");
+    }
+
+    expect(updated.data.points).toHaveLength(3);
 
     await harness.destroy();
   });

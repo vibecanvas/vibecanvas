@@ -261,6 +261,7 @@ export function createShape1dPlugin(): IPlugin<{
             draggable: true,
           });
 
+          handle.setAttr("vcInteractionOverlay", true);
           handle.setAttr("vcShape1dHandleKind", "anchor");
           handle.setAttr("vcShape1dPointIndex", pointIndex);
           handle.on("dragstart", () => {
@@ -331,6 +332,7 @@ export function createShape1dPlugin(): IPlugin<{
             draggable: true,
           });
 
+          handle.setAttr("vcInteractionOverlay", true);
           handle.setAttr("vcShape1dHandleKind", "insert");
           handle.setAttr("vcShape1dSegmentIndex", index);
           handle.on("dragstart", () => {
@@ -665,6 +667,27 @@ export function createShape1dPlugin(): IPlugin<{
           event.preventDefault();
           event.stopPropagation();
           cancelDraft();
+          return;
+        }
+
+        if (event.key === "Enter"
+          && selection.mode === CanvasMode.SELECT
+          && editor.editingShape1dId === null) {
+          const filteredSelection = fxFilterSelection({
+            render,
+            selection: selection.selection,
+          });
+          const target = filteredSelection.length === 1 && isShape1dNode(filteredSelection[0])
+            && selection.focusedId === filteredSelection[0].id()
+              ? filteredSelection[0]
+              : null;
+          if (!target) {
+            return;
+          }
+
+          event.preventDefault();
+          event.stopPropagation();
+          enterEditMode(target);
           return;
         }
 
