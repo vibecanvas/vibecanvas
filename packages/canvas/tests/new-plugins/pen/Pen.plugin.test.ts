@@ -2,6 +2,7 @@ import Konva from "konva";
 import type { TElement, TPenData } from "@vibecanvas/service-automerge/types/canvas-doc.types";
 import { describe, expect, test } from "vitest";
 import { createPenDataFromStrokePoints, type TStrokePoint } from "../../../src/new-plugins/pen/pen.math";
+import { THEME_ID_DARK } from "../../../src/new-services/theme/enum";
 import { createMockDocHandle, createNewCanvasHarness, flushCanvasEffects } from "../../new-test-setup";
 
 function createPenElement(args?: {
@@ -462,6 +463,32 @@ describe("new Pen plugin", () => {
     expect(clonedPenData.points).toEqual(sourcePenData.points);
     expect(clonedPenData.pressures).toEqual(sourcePenData.pressures);
     expect(selection.selection[0]?.id()).toBe(createdClone.id);
+
+    await harness.destroy();
+  });
+
+  test("pen token fill repaints on theme change and round-trips token style", async () => {
+    const element = createPenElement({ id: "pen-token" });
+    element.style.backgroundColor = "@green/500";
+    const docHandle = createMockDocHandle({
+      elements: {
+        [element.id]: structuredClone(element),
+      },
+    });
+
+    const harness = await createNewCanvasHarness({ docHandle });
+    const theme = harness.runtime.services.require("theme");
+    const editor = harness.runtime.services.require("editor");
+    const node = harness.staticForegroundLayer.findOne<Konva.Path>(`#${element.id}`)!;
+
+    expect(node.fill()).toBe("#22c55e");
+    expect(editor.toElement(node)?.style.backgroundColor).toBe("@green/500");
+
+    theme.setTheme(THEME_ID_DARK);
+    await flushCanvasEffects();
+
+    expect(node.fill()).toBe("#16a34a");
+    expect(editor.toElement(node)?.style.backgroundColor).toBe("@green/500");
 
     await harness.destroy();
   });

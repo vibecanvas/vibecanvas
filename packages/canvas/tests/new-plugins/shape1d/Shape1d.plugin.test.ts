@@ -2,6 +2,7 @@ import Konva from "konva";
 import type { TArrowData, TElement, TLineData } from "@vibecanvas/service-automerge/types/canvas-doc.types";
 import { describe, expect, test } from "vitest";
 import { isShape1dNode } from "../../../src/new-plugins/shape1d/Shape1d.shared";
+import { THEME_ID_DARK } from "../../../src/new-services/theme/enum";
 import { createMockDocHandle, createNewCanvasHarness, flushCanvasEffects } from "../../new-test-setup";
 
 function createHookPointerEvent(type: string) {
@@ -396,6 +397,39 @@ describe("new Shape1d plugin", () => {
     const createdClone = persistedShape1dElements.find((candidate) => candidate.id !== element.id);
     expect(createdClone).toBeTruthy();
     expect(selection.selection[0]?.id()).toBe(createdClone?.id);
+
+    await harness.destroy();
+  });
+
+  test("shape1d token stroke repaints on theme change and round-trips token style", async () => {
+    const element = createArrowElement({ id: "arrow-token" });
+    element.style.strokeColor = "@blue/700";
+    const docHandle = createMockDocHandle({
+      elements: {
+        [element.id]: structuredClone(element),
+      },
+    });
+
+    const harness = await createNewCanvasHarness({ docHandle });
+    const theme = harness.runtime.services.require("theme");
+    const editor = harness.runtime.services.require("editor");
+    const node = harness.staticForegroundLayer.findOne((candidate: Konva.Node) => {
+      return isShape1dNode(candidate) && candidate.id() === element.id;
+    });
+
+    expect(isShape1dNode(node)).toBe(true);
+    if (!node || !isShape1dNode(node)) {
+      throw new Error("Expected token arrow node");
+    }
+
+    expect(node.stroke()).toBe("#1d4ed8");
+    expect(editor.toElement(node)?.style.strokeColor).toBe("@blue/700");
+
+    theme.setTheme(THEME_ID_DARK);
+    await flushCanvasEffects();
+
+    expect(node.stroke()).toBe("#60a5fa");
+    expect(editor.toElement(node)?.style.strokeColor).toBe("@blue/700");
 
     await harness.destroy();
   });

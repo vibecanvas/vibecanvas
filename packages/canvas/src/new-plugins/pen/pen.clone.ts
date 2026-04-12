@@ -4,6 +4,7 @@ import type { CrdtService } from "../../new-services/crdt/CrdtService";
 import type { RenderOrderService } from "../../new-services/render-order/RenderOrderService";
 import type { RenderService } from "../../new-services/render/RenderService";
 import type { SelectionService } from "../../new-services/selection/SelectionService";
+import type { ThemeService } from "../../new-services/theme/ThemeService";
 import { createPenPathFromElement } from "./pen.element";
 
 export type TPenClonePortal = {
@@ -11,6 +12,7 @@ export type TPenClonePortal = {
   render: RenderService;
   renderOrder: RenderOrderService;
   selection: SelectionService;
+  theme: ThemeService;
   createId: () => string;
   now: () => number;
   setupNode: (node: Konva.Path) => Konva.Path;
@@ -20,7 +22,7 @@ export type TPenClonePortal = {
 export function createPenPreviewClone(portal: TPenClonePortal, node: Konva.Path) {
   const element = portal.toElement(node);
   const now = portal.now();
-  const clone = createPenPathFromElement(portal.render, {
+  const clone = createPenPathFromElement(portal.render, portal.theme, {
     ...element,
     id: portal.createId(),
     parentGroupId: null,

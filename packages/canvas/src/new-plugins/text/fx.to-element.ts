@@ -1,8 +1,11 @@
 import type { TElement, TElementStyle, TTextData } from "@vibecanvas/service-automerge/types/canvas-doc.types";
+import { fxGetNodeZIndex } from "../../core/fn.get-node-z-index";
+import { fxGetNearestFontSizePreset } from "../../core/fn.text-style";
 import { fxGetWorldPosition } from "../../core/fn.world-position";
-import { getNodeZIndex } from "../../core/render-order";
 import type { RenderService } from "../../new-services/render/RenderService";
 import type Konva from "konva";
+
+const ELEMENT_STYLE_ATTR = "vcElementStyle";
 
 export type TPortalToElement = {
   render: RenderService;
@@ -26,23 +29,29 @@ export function fxToElement(portal: TPortalToElement, args: TArgsToElement) {
   const parent = args.node.getParent();
   const parentGroupId = parent instanceof portal.render.Group ? parent.id() : null;
 
-  const style: TElementStyle = { opacity: args.node.opacity() };
+  const baseStyle = structuredClone((args.node.getAttr(ELEMENT_STYLE_ATTR) as TElementStyle | undefined) ?? {});
+  const style: TElementStyle = {
+    ...baseStyle,
+    opacity: args.node.opacity(),
+  };
   const fill = args.node.fill();
   const usesThemeTextColor = args.node.getAttr("vcUsesThemeTextColor") === true;
-  if (!usesThemeTextColor && typeof fill === "string") {
+  if (!usesThemeTextColor && typeof baseStyle.strokeColor !== "string" && typeof fill === "string") {
     style.strokeColor = fill;
   }
 
   const textScaleX = absoluteScale.x / layerScaleX;
   const textScaleY = absoluteScale.y / layerScaleY;
 
+  const fontSize = Math.max(1, args.node.fontSize() * textScaleX);
   const data: TTextData = {
     type: "text",
     w: args.node.width() * textScaleX,
     h: args.node.height() * textScaleY,
     text: args.node.text(),
     originalText: (args.node.getAttr("vcOriginalText") as string | undefined) ?? args.node.text(),
-    fontSize: Math.max(1, args.node.fontSize() * textScaleX),
+    fontSize,
+    fontSizePreset: (args.node.getAttr("vcFontSizePreset") as TTextData["fontSizePreset"] | undefined) ?? fxGetNearestFontSizePreset(fontSize),
     fontFamily: args.node.fontFamily(),
     textAlign: args.node.align() as TTextData["textAlign"],
     verticalAlign: args.node.verticalAlign() as TTextData["verticalAlign"],
@@ -62,7 +71,7 @@ export function fxToElement(portal: TPortalToElement, args: TArgsToElement) {
     updatedAt: args.updatedAt,
     locked: false,
     parentGroupId,
-    zIndex: getNodeZIndex(args.node),
+    zIndex: fxGetNodeZIndex(args.node),
     style,
     data,
   } satisfies TElement;

@@ -2,6 +2,7 @@ import type { TElement, TElementStyle } from "@vibecanvas/service-automerge/type
 import Konva from "konva";
 import { getWorldPosition, setWorldPosition } from "../../core/node-space";
 import { getNodeZIndex, setNodeZIndex } from "../../core/render-order";
+import type { ThemeService } from "../../new-services/theme/ThemeService";
 import { createShapeFromElement } from "./Shape1d.render";
 import {
   DEFAULT_OPACITY,
@@ -28,17 +29,19 @@ function createStyleFromNode(node: TShape1dNode, baseStyle: TElementStyle): TEle
   delete style.strokeColor;
 
   const stroke = node.stroke();
-  style[colorStyleKey] = typeof stroke === "string" ? stroke : DEFAULT_STROKE;
+  style[colorStyleKey] = typeof baseStyle[colorStyleKey] === "string"
+    ? baseStyle[colorStyleKey]
+    : (typeof stroke === "string" ? stroke : DEFAULT_STROKE);
   return style;
 }
 
-export function updateShapeFromElement(node: TShape1dNode, element: TElement) {
+export function updateShapeFromElement(theme: ThemeService, node: TShape1dNode, element: TElement) {
   if (!isSupportedElementType(element.data.type)) {
     return;
   }
 
   const strokeWidth = getStrokeWidthFromStyle(element.style);
-  const color = getStrokeColorFromStyle(element.style);
+  const color = getStrokeColorFromStyle(theme, element.style);
   setWorldPosition(node, { x: element.x, y: element.y });
   node.rotation(element.rotation);
   node.stroke(color);
@@ -91,10 +94,11 @@ export function createPreviewClone(
   node: TShape1dNode,
   createId: () => string,
   now: () => number,
+  theme: ThemeService,
 ) {
   const element = toTElement(node);
   const timestamp = now();
-  const clone = createShapeFromElement({
+  const clone = createShapeFromElement(theme, {
     ...element,
     id: createId(),
     parentGroupId: null,

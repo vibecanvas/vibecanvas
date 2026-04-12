@@ -109,6 +109,7 @@ export function createShape2dPlugin(): IPlugin<{
       const createNode = (element: TElement) => {
         return fxCreateShape2dNode({
           render,
+          theme,
           setNodeZIndex,
         }, {
           element,
@@ -439,6 +440,7 @@ export function createShape2dPlugin(): IPlugin<{
 
         const didUpdate = txUpdateShape2dNodeFromElement({
           render,
+          theme,
           setNodeZIndex,
         }, {
           node,
@@ -550,6 +552,7 @@ export function createShape2dPlugin(): IPlugin<{
 
         txUpdateShape2dNodeFromElement({
           render,
+          theme,
           setNodeZIndex,
         }, {
           node: previewNode,
@@ -651,6 +654,31 @@ export function createShape2dPlugin(): IPlugin<{
           createId,
           now,
         }, shapeNode);
+      });
+
+      theme.hooks.change.tap(() => {
+        render.staticForegroundLayer.find((candidate: Konva.Node) => {
+          return candidate instanceof render.Shape && fxGetShape2dNodeType({ render, node: candidate }) !== null;
+        }).forEach((candidate) => {
+          if (!(candidate instanceof render.Shape)) {
+            return;
+          }
+
+          const element = editor.toElement(candidate);
+          if (!element || !fxIsShape2dElementType(element.data.type)) {
+            return;
+          }
+
+          txUpdateShape2dNodeFromElement({
+            render,
+            theme,
+            setNodeZIndex,
+          }, {
+            node: candidate,
+            element,
+          });
+        });
+        render.staticForegroundLayer.batchDraw();
       });
 
       ctx.hooks.destroy.tap(() => {

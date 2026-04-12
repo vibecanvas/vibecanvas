@@ -6,7 +6,7 @@ import { EditorService } from "../../src/new-services/editor/EditorService";
 import { HistoryService } from "../../src/new-services/history/HistoryService";
 import { SelectionService } from "../../src/new-services/selection/SelectionService";
 import { ThemeService } from "../../src/new-services/theme/ThemeService";
-import { THEME_ID_LIGHT } from "../../src/new-services/theme/enum";
+import { THEME_ID_DARK, THEME_ID_LIGHT } from "../../src/new-services/theme/enum";
 
 function createElement(id: string): TElement {
   return {
@@ -55,6 +55,19 @@ describe("new stateful services", () => {
     expect(service.name).toBe("theme");
     expect(service.getThemeId()).toBe(THEME_ID_LIGHT);
     expect(service.getTheme().id).toBe(THEME_ID_LIGHT);
+  });
+
+  test("ThemeService exposes canvas token palette and resolves token colors per theme", () => {
+    const service = new ThemeService();
+
+    expect(service.getCanvasThemeStyle().id).toBe(THEME_ID_LIGHT);
+    expect(service.resolveThemeColor("@red/300")).toBe("#fca5a5");
+    expect(service.getThemeColorPickerPalette().groups[1]?.id).toBe("red");
+
+    service.setTheme(THEME_ID_DARK);
+
+    expect(service.resolveThemeColor("@red/300")).toBe("#7f1d1d");
+    expect(service.resolveThemeColor("#123456")).toBe("#123456");
   });
 
   test("SelectionService updates selection and focus and emits change", () => {

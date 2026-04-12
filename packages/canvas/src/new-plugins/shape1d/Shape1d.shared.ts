@@ -2,6 +2,8 @@ import type { TArrowData, TElement, TElementStyle, TLineData } from "@vibecanvas
 import Konva from "konva";
 import { getWorldPosition } from "../../core/node-space";
 import type { RenderService } from "../../new-services/render/RenderService";
+import type { ThemeService } from "../../new-services/theme/ThemeService";
+import { resolveThemeColor } from "../../new-services/theme/ThemeService";
 
 export type TShape1dData = TLineData | TArrowData;
 export type TShape1dTool = "line" | "arrow";
@@ -68,8 +70,9 @@ export function getStrokeWidthFromStyle(style: TElementStyle) {
   return style.strokeWidth ?? DEFAULT_STROKE_WIDTH;
 }
 
-export function getStrokeColorFromStyle(style: TElementStyle) {
-  return style.strokeColor ?? style.backgroundColor ?? DEFAULT_STROKE;
+export function getStrokeColorFromStyle(theme: ThemeService, style: TElementStyle) {
+  const rawColor = style.strokeColor ?? style.backgroundColor;
+  return resolveThemeColor(theme.getTheme(), rawColor, DEFAULT_STROKE) ?? DEFAULT_STROKE;
 }
 
 export function getColorStyleKey(style: TElementStyle): "backgroundColor" | "strokeColor" {

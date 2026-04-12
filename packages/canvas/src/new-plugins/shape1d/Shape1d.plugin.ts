@@ -8,6 +8,7 @@ import type { HistoryService } from "../../new-services/history/HistoryService";
 import type { RenderOrderService } from "../../new-services/render-order/RenderOrderService";
 import type { RenderService } from "../../new-services/render/RenderService";
 import type { SelectionService } from "../../new-services/selection/SelectionService";
+import type { ThemeService } from "../../new-services/theme/ThemeService";
 import { CanvasMode } from "../../new-services/selection/enum";
 import type { IHooks } from "../../runtime";
 import { fxFilterSelection } from "../../core/fn.filter-selection";
@@ -61,6 +62,7 @@ export function createShape1dPlugin(): IPlugin<{
   render: RenderService;
   renderOrder: RenderOrderService;
   selection: SelectionService;
+  theme: ThemeService;
 }, IHooks> {
   let previewShape: TShape1dNode | null = null;
   let draftElementId: string | null = null;
@@ -82,6 +84,7 @@ export function createShape1dPlugin(): IPlugin<{
       const render = ctx.services.require("render");
       const renderOrder = ctx.services.require("renderOrder");
       const selection = ctx.services.require("selection");
+      const theme = ctx.services.require("theme");
       previousToolId = editor.activeToolId;
       const createId = createCreateId(render);
       const now = () => Date.now();
@@ -93,12 +96,14 @@ export function createShape1dPlugin(): IPlugin<{
         render,
         renderOrder,
         selection,
+        theme,
         setupNode,
       };
 
       const runtimePortal = {
         ...historyPortal,
         hooks: ctx.hooks,
+        theme,
         createId,
         now,
       };
@@ -165,7 +170,7 @@ export function createShape1dPlugin(): IPlugin<{
           return null;
         }
 
-        previewShape = createShapeFromElement(previewElement);
+        previewShape = createShapeFromElement(theme, previewElement);
         previewShape.listening(false);
         previewShape.visible(false);
         previewShape.draggable(false);
@@ -186,7 +191,7 @@ export function createShape1dPlugin(): IPlugin<{
           return;
         }
 
-        updateShapeFromElement(nextPreviewShape, element);
+        updateShapeFromElement(theme, nextPreviewShape, element);
         nextPreviewShape.listening(false);
         nextPreviewShape.visible(true);
         nextPreviewShape.draggable(false);
@@ -513,7 +518,7 @@ export function createShape1dPlugin(): IPlugin<{
           return;
         }
 
-        const node = setupNode(createShapeFromElement(element));
+        const node = setupNode(createShapeFromElement(theme, element));
         render.staticForegroundLayer.add(node);
         renderOrder.assignOrderOnInsert({
           parent: render.staticForegroundLayer,
@@ -578,7 +583,7 @@ export function createShape1dPlugin(): IPlugin<{
           return null;
         }
 
-        return setupNode(createShapeFromElement(element));
+        return setupNode(createShapeFromElement(theme, element));
       });
 
       editor.registerSetupExistingShape("shape1d", (node) => {
@@ -605,7 +610,7 @@ export function createShape1dPlugin(): IPlugin<{
           return false;
         }
 
-        updateShapeFromElement(node, element);
+        updateShapeFromElement(theme, node, element);
         return true;
       });
 
@@ -743,6 +748,20 @@ export function createShape1dPlugin(): IPlugin<{
         refreshEditMode();
       });
       editor.hooks.editingShape1dChange.tap(() => {
+        refreshEditMode();
+      });
+      theme.hooks.change.tap(() => {
+        render.staticForegroundLayer.find((candidate: Konva.Node) => {
+          return isShape1dNode(candidate);
+        }).forEach((candidate) => {
+          if (!isShape1dNode(candidate)) {
+            return;
+          }
+
+          const element = toTElement(candidate);
+          updateShapeFromElement(theme, candidate, element);
+        });
+        render.staticForegroundLayer.batchDraw();
         refreshEditMode();
       });
 

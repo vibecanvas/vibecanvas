@@ -5,6 +5,7 @@ import type { HistoryService } from "../../new-services/history/HistoryService";
 import type { RenderOrderService } from "../../new-services/render-order/RenderOrderService";
 import type { RenderService } from "../../new-services/render/RenderService";
 import type { SelectionService } from "../../new-services/selection/SelectionService";
+import type { ThemeService } from "../../new-services/theme/ThemeService";
 import { createShapeFromElement } from "./Shape1d.render";
 import { findShape1dNodeById, type TShape1dNode } from "./Shape1d.shared";
 
@@ -15,6 +16,7 @@ export type TPortalRecordShape1dHistory = {
   render: RenderService;
   renderOrder: RenderOrderService;
   selection: SelectionService;
+  theme: ThemeService;
   setupNode: (node: TShape1dNode) => TShape1dNode;
 };
 
@@ -73,7 +75,7 @@ export function recordCreateHistory(
     redo() {
       let currentNode = findShape1dNodeById(portal.render, snapshot.id);
       if (!currentNode) {
-        currentNode = portal.setupNode(createShapeFromElement(snapshot));
+        currentNode = portal.setupNode(createShapeFromElement(portal.theme, snapshot));
         currentNode.setDraggable(true);
         portal.render.staticForegroundLayer.add(currentNode);
       }

@@ -3,6 +3,7 @@ import type { TElement, TTextData } from "@vibecanvas/service-automerge/types/ca
 import { describe, expect, test } from "vitest";
 import { fxToElement } from "../../../src/new-plugins/text/fx.to-element";
 import { txUpdateTextNodeFromElement } from "../../../src/new-plugins/text/tx.update-text-node-from-element";
+import { THEME_ID_DARK } from "../../../src/new-services/theme/enum";
 import { createNewCanvasHarness, createMockDocHandle, flushCanvasEffects } from "../../new-test-setup";
 
 function createTextElement(overrides?: Partial<TElement>): TElement {
@@ -84,6 +85,30 @@ describe("new Text plugin core", () => {
     expect(data.fontSize).toBe(16);
     expect(data.textAlign).toBe("left");
     expect(editor.toElement(node)?.data.type).toBe("text");
+
+    await harness.destroy();
+  });
+
+  test("token text color repaints on theme change and round-trips stored token", async () => {
+    const harness = await createNewCanvasHarness();
+    const theme = harness.runtime.services.require("theme");
+    const editor = harness.runtime.services.require("editor");
+    const node = addHydratedTextNode(harness, createTextElement({
+      id: "text-token-1",
+      style: {
+        opacity: 1,
+        strokeColor: "@purple/700",
+      },
+    }));
+
+    expect(node.fill()).toBe("#7e22ce");
+    expect(editor.toElement(node)?.style.strokeColor).toBe("@purple/700");
+
+    theme.setTheme(THEME_ID_DARK);
+    await flushCanvasEffects();
+
+    expect(node.fill()).toBe("#c084fc");
+    expect(editor.toElement(node)?.style.strokeColor).toBe("@purple/700");
 
     await harness.destroy();
   });

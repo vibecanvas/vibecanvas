@@ -1,4 +1,4 @@
-import type { ThemeService } from "@vibecanvas/service-theme";
+import type { ThemeService } from "../../new-services/theme/ThemeService";
 import { fxGetNearestFontSizePreset } from "../../core/fn.text-style";
 import { fxGetAbsolutePositionFromWorldPosition } from "../../core/fn.world-position";
 import type { TElement, TTextData } from "@vibecanvas/service-automerge/types/canvas-doc.types";
@@ -16,6 +16,7 @@ export type TArgsUpdateTextNodeFromElement = {
 };
 
 const ATTACHED_TEXT_NAME = "attached-text";
+const ELEMENT_STYLE_ATTR = "vcElementStyle";
 
 export function txUpdateTextNodeFromElement(portal: TPortalUpdateTextNodeFromElement, args: TArgsUpdateTextNodeFromElement) {
   if (args.element.data.type !== "text") {
@@ -46,7 +47,8 @@ export function txUpdateTextNodeFromElement(portal: TPortalUpdateTextNodeFromEle
   node.verticalAlign(data.verticalAlign);
   node.lineHeight(data.lineHeight);
   node.opacity(args.element.style.opacity ?? 1);
-  node.fill(args.element.style.strokeColor ?? portal.theme.getTheme().colors.canvasText);
+  node.fill(portal.theme.resolveThemeColor(args.element.style.strokeColor, portal.theme.getTheme().colors.canvasText) ?? portal.theme.getTheme().colors.canvasText);
+  node.setAttr(ELEMENT_STYLE_ATTR, structuredClone(args.element.style));
   node.setAttr("vcUsesThemeTextColor", !args.element.style.strokeColor);
   node.setAttr("vcContainerId", data.containerId ?? null);
   node.setAttr("vcOriginalText", data.originalText);

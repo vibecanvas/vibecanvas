@@ -1,5 +1,7 @@
 import type { TElement, TElementStyle, TPenData } from "@vibecanvas/service-automerge/types/canvas-doc.types";
 import type { RenderService } from "../../new-services/render/RenderService";
+import type { ThemeService } from "../../new-services/theme/ThemeService";
+import { resolveThemeColor } from "../../new-services/theme/ThemeService";
 import Konva from "konva";
 import { getWorldPosition, setWorldPosition } from "../../core/node-space";
 import { getNodeZIndex, setNodeZIndex } from "../../core/render-order";
@@ -15,8 +17,9 @@ export function getPenStrokeWidthFromStyle(style: TElementStyle) {
   return style.strokeWidth ?? DEFAULT_STROKE_WIDTH;
 }
 
-export function getPenFillFromStyle(style: TElementStyle) {
-  return style.backgroundColor ?? style.strokeColor ?? DEFAULT_FILL;
+export function getPenFillFromStyle(theme: ThemeService, style: TElementStyle) {
+  const rawFill = style.backgroundColor ?? style.strokeColor;
+  return resolveThemeColor(theme.getTheme(), rawFill, DEFAULT_FILL) ?? DEFAULT_FILL;
 }
 
 export function getPenColorStyleKey(style: TElementStyle): "backgroundColor" | "strokeColor" {
@@ -48,7 +51,7 @@ function createPenStyleFromNode(node: Konva.Path, baseStyle: TElementStyle): TEl
   const colorStyleKey = getPenColorStyleKey(baseStyle);
   delete style.backgroundColor;
   delete style.strokeColor;
-  style[colorStyleKey] = fill;
+  style[colorStyleKey] = typeof baseStyle[colorStyleKey] === "string" ? baseStyle[colorStyleKey] : fill;
 
   return style;
 }
@@ -60,7 +63,7 @@ function syncPenMetadata(node: Konva.Path, element: TElement) {
   node.setAttr(ELEMENT_CREATED_AT_ATTR, element.createdAt);
 }
 
-export function createPenPathFromElement(render: RenderService, element: TElement) {
+export function createPenPathFromElement(render: RenderService, theme: ThemeService, element: TElement) {
   if (element.data.type !== "pen") {
     throw new Error("Unsupported element type for createPenPathFromElement");
   }
@@ -73,7 +76,7 @@ export function createPenPathFromElement(render: RenderService, element: TElemen
     data: getStrokePathFromPenData(element, {
       size: getPenStrokeWidthFromStyle(element.style),
     }),
-    fill: getPenFillFromStyle(element.style),
+    fill: getPenFillFromStyle(theme, element.style),
     opacity: element.style.opacity ?? DEFAULT_OPACITY,
     listening: true,
     draggable: true,
@@ -85,7 +88,7 @@ export function createPenPathFromElement(render: RenderService, element: TElemen
   return node;
 }
 
-export function updatePenPathFromElement(node: Konva.Path, element: TElement) {
+export function updatePenPathFromElement(node: Konva.Path, theme: ThemeService, element: TElement) {
   if (element.data.type !== "pen") {
     return false;
   }
@@ -96,7 +99,7 @@ export function updatePenPathFromElement(node: Konva.Path, element: TElement) {
   node.data(getStrokePathFromPenData(element, {
     size: getPenStrokeWidthFromStyle(element.style),
   }));
-  node.fill(getPenFillFromStyle(element.style));
+  node.fill(getPenFillFromStyle(theme, element.style));
   node.opacity(element.style.opacity ?? DEFAULT_OPACITY);
   node.scale({ x: 1, y: 1 });
   syncPenMetadata(node, element);

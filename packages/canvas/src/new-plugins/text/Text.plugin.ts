@@ -1,5 +1,5 @@
 import type { IPlugin } from "@vibecanvas/runtime";
-import type { ThemeService } from "@vibecanvas/service-theme";
+import { resolveThemeColor, type ThemeService } from "../../new-services/theme/ThemeService";
 import type { TElement, TTextData } from "@vibecanvas/service-automerge/types/canvas-doc.types";
 import type Konva from "konva";
 import type { ContextMenuService } from "../../new-services/context-menu/ContextMenuService";
@@ -22,21 +22,18 @@ import { txDeleteSelection } from "../select/tx.delete-selection";
 const FREE_TEXT_NAME = "free-text";
 const ATTACHED_TEXT_NAME = "attached-text";
 const TEXT_USES_THEME_COLOR_ATTR = "vcUsesThemeTextColor";
+const ELEMENT_STYLE_ATTR = "vcElementStyle";
 
 function usesThemeTextColor(element: Pick<TElement, "style">) {
   return !element.style.strokeColor;
 }
 
 function getTextFillColor(theme: ThemeService, element: Pick<TElement, "style">) {
-  return element.style.strokeColor ?? theme.getTheme().colors.canvasText;
+  return resolveThemeColor(theme.getTheme(), element.style.strokeColor, theme.getTheme().colors.canvasText) ?? theme.getTheme().colors.canvasText;
 }
 
 function applyTextThemeState(node: Konva.Text, element: Pick<TElement, "style">) {
   node.setAttr(TEXT_USES_THEME_COLOR_ATTR, usesThemeTextColor(element));
-}
-
-function nodeUsesThemeTextColor(node: Konva.Text) {
-  return node.getAttr(TEXT_USES_THEME_COLOR_ATTR) === true;
 }
 
 function createTextNode(render: RenderService, theme: ThemeService, element: TElement) {
@@ -64,6 +61,7 @@ function createTextNode(render: RenderService, theme: ThemeService, element: TEl
   });
 
   applyTextThemeState(node, element);
+  node.setAttr(ELEMENT_STYLE_ATTR, structuredClone(element.style));
   node.setAttr("vcContainerId", data.containerId ?? null);
   node.setAttr("vcOriginalText", data.originalText);
   node.setAttr("vcTextAutoResize", data.autoResize);
@@ -101,17 +99,24 @@ export function createTextPlugin(): IPlugin<{
 
       const syncThemeTextNodes = () => {
         render.staticForegroundLayer.find((candidate: Konva.Node) => {
-          return candidate instanceof render.Text && candidate.name() === FREE_TEXT_NAME;
+          return candidate instanceof render.Text;
         }).forEach((candidate) => {
           if (!(candidate instanceof render.Text)) {
             return;
           }
 
-          if (!nodeUsesThemeTextColor(candidate)) {
+          const element = editor.toElement(candidate);
+          if (!element || element.data.type !== "text") {
             return;
           }
 
-          candidate.fill(theme.getTheme().colors.canvasText);
+          txUpdateTextNodeFromElement({
+            render,
+            theme,
+          }, {
+            element,
+            freeTextName: FREE_TEXT_NAME,
+          });
         });
         render.staticForegroundLayer.batchDraw();
       };
@@ -184,7 +189,13 @@ export function createTextPlugin(): IPlugin<{
       });
 
       editor.registerUpdateShapeFromTElement("text", (element) => {
-        return txUpdateTextNodeFromElement({ render, theme }, { element, freeTextName: FREE_TEXT_NAME });
+        return txUpdateTextNodeFromElement({
+          render,
+          theme,
+        }, {
+          element,
+          freeTextName: FREE_TEXT_NAME,
+        });
       });
 
       theme.hooks.change.tap(() => {

@@ -8,6 +8,7 @@ import type { HistoryService } from "../../new-services/history/HistoryService";
 import type { RenderOrderService } from "../../new-services/render-order/RenderOrderService";
 import type { RenderService } from "../../new-services/render/RenderService";
 import type { SelectionService } from "../../new-services/selection/SelectionService";
+import type { ThemeService } from "../../new-services/theme/ThemeService";
 import { CanvasMode } from "../../new-services/selection/enum";
 import type { IHooks } from "../../runtime";
 import { fxFilterSelection } from "../../core/fn.filter-selection";
@@ -66,6 +67,7 @@ export function createPenPlugin(): IPlugin<{
   render: RenderService;
   renderOrder: RenderOrderService;
   selection: SelectionService;
+  theme: ThemeService;
 }, IHooks> {
   return {
     name: "pen",
@@ -77,6 +79,7 @@ export function createPenPlugin(): IPlugin<{
       const render = ctx.services.require("render");
       const renderOrder = ctx.services.require("renderOrder");
       const selection = ctx.services.require("selection");
+      const theme = ctx.services.require("theme");
       const createId = createCreateId(render);
       const now = () => Date.now();
 
@@ -102,6 +105,7 @@ export function createPenPlugin(): IPlugin<{
               render,
               renderOrder,
               selection,
+              theme,
               createId,
               now,
               setupNode,
@@ -114,6 +118,7 @@ export function createPenPlugin(): IPlugin<{
               render,
               renderOrder,
               selection,
+              theme,
               createId,
               now,
               setupNode,
@@ -126,6 +131,7 @@ export function createPenPlugin(): IPlugin<{
               render,
               renderOrder,
               selection,
+              theme,
               createId,
               now,
               setupNode,
@@ -219,7 +225,7 @@ export function createPenPlugin(): IPlugin<{
         }
 
         const node = ensurePreviewPath();
-        updatePenPathFromElement(node, element);
+        updatePenPathFromElement(node, theme, element);
         node.listening(false);
         node.draggable(false);
         node.visible(true);
@@ -273,7 +279,7 @@ export function createPenPlugin(): IPlugin<{
           return null;
         }
 
-        return setupNode(createPenPathFromElement(render, element));
+        return setupNode(createPenPathFromElement(render, theme, element));
       });
 
       editor.registerSetupExistingShape("pen", (node) => {
@@ -301,7 +307,7 @@ export function createPenPlugin(): IPlugin<{
           return false;
         }
 
-        return updatePenPathFromElement(node, element);
+        return updatePenPathFromElement(node, theme, element);
       });
 
       ctx.hooks.toolSelect.tap((toolId) => {
@@ -376,7 +382,7 @@ export function createPenPlugin(): IPlugin<{
           return;
         }
 
-        const node = setupNode(createPenPathFromElement(render, element));
+        const node = setupNode(createPenPathFromElement(render, theme, element));
         render.staticForegroundLayer.add(node);
         renderOrder.assignOrderOnInsert({
           parent: render.staticForegroundLayer,
@@ -419,6 +425,20 @@ export function createPenPlugin(): IPlugin<{
         event.preventDefault();
         event.stopPropagation();
         cancelStroke();
+      });
+
+      theme.hooks.change.tap(() => {
+        render.staticForegroundLayer.find((candidate: Konva.Node) => {
+          return candidate instanceof render.Path && isPenPath(candidate);
+        }).forEach((candidate) => {
+          if (!(candidate instanceof render.Path)) {
+            return;
+          }
+
+          const element = toElement(candidate);
+          updatePenPathFromElement(candidate, theme, element);
+        });
+        render.staticForegroundLayer.batchDraw();
       });
 
       ctx.hooks.destroy.tap(() => {

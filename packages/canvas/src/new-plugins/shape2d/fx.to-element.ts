@@ -5,6 +5,8 @@ import { fxGetWorldPosition } from "../../core/fn.world-position";
 import type { RenderService } from "../../new-services/render/RenderService";
 import { fxGetShape2dNodeType } from "./fn.node";
 
+const ELEMENT_STYLE_ATTR = "vcElementStyle";
+
 export type TPortalToShape2dElement = {
   render: RenderService;
   getNodeZIndex: (node: Konva.Shape) => string;
@@ -16,19 +18,25 @@ export type TArgsToShape2dElement = {
 };
 
 function getNodeStyle(node: Konva.Shape): TElementStyle {
+  const baseStyle = structuredClone((node.getAttr(ELEMENT_STYLE_ATTR) as TElementStyle | undefined) ?? {});
   const style: TElementStyle = {
+    ...baseStyle,
     opacity: node.opacity(),
     strokeWidth: node.strokeWidth(),
   };
 
-  const fill = node.fill();
-  if (typeof fill === "string") {
-    style.backgroundColor = fill;
+  if (typeof baseStyle.backgroundColor !== "string") {
+    const fill = node.fill();
+    if (typeof fill === "string") {
+      style.backgroundColor = fill;
+    }
   }
 
-  const stroke = node.stroke();
-  if (typeof stroke === "string") {
-    style.strokeColor = stroke;
+  if (typeof baseStyle.strokeColor !== "string") {
+    const stroke = node.stroke();
+    if (typeof stroke === "string") {
+      style.strokeColor = stroke;
+    }
   }
 
   return style;

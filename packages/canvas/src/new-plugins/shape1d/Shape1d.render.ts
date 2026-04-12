@@ -13,6 +13,7 @@ import {
   getStrokeWidthFromStyle,
   isSupportedElementType,
 } from "./Shape1d.shared";
+import type { ThemeService } from "../../new-services/theme/ThemeService";
 
 function getBoundsPadding(data: TShape1dData, strokeWidth: number) {
   const base = Math.max(strokeWidth * 1.5, 8);
@@ -170,13 +171,13 @@ function createNode(config?: Konva.ShapeConfig) {
   return attachShapeRuntime(node);
 }
 
-export function createShapeFromElement(element: TElement) {
+export function createShapeFromElement(theme: ThemeService, element: TElement) {
   if (!isSupportedElementType(element.data.type)) {
     throw new Error("Unsupported element type for Shape1dPlugin");
   }
 
   const strokeWidth = getStrokeWidthFromStyle(element.style);
-  const color = getStrokeColorFromStyle(element.style);
+  const color = getStrokeColorFromStyle(theme, element.style);
   const node = createNode({
     id: element.id,
     x: element.x,

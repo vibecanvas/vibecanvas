@@ -2,9 +2,13 @@ import type Konva from "konva";
 import type { TElement } from "@vibecanvas/service-automerge/types/canvas-doc.types";
 import { fxGetDiamondPoints } from "../../core/fn.shape2d";
 import type { RenderService } from "../../new-services/render/RenderService";
+import type { ThemeService } from "../../new-services/theme/ThemeService";
+
+const ELEMENT_STYLE_ATTR = "vcElementStyle";
 
 export type TPortalCreateShape2dNode = {
   render: RenderService;
+  theme: ThemeService;
   setNodeZIndex: (node: Konva.Shape, zIndex: string) => void;
 };
 
@@ -14,6 +18,8 @@ export type TArgsCreateShape2dNode = {
 
 export function fxCreateShape2dNode(portal: TPortalCreateShape2dNode, args: TArgsCreateShape2dNode) {
   const style = args.element.style;
+  const fill = portal.theme.resolveThemeColor(style.backgroundColor);
+  const stroke = portal.theme.resolveThemeColor(style.strokeColor);
 
   if (args.element.data.type === "rect") {
     const node = new portal.render.Rect({
@@ -23,8 +29,8 @@ export function fxCreateShape2dNode(portal: TPortalCreateShape2dNode, args: TArg
       rotation: args.element.rotation,
       width: args.element.data.w,
       height: args.element.data.h,
-      fill: style.backgroundColor,
-      stroke: style.strokeColor,
+      fill,
+      stroke,
       strokeWidth: style.strokeWidth ?? 0,
       opacity: style.opacity ?? 1,
       draggable: true,
@@ -33,6 +39,7 @@ export function fxCreateShape2dNode(portal: TPortalCreateShape2dNode, args: TArg
 
     node.setAttr("vcShape2dType", "rect");
     node.setAttr("vcElementCreatedAt", args.element.createdAt);
+    node.setAttr(ELEMENT_STYLE_ATTR, structuredClone(style));
     portal.setNodeZIndex(node, args.element.zIndex);
     return node;
   }
@@ -48,8 +55,8 @@ export function fxCreateShape2dNode(portal: TPortalCreateShape2dNode, args: TArg
         width: args.element.data.w,
         height: args.element.data.h,
       }),
-      fill: style.backgroundColor,
-      stroke: style.strokeColor,
+      fill,
+      stroke,
       strokeWidth: style.strokeWidth ?? 0,
       opacity: style.opacity ?? 1,
       draggable: true,
@@ -58,6 +65,7 @@ export function fxCreateShape2dNode(portal: TPortalCreateShape2dNode, args: TArg
 
     node.setAttr("vcShape2dType", "diamond");
     node.setAttr("vcElementCreatedAt", args.element.createdAt);
+    node.setAttr(ELEMENT_STYLE_ATTR, structuredClone(style));
     portal.setNodeZIndex(node, args.element.zIndex);
     return node;
   }
@@ -70,8 +78,8 @@ export function fxCreateShape2dNode(portal: TPortalCreateShape2dNode, args: TArg
       rotation: args.element.rotation,
       radiusX: args.element.data.rx,
       radiusY: args.element.data.ry,
-      fill: style.backgroundColor,
-      stroke: style.strokeColor,
+      fill,
+      stroke,
       strokeWidth: style.strokeWidth ?? 0,
       opacity: style.opacity ?? 1,
       draggable: true,
@@ -80,6 +88,7 @@ export function fxCreateShape2dNode(portal: TPortalCreateShape2dNode, args: TArg
 
     node.setAttr("vcShape2dType", "ellipse");
     node.setAttr("vcElementCreatedAt", args.element.createdAt);
+    node.setAttr(ELEMENT_STYLE_ATTR, structuredClone(style));
     portal.setNodeZIndex(node, args.element.zIndex);
     return node;
   }

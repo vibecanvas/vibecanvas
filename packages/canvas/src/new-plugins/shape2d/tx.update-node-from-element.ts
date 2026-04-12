@@ -3,9 +3,13 @@ import type { TElement } from "@vibecanvas/service-automerge/types/canvas-doc.ty
 import { fxGetDiamondPoints } from "../../core/fn.shape2d";
 import { fxGetAbsolutePositionFromWorldPosition } from "../../core/fn.world-position";
 import type { RenderService } from "../../new-services/render/RenderService";
+import type { ThemeService } from "../../new-services/theme/ThemeService";
+
+const ELEMENT_STYLE_ATTR = "vcElementStyle";
 
 export type TPortalUpdateShape2dNodeFromElement = {
   render: RenderService;
+  theme: ThemeService;
   setNodeZIndex: (node: Konva.Shape, zIndex: string) => void;
 };
 
@@ -14,10 +18,15 @@ export type TArgsUpdateShape2dNodeFromElement = {
   element: TElement;
 };
 
-function syncShapeFill(node: Konva.Shape, backgroundColor: string | undefined) {
-  if (typeof backgroundColor === "string") {
+function syncShapeFill(
+  node: Konva.Shape,
+  theme: ThemeService,
+  backgroundColor: string | undefined,
+) {
+  const fill = theme.resolveThemeColor(backgroundColor);
+  if (typeof fill === "string") {
     node.fillEnabled(true);
-    node.fill(backgroundColor);
+    node.fill(fill);
     return;
   }
 
@@ -25,10 +34,16 @@ function syncShapeFill(node: Konva.Shape, backgroundColor: string | undefined) {
   node.fill(undefined);
 }
 
-function syncShapeStroke(node: Konva.Shape, strokeColor: string | undefined, strokeWidth: number | undefined) {
-  if (typeof strokeColor === "string") {
+function syncShapeStroke(
+  node: Konva.Shape,
+  theme: ThemeService,
+  strokeColor: string | undefined,
+  strokeWidth: number | undefined,
+) {
+  const stroke = theme.resolveThemeColor(strokeColor);
+  if (typeof stroke === "string") {
     node.strokeEnabled(true);
-    node.stroke(strokeColor);
+    node.stroke(stroke);
     node.strokeWidth(strokeWidth ?? 0);
     return;
   }
@@ -61,8 +76,9 @@ export function txUpdateShape2dNodeFromElement(
     node.listening(true);
     node.setAttr("vcShape2dType", "rect");
     node.setAttr("vcElementCreatedAt", args.element.createdAt);
-    syncShapeFill(node, style.backgroundColor);
-    syncShapeStroke(node, style.strokeColor, style.strokeWidth);
+    node.setAttr(ELEMENT_STYLE_ATTR, structuredClone(style));
+    syncShapeFill(node, portal.theme, style.backgroundColor);
+    syncShapeStroke(node, portal.theme, style.strokeColor, style.strokeWidth);
     portal.setNodeZIndex(node, args.element.zIndex);
     return true;
   }
@@ -86,8 +102,9 @@ export function txUpdateShape2dNodeFromElement(
     node.listening(true);
     node.setAttr("vcShape2dType", "diamond");
     node.setAttr("vcElementCreatedAt", args.element.createdAt);
-    syncShapeFill(node, style.backgroundColor);
-    syncShapeStroke(node, style.strokeColor, style.strokeWidth);
+    node.setAttr(ELEMENT_STYLE_ATTR, structuredClone(style));
+    syncShapeFill(node, portal.theme, style.backgroundColor);
+    syncShapeStroke(node, portal.theme, style.strokeColor, style.strokeWidth);
     portal.setNodeZIndex(node, args.element.zIndex);
     return true;
   }
@@ -111,8 +128,9 @@ export function txUpdateShape2dNodeFromElement(
     node.listening(true);
     node.setAttr("vcShape2dType", "ellipse");
     node.setAttr("vcElementCreatedAt", args.element.createdAt);
-    syncShapeFill(node, style.backgroundColor);
-    syncShapeStroke(node, style.strokeColor, style.strokeWidth);
+    node.setAttr(ELEMENT_STYLE_ATTR, structuredClone(style));
+    syncShapeFill(node, portal.theme, style.backgroundColor);
+    syncShapeStroke(node, portal.theme, style.strokeColor, style.strokeWidth);
     portal.setNodeZIndex(node, args.element.zIndex);
     return true;
   }

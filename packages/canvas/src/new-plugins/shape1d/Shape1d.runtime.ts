@@ -8,6 +8,7 @@ import type { HistoryService } from "../../new-services/history/HistoryService";
 import type { RenderOrderService } from "../../new-services/render-order/RenderOrderService";
 import type { RenderService } from "../../new-services/render/RenderService";
 import type { SelectionService } from "../../new-services/selection/SelectionService";
+import type { ThemeService } from "../../new-services/theme/ThemeService";
 import { CanvasMode } from "../../new-services/selection/enum";
 import type { IHooks, TElementPointerEvent } from "../../runtime";
 import { fxSerializeSubtreeElements } from "../group/fn.serialize-subtree-elements";
@@ -17,6 +18,7 @@ import { type TShape1dNode, toPositionPatch } from "./Shape1d.shared";
 
 export type TPortalShape1dRuntime = TPortalRecordShape1dHistory & {
   hooks: IHooks;
+  theme: ThemeService;
   createId: () => string;
   now: () => number;
 };
@@ -90,7 +92,7 @@ export function finalizePreviewClone(portal: TPortalShape1dRuntime, previewClone
 }
 
 export function createCloneDrag(portal: TPortalShape1dRuntime, node: TShape1dNode) {
-  const previewClone = createPreviewClone(node, portal.createId, portal.now);
+  const previewClone = createPreviewClone(node, portal.createId, portal.now, portal.theme);
   portal.render.dynamicLayer.add(previewClone);
   previewClone.startDrag();
 
