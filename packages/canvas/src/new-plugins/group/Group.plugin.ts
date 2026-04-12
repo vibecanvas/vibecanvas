@@ -7,10 +7,12 @@ import type { CameraService } from "../../new-services/camera/CameraService";
 import type { CrdtService } from "../../new-services/crdt/CrdtService";
 import type { EditorService } from "../../new-services/editor/EditorService";
 import type { HistoryService } from "../../new-services/history/HistoryService";
+import type { RenderOrderService } from "../../new-services/render-order/RenderOrderService";
 import type { RenderService } from "../../new-services/render/RenderService";
 import type { SelectionService } from "../../new-services/selection/SelectionService";
 import { CanvasMode } from "../../new-services/selection/enum";
 import type { IHooks } from "../../runtime";
+import { startGroupCloneDrag } from "./Group.clone";
 import { fxIsSceneNode } from "./fn.scene-node";
 import { fxToGroupPatch } from "./fn.to-group-patch";
 import { txGroupSelection } from "./tx.group-selection";
@@ -60,6 +62,7 @@ export function createGroupPlugin(): IPlugin<{
   editor: EditorService;
   history: HistoryService;
   render: RenderService;
+  renderOrder: RenderOrderService;
   selection: SelectionService;
 }, IHooks> {
   return {
@@ -70,6 +73,7 @@ export function createGroupPlugin(): IPlugin<{
       const editor = ctx.services.require("editor");
       const history = ctx.services.require("history");
       const render = ctx.services.require("render");
+      const renderOrder = ctx.services.require("renderOrder");
       const selection = ctx.services.require("selection");
       const boundaries = new Map<string, TGroupBoundary>();
 
@@ -90,6 +94,17 @@ export function createGroupPlugin(): IPlugin<{
           selection,
           hooks: ctx.hooks,
           refreshBoundaries,
+          startCloneDrag: (groupNode) => {
+            startGroupCloneDrag({
+              crdt,
+              editor,
+              render,
+              renderOrder,
+              selection,
+              setupGroupNode: setupNode,
+              createId: () => crypto.randomUUID(),
+            }, groupNode);
+          },
           createThrottledPatch: (callback) => {
             return throttle(callback, 100);
           },

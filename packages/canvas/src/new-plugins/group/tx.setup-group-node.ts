@@ -16,6 +16,7 @@ export type TPortalSetupGroupNode = {
   selection: SelectionService;
   hooks: IHooks;
   refreshBoundaries: () => void;
+  startCloneDrag: (group: Konva.Group) => void;
   createThrottledPatch: (callback: (elements: TElement[]) => void) => (elements: TElement[]) => void;
 };
 
@@ -35,6 +36,7 @@ export function txSetupGroupNode(
   args.group.draggable(true);
 
   let beforeElements: TElement[] = [];
+  let isCloneDrag = false;
   const throttledPatch = portal.createThrottledPatch((elements) => {
     portal.crdt.patch({ elements, groups: [] });
   });
@@ -69,6 +71,19 @@ export function txSetupGroupNode(
       return;
     }
 
+    if (event.evt?.altKey) {
+      isCloneDrag = true;
+      try {
+        if (args.group.isDragging()) {
+          args.group.stopDrag();
+        }
+      } catch {
+        return;
+      }
+      portal.startCloneDrag(args.group);
+      return;
+    }
+
     beforeElements = fxSerializeSubtreeElements({
       editor: portal.editor,
       render: portal.render,
@@ -88,6 +103,11 @@ export function txSetupGroupNode(
   });
 
   args.group.on("dragmove", () => {
+    if (isCloneDrag) {
+      isCloneDrag = false;
+      return;
+    }
+
     portal.refreshBoundaries();
     throttledPatch(fxSerializeSubtreeElements({
       editor: portal.editor,
@@ -101,6 +121,12 @@ export function txSetupGroupNode(
   });
 
   args.group.on("dragend", () => {
+    if (isCloneDrag) {
+      isCloneDrag = false;
+      beforeElements = [];
+      return;
+    }
+
     const afterElements = fxSerializeSubtreeElements({
       editor: portal.editor,
       render: portal.render,

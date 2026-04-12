@@ -112,6 +112,19 @@ export function createTextPlugin(): IPlugin<{
         return setupNode(createTextNode(render, element));
       });
 
+      editor.registerSetupExistingShape("text", (node) => {
+        if (!(node instanceof render.Text)) {
+          return false;
+        }
+
+        if (node.name() !== FREE_TEXT_NAME) {
+          return false;
+        }
+
+        setupNode(node);
+        return true;
+      });
+
       editor.registerUpdateShapeFromTElement("text", (element) => {
         return txUpdateTextNodeFromElement({ render }, { element, freeTextName: FREE_TEXT_NAME });
       });
@@ -177,6 +190,7 @@ export function createTextPlugin(): IPlugin<{
         editor.unregisterTool("text");
         editor.unregisterToElement("text");
         editor.unregisterCreateShapeFromTElement("text");
+        editor.unregisterSetupExistingShape("text");
         editor.unregisterUpdateShapeFromTElement("text");
       });
     },

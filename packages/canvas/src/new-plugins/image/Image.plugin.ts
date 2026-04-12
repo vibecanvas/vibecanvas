@@ -14,6 +14,7 @@ import type { IHooks } from "../../runtime";
 import { getWorldPosition, setWorldPosition } from "../../core/node-space";
 import { getNodeZIndex, setNodeZIndex } from "../../core/render-order";
 import { fxToImageElement } from "./fn.to-image-element";
+import { txCloneBackendFileForElement } from "./tx.clone-backend-file-for-element";
 import { txInsertImage } from "./tx.insert-image";
 import { txSetupImageListeners } from "./tx.setup-image-listeners";
 import { txUpdateImageNodeFromElement } from "./tx.update-image-node-from-element";
@@ -376,6 +377,28 @@ export function createImagePlugin(): IPlugin<{
         return setupNode(createImageNode(render, element));
       });
 
+      editor.registerSetupExistingShape("image", (node) => {
+        if (!(node instanceof render.Image)) {
+          return false;
+        }
+
+        setupNode(node);
+        return true;
+      });
+
+      editor.registerCloneElement("image", ({ sourceElement, clonedElement }) => {
+        if (sourceElement.data.type !== "image" || clonedElement.data.type !== "image") {
+          return false;
+        }
+
+        txCloneBackendFileForElement(cloneBackendFileForElementPortal, {
+          element: clonedElement,
+          errorTitle: "Failed to clone grouped image file",
+          now: Date.now(),
+        });
+        return true;
+      });
+
       editor.registerUpdateShapeFromTElement("image", (element) => {
         if (element.data.type !== "image") {
           return false;
@@ -491,6 +514,8 @@ export function createImagePlugin(): IPlugin<{
         editor.unregisterTool("image");
         editor.unregisterToElement("image");
         editor.unregisterCreateShapeFromTElement("image");
+        editor.unregisterSetupExistingShape("image");
+        editor.unregisterCloneElement("image");
         editor.unregisterUpdateShapeFromTElement("image");
       });
     },

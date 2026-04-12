@@ -38,7 +38,9 @@ export type TEditorToElement = (node: Konva.Node) => TElement | null;
 export type TEditorToGroup = (node: Konva.Node) => TGroup | null;
 export type TEditorCreateGroupFromTGroup = (group: TGroup) => Konva.Group | null;
 export type TEditorCreateShapeFromTElement = (element: TElement) => Konva.Shape | null;
+export type TEditorSetupExistingShape = (node: Konva.Node) => boolean;
 export type TEditorUpdateShapeFromTElement = (element: TElement) => boolean;
+export type TEditorCloneElement = (args: { sourceElement: TElement; clonedElement: TElement }) => boolean;
 
 /**
  * Editor-local hook bag.
@@ -56,7 +58,9 @@ export interface TEditorServiceHooks {
   toGroupRegistryChange: SyncHook<[]>;
   createGroupFromTGroupRegistryChange: SyncHook<[]>;
   createShapeFromTElementRegistryChange: SyncHook<[]>;
+  setupExistingShapeRegistryChange: SyncHook<[]>;
   updateShapeFromTElementRegistryChange: SyncHook<[]>;
+  cloneElementRegistryChange: SyncHook<[]>;
 }
 
 /**
@@ -77,7 +81,9 @@ export class EditorService implements IService<TEditorServiceHooks> {
     toGroupRegistryChange: new SyncHook(),
     createGroupFromTGroupRegistryChange: new SyncHook(),
     createShapeFromTElementRegistryChange: new SyncHook(),
+    setupExistingShapeRegistryChange: new SyncHook(),
     updateShapeFromTElementRegistryChange: new SyncHook(),
+    cloneElementRegistryChange: new SyncHook(),
   };
 
   readonly tools = new Map<string, TEditorTool>();
@@ -85,7 +91,9 @@ export class EditorService implements IService<TEditorServiceHooks> {
   readonly toGroupRegistry = new Map<string, TEditorToGroup>();
   readonly createGroupFromTGroupRegistry = new Map<string, TEditorCreateGroupFromTGroup>();
   readonly createShapeFromTElementRegistry = new Map<string, TEditorCreateShapeFromTElement>();
+  readonly setupExistingShapeRegistry = new Map<string, TEditorSetupExistingShape>();
   readonly updateShapeFromTElementRegistry = new Map<string, TEditorUpdateShapeFromTElement>();
+  readonly cloneElementRegistry = new Map<string, TEditorCloneElement>();
 
   activeToolId = "select";
   editingTextId: string | null = null;
@@ -353,6 +361,40 @@ export class EditorService implements IService<TEditorServiceHooks> {
   }
 
   /**
+   * Registers one existing runtime shape setup hook.
+   * First setup that handles the node wins.
+   */
+  registerSetupExistingShape(id: string, setupExistingShape: TEditorSetupExistingShape) {
+    this.setupExistingShapeRegistry.set(id, setupExistingShape);
+    this.hooks.setupExistingShapeRegistryChange.call();
+  }
+
+  /**
+   * Removes one existing runtime shape setup hook.
+   */
+  unregisterSetupExistingShape(id: string) {
+    const didDelete = this.setupExistingShapeRegistry.delete(id);
+    if (!didDelete) {
+      return;
+    }
+
+    this.hooks.setupExistingShapeRegistryChange.call();
+  }
+
+  /**
+   * Applies registered setup hooks to one existing runtime shape.
+   */
+  setupExistingShape(node: Konva.Node) {
+    for (const setupExistingShape of this.setupExistingShapeRegistry.values()) {
+      if (setupExistingShape(node)) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  /**
    * Registers one element -> node updater.
    * First updater that handles the element wins.
    */
@@ -379,6 +421,39 @@ export class EditorService implements IService<TEditorServiceHooks> {
   updateShapeFromTElement(element: TElement) {
     for (const updateShapeFromTElement of this.updateShapeFromTElementRegistry.values()) {
       if (updateShapeFromTElement(element)) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  /**
+   * Registers one clone hook for element-specific clone follow-up work.
+   */
+  registerCloneElement(id: string, cloneElement: TEditorCloneElement) {
+    this.cloneElementRegistry.set(id, cloneElement);
+    this.hooks.cloneElementRegistryChange.call();
+  }
+
+  /**
+   * Removes one clone hook.
+   */
+  unregisterCloneElement(id: string) {
+    const didDelete = this.cloneElementRegistry.delete(id);
+    if (!didDelete) {
+      return;
+    }
+
+    this.hooks.cloneElementRegistryChange.call();
+  }
+
+  /**
+   * Runs registered clone hooks until one handles the cloned element.
+   */
+  cloneElement(args: { sourceElement: TElement; clonedElement: TElement }) {
+    for (const cloneElement of this.cloneElementRegistry.values()) {
+      if (cloneElement(args)) {
         return true;
       }
     }
