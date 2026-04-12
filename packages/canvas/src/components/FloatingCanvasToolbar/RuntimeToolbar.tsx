@@ -1,6 +1,8 @@
 import Grid2x2 from "lucide-solid/icons/grid-2x2";
 import Hand from "lucide-solid/icons/hand";
+import Image from "lucide-solid/icons/image";
 import MousePointer2 from "lucide-solid/icons/mouse-pointer-2";
+import Type from "lucide-solid/icons/type";
 import type { Accessor } from "solid-js";
 import { For, createSignal } from "solid-js";
 import { ToolButton } from "./ToolButton";
@@ -9,6 +11,7 @@ export type TRuntimeToolbarTool = {
   id: string;
   label: string;
   shortcuts?: string[];
+  active?: boolean;
 };
 
 export type TRuntimeToolbarProps = {
@@ -28,6 +31,14 @@ function getToolIcon(toolId: string) {
 
   if (toolId === "grid") {
     return <Grid2x2 size={14} />;
+  }
+
+  if (toolId === "image") {
+    return <Image size={14} />;
+  }
+
+  if (toolId === "text") {
+    return <Type size={14} />;
   }
 
   return <span class="text-[10px] font-mono uppercase">{toolId.slice(0, 2)}</span>;

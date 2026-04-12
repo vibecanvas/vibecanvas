@@ -37,7 +37,7 @@
 - [ ] `Shape1dPlugin`
 - [ ] `Shape2dPlugin`
 - [ ] `PenPlugin`
-- [ ] `TextPlugin`
+- [x] `TextPlugin`
 - [ ] `ImagePlugin`
 - [ ] `HostedSolidWidgetPlugin`
 - [ ] `IframeBrowserWidgetPlugin`

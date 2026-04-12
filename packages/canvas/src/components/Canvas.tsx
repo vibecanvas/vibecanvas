@@ -60,7 +60,9 @@ export function Canvas(props: CanvasPageProps) {
       onToggleSidebar: props.store.onToggleSidebar,
       env: {
         DEV: import.meta.env.DEV,
-      }
+      },
+      image: props.image,
+      notification: props.notification,
     })
 
     void runtime.boot();

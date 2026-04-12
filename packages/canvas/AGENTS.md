@@ -55,7 +55,7 @@ Current new-runtime snapshot:
 - `theme` service exists but is still minimal
 - `history` service exists and owns undo/redo stacks
 - `crdt` service exists and owns document patch/delete reads+writes
-- migrated runtime plugins so far: `event-listener`, `grid`, `camera-control`, `history-control`, `toolbar`, `select`, `transform`, `visual-debug`
+- migrated runtime plugins so far: `event-listener`, `grid`, `camera-control`, `history-control`, `toolbar`, `select`, `transform`, `text`, `visual-debug`
 - new toolbar currently registers base tools (`hand`, `select`) and renders from the editor registry
 - `grid` is now also a registered toolbar action tool (`g`) instead of legacy custom-event wiring
 
