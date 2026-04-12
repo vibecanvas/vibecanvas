@@ -1,17 +1,16 @@
 import type { IPlugin } from "@vibecanvas/runtime";
+import type { ThemeService } from "@vibecanvas/service-theme";
 import type { CameraService } from "../../new-services/camera/CameraService";
 import type { EditorService } from "../../new-services/editor/EditorService";
 import type { RenderService } from "../../new-services/render/RenderService";
 import type { IHooks } from "../../runtime";
 import { txDrawGrid } from "./tx.draw";
 
-const minorGridColor = "rgba(71, 85, 105, 0.16)";
-const majorGridColor = "rgba(71, 85, 105, 0.28)";
-
 export function createGridPlugin(): IPlugin<{
   camera: CameraService;
   editor: EditorService;
   render: RenderService;
+  theme: ThemeService;
 }, IHooks> {
   let visible = true;
 
@@ -39,6 +38,7 @@ export function createGridPlugin(): IPlugin<{
       ctx.hooks.init.tap(() => {
         const render = ctx.services.require("render");
         const camera = ctx.services.require("camera");
+        const theme = ctx.services.require("theme");
         const gridShape = new render.Shape({
           listening: false,
           sceneFunc: (shapeContext) => {
@@ -48,14 +48,16 @@ export function createGridPlugin(): IPlugin<{
             const height = render.stage.height();
             if (width <= 0 || height <= 0) return;
 
+            const activeTheme = theme.getTheme();
+
             txDrawGrid({ shapeContext }, {
               width,
               height,
               zoom: camera.zoom,
               x: camera.x,
               y: camera.y,
-              minorGridColor,
-              majorGridColor,
+              minorGridColor: activeTheme.colors.canvasGridMinor,
+              majorGridColor: activeTheme.colors.canvasGridMajor,
             });
           },
         });
@@ -64,6 +66,10 @@ export function createGridPlugin(): IPlugin<{
         render.staticBackgroundLayer.batchDraw();
 
         camera.hooks.change.tap(() => {
+          render.staticBackgroundLayer.batchDraw();
+        });
+
+        theme.hooks.change.tap(() => {
           render.staticBackgroundLayer.batchDraw();
         });
 

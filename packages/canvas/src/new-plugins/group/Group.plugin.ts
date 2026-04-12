@@ -1,5 +1,6 @@
 import { throttle } from "@solid-primitives/scheduled";
 import type { IPlugin } from "@vibecanvas/runtime";
+import type { ThemeService } from "@vibecanvas/service-theme";
 import type { TGroup } from "@vibecanvas/service-automerge/types/canvas-doc.types";
 import type Konva from "konva";
 import { getNodeZIndex, setNodeZIndex } from "../../core/render-order";
@@ -67,6 +68,7 @@ export function createGroupPlugin(): IPlugin<{
   render: RenderService;
   renderOrder: RenderOrderService;
   selection: SelectionService;
+  theme: ThemeService;
 }, IHooks> {
   return {
     name: "group",
@@ -79,10 +81,11 @@ export function createGroupPlugin(): IPlugin<{
       const render = ctx.services.require("render");
       const renderOrder = ctx.services.require("renderOrder");
       const selection = ctx.services.require("selection");
+      const theme = ctx.services.require("theme");
       const boundaries = new Map<string, TGroupBoundary>();
 
       const refreshBoundaries = () => {
-        txSyncGroupBoundaries({ render, selection, boundaries }, {});
+        txSyncGroupBoundaries({ render, selection, theme, boundaries }, {});
       };
 
       const syncDraggability = () => {
@@ -156,6 +159,11 @@ export function createGroupPlugin(): IPlugin<{
 
       camera.hooks.change.tap(() => {
         refreshBoundaries();
+      });
+
+      theme.hooks.change.tap(() => {
+        refreshBoundaries();
+        render.dynamicLayer.batchDraw();
       });
 
       ctx.hooks.init.tap(() => {

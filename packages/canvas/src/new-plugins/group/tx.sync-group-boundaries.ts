@@ -1,3 +1,4 @@
+import type { ThemeService } from "@vibecanvas/service-theme";
 import type Konva from "konva";
 import type { RenderService } from "../../new-services/render/RenderService";
 import type { SelectionService } from "../../new-services/selection/SelectionService";
@@ -8,6 +9,7 @@ export type TGroupBoundary = ReturnType<typeof fxCreateGroupBoundary>;
 export type TPortalSyncGroupBoundaries = {
   render: RenderService;
   selection: SelectionService;
+  theme: ThemeService;
   boundaries: Map<string, TGroupBoundary>;
 };
 
@@ -22,7 +24,8 @@ export function txSyncGroupBoundaries(
   portal.selection.selection
     .filter((node): node is Konva.Group => node instanceof portal.render.Group)
     .forEach((group) => {
-      const boundary = portal.boundaries.get(group.id()) ?? fxCreateGroupBoundary({ render: portal.render }, { group });
+      const boundary = portal.boundaries.get(group.id()) ?? fxCreateGroupBoundary({ render: portal.render, theme: portal.theme }, { group });
+      boundary.syncTheme();
       portal.boundaries.set(group.id(), boundary);
       portal.render.dynamicLayer.add(boundary.node);
       boundary.show();

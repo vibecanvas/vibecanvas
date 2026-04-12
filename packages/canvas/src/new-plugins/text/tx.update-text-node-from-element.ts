@@ -1,3 +1,4 @@
+import type { ThemeService } from "@vibecanvas/service-theme";
 import { fxGetAbsolutePositionFromWorldPosition } from "../../core/fn.world-position";
 import type { TElement, TTextData } from "@vibecanvas/service-automerge/types/canvas-doc.types";
 import type Konva from "konva";
@@ -5,6 +6,7 @@ import type { RenderService } from "../../new-services/render/RenderService";
 
 export type TPortalUpdateTextNodeFromElement = {
   render: RenderService;
+  theme: ThemeService;
 };
 
 export type TArgsUpdateTextNodeFromElement = {
@@ -41,7 +43,8 @@ export function txUpdateTextNodeFromElement(portal: TPortalUpdateTextNodeFromEle
   node.verticalAlign(data.verticalAlign);
   node.lineHeight(data.lineHeight);
   node.opacity(args.element.style.opacity ?? 1);
-  node.fill(args.element.style.strokeColor ?? "#000000");
+  node.fill(args.element.style.strokeColor ?? portal.theme.getTheme().colors.canvasText);
+  node.setAttr("vcUsesThemeTextColor", !args.element.style.strokeColor);
   node.scale({ x: 1, y: 1 });
   node.wrap("none");
   node.listening(true);

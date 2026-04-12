@@ -66,6 +66,7 @@
         "@vibecanvas/orpc-client": "workspace:*",
         "@vibecanvas/service-automerge": "workspace:*",
         "@vibecanvas/service-db": "workspace:*",
+        "@vibecanvas/service-theme": "workspace:*",
         "konva": "^9.3.22",
         "lucide-solid": "catalog:",
         "partysocket": "^1.1.16",
@@ -222,6 +223,7 @@
         "@vibecanvas/runtime": "workspace:*",
         "@vibecanvas/service-automerge": "workspace:*",
         "@vibecanvas/service-db": "workspace:*",
+        "@vibecanvas/service-theme": "workspace:*",
         "@vibecanvas/tapable": "workspace:*",
         "ghostty-web": "^0.4.0",
         "konva": "^9.3.22",
@@ -326,6 +328,14 @@
       "dependencies": {
         "@vibecanvas/runtime": "workspace:*",
         "bun-pty": "^0.4.8",
+      },
+    },
+    "packages/service-theme": {
+      "name": "@vibecanvas/service-theme",
+      "version": "0.3.1",
+      "dependencies": {
+        "@vibecanvas/runtime": "workspace:*",
+        "@vibecanvas/tapable": "workspace:*",
       },
     },
     "packages/shared-functions": {
@@ -1000,6 +1010,8 @@
     "@vibecanvas/service-filesystem": ["@vibecanvas/service-filesystem@workspace:packages/service-filesystem"],
 
     "@vibecanvas/service-pty": ["@vibecanvas/service-pty@workspace:packages/service-pty"],
+
+    "@vibecanvas/service-theme": ["@vibecanvas/service-theme@workspace:packages/service-theme"],
 
     "@vibecanvas/shared-functions": ["@vibecanvas/shared-functions@workspace:packages/shared-functions"],
 

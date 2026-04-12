@@ -1,4 +1,5 @@
 import type { IPlugin } from "@vibecanvas/runtime";
+import type { ThemeService } from "@vibecanvas/service-theme";
 import type { TElement, TTextData } from "@vibecanvas/service-automerge/types/canvas-doc.types";
 import type Konva from "konva";
 import type { ContextMenuService } from "../../new-services/context-menu/ContextMenuService";
@@ -18,8 +19,25 @@ import { txUpdateTextNodeFromElement } from "./tx.update-text-node-from-element"
 import { txDeleteSelection } from "../select/tx.delete-selection";
 
 const FREE_TEXT_NAME = "free-text";
+const TEXT_USES_THEME_COLOR_ATTR = "vcUsesThemeTextColor";
 
-function createTextNode(render: RenderService, element: TElement) {
+function usesThemeTextColor(element: Pick<TElement, "style">) {
+  return !element.style.strokeColor;
+}
+
+function getTextFillColor(theme: ThemeService, element: Pick<TElement, "style">) {
+  return element.style.strokeColor ?? theme.getTheme().colors.canvasText;
+}
+
+function applyTextThemeState(node: Konva.Text, element: Pick<TElement, "style">) {
+  node.setAttr(TEXT_USES_THEME_COLOR_ATTR, usesThemeTextColor(element));
+}
+
+function nodeUsesThemeTextColor(node: Konva.Text) {
+  return node.getAttr(TEXT_USES_THEME_COLOR_ATTR) === true;
+}
+
+function createTextNode(render: RenderService, theme: ThemeService, element: TElement) {
   const data = element.data as TTextData;
 
   const node = new render.Text({
@@ -38,10 +56,11 @@ function createTextNode(render: RenderService, element: TElement) {
     wrap: "none",
     draggable: true,
     listening: true,
-    fill: element.style.strokeColor ?? "#000000",
+    fill: getTextFillColor(theme, element),
     opacity: element.style.opacity ?? 1,
   });
 
+  applyTextThemeState(node, element);
   node.name(FREE_TEXT_NAME);
   return node;
 }
@@ -58,6 +77,7 @@ export function createTextPlugin(): IPlugin<{
   render: RenderService;
   renderOrder: RenderOrderService;
   selection: SelectionService;
+  theme: ThemeService;
 }, IHooks> {
   return {
     name: "text",
@@ -69,7 +89,25 @@ export function createTextPlugin(): IPlugin<{
       const render = ctx.services.require("render");
       const renderOrder = ctx.services.require("renderOrder");
       const selection = ctx.services.require("selection");
+      const theme = ctx.services.require("theme");
       const document = render.container.ownerDocument;
+
+      const syncThemeTextNodes = () => {
+        render.staticForegroundLayer.find((candidate: Konva.Node) => {
+          return candidate instanceof render.Text && candidate.name() === FREE_TEXT_NAME;
+        }).forEach((candidate) => {
+          if (!(candidate instanceof render.Text)) {
+            return;
+          }
+
+          if (!nodeUsesThemeTextColor(candidate)) {
+            return;
+          }
+
+          candidate.fill(theme.getTheme().colors.canvasText);
+        });
+        render.staticForegroundLayer.batchDraw();
+      };
 
       const setupNode = (node: Konva.Text) => {
         txSetupTextNode(
@@ -81,6 +119,7 @@ export function createTextPlugin(): IPlugin<{
             render,
             selection,
             setupNode,
+            theme,
           },
           { freeTextName: FREE_TEXT_NAME, node },
         );
@@ -129,7 +168,7 @@ export function createTextPlugin(): IPlugin<{
           return null;
         }
 
-        return setupNode(createTextNode(render, element));
+        return setupNode(createTextNode(render, theme, element));
       });
 
       editor.registerSetupExistingShape("text", (node) => {
@@ -146,7 +185,11 @@ export function createTextPlugin(): IPlugin<{
       });
 
       editor.registerUpdateShapeFromTElement("text", (element) => {
-        return txUpdateTextNodeFromElement({ render }, { element, freeTextName: FREE_TEXT_NAME });
+        return txUpdateTextNodeFromElement({ render, theme }, { element, freeTextName: FREE_TEXT_NAME });
+      });
+
+      theme.hooks.change.tap(() => {
+        syncThemeTextNodes();
       });
 
       ctx.hooks.pointerUp.tap(() => {
@@ -171,7 +214,7 @@ export function createTextPlugin(): IPlugin<{
           createdAt: now,
           updatedAt: now,
         });
-        const node = setupNode(createTextNode(render, element));
+        const node = setupNode(createTextNode(render, theme, element));
 
         render.staticForegroundLayer.add(node);
         renderOrder.assignOrderOnInsert({
@@ -185,7 +228,7 @@ export function createTextPlugin(): IPlugin<{
         editor.setActiveTool("select");
 
         txEnterEditMode(
-          { crdt, document, editor, history, render, selection },
+          { crdt, document, editor, history, render, selection, theme },
           { freeTextName: FREE_TEXT_NAME, node, isNew: true },
         );
       });
@@ -200,7 +243,7 @@ export function createTextPlugin(): IPlugin<{
         }
 
         txEnterEditMode(
-          { crdt, document, editor, history, render, selection },
+          { crdt, document, editor, history, render, selection, theme },
           { freeTextName: FREE_TEXT_NAME, node: event.currentTarget, isNew: false },
         );
         return true;

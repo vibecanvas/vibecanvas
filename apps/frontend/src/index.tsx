@@ -3,6 +3,7 @@ import './index.css';
 import { render } from 'solid-js/web';
 import 'solid-devtools';
 import './services/orpc-websocket';
+import './services/theme';
 
 import { Router, Route } from '@solidjs/router';
 import { Show } from 'solid-js';

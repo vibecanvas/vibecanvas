@@ -54,6 +54,7 @@
     "@vibecanvas/orpc-client": "workspace:*",
     "@vibecanvas/service-automerge": "workspace:*",
     "@vibecanvas/service-db": "workspace:*",
+    "@vibecanvas/service-theme": "workspace:*",
     "@vibecanvas/runtime": "workspace:*",
     "@vibecanvas/tapable": "workspace:*",
     "ghostty-web": "^0.4.0",

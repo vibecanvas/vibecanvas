@@ -1,4 +1,5 @@
 import type { IPlugin } from "@vibecanvas/runtime";
+import type { ThemeService } from "@vibecanvas/service-theme";
 import type { Node } from "konva/lib/Node";
 import type { CrdtService } from "../../new-services/crdt/CrdtService";
 import type { EditorService } from "../../new-services/editor/EditorService";
@@ -78,6 +79,7 @@ export function createSelectPlugin(): IPlugin<{
   render: RenderService;
   renderOrder: RenderOrderService;
   selection: SelectionService;
+  theme: ThemeService;
 }, IHooks> {
   return {
     name: "select",
@@ -88,17 +90,28 @@ export function createSelectPlugin(): IPlugin<{
       const render = ctx.services.require("render");
       const renderOrder = ctx.services.require("renderOrder");
       const selection = ctx.services.require("selection");
+      const theme = ctx.services.require("theme");
       const selectionRectangle = new render.Rect({
         visible: false,
-        fill: "rgba(59, 130, 246, 0.12)",
-        stroke: "#3b82f6",
         strokeWidth: 1,
         dash: [6, 4],
         listening: false,
       });
 
+      const syncSelectionRectangleTheme = () => {
+        const activeTheme = theme.getTheme();
+        selectionRectangle.fill(activeTheme.colors.canvasSelectionFill);
+        selectionRectangle.stroke(activeTheme.colors.canvasSelectionStroke);
+      };
+
       ctx.hooks.init.tap(() => {
+        syncSelectionRectangleTheme();
         render.dynamicLayer.add(selectionRectangle);
+      });
+
+      theme.hooks.change.tap(() => {
+        syncSelectionRectangleTheme();
+        render.dynamicLayer.batchDraw();
       });
 
       ctx.hooks.elementPointerDown.tap((event) => {

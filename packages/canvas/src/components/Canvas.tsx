@@ -1,4 +1,5 @@
 import { AutomergeUrl, DocHandle } from "@automerge/automerge-repo";
+import type { ThemeService } from "@vibecanvas/service-theme";
 import { TCanvasDoc } from "@vibecanvas/service-automerge/types/canvas-doc.types";
 import type * as schema from "@vibecanvas/service-db/schema";
 import { createEffect, createResource, Match, onCleanup, Switch } from "solid-js";
@@ -28,6 +29,7 @@ type CanvasPageProps = {
     showError(title: string, description?: string): void
     showInfo(title: string, description?: string): void
   }
+  themeService?: ThemeService;
 };
 
 
@@ -63,6 +65,7 @@ export function Canvas(props: CanvasPageProps) {
       },
       image: props.image,
       notification: props.notification,
+      themeService: props.themeService,
     })
 
     void runtime.boot();
@@ -74,7 +77,7 @@ export function Canvas(props: CanvasPageProps) {
     activeHandle = null;
   });
 
-  return <div ref={containerRef} class="relative w-full h-full bg-gray-400/10">
+  return <div ref={containerRef} class="relative w-full h-full" style={{ background: "var(--vc-canvas-background, rgba(168, 162, 158, 0.10))" }}>
     <Switch>
       <Match when={docHandle.loading}>
         <div>Loading...</div>

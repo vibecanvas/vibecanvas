@@ -1,16 +1,17 @@
 import { makePersisted } from "@solid-primitives/storage";
+import { DEFAULT_THEME_ID, type ThemeId } from "@vibecanvas/service-theme";
 import { createStore } from "solid-js/store";
 import type { TBackendCanvas } from "./types/backend.types";
 import { orpcWebsocketService } from "./services/orpc-websocket";
 
 type TGlobalStore = {
-  theme: "light" | "dark";
+  theme: ThemeId;
   sidebarVisible: boolean;
   canvases: TBackendCanvas[];
 };
 
 const [store, setStore, init] = makePersisted(createStore<TGlobalStore>({
-  theme: "light",
+  theme: DEFAULT_THEME_ID,
   sidebarVisible: true,
   canvases: [],
 }), { name: "vibecanvas" });

@@ -1,8 +1,10 @@
+import type { ThemeService } from "@vibecanvas/service-theme";
 import type Konva from "konva";
 import type { RenderService } from "../../new-services/render/RenderService";
 
 export type TPortalCreateGroupBoundary = {
   render: RenderService;
+  theme: ThemeService;
 };
 
 export type TArgsCreateGroupBoundary = {
@@ -18,7 +20,7 @@ export function fxCreateGroupBoundary(
     y: 0,
     width: 0,
     height: 0,
-    stroke: "#1e1e1e",
+    stroke: portal.theme.getTheme().colors.canvasGroupBoundary,
     dash: [11, 11],
     strokeWidth: 2,
     strokeScaleEnabled: false,
@@ -59,7 +61,12 @@ export function fxCreateGroupBoundary(
     boundary.size({ width, height });
   };
 
+  const syncTheme = () => {
+    boundary.stroke(portal.theme.getTheme().colors.canvasGroupBoundary);
+  };
+
   const show = () => {
+    syncTheme();
     update();
     boundary.visible(true);
   };
@@ -73,6 +80,7 @@ export function fxCreateGroupBoundary(
     update,
     show,
     hide,
+    syncTheme,
     getBoundaryBox,
   };
 }

@@ -2,6 +2,7 @@ import { fxComputeTextHeight } from "./fn.compute-text-height";
 import { fxComputeTextWidth } from "./fx.compute-text-width";
 import { fxToElement } from "./fx.to-element";
 import { txUpdateTextNodeFromElement } from "./tx.update-text-node-from-element";
+import type { ThemeService } from "@vibecanvas/service-theme";
 import type { CrdtService } from "../../new-services/crdt/CrdtService";
 import type { EditorService } from "../../new-services/editor/EditorService";
 import type { HistoryService } from "../../new-services/history/HistoryService";
@@ -16,6 +17,7 @@ export type TPortalEnterEditMode = {
   history: HistoryService;
   render: RenderService;
   selection: SelectionService;
+  theme: ThemeService;
 };
 
 export type TArgsEnterEditMode = {
@@ -60,7 +62,7 @@ export function txEnterEditMode(portal: TPortalEnterEditMode, args: TArgsEnterEd
     transform: `rotate(${absoluteRotation}deg)`,
     transformOrigin: "top left",
     whiteSpace: "pre",
-    outline: "2px solid #3b82f6",
+    outline: "2px solid var(--vc-canvas-text-editor-outline, #3b82f6)",
     background: "transparent",
     border: "none",
     resize: "none",
@@ -68,7 +70,7 @@ export function txEnterEditMode(portal: TPortalEnterEditMode, args: TArgsEnterEd
     padding: "0",
     boxSizing: "border-box",
     zIndex: "9999",
-    color: "#000000",
+    color: "var(--vc-canvas-text, #000000)",
   });
 
   const cleanup = () => {
@@ -119,12 +121,12 @@ export function txEnterEditMode(portal: TPortalEnterEditMode, args: TArgsEnterEd
     portal.history.record({
       label: "edit-text",
       undo: () => {
-        txUpdateTextNodeFromElement({ render: portal.render }, { element: undoElement, freeTextName: args.freeTextName });
+        txUpdateTextNodeFromElement({ render: portal.render, theme: portal.theme }, { element: undoElement, freeTextName: args.freeTextName });
         portal.render.staticForegroundLayer.batchDraw();
         portal.crdt.patch({ elements: [undoElement], groups: [] });
       },
       redo: () => {
-        txUpdateTextNodeFromElement({ render: portal.render }, { element: redoElement, freeTextName: args.freeTextName });
+        txUpdateTextNodeFromElement({ render: portal.render, theme: portal.theme }, { element: redoElement, freeTextName: args.freeTextName });
         portal.render.staticForegroundLayer.batchDraw();
         portal.crdt.patch({ elements: [redoElement], groups: [] });
       },

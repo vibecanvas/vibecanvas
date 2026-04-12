@@ -6,7 +6,7 @@ import { EditorService } from "../../src/new-services/editor/EditorService";
 import { HistoryService } from "../../src/new-services/history/HistoryService";
 import { SelectionService } from "../../src/new-services/selection/SelectionService";
 import { ThemeService } from "../../src/new-services/theme/ThemeService";
-import { Theme } from "../../src/new-services/theme/enum";
+import { THEME_ID_LIGHT } from "../../src/new-services/theme/enum";
 
 function createElement(id: string): TElement {
   return {
@@ -53,7 +53,8 @@ describe("new stateful services", () => {
   test("ThemeService starts with light theme", () => {
     const service = new ThemeService();
     expect(service.name).toBe("theme");
-    expect(service.theme).toBe(Theme.LIGHT);
+    expect(service.getThemeId()).toBe(THEME_ID_LIGHT);
+    expect(service.getTheme().id).toBe(THEME_ID_LIGHT);
   });
 
   test("SelectionService updates selection and focus and emits change", () => {

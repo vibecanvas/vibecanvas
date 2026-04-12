@@ -16,7 +16,7 @@ import type { IPlugin, IPluginContext, TMouseEvent, TPointerEvent, TWheelEvent }
 import { AsyncParallelHook, SyncExitHook, SyncHook } from "../../tapable";
 import { Camera } from "./Camera";
 import { Crdt } from "./crdt";
-import { CanvasMode, Theme } from "./enum";
+import { CanvasMode, THEME_ID_LIGHT } from "./enum";
 import type { IState } from "./interface";
 import { History } from "./History";
 
@@ -101,7 +101,7 @@ export class CanvasService {
 
     const [state, setState] = createStore({
       mode: CanvasMode.SELECT,
-      theme: Theme.LIGHT,
+      theme: THEME_ID_LIGHT,
       selection: [] as (Group | Shape<ShapeConfig>)[],
       focusedId: null as string | null,
       editingTextId: null as string | null,

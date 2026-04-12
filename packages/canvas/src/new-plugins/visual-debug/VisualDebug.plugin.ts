@@ -1,4 +1,5 @@
 import type { IPlugin } from "@vibecanvas/runtime";
+import type { ThemeService } from "@vibecanvas/service-theme";
 import type { CameraService } from "../../new-services/camera/CameraService";
 import type { RenderService } from "../../new-services/render/RenderService";
 import type { SelectionService } from "../../new-services/selection/SelectionService";
@@ -32,6 +33,7 @@ export function createVisualDebugPlugin(): IPlugin<{
   camera: CameraService;
   render: RenderService;
   selection: SelectionService;
+  theme: ThemeService;
 }, IHooks> {
   return {
     name: "visual-debug",
@@ -40,13 +42,13 @@ export function createVisualDebugPlugin(): IPlugin<{
         const render = ctx.services.require("render");
         const camera = ctx.services.require("camera");
         const selection = ctx.services.require("selection");
+        const theme = ctx.services.require("theme");
         const text = new render.Text({
           x: 12,
           y: 12,
           text: "",
           fontSize: 12,
           fontFamily: "monospace",
-          fill: "rgba(71, 85, 105, 0.8)",
           listening: false,
         });
 
@@ -58,6 +60,7 @@ export function createVisualDebugPlugin(): IPlugin<{
           }
 
           text.text(lines.join("\n"));
+          text.fill(theme.getTheme().colors.canvasDebugText);
           render.staticBackgroundLayer.batchDraw();
         };
 
@@ -68,6 +71,9 @@ export function createVisualDebugPlugin(): IPlugin<{
           syncText();
         });
         selection.hooks.change.tap(() => {
+          syncText();
+        });
+        theme.hooks.change.tap(() => {
           syncText();
         });
       });

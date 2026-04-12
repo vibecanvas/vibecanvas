@@ -1,6 +1,10 @@
 import { Button } from "@kobalte/core/button";
+import * as ToggleButton from "@kobalte/core/toggle-button";
+import { THEME_ID_DARK, THEME_ID_LIGHT } from "@vibecanvas/service-theme";
 import { useLocation, useNavigate } from "@solidjs/router";
+import MoonStar from "lucide-solid/icons/moon-star";
 import Plus from "lucide-solid/icons/plus";
+import Sun from "lucide-solid/icons/sun";
 import type { Component } from "solid-js";
 import { For, createSignal } from "solid-js";
 import { orpcWebsocketService } from "../../../services/orpc-websocket";
@@ -11,6 +15,7 @@ import { RenameDialog } from "./RenameDialog";
 import SidebarItem from "./SidebarItem";
 import { showErrorToast } from "@/components/ui/Toast";
 import { removeFromCache } from "@/services/automerge";
+import { themeService } from "@/services/theme";
 import { store, setStore } from "@/store";
 
 export type SidebarProps = {
@@ -84,6 +89,15 @@ const Sidebar: Component<SidebarProps> = (props) => {
     }
   };
 
+  const isDarkTheme = () => {
+    void store.theme;
+    return themeService.getTheme().appearance === "dark";
+  };
+
+  const handleThemeToggle = (pressed: boolean) => {
+    themeService.setTheme(pressed ? THEME_ID_DARK : THEME_ID_LIGHT);
+  };
+
   return (
     <>
       <aside
@@ -121,17 +135,22 @@ const Sidebar: Component<SidebarProps> = (props) => {
           </Button>
         </div>
 
-        {/* TODO: Settings footer — uncomment when implemented
-        <div class="border-t border-border">
-          <Button
-            class="w-full text-left px-3 py-2 flex items-center gap-2 hover:bg-stone-200 dark:hover:bg-stone-800 transition-colors"
-            onClick={() => props.onSettingsClick?.()}
+        <div class="border-t border-border p-3">
+          <ToggleButton.Root
+            pressed={isDarkTheme()}
+            onChange={handleThemeToggle}
+            class="w-full flex items-center justify-between gap-2 border border-border bg-secondary px-3 py-2 text-xs text-secondary-foreground hover:bg-accent transition-colors data-[pressed]:bg-primary/15 data-[pressed]:text-foreground"
+            aria-label="Toggle dark theme"
           >
-            <Settings size={14} class="text-muted-foreground" />
-            <span class="font-medium text-xs text-foreground">Settings</span>
-          </Button>
+            <div class="flex items-center gap-2">
+              {isDarkTheme() ? <MoonStar size={14} class="text-primary" /> : <Sun size={14} class="text-warning" />}
+              <span class="font-medium">Dark mode</span>
+            </div>
+            <span class="font-mono text-[10px] text-muted-foreground">
+              {isDarkTheme() ? "ON" : "OFF"}
+            </span>
+          </ToggleButton.Root>
         </div>
-        */}
       </aside>
 
       {/* Rename Dialog */}

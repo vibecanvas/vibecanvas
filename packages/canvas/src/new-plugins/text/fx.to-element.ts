@@ -27,7 +27,8 @@ export function fxToElement(portal: TPortalToElement, args: TArgsToElement) {
 
   const style: TElementStyle = { opacity: args.node.opacity() };
   const fill = args.node.fill();
-  if (typeof fill === "string") {
+  const usesThemeTextColor = args.node.getAttr("vcUsesThemeTextColor") === true;
+  if (!usesThemeTextColor && typeof fill === "string") {
     style.strokeColor = fill;
   }
 

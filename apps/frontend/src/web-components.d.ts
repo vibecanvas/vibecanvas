@@ -6,7 +6,7 @@ declare module "solid-js" {
       "ic-spectrum-canvas": JSX.HTMLAttributes<HTMLElement> & {
         renderer?: "webgl" | "webgpu";
         "shader-compiler-path"?: string;
-        theme?: "dark" | "light";
+        theme?: string;
         "app-state"?: string;
         nodes?: string;
         ref?: (el: HTMLElement) => void;

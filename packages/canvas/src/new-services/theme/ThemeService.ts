@@ -1,12 +1,16 @@
-import type { IService } from "@vibecanvas/runtime";
-import { Theme } from "./enum";
-
-/**
- * Holds canvas theme state.
- * Small service for current visual theme only.
- */
-export class ThemeService implements IService {
-  readonly name = "theme";
-
-  theme = Theme.LIGHT;
-}
+export {
+  ThemeService,
+  BUILTIN_THEMES,
+  DEFAULT_THEME_ID,
+  THEME_ID_DARK,
+  THEME_ID_GRAPHITE,
+  THEME_ID_LIGHT,
+  THEME_ID_SEPIA,
+  type ThemeId,
+  type TThemeColors,
+  type TThemeDefinition,
+  type TThemeServiceArgs,
+  type TThemeServiceHooks,
+  fxGetThemeCssVariables,
+  txApplyThemeToElement,
+} from "@vibecanvas/service-theme";

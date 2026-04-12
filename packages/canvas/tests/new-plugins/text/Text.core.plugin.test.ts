@@ -232,13 +232,14 @@ describe("new Text plugin core", () => {
   test("updateTextNodeFromElement restores baked dimensions and resets scale", async () => {
     const harness = await createNewCanvasHarness();
     const render = harness.runtime.services.require("render");
+    const theme = harness.runtime.services.require("theme");
 
     const node = addHydratedTextNode(harness, createTextElement({ id: "restore-test" }));
     node.scaleX(1.5);
     node.scaleY(1.2);
 
     const element = fxToElement({ render }, { node, createdAt: 1, updatedAt: 2 });
-    const updated = txUpdateTextNodeFromElement({ render }, { element, freeTextName: "free-text" });
+    const updated = txUpdateTextNodeFromElement({ render, theme }, { element, freeTextName: "free-text" });
 
     expect(updated).toBe(true);
     expect(node.scaleX()).toBeCloseTo(1, 5);

@@ -1,5 +1,6 @@
 import { fxToElement } from "./fx.to-element";
 import { txUpdateTextNodeFromElement } from "./tx.update-text-node-from-element";
+import type { ThemeService } from "@vibecanvas/service-theme";
 import type { TElement } from "@vibecanvas/service-automerge/types/canvas-doc.types";
 import type { CrdtService } from "../../new-services/crdt/CrdtService";
 import type { HistoryService } from "../../new-services/history/HistoryService";
@@ -16,6 +17,7 @@ export type TPortalSetupTextNode = {
   render: RenderService;
   selection: SelectionService;
   setupNode: (node: Konva.Text) => Konva.Text;
+  theme: ThemeService;
 };
 
 export type TArgsSetupTextNode = {
@@ -131,12 +133,12 @@ export function txSetupTextNode(portal: TPortalSetupTextNode, args: TArgsSetupTe
     portal.history.record({
       label: "drag-text",
       undo: () => {
-        txUpdateTextNodeFromElement({ render: portal.render }, { element: undoElement, freeTextName: args.freeTextName });
+        txUpdateTextNodeFromElement({ render: portal.render, theme: portal.theme }, { element: undoElement, freeTextName: args.freeTextName });
         portal.render.staticForegroundLayer.batchDraw();
         portal.crdt.patch({ elements: [undoElement], groups: [] });
       },
       redo: () => {
-        txUpdateTextNodeFromElement({ render: portal.render }, { element: redoElement, freeTextName: args.freeTextName });
+        txUpdateTextNodeFromElement({ render: portal.render, theme: portal.theme }, { element: redoElement, freeTextName: args.freeTextName });
         portal.render.staticForegroundLayer.batchDraw();
         portal.crdt.patch({ elements: [redoElement], groups: [] });
       },
