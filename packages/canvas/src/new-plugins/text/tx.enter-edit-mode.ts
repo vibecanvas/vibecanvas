@@ -232,6 +232,22 @@ export function txEnterEditMode(portal: TPortalEnterEditMode, args: TArgsEnterEd
 
     cleanup();
 
+    if (newText === "" && isAttachedText) {
+      if (originalHostElement) {
+        portal.editor.updateShapeFromTElement(originalHostElement);
+      }
+      args.node.destroy();
+      portal.render.staticForegroundLayer.batchDraw();
+      portal.crdt.deleteById({ elementIds: [args.node.id()] });
+      if (attachedHostNode) {
+        portal.selection.setSelection([attachedHostNode]);
+        portal.selection.setFocusedNode(attachedHostNode);
+      } else {
+        portal.selection.clear();
+      }
+      return;
+    }
+
     if (args.isNew && newText === "") {
       if (originalHostElement) {
         portal.editor.updateShapeFromTElement(originalHostElement);
@@ -243,7 +259,7 @@ export function txEnterEditMode(portal: TPortalEnterEditMode, args: TArgsEnterEd
       return;
     }
 
-    const textToSet = !args.isNew && newText === "" ? originalText : newText;
+    const textToSet = newText;
     args.node.text(textToSet);
     args.node.wrap(isAttachedText ? "word" : "none");
     args.node.setAttr("vcOriginalText", textToSet);

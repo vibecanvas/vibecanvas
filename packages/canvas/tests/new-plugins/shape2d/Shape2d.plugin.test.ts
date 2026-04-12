@@ -2,6 +2,7 @@ import Konva from "konva";
 import type { TElement, TTextData } from "@vibecanvas/service-automerge/types/canvas-doc.types";
 import { describe, expect, test } from "vitest";
 import { CanvasMode } from "../../../src/new-services/selection/enum";
+import { THEME_ID_DARK } from "../../../src/new-services/theme/enum";
 import { createMockDocHandle, createNewCanvasHarness, flushCanvasEffects } from "../../new-test-setup";
 
 function createRectElement(overrides?: Partial<TElement>): TElement {
@@ -299,6 +300,102 @@ describe("new Shape2d plugin", () => {
     await harness.destroy();
   });
 
+  test("transform keeps attached rect text centered while resizing", async () => {
+    const rectElement = createRectElement({ id: "rect-transform-text" });
+    const docHandle = createMockDocHandle({
+      elements: {
+        [rectElement.id]: structuredClone(rectElement),
+      },
+    });
+
+    const harness = await createNewCanvasHarness({ docHandle });
+    const selection = harness.runtime.services.require("selection");
+    const editor = harness.runtime.services.require("editor");
+    const rectNode = harness.staticForegroundLayer.findOne<Konva.Rect>(`#${rectElement.id}`)!;
+
+    selection.setSelection([rectNode]);
+    selection.setFocusedNode(rectNode);
+    await flushCanvasEffects();
+
+    fireKeydown(harness.runtime, "Enter");
+    await flushCanvasEffects();
+
+    let textarea = harness.stage.container().querySelector("textarea") as HTMLTextAreaElement;
+    textarea.value = "resize me";
+    textarea.dispatchEvent(new Event("blur"));
+    await flushCanvasEffects();
+
+    const textNode = harness.staticForegroundLayer.findOne<Konva.Text>((candidate: Konva.Node) => {
+      return candidate instanceof Konva.Text && candidate.getAttr("vcContainerId") === rectElement.id;
+    })!;
+
+    selection.setSelection([rectNode]);
+    selection.setFocusedNode(rectNode);
+    await flushCanvasEffects();
+
+    const transformer = editor.transformer!;
+    rectNode.scale({ x: 1.5, y: 1.25 });
+    rectNode.fire("transform", { target: rectNode, currentTarget: rectNode, evt: new Event("transform") }, true);
+    await flushCanvasEffects();
+
+    expect(textNode.width()).toBeCloseTo(rectNode.width() * rectNode.scaleX(), 4);
+    expect(textNode.height()).toBeCloseTo(rectNode.height() * rectNode.scaleY(), 4);
+    expect(textNode.x()).toBeCloseTo(rectNode.x(), 4);
+    expect(textNode.y()).toBeCloseTo(rectNode.y(), 4);
+
+    transformer.fire("transformend", { target: transformer, currentTarget: transformer, evt: new Event("transformend") }, true);
+    await flushCanvasEffects();
+
+    await harness.destroy();
+  });
+
+  test("clearing attached rect text removes the text node on commit", async () => {
+    const rectElement = createRectElement({ id: "rect-clear-text" });
+    const docHandle = createMockDocHandle({
+      elements: {
+        [rectElement.id]: structuredClone(rectElement),
+      },
+    });
+
+    const harness = await createNewCanvasHarness({ docHandle });
+    const selection = harness.runtime.services.require("selection");
+    const rectNode = harness.staticForegroundLayer.findOne<Konva.Rect>(`#${rectElement.id}`)!;
+
+    selection.setSelection([rectNode]);
+    selection.setFocusedNode(rectNode);
+    await flushCanvasEffects();
+
+    fireKeydown(harness.runtime, "Enter");
+    await flushCanvasEffects();
+
+    let textarea = harness.stage.container().querySelector("textarea") as HTMLTextAreaElement;
+    textarea.value = "will clear";
+    textarea.dispatchEvent(new Event("blur"));
+    await flushCanvasEffects();
+
+    selection.setSelection([rectNode]);
+    selection.setFocusedNode(rectNode);
+    await flushCanvasEffects();
+
+    fireKeydown(harness.runtime, "Enter");
+    await flushCanvasEffects();
+
+    textarea = harness.stage.container().querySelector("textarea") as HTMLTextAreaElement;
+    textarea.value = "";
+    textarea.dispatchEvent(new Event("blur"));
+    await flushCanvasEffects();
+
+    const textNode = harness.staticForegroundLayer.findOne<Konva.Text>((candidate: Konva.Node) => {
+      return candidate instanceof Konva.Text && candidate.getAttr("vcContainerId") === rectElement.id;
+    });
+    expect(textNode ?? null).toBeNull();
+    expect(Object.values(docHandle.doc().elements).find((candidate) => {
+      return candidate.data.type === "text" && (candidate.data as TTextData).containerId === rectElement.id;
+    })).toBeUndefined();
+
+    await harness.destroy();
+  });
+
   test("Escape commits rect attached text edit and keeps geometry stable", async () => {
     const rectElement = createRectElement({ id: "rect-escape-text" });
     const docHandle = createMockDocHandle({
@@ -488,6 +585,33 @@ describe("new Shape2d plugin", () => {
     await flushCanvasEffects();
     expect(Object.values(harness.docHandle.doc().elements).filter((candidate) => candidate.data.type === "rect")).toHaveLength(2);
     expect(Object.values(harness.docHandle.doc().elements).filter((candidate) => candidate.data.type === "text")).toHaveLength(2);
+
+    await harness.destroy();
+  });
+
+  test("shape2d token colors repaint on theme change and preserve stored token style", async () => {
+    const docHandle = createMockDocHandle({
+      elements: {
+        "rect-token": createRectElement({
+          id: "rect-token",
+          style: { backgroundColor: "@red/300", strokeColor: "@gray/900", strokeWidth: 2, opacity: 1 },
+        }),
+      },
+    });
+
+    const harness = await createNewCanvasHarness({ docHandle });
+    const theme = harness.runtime.services.require("theme");
+    const editor = harness.runtime.services.require("editor");
+    const rectNode = harness.staticForegroundLayer.findOne<Konva.Rect>("#rect-token")!;
+
+    expect(rectNode.fill()).toBe("#fca5a5");
+    expect(editor.toElement(rectNode)?.style.backgroundColor).toBe("@red/300");
+
+    theme.setTheme(THEME_ID_DARK);
+    await flushCanvasEffects();
+
+    expect(rectNode.fill()).toBe("#7f1d1d");
+    expect(editor.toElement(rectNode)?.style.strokeColor).toBe("@gray/900");
 
     await harness.destroy();
   });

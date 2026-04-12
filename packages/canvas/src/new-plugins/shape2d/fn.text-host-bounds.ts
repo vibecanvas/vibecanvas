@@ -24,22 +24,27 @@ export function fxGetShapeTextHostBounds(args: {
   render: RenderService;
   node: Konva.Shape;
 }) {
+  const scaleX = Math.abs(args.node.scaleX());
+  const scaleY = Math.abs(args.node.scaleY());
+
   if (args.node instanceof args.render.Rect) {
     return {
       x: args.node.x(),
       y: args.node.y(),
-      width: args.node.width(),
-      height: args.node.height(),
+      width: args.node.width() * scaleX,
+      height: args.node.height() * scaleY,
       rotation: args.node.rotation(),
     } satisfies TShapeTextHostBounds;
   }
 
   if (args.node instanceof args.render.Ellipse) {
+    const width = args.node.radiusX() * 2 * scaleX;
+    const height = args.node.radiusY() * 2 * scaleY;
     return {
-      x: args.node.x() - args.node.radiusX(),
-      y: args.node.y() - args.node.radiusY(),
-      width: args.node.radiusX() * 2,
-      height: args.node.radiusY() * 2,
+      x: args.node.x() - width / 2,
+      y: args.node.y() - height / 2,
+      width,
+      height,
       rotation: args.node.rotation(),
     } satisfies TShapeTextHostBounds;
   }
@@ -49,8 +54,8 @@ export function fxGetShapeTextHostBounds(args: {
     return {
       x: args.node.x(),
       y: args.node.y(),
-      width: size.width,
-      height: size.height,
+      width: size.width * scaleX,
+      height: size.height * scaleY,
       rotation: args.node.rotation(),
     } satisfies TShapeTextHostBounds;
   }
