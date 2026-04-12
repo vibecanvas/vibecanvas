@@ -6,7 +6,7 @@ import type { Group } from "konva/lib/Group";
 import type { KonvaEventObject } from "konva/lib/Node";
 import type { Shape, ShapeConfig } from "konva/lib/Shape";
 import { AsyncParallelHook, SyncExitHook, SyncHook } from "@vibecanvas/tapable";
-import { createCameraControlPlugin, createEventListenerPlugin, createGridPlugin, createGroupPlugin, createHistoryControlPlugin, createImagePlugin, createRenderOrderPlugin, createSceneHydratorPlugin, createSelectPlugin, createTextPlugin, createToolbarPlugin, createTransformPlugin, createVisualDebugPlugin } from "./new-plugins";
+import { createCameraControlPlugin, createEventListenerPlugin, createGridPlugin, createGroupPlugin, createHistoryControlPlugin, createImagePlugin, createRecorderPlugin, createRenderOrderPlugin, createSceneHydratorPlugin, createSelectPlugin, createTextPlugin, createToolbarPlugin, createTransformPlugin, createVisualDebugPlugin } from "./new-plugins";
 import { CameraService } from "./new-services/camera/CameraService";
 import { CrdtService } from "./new-services/crdt/CrdtService";
 import { EditorService } from "./new-services/editor/EditorService";
@@ -114,6 +114,26 @@ function createHooks(): IHooks {
 }
 
 export function buildRuntime(config: IRuntimeConfig) {
+  const plugins: Array<import("@vibecanvas/runtime").IPlugin<any, IHooks, IRuntimeConfig>> = [
+    createEventListenerPlugin(),
+    createGridPlugin(),
+    createToolbarPlugin(),
+    createHistoryControlPlugin(),
+    createRenderOrderPlugin(),
+    createSelectPlugin(),
+    createTransformPlugin(),
+    createTextPlugin(),
+    createImagePlugin(),
+    createGroupPlugin(),
+    createSceneHydratorPlugin(),
+    createVisualDebugPlugin(),
+    createCameraControlPlugin(),
+  ];
+
+  if (config.env.DEV) {
+    plugins.splice(5, 0, createRecorderPlugin());
+  }
+
   const services = createServiceRegistry();
   const render = new RenderService({
     container: config.container,
@@ -138,7 +158,7 @@ export function buildRuntime(config: IRuntimeConfig) {
   return createRuntime<IHooks, IRuntimeConfig>({
     config,
     hooks: createHooks(),
-    plugins: [createEventListenerPlugin(), createGridPlugin(), createToolbarPlugin(), createHistoryControlPlugin(), createRenderOrderPlugin(), createSelectPlugin(), createTransformPlugin(), createTextPlugin(), createImagePlugin(), createGroupPlugin(), createSceneHydratorPlugin(), createVisualDebugPlugin(), createCameraControlPlugin()],
+    plugins,
     services,
     boot: async ({ services, hooks }) => {
       services.require("render").start();

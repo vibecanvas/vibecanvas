@@ -4,6 +4,7 @@ export * from "./grid/Grid.plugin";
 export * from "./group/Group.plugin";
 export * from "./history-control/HistoryControl.plugin";
 export * from "./image/Image.plugin";
+export * from "./recorder/Recorder.plugin";
 export * from "./render-order/RenderOrder.plugin";
 export * from "./select/Select.plugin";
 export * from "./scene-hydrator/SceneHydrator.plugin";

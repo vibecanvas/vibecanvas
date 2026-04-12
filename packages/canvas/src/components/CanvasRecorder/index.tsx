@@ -12,6 +12,7 @@ type ICanvasRecorderProps = {
   onStart: () => void;
   onStop: () => void;
   onClear: () => void;
+  onCopy: () => void;
   onExport: () => void;
 };
 
@@ -76,6 +77,7 @@ export function CanvasRecorder(props: ICanvasRecorderProps) {
                 <ActionButton label="Start" onClick={props.onStart} />
               </Show>
               <ActionButton label="Clear" onClick={props.onClear} />
+              <ActionButton label="Copy" onClick={props.onCopy} disabled={!props.canExport()} />
               <ActionButton label="Export" onClick={props.onExport} disabled={!props.canExport()} />
             </div>
 
