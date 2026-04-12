@@ -6,7 +6,7 @@ import type { Group } from "konva/lib/Group";
 import type { KonvaEventObject } from "konva/lib/Node";
 import type { Shape, ShapeConfig } from "konva/lib/Shape";
 import { AsyncParallelHook, SyncExitHook, SyncHook } from "@vibecanvas/tapable";
-import { createCameraControlPlugin, createContextMenuPlugin, createEventListenerPlugin, createGridPlugin, createGroupPlugin, createHistoryControlPlugin, createImagePlugin, createRecorderPlugin, createRenderOrderPlugin, createSceneHydratorPlugin, createSelectPlugin, createTextPlugin, createToolbarPlugin, createTransformPlugin, createVisualDebugPlugin } from "./new-plugins";
+import { createCameraControlPlugin, createContextMenuPlugin, createEventListenerPlugin, createGridPlugin, createGroupPlugin, createHistoryControlPlugin, createImagePlugin, createPenPlugin, createRecorderPlugin, createRenderOrderPlugin, createSceneHydratorPlugin, createSelectPlugin, createShape1dPlugin, createShape2dPlugin, createTextPlugin, createToolbarPlugin, createTransformPlugin, createVisualDebugPlugin } from "./new-plugins";
 import { CameraService } from "./new-services/camera/CameraService";
 import { ContextMenuService } from "./new-services/context-menu/ContextMenuService";
 import { CrdtService } from "./new-services/crdt/CrdtService";
@@ -22,6 +22,7 @@ interface IRuntimeConfig {
   docHandle: DocHandle<TCanvasDoc>;
   onToggleSidebar: () => void;
   env: Pick<ImportMetaEnv, "DEV">;
+  themeService?: ThemeService;
   image?: {
     uploadImage: import("./services/canvas/interface").TUploadImage;
     cloneImage: import("./services/canvas/interface").TCloneImage;
@@ -125,6 +126,9 @@ export function buildRuntime(config: IRuntimeConfig) {
     createRenderOrderPlugin(),
     createSelectPlugin(),
     createTransformPlugin(),
+    createShape1dPlugin(),
+    createShape2dPlugin(),
+    createPenPlugin(),
     createTextPlugin(),
     createImagePlugin(),
     createGroupPlugin(),
@@ -157,7 +161,7 @@ export function buildRuntime(config: IRuntimeConfig) {
     render,
   }));
   services.provide("selection", new SelectionService());
-  services.provide("theme", new ThemeService());
+  services.provide("theme", config.themeService ?? new ThemeService());
 
   return createRuntime<IHooks, IRuntimeConfig>({
     config,
