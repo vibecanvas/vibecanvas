@@ -136,7 +136,7 @@ function createImageNode(render: RenderService, element: TElement) {
     width: data.w,
     height: data.h,
     opacity: element.style.opacity ?? 1,
-    draggable: false,
+    draggable: true,
     image: undefined,
   });
 
@@ -365,6 +365,14 @@ export function createImagePlugin(): IPlugin<{
         return toElement(render, node);
       });
 
+      editor.registerCreateShapeFromTElement("image", (element) => {
+        if (element.data.type !== "image") {
+          return null;
+        }
+
+        return setupNode(createImageNode(render, element));
+      });
+
       editor.registerUpdateShapeFromTElement("image", (element) => {
         if (element.data.type !== "image") {
           return false;
@@ -479,6 +487,7 @@ export function createImagePlugin(): IPlugin<{
       ctx.hooks.destroy.tap(() => {
         editor.unregisterTool("image");
         editor.unregisterToElement("image");
+        editor.unregisterCreateShapeFromTElement("image");
         editor.unregisterUpdateShapeFromTElement("image");
       });
     },

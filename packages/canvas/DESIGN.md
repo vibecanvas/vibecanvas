@@ -37,7 +37,7 @@
 - [ ] `Shape1dPlugin`
 - [ ] `Shape2dPlugin`
 - [ ] `PenPlugin`
-- [x] `TextPlugin`
+- [x] `TextPlugin` *(free text create/edit/drag/transform + clone-drag; attached-text parity still missing)*
 - [ ] `ImagePlugin`
 - [ ] `HostedSolidWidgetPlugin`
 - [ ] `IframeBrowserWidgetPlugin`
@@ -61,3 +61,25 @@ This changes often.
 - move tool state and tool registry through `EditorService`; toolbar should render from registry, not hardcoded tool lists
 - migrate next feature plugins by moving tool registration + feature logic one plugin at a time
 - reduce direct engine type leakage from state services over time
+
+## Migration reminders
+
+When migrating an old plugin, do not forget the non-obvious behavior around the happy path.
+
+Checklist:
+- register the tool in `EditorService` if the feature is user-selectable
+- register node -> element and element -> node handlers in `EditorService` if transform/history/crdt needs them
+- wire node-level pointer forwarding if old behavior depended on per-node selection or dblclick behavior
+- compare old drag behavior, not just create/edit behavior
+- compare old `alt+drag` clone behavior
+- compare multi-selection drag passengers and selection handoff after clone/create
+- compare transform hooks, scale normalization, and hidden-transformer edit modes
+- compare hydration/create-from-element path, not just runtime creation path
+- compare history side effects and undo/redo payloads
+- compare CRDT writes on create, dragmove, dragend, transformend, edit commit, and delete/cancel
+- compare attached or linked behavior such as attached text, linked rect sync, hosted widget attrs, and parent group refresh
+- compare render-order/z-index handling
+
+Recent example:
+- `TextPlugin` looked migrated after free text create/edit/drag worked
+- but old `alt+drag` clone behavior was still missing and had to be added after comparing old listeners/clone helpers

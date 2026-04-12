@@ -35,6 +35,7 @@ export type TEditorTool = {
 };
 
 export type TEditorToElement = (node: Konva.Node) => TElement | null;
+export type TEditorCreateShapeFromTElement = (element: TElement) => Konva.Shape | null;
 export type TEditorUpdateShapeFromTElement = (element: TElement) => boolean;
 
 /**
@@ -50,6 +51,7 @@ export interface TEditorServiceHooks {
   previewNodeChange: SyncHook<[Konva.Node | null]>;
   transformerChange: SyncHook<[Konva.Transformer | null]>;
   toElementRegistryChange: SyncHook<[]>;
+  createShapeFromTElementRegistryChange: SyncHook<[]>;
   updateShapeFromTElementRegistryChange: SyncHook<[]>;
 }
 
@@ -68,11 +70,13 @@ export class EditorService implements IService<TEditorServiceHooks> {
     previewNodeChange: new SyncHook(),
     transformerChange: new SyncHook(),
     toElementRegistryChange: new SyncHook(),
+    createShapeFromTElementRegistryChange: new SyncHook(),
     updateShapeFromTElementRegistryChange: new SyncHook(),
   };
 
   readonly tools = new Map<string, TEditorTool>();
   readonly toElementRegistry = new Map<string, TEditorToElement>();
+  readonly createShapeFromTElementRegistry = new Map<string, TEditorCreateShapeFromTElement>();
   readonly updateShapeFromTElementRegistry = new Map<string, TEditorUpdateShapeFromTElement>();
 
   activeToolId = "select";
@@ -229,6 +233,41 @@ export class EditorService implements IService<TEditorServiceHooks> {
       const element = toElement(node);
       if (element) {
         return element;
+      }
+    }
+
+    return null;
+  }
+
+  /**
+   * Registers one element -> node creator.
+   * First creator that returns a node wins.
+   */
+  registerCreateShapeFromTElement(id: string, createShapeFromTElement: TEditorCreateShapeFromTElement) {
+    this.createShapeFromTElementRegistry.set(id, createShapeFromTElement);
+    this.hooks.createShapeFromTElementRegistryChange.call();
+  }
+
+  /**
+   * Removes one element -> node creator.
+   */
+  unregisterCreateShapeFromTElement(id: string) {
+    const didDelete = this.createShapeFromTElementRegistry.delete(id);
+    if (!didDelete) {
+      return;
+    }
+
+    this.hooks.createShapeFromTElementRegistryChange.call();
+  }
+
+  /**
+   * Creates one runtime node from a canvas element through registered creators.
+   */
+  createShapeFromTElement(element: TElement) {
+    for (const createShapeFromTElement of this.createShapeFromTElementRegistry.values()) {
+      const node = createShapeFromTElement(element);
+      if (node) {
+        return node;
       }
     }
 

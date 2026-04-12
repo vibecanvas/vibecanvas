@@ -101,6 +101,14 @@ export function createTextPlugin(): IPlugin<{
         return fxToElement({ render }, { node, createdAt: now, updatedAt: now });
       });
 
+      editor.registerCreateShapeFromTElement("text", (element) => {
+        if (element.data.type !== "text") {
+          return null;
+        }
+
+        return setupNode(createTextNode(render, element));
+      });
+
       editor.registerUpdateShapeFromTElement("text", (element) => {
         return txUpdateTextNodeFromElement({ render }, { element, freeTextName: FREE_TEXT_NAME });
       });
@@ -160,6 +168,7 @@ export function createTextPlugin(): IPlugin<{
       ctx.hooks.destroy.tap(() => {
         editor.unregisterTool("text");
         editor.unregisterToElement("text");
+        editor.unregisterCreateShapeFromTElement("text");
         editor.unregisterUpdateShapeFromTElement("text");
       });
     },

@@ -4,6 +4,7 @@ export * from "./grid/Grid.plugin";
 export * from "./history-control/HistoryControl.plugin";
 export * from "./image/Image.plugin";
 export * from "./select/Select.plugin";
+export * from "./scene-hydrator/SceneHydrator.plugin";
 export * from "./text/Text.plugin";
 export * from "./toolbar/Toolbar.plugin";
 export * from "./transform/Transform.plugin";
