@@ -2,8 +2,7 @@ import type { TArrowData, TElement, TElementStyle, TLineData } from "@vibecanvas
 import Konva from "konva";
 import { getWorldPosition } from "../../core/node-space";
 import type { RenderService } from "../../new-services/render/RenderService";
-import type { ThemeService } from "../../new-services/theme/ThemeService";
-import { resolveThemeColor } from "../../new-services/theme/ThemeService";
+import { resolveThemeColor, type ThemeService } from "@vibecanvas/service-theme";
 
 export type TShape1dData = TLineData | TArrowData;
 export type TShape1dTool = "line" | "arrow";

@@ -1,4 +1,4 @@
-import { THEME_ID_LIGHT } from "@vibecanvas/service-theme";
+import { THEME_ID_LIGHT } from "./builtins";
 import { createColorScale, createThemeStyle } from "./style.shared";
 
 export const STYLE_LIGHT = createThemeStyle({

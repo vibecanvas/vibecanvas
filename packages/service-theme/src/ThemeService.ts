@@ -1,6 +1,17 @@
-import type { IService } from "@vibecanvas/runtime";
-import { SyncHook } from "@vibecanvas/tapable";
-import { BUILTIN_THEMES, DEFAULT_THEME_ID, type ThemeId, type TThemeDefinition } from "./builtins";
+import type { IService } from "../../runtime/src/interface";
+import { SyncHook } from "../../tapable/src/SyncHook";
+import {
+  BUILTIN_THEMES,
+  DEFAULT_THEME_ID,
+  type ThemeId,
+  type TThemeDefinition,
+} from "./builtins";
+import {
+  getThemeColorPickerPalette as getThemeColorPickerPaletteFromTheme,
+  getThemeStyle,
+  resolveThemeColor as resolveThemeColorFromTheme,
+} from "./styles";
+import type { TCanvasThemeStyle, TThemeColorPickerPalette } from "./types";
 
 export type TThemeServiceArgs = {
   themes?: TThemeDefinition[];
@@ -42,6 +53,18 @@ export class ThemeService implements IService<TThemeServiceHooks> {
 
   getThemes() {
     return [...this.#themes.values()];
+  }
+
+  getCanvasThemeStyle(): TCanvasThemeStyle {
+    return getThemeStyle(this.getTheme());
+  }
+
+  resolveThemeColor(value: string | undefined, fallback?: string) {
+    return resolveThemeColorFromTheme(this.getTheme(), value, fallback);
+  }
+
+  getThemeColorPickerPalette(): TThemeColorPickerPalette {
+    return getThemeColorPickerPaletteFromTheme(this.getTheme());
   }
 
   hasTheme(themeId: ThemeId) {

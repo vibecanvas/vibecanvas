@@ -1,7 +1,6 @@
 import type { TElement, TElementStyle, TPenData } from "@vibecanvas/service-automerge/types/canvas-doc.types";
 import type { RenderService } from "../../new-services/render/RenderService";
-import type { ThemeService } from "../../new-services/theme/ThemeService";
-import { resolveThemeColor } from "../../new-services/theme/ThemeService";
+import { resolveThemeColor, type ThemeService } from "@vibecanvas/service-theme";
 import Konva from "konva";
 import { getWorldPosition, setWorldPosition } from "../../core/node-space";
 import { getNodeZIndex, setNodeZIndex } from "../../core/render-order";

@@ -5,8 +5,7 @@ import { ContextMenuService } from "../../src/new-services/context-menu/ContextM
 import { EditorService } from "../../src/new-services/editor/EditorService";
 import { HistoryService } from "../../src/new-services/history/HistoryService";
 import { SelectionService } from "../../src/new-services/selection/SelectionService";
-import { ThemeService } from "../../src/new-services/theme/ThemeService";
-import { THEME_ID_DARK, THEME_ID_LIGHT } from "../../src/new-services/theme/enum";
+import { ThemeService, THEME_ID_DARK, THEME_ID_LIGHT } from "@vibecanvas/service-theme";
 
 function createElement(id: string): TElement {
   return {

@@ -2,7 +2,7 @@ import type Konva from "konva";
 import type { TElement } from "@vibecanvas/service-automerge/types/canvas-doc.types";
 import { fxGetDiamondPoints } from "../../core/fn.shape2d";
 import type { RenderService } from "../../new-services/render/RenderService";
-import type { ThemeService } from "../../new-services/theme/ThemeService";
+import type { ThemeService } from "@vibecanvas/service-theme";
 
 const ELEMENT_STYLE_ATTR = "vcElementStyle";
 

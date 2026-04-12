@@ -5,7 +5,7 @@ import type { HistoryService } from "../../new-services/history/HistoryService";
 import type { RenderOrderService } from "../../new-services/render-order/RenderOrderService";
 import type { RenderService } from "../../new-services/render/RenderService";
 import type { SelectionService } from "../../new-services/selection/SelectionService";
-import type { ThemeService } from "../../new-services/theme/ThemeService";
+import type { ThemeService } from "@vibecanvas/service-theme";
 import { createShapeFromElement } from "./Shape1d.render";
 import { findShape1dNodeById, type TShape1dNode } from "./Shape1d.shared";
 

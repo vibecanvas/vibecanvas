@@ -1,4 +1,4 @@
-import type { ThemeService } from "../../new-services/theme/ThemeService";
+import type { ThemeService } from "@vibecanvas/service-theme";
 import { fxGetNearestFontSizePreset } from "../../core/fn.text-style";
 import { fxGetAbsolutePositionFromWorldPosition } from "../../core/fn.world-position";
 import type { TElement, TTextData } from "@vibecanvas/service-automerge/types/canvas-doc.types";

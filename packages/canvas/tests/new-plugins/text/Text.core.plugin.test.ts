@@ -3,7 +3,7 @@ import type { TElement, TTextData } from "@vibecanvas/service-automerge/types/ca
 import { describe, expect, test } from "vitest";
 import { fxToElement } from "../../../src/new-plugins/text/fx.to-element";
 import { txUpdateTextNodeFromElement } from "../../../src/new-plugins/text/tx.update-text-node-from-element";
-import { THEME_ID_DARK } from "../../../src/new-services/theme/enum";
+import { THEME_ID_DARK } from "@vibecanvas/service-theme";
 import { createNewCanvasHarness, createMockDocHandle, flushCanvasEffects } from "../../new-test-setup";
 
 function createTextElement(overrides?: Partial<TElement>): TElement {

@@ -2,7 +2,7 @@ import {
   BUILTIN_THEMES,
   type ThemeId,
   type TThemeDefinition,
-} from "@vibecanvas/service-theme";
+} from "./builtins";
 import type {
   TCanvasThemeStyle,
   TThemeColorFamily,

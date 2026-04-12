@@ -2,7 +2,7 @@ import type { TElement, TElementStyle } from "@vibecanvas/service-automerge/type
 import Konva from "konva";
 import { getWorldPosition, setWorldPosition } from "../../core/node-space";
 import { getNodeZIndex, setNodeZIndex } from "../../core/render-order";
-import type { ThemeService } from "../../new-services/theme/ThemeService";
+import type { ThemeService } from "@vibecanvas/service-theme";
 import { createShapeFromElement } from "./Shape1d.render";
 import {
   DEFAULT_OPACITY,

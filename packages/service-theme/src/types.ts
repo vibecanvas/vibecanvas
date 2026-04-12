@@ -1,4 +1,4 @@
-import type { ThemeId, TThemeDefinition } from "@vibecanvas/service-theme";
+import type { ThemeId, TThemeDefinition } from "./builtins";
 
 export const THEME_COLOR_FAMILIES = [
   "gray",

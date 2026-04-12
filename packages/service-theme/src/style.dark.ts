@@ -1,4 +1,4 @@
-import { THEME_ID_DARK } from "@vibecanvas/service-theme";
+import { THEME_ID_DARK } from "./builtins";
 import { createColorScale, createThemeStyle } from "./style.shared";
 
 export const STYLE_DARK = createThemeStyle({

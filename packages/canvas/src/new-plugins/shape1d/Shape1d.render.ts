@@ -13,7 +13,7 @@ import {
   getStrokeWidthFromStyle,
   isSupportedElementType,
 } from "./Shape1d.shared";
-import type { ThemeService } from "../../new-services/theme/ThemeService";
+import type { ThemeService } from "@vibecanvas/service-theme";
 
 function getBoundsPadding(data: TShape1dData, strokeWidth: number) {
   const base = Math.max(strokeWidth * 1.5, 8);

@@ -1,5 +1,5 @@
 import type { IPlugin } from "@vibecanvas/runtime";
-import { resolveThemeColor, type ThemeService } from "../../new-services/theme/ThemeService";
+import { resolveThemeColor, type ThemeService } from "@vibecanvas/service-theme";
 import type { TElement, TTextData } from "@vibecanvas/service-automerge/types/canvas-doc.types";
 import type Konva from "konva";
 import type { ContextMenuService } from "../../new-services/context-menu/ContextMenuService";

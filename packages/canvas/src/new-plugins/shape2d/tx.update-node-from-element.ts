@@ -3,7 +3,7 @@ import type { TElement } from "@vibecanvas/service-automerge/types/canvas-doc.ty
 import { fxGetDiamondPoints } from "../../core/fn.shape2d";
 import { fxGetAbsolutePositionFromWorldPosition } from "../../core/fn.world-position";
 import type { RenderService } from "../../new-services/render/RenderService";
-import type { ThemeService } from "../../new-services/theme/ThemeService";
+import type { ThemeService } from "@vibecanvas/service-theme";
 
 const ELEMENT_STYLE_ATTR = "vcElementStyle";
 

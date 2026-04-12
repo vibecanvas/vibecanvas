@@ -2,7 +2,7 @@ import {
   DEFAULT_THEME_ID,
   type ThemeId,
   type TThemeDefinition,
-} from "@vibecanvas/service-theme";
+} from "./builtins";
 import { STYLE_DARK } from "./style.dark";
 import { STYLE_GRAPHITE } from "./style.graphite";
 import { STYLE_LIGHT } from "./style.light";

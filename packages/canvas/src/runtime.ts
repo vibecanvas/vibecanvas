@@ -16,7 +16,7 @@ import { LoggingService } from "./new-services/logging/LoggingService";
 import { RenderOrderService } from "./new-services/render-order/RenderOrderService";
 import { RenderService } from "./new-services/render/RenderService";
 import { SelectionService } from "./new-services/selection/SelectionService";
-import { ThemeService } from "./new-services/theme/ThemeService";
+import { ThemeService } from "@vibecanvas/service-theme";
 
 interface IRuntimeConfig {
   container: HTMLDivElement;

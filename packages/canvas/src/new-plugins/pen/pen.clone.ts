@@ -4,7 +4,7 @@ import type { CrdtService } from "../../new-services/crdt/CrdtService";
 import type { RenderOrderService } from "../../new-services/render-order/RenderOrderService";
 import type { RenderService } from "../../new-services/render/RenderService";
 import type { SelectionService } from "../../new-services/selection/SelectionService";
-import type { ThemeService } from "../../new-services/theme/ThemeService";
+import type { ThemeService } from "@vibecanvas/service-theme";
 import { createPenPathFromElement } from "./pen.element";
 
 export type TPenClonePortal = {
