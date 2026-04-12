@@ -27,7 +27,7 @@ export function txUpdateTextNodeFromElement(portal: TPortalUpdateTextNodeFromEle
   const data = args.element.data as TTextData;
   const absolutePosition = fxGetAbsolutePositionFromWorldPosition({
     worldPosition: { x: args.element.x, y: args.element.y },
-    parentTransform: node.getParent()?.getAbsoluteTransform() ?? null,
+    parentTransform: node.getLayer()?.getAbsoluteTransform() ?? null,
   });
 
   node.absolutePosition(absolutePosition);

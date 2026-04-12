@@ -16,7 +16,7 @@ export type TArgsToElement = {
 export function fxToElement(portal: TPortalToElement, args: TArgsToElement) {
   const worldPosition = fxGetWorldPosition({
     absolutePosition: args.node.absolutePosition(),
-    parentTransform: args.node.getParent()?.getAbsoluteTransform() ?? null,
+    parentTransform: args.node.getLayer()?.getAbsoluteTransform() ?? null,
   });
   const absoluteScale = args.node.getAbsoluteScale();
   const layer = args.node.getLayer();
@@ -31,13 +31,16 @@ export function fxToElement(portal: TPortalToElement, args: TArgsToElement) {
     style.strokeColor = fill;
   }
 
+  const textScaleX = absoluteScale.x / layerScaleX;
+  const textScaleY = absoluteScale.y / layerScaleY;
+
   const data: TTextData = {
     type: "text",
-    w: args.node.width() * (absoluteScale.x / layerScaleX),
-    h: args.node.height() * (absoluteScale.y / layerScaleY),
+    w: args.node.width() * textScaleX,
+    h: args.node.height() * textScaleY,
     text: args.node.text(),
     originalText: args.node.text(),
-    fontSize: args.node.fontSize(),
+    fontSize: Math.max(1, args.node.fontSize() * textScaleX),
     fontFamily: args.node.fontFamily(),
     textAlign: args.node.align() as TTextData["textAlign"],
     verticalAlign: args.node.verticalAlign() as TTextData["verticalAlign"],

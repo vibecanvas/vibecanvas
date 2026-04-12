@@ -21,6 +21,7 @@ import { txSetupGroupNode } from "./tx.setup-group-node";
 import { txSyncDraggability } from "./tx.sync-draggability";
 import { txSyncGroupBoundaries, type TGroupBoundary } from "./tx.sync-group-boundaries";
 import { txUngroupSelection } from "./tx.ungroup-selection";
+import { txDeleteSelection } from "../select/tx.delete-selection";
 
 function createGroupNode(render: RenderService, group: TGroup) {
   const node = new render.Group({
@@ -191,6 +192,15 @@ export function createGroupPlugin(): IPlugin<{
             onSelect: () => {
               selection.setSelection(activeSelection);
               runUngroupSelection();
+            },
+          });
+          actions.push({
+            id: "delete-group-selection",
+            label: "Delete",
+            priority: 220,
+            onSelect: () => {
+              selection.setSelection(activeSelection);
+              txDeleteSelection({ crdt, editor, history, render, renderOrder, selection }, {});
             },
           });
         }

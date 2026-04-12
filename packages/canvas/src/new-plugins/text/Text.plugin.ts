@@ -1,6 +1,7 @@
 import type { IPlugin } from "@vibecanvas/runtime";
 import type { TElement, TTextData } from "@vibecanvas/service-automerge/types/canvas-doc.types";
 import type Konva from "konva";
+import type { ContextMenuService } from "../../new-services/context-menu/ContextMenuService";
 import type { CrdtService } from "../../new-services/crdt/CrdtService";
 import type { EditorService } from "../../new-services/editor/EditorService";
 import type { HistoryService } from "../../new-services/history/HistoryService";
@@ -14,6 +15,7 @@ import { fxToElement } from "./fx.to-element";
 import { txEnterEditMode } from "./tx.enter-edit-mode";
 import { txSetupTextNode } from "./tx.setup-text-node";
 import { txUpdateTextNodeFromElement } from "./tx.update-text-node-from-element";
+import { txDeleteSelection } from "../select/tx.delete-selection";
 
 const FREE_TEXT_NAME = "free-text";
 
@@ -49,6 +51,7 @@ function createTextNode(render: RenderService, element: TElement) {
  * Attached-text and clone-drag parity can come later.
  */
 export function createTextPlugin(): IPlugin<{
+  contextMenu: ContextMenuService;
   crdt: CrdtService;
   editor: EditorService;
   history: HistoryService;
@@ -59,6 +62,7 @@ export function createTextPlugin(): IPlugin<{
   return {
     name: "text",
     apply(ctx) {
+      const contextMenu = ctx.services.require("contextMenu");
       const crdt = ctx.services.require("crdt");
       const editor = ctx.services.require("editor");
       const history = ctx.services.require("history");
@@ -82,6 +86,22 @@ export function createTextPlugin(): IPlugin<{
         );
         return node;
       };
+
+      contextMenu.registerProvider("text", ({ targetElement, activeSelection }) => {
+        if (targetElement?.data.type !== "text") {
+          return [];
+        }
+
+        return [{
+          id: "delete-text-selection",
+          label: "Delete",
+          priority: 300,
+          onSelect: () => {
+            selection.setSelection(activeSelection);
+            txDeleteSelection({ crdt, editor, history, render, renderOrder, selection }, {});
+          },
+        }];
+      });
 
       editor.registerTool({
         id: "text",
@@ -187,6 +207,7 @@ export function createTextPlugin(): IPlugin<{
       });
 
       ctx.hooks.destroy.tap(() => {
+        contextMenu.unregisterProvider("text");
         editor.unregisterTool("text");
         editor.unregisterToElement("text");
         editor.unregisterCreateShapeFromTElement("text");
