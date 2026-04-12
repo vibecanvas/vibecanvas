@@ -12,6 +12,7 @@ import { ContextMenuService } from "./new-services/context-menu/ContextMenuServi
 import { CrdtService } from "./new-services/crdt/CrdtService";
 import { EditorService } from "./new-services/editor/EditorService";
 import { HistoryService } from "./new-services/history/HistoryService";
+import { LoggingService } from "./new-services/logging/LoggingService";
 import { RenderOrderService } from "./new-services/render-order/RenderOrderService";
 import { RenderService } from "./new-services/render/RenderService";
 import { SelectionService } from "./new-services/selection/SelectionService";
@@ -87,6 +88,7 @@ declare module "@vibecanvas/runtime" {
     crdt: CrdtService;
     editor: EditorService;
     history: HistoryService;
+    logging: LoggingService;
     render: RenderService;
     renderOrder: RenderOrderService;
     selection: SelectionService;
@@ -155,6 +157,7 @@ export function buildRuntime(config: IRuntimeConfig) {
   const history = new HistoryService();
 
   services.provide("history", history);
+  services.provide("logging", new LoggingService());
   services.provide("render", render);
   services.provide("renderOrder", new RenderOrderService({
     crdt: services.require("crdt"),
