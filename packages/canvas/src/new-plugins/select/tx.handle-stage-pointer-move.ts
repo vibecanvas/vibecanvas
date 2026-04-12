@@ -48,6 +48,10 @@ export function txHandleStagePointerMove(
         return false;
       }
 
+      if (node.getAttr("vcInteractionOverlay") === true) {
+        return false;
+      }
+
       if (!node.isListening()) {
         return false;
       }

@@ -1,8 +1,10 @@
 import type { IPlugin } from "@vibecanvas/runtime";
+import type { ThemeService } from "@vibecanvas/service-theme";
 import type Konva from "konva";
 import type { Group } from "konva/lib/Group";
 import type { Shape, ShapeConfig } from "konva/lib/Shape";
 import type { TElement } from "@vibecanvas/service-automerge/types/canvas-doc.types";
+import { throttle } from "@solid-primitives/scheduled";
 import type { CrdtService } from "../../new-services/crdt/CrdtService";
 import type { EditorService } from "../../new-services/editor/EditorService";
 import type { HistoryService } from "../../new-services/history/HistoryService";
@@ -10,6 +12,7 @@ import type { RenderService } from "../../new-services/render/RenderService";
 import type { SelectionService } from "../../new-services/selection/SelectionService";
 import type { IHooks } from "../../runtime";
 import { fxFilterSelection } from "../../core/fn.filter-selection";
+import { isShape1dNode } from "../shape1d/Shape1d.shared";
 
 const GROUP_ANCHORS = [
   "top-left",
@@ -28,6 +31,18 @@ const DEFAULT_ANCHORS = [
   "bottom-center",
   "bottom-right",
 ] as const;
+
+const TRANSFORM_DRAG_PROXY_NAME = "transform-drag-proxy";
+const INTERACTION_OVERLAY_ATTR = "vcInteractionOverlay";
+
+type TTransformDragProxyState = {
+  node: Shape<ShapeConfig>;
+  beforeElement: TElement;
+  label: string;
+  proxyStartPosition: { x: number; y: number };
+  nodeStartPosition: { x: number; y: number };
+  throttledPatch: (element: TElement) => void;
+};
 
 function collectSerializableShapes(
   render: RenderService,
@@ -48,44 +63,14 @@ function collectSerializableShapes(
 
 function serializeSelection(editor: EditorService, render: RenderService, nodes: Konva.Node[]) {
   const shapes = collectSerializableShapes(render, nodes);
-  const elements = shapes
-    .map((node) => {
-      const element = editor.toElement(node);
-      console.debug("[transform] serialize node", {
-        id: node.id(),
-        className: node.getClassName(),
-        scaleX: node.scaleX(),
-        scaleY: node.scaleY(),
-        rotation: node.rotation(),
-        width: "width" in node ? (node as Konva.Shape).width?.() : undefined,
-        height: "height" in node ? (node as Konva.Shape).height?.() : undefined,
-        serialized: element,
-      });
-      return element;
-    })
+  return shapes
+    .map((node) => editor.toElement(node))
     .filter((element): element is TElement => element !== null);
-
-  console.debug("[transform] serialize selection summary", {
-    nodeCount: nodes.length,
-    shapeCount: shapes.length,
-    elementCount: elements.length,
-    elementTypes: elements.map((element) => element.data.type),
-  });
-
-  return elements;
 }
 
 function applyElements(editor: EditorService, elements: TElement[]) {
   elements.forEach((element) => {
-    const didUpdate = editor.updateShapeFromTElement(element);
-    console.debug("[transform] apply element", {
-      id: element.id,
-      type: element.data.type,
-      didUpdate,
-      x: element.x,
-      y: element.y,
-      rotation: element.rotation,
-    });
+    editor.updateShapeFromTElement(element);
   });
 }
 
@@ -109,18 +94,114 @@ function refreshSelectedGroups(render: RenderService, selection: SelectionServic
   });
 }
 
+function hasPenOnlySelection(args: {
+  render: RenderService;
+  editor: EditorService;
+  selection: Array<Group | Shape<ShapeConfig>>;
+}) {
+  return args.selection.length > 0 && args.selection.every((node) => {
+    if (!(node instanceof args.render.Path)) {
+      return false;
+    }
+
+    const element = args.editor.toElement(node);
+    return element?.data.type === "pen";
+  });
+}
+
+function isProxyDragCandidate(args: {
+  render: RenderService;
+  editor: EditorService;
+  node: Group | Shape<ShapeConfig>;
+}) {
+  if (!(args.node instanceof args.render.Shape)) {
+    return false;
+  }
+
+  if (isShape1dNode(args.node)) {
+    return true;
+  }
+
+  const pathNode = args.node as unknown as Konva.Node;
+  if (!(pathNode instanceof args.render.Path)) {
+    return false;
+  }
+
+  const element = args.editor.toElement(pathNode);
+  return element?.data.type === "pen";
+}
+
+function getProxyDragTarget(args: {
+  render: RenderService;
+  editor: EditorService;
+  selection: SelectionService;
+}) {
+  if (args.selection.mode !== "select") {
+    return null;
+  }
+
+  const rawSelection = args.selection.selection;
+  const filteredSelection = fxFilterSelection({
+    render: args.render,
+    selection: rawSelection,
+  });
+
+  if (rawSelection.length !== 1 || filteredSelection.length !== 1) {
+    return null;
+  }
+
+  const rawNode = rawSelection[0];
+  const filteredNode = filteredSelection[0];
+  if (!rawNode || rawNode !== filteredNode) {
+    return null;
+  }
+
+  return isProxyDragCandidate({
+    render: args.render,
+    editor: args.editor,
+    node: rawNode,
+  })
+    ? rawNode as Shape<ShapeConfig>
+    : null;
+}
+
+function getProxyDragLabel(element: TElement) {
+  return element.data.type === "pen" ? "drag-pen" : "drag-shape1d";
+}
+
+function getProxyBounds(render: RenderService, node: Shape<ShapeConfig>) {
+  const localRect = node.getClientRect({ relativeTo: node });
+  const nodeTransform = node.getAbsoluteTransform();
+  const layerInverseTransform = render.staticForegroundLayer.getAbsoluteTransform().copy();
+  layerInverseTransform.invert();
+
+  const topLeft = layerInverseTransform.point(nodeTransform.point({ x: localRect.x, y: localRect.y }));
+  const topRight = layerInverseTransform.point(nodeTransform.point({ x: localRect.x + localRect.width, y: localRect.y }));
+  const bottomLeft = layerInverseTransform.point(nodeTransform.point({ x: localRect.x, y: localRect.y + localRect.height }));
+
+  return {
+    position: topLeft,
+    width: Math.max(1, Math.hypot(topRight.x - topLeft.x, topRight.y - topLeft.y)),
+    height: Math.max(1, Math.hypot(bottomLeft.x - topLeft.x, bottomLeft.y - topLeft.y)),
+    rotation: Math.atan2(topRight.y - topLeft.y, topRight.x - topLeft.x) * 180 / Math.PI,
+  };
+}
+
+function syncTransformerTheme(theme: ThemeService, transformer: Konva.Transformer) {
+  const activeTheme = theme.getTheme();
+  transformer.borderStroke(activeTheme.colors.canvasSelectionStroke);
+  transformer.anchorStroke(activeTheme.colors.canvasSelectionStroke);
+  transformer.anchorFill(activeTheme.colors.background);
+  transformer.anchorCornerRadius(0);
+  transformer.anchorSize(8);
+}
+
 function syncTransformer(args: {
   render: RenderService;
   editor: EditorService;
   selection: SelectionService;
   transformer: Konva.Transformer;
 }) {
-  console.debug("[transform] syncTransformer input", {
-    editingTextId: args.editor.editingTextId,
-    editingShape1dId: args.editor.editingShape1dId,
-    selectionIds: args.selection.selection.map((node) => node.id()),
-    selectionClasses: args.selection.selection.map((node) => node.getClassName()),
-  });
   if (args.editor.editingTextId !== null || args.editor.editingShape1dId !== null) {
     args.transformer.setNodes([]);
     args.transformer.update();
@@ -132,26 +213,27 @@ function syncTransformer(args: {
   const isSingleGroupSelection = filteredSelection.length === 1 && filteredSelection[0] instanceof args.render.Group;
   const isMultiSelection = filteredSelection.length > 1;
   const hasTextOnly = filteredSelection.length > 0 && filteredSelection.every((node) => node instanceof args.render.Text);
-  const useCornerAnchors = isSingleGroupSelection || hasTextOnly || isMultiSelection;
+  const hasShape1dOnly = filteredSelection.length > 0 && filteredSelection.every((node) => isShape1dNode(node));
+  const hasPenOnly = hasPenOnlySelection({
+    render: args.render,
+    editor: args.editor,
+    selection: filteredSelection,
+  });
+  const useCornerAnchors = isSingleGroupSelection || hasTextOnly || hasShape1dOnly || hasPenOnly || isMultiSelection;
 
   args.transformer.borderEnabled(!isSingleGroupSelection);
   args.transformer.borderDash(isMultiSelection ? [2, 2] : [0, 0]);
   args.transformer.keepRatio(useCornerAnchors);
   args.transformer.enabledAnchors(useCornerAnchors ? [...GROUP_ANCHORS] : [...DEFAULT_ANCHORS]);
   args.transformer.setNodes(filteredSelection);
-  console.debug("[transform] syncTransformer output", {
-    filteredSelectionIds: filteredSelection.map((node) => node.id()),
-    filteredSelectionClasses: filteredSelection.map((node) => node.getClassName()),
-    transformerNodeIds: args.transformer.getNodes().map((node) => node.id()),
-    transformerNodeClasses: args.transformer.getNodes().map((node) => node.getClassName()),
-  });
   args.transformer.update();
   args.render.dynamicLayer.batchDraw();
 }
 
 /**
  * Owns shared transformer UI for current selection.
- * Uses editor registries to serialize and re-apply transformed shapes.
+ * Also adds a drag proxy for single pen/shape1d selections.
+ * Proxy sits behind selected node, so direct stroke clicks still work.
  */
 export function createTransformPlugin(): IPlugin<{
   crdt: CrdtService;
@@ -159,8 +241,11 @@ export function createTransformPlugin(): IPlugin<{
   history: HistoryService;
   render: RenderService;
   selection: SelectionService;
+  theme: ThemeService;
 }, IHooks> {
   let transformer: Konva.Transformer | null = null;
+  let dragProxy: Konva.Rect | null = null;
+  let dragProxyState: TTransformDragProxyState | null = null;
   let beforeElements: TElement[] = [];
 
   return {
@@ -171,6 +256,7 @@ export function createTransformPlugin(): IPlugin<{
       const history = ctx.services.require("history");
       const render = ctx.services.require("render");
       const selection = ctx.services.require("selection");
+      const theme = ctx.services.require("theme");
 
       const refreshTransformer = () => {
         if (!transformer) {
@@ -185,16 +271,182 @@ export function createTransformPlugin(): IPlugin<{
         });
       };
 
+      const hideDragProxy = () => {
+        if (!dragProxy) {
+          return;
+        }
+
+        dragProxy.visible(false);
+        dragProxy.listening(false);
+        dragProxy.draggable(false);
+        render.staticForegroundLayer.batchDraw();
+      };
+
+      const refreshDragProxy = () => {
+        if (!dragProxy || dragProxyState) {
+          return;
+        }
+
+        if (editor.editingTextId !== null || editor.editingShape1dId !== null) {
+          hideDragProxy();
+          return;
+        }
+
+        const target = getProxyDragTarget({ render, editor, selection });
+        if (!target) {
+          hideDragProxy();
+          return;
+        }
+
+        const bounds = getProxyBounds(render, target);
+        dragProxy.position(bounds.position);
+        dragProxy.rotation(bounds.rotation);
+        dragProxy.scale({ x: 1, y: 1 });
+        dragProxy.size({ width: bounds.width, height: bounds.height });
+        dragProxy.visible(true);
+        dragProxy.listening(true);
+        dragProxy.draggable(true);
+        const targetIndex = target.zIndex();
+        const proxyIndex = dragProxy.zIndex();
+        dragProxy.zIndex(proxyIndex < targetIndex ? Math.max(0, targetIndex - 1) : targetIndex);
+        render.staticForegroundLayer.batchDraw();
+      };
+
+      const applyProxyDragElement = (element: TElement) => {
+        applyElements(editor, [element]);
+        refreshTransformer();
+        render.staticForegroundLayer.batchDraw();
+      };
+
       ctx.hooks.init.tap(() => {
+        dragProxy = new render.Rect({
+          x: 0,
+          y: 0,
+          width: 0,
+          height: 0,
+          rotation: 0,
+          fill: theme.getTheme().colors.canvasSelectionFill,
+          opacity: 0.01,
+          strokeEnabled: false,
+          visible: false,
+          listening: false,
+          draggable: false,
+          name: TRANSFORM_DRAG_PROXY_NAME,
+        });
+        dragProxy.setAttr(INTERACTION_OVERLAY_ATTR, true);
+        render.staticForegroundLayer.add(dragProxy);
+
+        dragProxy.on("dragstart", (event) => {
+          if (!dragProxy) {
+            return;
+          }
+
+          const target = getProxyDragTarget({ render, editor, selection });
+
+          if (event.evt?.altKey) {
+            dragProxy.stopDrag();
+            dragProxy.absolutePosition(dragProxy.absolutePosition());
+            if (target) {
+              target.fire("dragstart", {
+                target,
+                currentTarget: target,
+                evt: new MouseEvent("dragstart", { bubbles: true, altKey: true }),
+              });
+            }
+            refreshDragProxy();
+            return;
+          }
+
+          if (!target) {
+            dragProxy.stopDrag();
+            hideDragProxy();
+            return;
+          }
+
+          const beforeElement = editor.toElement(target);
+          if (!beforeElement) {
+            dragProxy.stopDrag();
+            refreshDragProxy();
+            return;
+          }
+
+          dragProxyState = {
+            node: target,
+            beforeElement,
+            label: getProxyDragLabel(beforeElement),
+            proxyStartPosition: { ...dragProxy.absolutePosition() },
+            nodeStartPosition: { ...target.absolutePosition() },
+            throttledPatch: throttle((element: TElement) => {
+              crdt.patch({ elements: [element], groups: [] });
+            }, 100),
+          };
+        });
+
+        dragProxy.on("dragmove", () => {
+          if (!dragProxy || !dragProxyState) {
+            return;
+          }
+
+          const currentProxyPosition = dragProxy.absolutePosition();
+          const dx = currentProxyPosition.x - dragProxyState.proxyStartPosition.x;
+          const dy = currentProxyPosition.y - dragProxyState.proxyStartPosition.y;
+          dragProxyState.node.absolutePosition({
+            x: dragProxyState.nodeStartPosition.x + dx,
+            y: dragProxyState.nodeStartPosition.y + dy,
+          });
+
+          const element = editor.toElement(dragProxyState.node);
+          if (element) {
+            dragProxyState.throttledPatch(element);
+          }
+          render.staticForegroundLayer.batchDraw();
+        });
+
+        dragProxy.on("dragend", () => {
+          if (!dragProxy || !dragProxyState) {
+            refreshDragProxy();
+            return;
+          }
+
+          const state = dragProxyState;
+          dragProxyState = null;
+          const afterElement = editor.toElement(state.node);
+          if (!afterElement) {
+            refreshDragProxy();
+            return;
+          }
+
+          crdt.patch({ elements: [afterElement], groups: [] });
+          refreshDragProxy();
+
+          const didMove = state.beforeElement.x !== afterElement.x || state.beforeElement.y !== afterElement.y;
+          if (!didMove) {
+            return;
+          }
+
+          const undoElement = structuredClone(state.beforeElement);
+          const redoElement = structuredClone(afterElement);
+          history.record({
+            label: state.label,
+            undo: () => {
+              applyProxyDragElement(undoElement);
+              crdt.patch({ elements: [undoElement], groups: [] });
+              refreshDragProxy();
+            },
+            redo: () => {
+              applyProxyDragElement(redoElement);
+              crdt.patch({ elements: [redoElement], groups: [] });
+              refreshDragProxy();
+            },
+          });
+        });
+
         transformer = new render.Transformer();
+        syncTransformerTheme(theme, transformer);
         render.dynamicLayer.add(transformer);
         editor.setTransformer(transformer);
 
         transformer.on("transformstart", () => {
-          console.debug("[transform] transformstart", {
-            nodeIds: (transformer?.getNodes() ?? []).map((node) => node.id()),
-            nodeClasses: (transformer?.getNodes() ?? []).map((node) => node.getClassName()),
-          });
           beforeElements = serializeSelection(editor, render, transformer?.getNodes() ?? []);
         });
 
@@ -203,23 +455,16 @@ export function createTransformPlugin(): IPlugin<{
             return;
           }
 
-          console.debug("[transform] transformend before serialize", {
-            nodeIds: transformer.getNodes().map((node) => node.id()),
-            nodeClasses: transformer.getNodes().map((node) => node.getClassName()),
-            scales: transformer.getNodes().map((node) => ({ id: node.id(), scaleX: node.scaleX(), scaleY: node.scaleY(), rotation: node.rotation() })),
-          });
-
           const afterElements = serializeSelection(editor, render, transformer.getNodes());
           if (afterElements.length === 0) {
-            console.debug("[transform] transformend no serialized elements");
             return;
           }
 
-          console.debug("[transform] transformend serialized elements", afterElements);
           normalizeSelectedGroupTransforms(render, transformer.getNodes());
           applyElements(editor, afterElements);
           refreshSelectedGroups(render, selection);
           refreshTransformer();
+          refreshDragProxy();
           crdt.patch({ elements: afterElements, groups: [] });
 
           if (beforeElements.length === 0) {
@@ -235,43 +480,76 @@ export function createTransformPlugin(): IPlugin<{
               applyElements(editor, undoElements);
               refreshSelectedGroups(render, selection);
               refreshTransformer();
+              refreshDragProxy();
               crdt.patch({ elements: undoElements, groups: [] });
             },
             redo: () => {
               applyElements(editor, redoElements);
               refreshSelectedGroups(render, selection);
               refreshTransformer();
+              refreshDragProxy();
               crdt.patch({ elements: redoElements, groups: [] });
             },
           });
         });
 
         refreshTransformer();
+        refreshDragProxy();
 
         selection.hooks.change.tap(() => {
-          console.debug("[transform] selection change", {
-            mode: selection.mode,
-            selectionIds: selection.selection.map((node) => node.id()),
-            selectionClasses: selection.selection.map((node) => node.getClassName()),
-          });
           refreshTransformer();
+          refreshDragProxy();
         });
         editor.hooks.editingTextChange.tap(() => {
           refreshTransformer();
+          refreshDragProxy();
         });
         editor.hooks.editingShape1dChange.tap(() => {
           refreshTransformer();
+          refreshDragProxy();
         });
         editor.hooks.toElementRegistryChange.tap(() => {
           refreshTransformer();
+          refreshDragProxy();
         });
         editor.hooks.updateShapeFromTElementRegistryChange.tap(() => {
           refreshTransformer();
+          refreshDragProxy();
         });
+        theme.hooks.change.tap(() => {
+          if (transformer) {
+            syncTransformerTheme(theme, transformer);
+          }
+          if (dragProxy) {
+            dragProxy.fill(theme.getTheme().colors.canvasSelectionFill);
+          }
+          refreshTransformer();
+          refreshDragProxy();
+        });
+      });
+
+      ctx.hooks.pointerMove.tap((event) => {
+        if (event.evt.buttons === 0) {
+          return;
+        }
+
+        refreshDragProxy();
+      });
+
+      ctx.hooks.pointerUp.tap(() => {
+        refreshDragProxy();
+      });
+
+      ctx.hooks.pointerCancel.tap(() => {
+        dragProxyState = null;
+        refreshDragProxy();
       });
 
       ctx.hooks.destroy.tap(() => {
         editor.setTransformer(null);
+        dragProxyState = null;
+        dragProxy?.destroy();
+        dragProxy = null;
         transformer?.destroy();
         transformer = null;
       });

@@ -74,6 +74,46 @@ function getPersistedPenElement(docHandle: ReturnType<typeof createMockDocHandle
   return element as TElement & { data: TPenData };
 }
 
+function getTransformDragProxy(harness: Awaited<ReturnType<typeof createNewCanvasHarness>>) {
+  const proxy = harness.staticForegroundLayer.findOne((node: Konva.Node) => {
+    return node instanceof Konva.Rect && node.name() === "transform-drag-proxy";
+  });
+
+  if (!(proxy instanceof Konva.Rect)) {
+    throw new Error("Expected transform drag proxy rect");
+  }
+
+  return proxy;
+}
+
+function altDragProxy(
+  proxy: Konva.Rect,
+  args: {
+    dx: number;
+    dy: number;
+    findPreviewClone: () => Konva.Node | undefined;
+  },
+) {
+  proxy.fire("dragstart", {
+    target: proxy,
+    currentTarget: proxy,
+    evt: new MouseEvent("dragstart", { bubbles: true, altKey: true }),
+  });
+
+  const previewClone = args.findPreviewClone();
+  if (!previewClone) {
+    throw new Error("Expected preview clone after alt-drag from proxy");
+  }
+
+  const before = previewClone.absolutePosition();
+  previewClone.setAbsolutePosition({ x: before.x + args.dx, y: before.y + args.dy });
+  previewClone.fire("dragend", {
+    target: previewClone,
+    currentTarget: previewClone,
+    evt: new MouseEvent("dragend", { bubbles: true, altKey: true }),
+  });
+}
+
 function altDragPen(node: Konva.Path, args: { dx: number; dy: number }) {
   const beforeNodeIds = new Set(
     node.getStage()?.getLayers().flatMap((layer) => layer.getChildren()).map((child) => child._id) ?? [],
@@ -244,6 +284,147 @@ describe("new Pen plugin", () => {
     await flushCanvasEffects();
     expect(node.absolutePosition().x).toBeCloseTo(before.x + 45, 6);
     expect(node.absolutePosition().y).toBeCloseTo(before.y + 20, 6);
+
+    await harness.destroy();
+  });
+
+  test("marquee selection ignores transform drag proxy for selected pen", async () => {
+    const element = createPenElement();
+    const docHandle = createMockDocHandle({
+      elements: {
+        [element.id]: structuredClone(element),
+      },
+    });
+
+    const harness = await createNewCanvasHarness({ docHandle });
+    const selection = harness.runtime.services.require("selection");
+    const node = harness.staticForegroundLayer.findOne<Konva.Path>(`#${element.id}`)!;
+
+    selection.setSelection([node]);
+    selection.setFocusedNode(node);
+    await flushCanvasEffects();
+
+    const proxy = getTransformDragProxy(harness);
+    expect(proxy.visible()).toBe(true);
+
+    withDynamicPointer(harness, { x: 80, y: 60 }, () => {
+      harness.runtime.hooks.pointerDown.call({
+        target: harness.stage,
+        currentTarget: harness.stage,
+        evt: new PointerEvent("pointerdown"),
+        cancelBubble: false,
+      } as unknown as Konva.KonvaEventObject<PointerEvent>);
+    });
+    withDynamicPointer(harness, { x: 260, y: 190 }, () => {
+      harness.runtime.hooks.pointerMove.call(createHookPointerEvent("pointermove", 0.5) as Konva.KonvaEventObject<MouseEvent>);
+    });
+    await flushCanvasEffects();
+
+    expect(selection.selection.map((selectedNode) => selectedNode.getClassName())).toEqual(["Path"]);
+    expect(selection.selection.map((selectedNode) => selectedNode.id())).toEqual([node.id()]);
+
+    await harness.destroy();
+  });
+
+  test("selected pen can drag from transform proxy area", async () => {
+    const element = createPenElement();
+    const docHandle = createMockDocHandle({
+      elements: {
+        [element.id]: structuredClone(element),
+      },
+    });
+
+    const harness = await createNewCanvasHarness({ docHandle });
+    const history = harness.runtime.services.require("history");
+    const selection = harness.runtime.services.require("selection");
+    const node = harness.staticForegroundLayer.findOne<Konva.Path>(`#${element.id}`)!;
+
+    selection.setSelection([node]);
+    selection.setFocusedNode(node);
+    await flushCanvasEffects();
+
+    const proxy = getTransformDragProxy(harness);
+    expect(proxy.visible()).toBe(true);
+
+    const before = { ...node.absolutePosition() };
+    proxy.fire("dragstart", {
+      target: proxy,
+      currentTarget: proxy,
+      evt: new MouseEvent("dragstart", { bubbles: true }),
+    });
+    proxy.setAbsolutePosition({ x: proxy.absolutePosition().x + 35, y: proxy.absolutePosition().y + 18 });
+    proxy.fire("dragmove", {
+      target: proxy,
+      currentTarget: proxy,
+      evt: new MouseEvent("dragmove", { bubbles: true }),
+    });
+    proxy.fire("dragend", {
+      target: proxy,
+      currentTarget: proxy,
+      evt: new MouseEvent("dragend", { bubbles: true }),
+    });
+    await flushCanvasEffects();
+
+    expect(node.absolutePosition().x).toBeCloseTo(before.x + 35, 6);
+    expect(node.absolutePosition().y).toBeCloseTo(before.y + 18, 6);
+    expect(docHandle.doc().elements[element.id]?.x).toBeCloseTo(before.x + 35, 6);
+    expect(docHandle.doc().elements[element.id]?.y).toBeCloseTo(before.y + 18, 6);
+
+    history.undo();
+    await flushCanvasEffects();
+    expect(node.absolutePosition().x).toBeCloseTo(before.x, 6);
+    expect(node.absolutePosition().y).toBeCloseTo(before.y, 6);
+
+    history.redo();
+    await flushCanvasEffects();
+    expect(node.absolutePosition().x).toBeCloseTo(before.x + 35, 6);
+    expect(node.absolutePosition().y).toBeCloseTo(before.y + 18, 6);
+
+    await harness.destroy();
+  });
+
+  test("alt-drag clone also works from transform proxy", async () => {
+    const element = createPenElement();
+    const docHandle = createMockDocHandle({
+      elements: {
+        [element.id]: structuredClone(element),
+      },
+    });
+
+    const harness = await createNewCanvasHarness({ docHandle });
+    const selection = harness.runtime.services.require("selection");
+    const sourceNode = harness.staticForegroundLayer.findOne<Konva.Path>(`#${element.id}`)!;
+
+    selection.setSelection([sourceNode]);
+    selection.setFocusedNode(sourceNode);
+    await flushCanvasEffects();
+
+    const proxy = getTransformDragProxy(harness);
+    const beforeNodeIds = new Set(
+      sourceNode.getStage()?.getLayers().flatMap((layer) => layer.getChildren()).map((child) => child._id) ?? [],
+    );
+
+    altDragProxy(proxy, {
+      dx: 70,
+      dy: 30,
+      findPreviewClone: () => {
+        return sourceNode.getStage()?.getLayers()
+          .flatMap((layer) => layer.getChildren())
+          .find((child) => !beforeNodeIds.has(child._id) && child instanceof Konva.Path);
+      },
+    });
+    await flushCanvasEffects();
+
+    const persistedPenElements = Object.values(docHandle.doc().elements).filter((candidate) => candidate.data.type === "pen");
+    expect(persistedPenElements).toHaveLength(2);
+
+    const createdClone = persistedPenElements.find((candidate) => candidate.id !== element.id);
+    expect(createdClone).toBeTruthy();
+    if (!createdClone || createdClone.data.type !== "pen") {
+      throw new Error("Expected cloned document element to be a pen");
+    }
+
+    expect(selection.selection[0]?.id()).toBe(createdClone.id);
 
     await harness.destroy();
   });

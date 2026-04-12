@@ -23,13 +23,30 @@ function isTransformerNode(render: RenderService, target: unknown) {
   return false;
 }
 
+function isInteractionOverlayNode(render: RenderService, target: unknown) {
+  if (!(target instanceof render.Node)) {
+    return false;
+  }
+
+  let current: unknown = target;
+  while (current instanceof render.Node) {
+    if (current.getAttr("vcInteractionOverlay") === true) {
+      return true;
+    }
+
+    current = current.getParent();
+  }
+
+  return false;
+}
+
 function getElementPointerEvent(render: RenderService, event: TPointerEvent) {
   const target = event.target;
   if (!(target instanceof render.Group || target instanceof render.Shape)) {
     return null;
   }
 
-  if (isTransformerNode(render, target)) {
+  if (isTransformerNode(render, target) || isInteractionOverlayNode(render, target)) {
     return null;
   }
 
