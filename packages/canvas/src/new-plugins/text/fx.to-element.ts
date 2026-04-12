@@ -1,5 +1,5 @@
 import type { TElement, TElementStyle, TTextData } from "@vibecanvas/service-automerge/types/canvas-doc.types";
-import { fxGetWorldPosition } from "../core/fn.world-position";
+import { fxGetWorldPosition } from "../../core/fn.world-position";
 import type { RenderService } from "../../new-services/render/RenderService";
 import type Konva from "konva";
 

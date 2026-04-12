@@ -7,11 +7,12 @@ import { getImageDimensions, getImageSource, getSupportedImageFormat, parseDataU
 import type { CrdtService } from "../../new-services/crdt/CrdtService";
 import type { EditorService } from "../../new-services/editor/EditorService";
 import type { HistoryService } from "../../new-services/history/HistoryService";
+import type { RenderOrderService } from "../../new-services/render-order/RenderOrderService";
 import type { RenderService } from "../../new-services/render/RenderService";
 import type { SelectionService } from "../../new-services/selection/SelectionService";
 import type { IHooks } from "../../runtime";
-import { getWorldPosition, setWorldPosition } from "../../plugins/shared/node-space";
-import { getNodeZIndex, setNodeZIndex } from "../../plugins/shared/render-order.shared";
+import { getWorldPosition, setWorldPosition } from "../../core/node-space";
+import { getNodeZIndex, setNodeZIndex } from "../../core/render-order";
 import { fxToImageElement } from "./fn.to-image-element";
 import { txInsertImage } from "./tx.insert-image";
 import { txSetupImageListeners } from "./tx.setup-image-listeners";
@@ -254,6 +255,7 @@ export function createImagePlugin(): IPlugin<{
   editor: EditorService;
   history: HistoryService;
   render: RenderService;
+  renderOrder: RenderOrderService;
   selection: SelectionService;
 }, IHooks> {
   let fileInput: HTMLInputElement | null = null;
@@ -265,6 +267,7 @@ export function createImagePlugin(): IPlugin<{
       const editor = ctx.services.require("editor");
       const history = ctx.services.require("history");
       const render = ctx.services.require("render");
+      const renderOrder = ctx.services.require("renderOrder");
       const selection = ctx.services.require("selection");
 
       const updateImageNodeFromElementPortal = {
@@ -299,11 +302,11 @@ export function createImagePlugin(): IPlugin<{
             crdt,
             history,
             render,
+            renderOrder,
             selection,
             createPreviewClone: (sourceNode) => createPreviewClone(render, sourceNode),
             createImageNode: (element) => createImageNode(render, element),
             setupNode,
-            setNodeZIndex,
             toElement: (imageNode) => toElement(render, imageNode),
             now: () => Date.now(),
           },
@@ -331,6 +334,7 @@ export function createImagePlugin(): IPlugin<{
           crdt,
           history,
           render,
+          renderOrder,
           selection,
           uploadImage: getImageCapabilities(ctx.config)?.uploadImage,
           notification: getNotification(ctx.config),
@@ -344,7 +348,6 @@ export function createImagePlugin(): IPlugin<{
           createImageNode: (element) => createImageNode(render, element),
           setupNode,
           toElement: (node) => toElement(render, node),
-          setNodeZIndex,
         }, args);
       };
 

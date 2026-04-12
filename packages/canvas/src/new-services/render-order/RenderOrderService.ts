@@ -1,0 +1,382 @@
+import type { IService } from "@vibecanvas/runtime";
+import type { TElement, TGroup } from "@vibecanvas/service-automerge/types/canvas-doc.types";
+import Konva from "konva";
+import { createOrderedZIndex, getNodeZIndex, setNodeZIndex } from "../../core/render-order";
+import type { TRenderOrderSnapshot } from "../../runtime";
+import type { CrdtService } from "../crdt/CrdtService";
+import type { HistoryService } from "../history/HistoryService";
+import type { RenderService } from "../render/RenderService";
+
+export type TOrderedNode = Konva.Group | Konva.Shape;
+export type TParentContainer = Konva.Layer | Konva.Group;
+export type TRenderOrderInsertPosition = "front" | "back" | { beforeId?: string; afterId?: string };
+export type TRenderOrderBundleResolver = (node: TOrderedNode) => TOrderedNode[] | null;
+
+export type TRenderOrderServiceArgs = {
+  crdt: CrdtService;
+  history: HistoryService;
+  render: RenderService;
+  syncDomOrder?: () => void;
+};
+
+function isOrderedNode(node: Konva.Node): node is TOrderedNode {
+  return node instanceof Konva.Group || node instanceof Konva.Shape;
+}
+
+function isParentContainer(node: Konva.Node | null | undefined): node is TParentContainer {
+  return node instanceof Konva.Layer || node instanceof Konva.Group;
+}
+
+function getImmediateOrderedChildren(parent: TParentContainer) {
+  return parent.getChildren().filter(isOrderedNode) as TOrderedNode[];
+}
+
+function sortNodesForBundle(nodes: TOrderedNode[], parent: TParentContainer) {
+  const children = getImmediateOrderedChildren(parent);
+  const order = new Map(children.map((node, index) => [node.id(), index]));
+  return [...nodes].sort((left, right) => (order.get(left.id()) ?? 0) - (order.get(right.id()) ?? 0));
+}
+
+function insertNodes(
+  stationary: TOrderedNode[],
+  moving: TOrderedNode[],
+  position: TRenderOrderInsertPosition,
+) {
+  if (position === "back") {
+    return [...moving, ...stationary];
+  }
+
+  if (position === "front") {
+    return [...stationary, ...moving];
+  }
+
+  if (position.afterId) {
+    const anchorIndex = stationary.findIndex((node) => node.id() === position.afterId);
+    if (anchorIndex >= 0) {
+      return [
+        ...stationary.slice(0, anchorIndex + 1),
+        ...moving,
+        ...stationary.slice(anchorIndex + 1),
+      ];
+    }
+  }
+
+  if (position.beforeId) {
+    const anchorIndex = stationary.findIndex((node) => node.id() === position.beforeId);
+    if (anchorIndex >= 0) {
+      return [
+        ...stationary.slice(0, anchorIndex),
+        ...moving,
+        ...stationary.slice(anchorIndex),
+      ];
+    }
+  }
+
+  return [...stationary, ...moving];
+}
+
+export class RenderOrderService implements IService<Record<string, never>> {
+  readonly name = "renderOrder";
+  readonly hooks = {};
+
+  readonly crdt: CrdtService;
+  readonly history: HistoryService;
+  readonly render: RenderService;
+  readonly syncDomOrder?: () => void;
+  #bundleResolvers = new Map<string, TRenderOrderBundleResolver>();
+
+  constructor(args: TRenderOrderServiceArgs) {
+    this.crdt = args.crdt;
+    this.history = args.history;
+    this.render = args.render;
+    this.syncDomOrder = args.syncDomOrder;
+  }
+
+  registerBundleResolver(id: string, resolver: TRenderOrderBundleResolver) {
+    this.#bundleResolvers.set(id, resolver);
+  }
+
+  unregisterBundleResolver(id: string) {
+    this.#bundleResolvers.delete(id);
+  }
+
+  clearBundleResolvers() {
+    this.#bundleResolvers.clear();
+  }
+
+  getNodeZIndex(node: TOrderedNode) {
+    return getNodeZIndex(node);
+  }
+
+  setNodeZIndex(node: TOrderedNode, zIndex: string) {
+    setNodeZIndex(node, zIndex);
+  }
+
+  getOrderBundle(node: TOrderedNode) {
+    for (const resolver of this.#bundleResolvers.values()) {
+      const bundle = resolver(node);
+      if (bundle && bundle.length > 0) {
+        return bundle;
+      }
+    }
+
+    const parent = node.getParent();
+    if (!isParentContainer(parent)) {
+      return [node];
+    }
+
+    return sortNodesForBundle([node], parent);
+  }
+
+  getOrderedSiblings(parent: TParentContainer) {
+    const children = getImmediateOrderedChildren(parent);
+    return [...children].sort((left, right) => {
+      const zCompare = getNodeZIndex(left).localeCompare(getNodeZIndex(right));
+      if (zCompare !== 0) {
+        return zCompare;
+      }
+
+      return left.id().localeCompare(right.id());
+    });
+  }
+
+  sortChildren(parent: TParentContainer) {
+    const sorted = this.getOrderedSiblings(parent);
+    sorted.forEach((node, index) => {
+      node.zIndex(index);
+    });
+    this.syncDomOrder?.();
+  }
+
+  assignOrderOnInsert(args: {
+    parent: TParentContainer;
+    nodes: TOrderedNode[];
+    position?: TRenderOrderInsertPosition;
+  }) {
+    const orderedNodes = sortNodesForBundle(args.nodes.filter((node) => node.getParent() === args.parent), args.parent);
+    if (orderedNodes.length === 0) {
+      return [];
+    }
+
+    const children = getImmediateOrderedChildren(args.parent);
+    const movingIds = new Set(orderedNodes.map((node) => node.id()));
+    const stationary = children.filter((child) => !movingIds.has(child.id()));
+    const nextChildren = insertNodes(stationary, orderedNodes, args.position ?? "front");
+    return this.applyOrderedChildren(args.parent, nextChildren, true);
+  }
+
+  moveSelectionUp(nodes: TOrderedNode[]) {
+    this.moveByOneStep(nodes, "forward");
+  }
+
+  moveSelectionDown(nodes: TOrderedNode[]) {
+    this.moveByOneStep(nodes, "backward");
+  }
+
+  bringSelectionToFront(nodes: TOrderedNode[]) {
+    this.moveToExtreme(nodes, "front");
+  }
+
+  sendSelectionToBack(nodes: TOrderedNode[]) {
+    this.moveToExtreme(nodes, "back");
+  }
+
+  snapshotParentOrder(parent: TParentContainer): TRenderOrderSnapshot {
+    return {
+      parentId: parent.id() || "__layer__",
+      items: getImmediateOrderedChildren(parent).map((node) => ({
+        id: node.id(),
+        zIndex: getNodeZIndex(node),
+        kind: node instanceof Konva.Group ? "group" : "element",
+      })),
+    };
+  }
+
+  restoreParentOrder(snapshot: TRenderOrderSnapshot) {
+    const parent = this.findParentBySnapshot(snapshot);
+    if (!parent) {
+      return;
+    }
+
+    snapshot.items.forEach((item) => {
+      const node = this.findImmediateChildById(parent, item.id);
+      if (!node) {
+        return;
+      }
+
+      setNodeZIndex(node, item.zIndex);
+    });
+
+    this.sortChildren(parent);
+  }
+
+  private moveByOneStep(roots: TOrderedNode[], direction: "forward" | "backward") {
+    const resolved = this.resolveOrderedUnits(roots);
+    if (!resolved) {
+      return;
+    }
+
+    const units = [...resolved.units];
+    if (direction === "forward") {
+      for (let index = units.length - 2; index >= 0; index -= 1) {
+        if (!units[index].selected && units[index + 1].selected) {
+          [units[index], units[index + 1]] = [units[index + 1], units[index]];
+        }
+      }
+    } else {
+      for (let index = 1; index < units.length; index += 1) {
+        if (units[index].selected && !units[index - 1].selected) {
+          [units[index], units[index - 1]] = [units[index - 1], units[index]];
+        }
+      }
+    }
+
+    this.applyUnitOrder(resolved.parent, units);
+  }
+
+  private moveToExtreme(roots: TOrderedNode[], position: "front" | "back") {
+    const resolved = this.resolveOrderedUnits(roots);
+    if (!resolved) {
+      return;
+    }
+
+    const selected = resolved.units.filter((unit) => unit.selected);
+    const unselected = resolved.units.filter((unit) => !unit.selected);
+    const next = position === "front"
+      ? [...unselected, ...selected]
+      : [...selected, ...unselected];
+
+    this.applyUnitOrder(resolved.parent, next);
+  }
+
+  private resolveOrderedUnits(roots: TOrderedNode[]) {
+    const uniqueRoots = roots.filter((node, index) => roots.findIndex((candidate) => candidate.id() === node.id()) === index);
+    if (uniqueRoots.length === 0) {
+      return null;
+    }
+
+    const parent = uniqueRoots[0]?.getParent();
+    if (!isParentContainer(parent)) {
+      return null;
+    }
+
+    if (!uniqueRoots.every((node) => node.getParent() === parent)) {
+      return null;
+    }
+
+    const selectedIds = new Set<string>();
+    uniqueRoots.forEach((root) => {
+      const bundle = this.getOrderBundle(root);
+      bundle.forEach((node) => {
+        selectedIds.add(node.id());
+      });
+    });
+
+    const orderedChildren = getImmediateOrderedChildren(parent);
+    const units: Array<{ nodes: TOrderedNode[]; selected: boolean }> = [];
+    const consumedIds = new Set<string>();
+
+    orderedChildren.forEach((child) => {
+      if (consumedIds.has(child.id())) {
+        return;
+      }
+
+      const bundle = this.getOrderBundle(child);
+      const nodes = sortNodesForBundle(bundle.filter((node) => node.getParent() === parent), parent);
+      nodes.forEach((node) => {
+        consumedIds.add(node.id());
+      });
+      units.push({
+        nodes,
+        selected: nodes.some((node) => selectedIds.has(node.id())),
+      });
+    });
+
+    return { parent, units };
+  }
+
+  private applyUnitOrder(parent: TParentContainer, units: Array<{ nodes: TOrderedNode[] }>) {
+    const orderedChildren = units.flatMap((unit) => unit.nodes);
+    const before = this.snapshotParentOrder(parent);
+    const patches = this.applyOrderedChildren(parent, orderedChildren, true);
+    const after = this.snapshotParentOrder(parent);
+    if (patches.length === 0) {
+      return;
+    }
+
+    this.history.record({
+      label: "render-order",
+      undo: () => {
+        this.applySnapshot(parent, before);
+      },
+      redo: () => {
+        this.applySnapshot(parent, after);
+      },
+    });
+  }
+
+  private applySnapshot(parent: TParentContainer, snapshot: TRenderOrderSnapshot) {
+    snapshot.items.forEach((item) => {
+      const node = this.findImmediateChildById(parent, item.id);
+      if (!node) {
+        return;
+      }
+
+      setNodeZIndex(node, item.zIndex);
+    });
+
+    const orderedChildren = [...snapshot.items]
+      .map((item) => this.findImmediateChildById(parent, item.id))
+      .filter((node): node is TOrderedNode => Boolean(node));
+    this.applyOrderedChildren(parent, orderedChildren, true);
+  }
+
+  private applyOrderedChildren(parent: TParentContainer, orderedChildren: TOrderedNode[], persist: boolean) {
+    orderedChildren.forEach((node, index) => {
+      node.zIndex(index);
+      setNodeZIndex(node, createOrderedZIndex(index));
+    });
+
+    if (!persist) {
+      return [];
+    }
+
+    const elementPatches: TElement[] = [];
+    const groupPatches: TGroup[] = [];
+
+    orderedChildren.forEach((node, index) => {
+      if (node instanceof Konva.Group) {
+        groupPatches.push({
+          id: node.id(),
+          zIndex: createOrderedZIndex(index),
+        } as TGroup);
+        return;
+      }
+
+      elementPatches.push({
+        id: node.id(),
+        zIndex: createOrderedZIndex(index),
+      } as TElement);
+    });
+
+    if (elementPatches.length > 0 || groupPatches.length > 0) {
+      this.crdt.patch({ elements: elementPatches, groups: groupPatches });
+    }
+
+    this.syncDomOrder?.();
+    return [...elementPatches, ...groupPatches];
+  }
+
+  private findImmediateChildById(parent: TParentContainer, id: string) {
+    return getImmediateOrderedChildren(parent).find((node) => node.id() === id) ?? null;
+  }
+
+  private findParentBySnapshot(snapshot: TRenderOrderSnapshot) {
+    if (snapshot.parentId === "__layer__") {
+      return this.render.staticForegroundLayer;
+    }
+
+    const parent = this.render.staticForegroundLayer.findOne(`#${snapshot.parentId}`);
+    return isParentContainer(parent) ? parent : null;
+  }
+}

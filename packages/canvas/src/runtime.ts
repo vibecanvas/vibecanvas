@@ -6,11 +6,12 @@ import type { Group } from "konva/lib/Group";
 import type { KonvaEventObject } from "konva/lib/Node";
 import type { Shape, ShapeConfig } from "konva/lib/Shape";
 import { AsyncParallelHook, SyncExitHook, SyncHook } from "@vibecanvas/tapable";
-import { createCameraControlPlugin, createEventListenerPlugin, createGridPlugin, createHistoryControlPlugin, createImagePlugin, createSceneHydratorPlugin, createSelectPlugin, createTextPlugin, createToolbarPlugin, createTransformPlugin, createVisualDebugPlugin } from "./new-plugins";
+import { createCameraControlPlugin, createEventListenerPlugin, createGridPlugin, createGroupPlugin, createHistoryControlPlugin, createImagePlugin, createRenderOrderPlugin, createSceneHydratorPlugin, createSelectPlugin, createTextPlugin, createToolbarPlugin, createTransformPlugin, createVisualDebugPlugin } from "./new-plugins";
 import { CameraService } from "./new-services/camera/CameraService";
 import { CrdtService } from "./new-services/crdt/CrdtService";
 import { EditorService } from "./new-services/editor/EditorService";
 import { HistoryService } from "./new-services/history/HistoryService";
+import { RenderOrderService } from "./new-services/render-order/RenderOrderService";
 import { RenderService } from "./new-services/render/RenderService";
 import { SelectionService } from "./new-services/selection/SelectionService";
 import { ThemeService } from "./new-services/theme/ThemeService";
@@ -84,6 +85,7 @@ declare module "@vibecanvas/runtime" {
     editor: EditorService;
     history: HistoryService;
     render: RenderService;
+    renderOrder: RenderOrderService;
     selection: SelectionService;
     theme: ThemeService;
   }
@@ -121,15 +123,22 @@ export function buildRuntime(config: IRuntimeConfig) {
   services.provide("camera", new CameraService({ render }));
   services.provide("crdt", new CrdtService({ docHandle: config.docHandle }));
   services.provide("editor", new EditorService());
-  services.provide("history", new HistoryService());
+  const history = new HistoryService();
+
+  services.provide("history", history);
   services.provide("render", render);
+  services.provide("renderOrder", new RenderOrderService({
+    crdt: services.require("crdt"),
+    history,
+    render,
+  }));
   services.provide("selection", new SelectionService());
   services.provide("theme", new ThemeService());
 
   return createRuntime<IHooks, IRuntimeConfig>({
     config,
     hooks: createHooks(),
-    plugins: [createEventListenerPlugin(), createGridPlugin(), createToolbarPlugin(), createHistoryControlPlugin(), createSelectPlugin(), createTransformPlugin(), createTextPlugin(), createImagePlugin(), createSceneHydratorPlugin(), createVisualDebugPlugin(), createCameraControlPlugin()],
+    plugins: [createEventListenerPlugin(), createGridPlugin(), createToolbarPlugin(), createHistoryControlPlugin(), createRenderOrderPlugin(), createSelectPlugin(), createTransformPlugin(), createTextPlugin(), createImagePlugin(), createGroupPlugin(), createSceneHydratorPlugin(), createVisualDebugPlugin(), createCameraControlPlugin()],
     services,
     boot: async ({ services, hooks }) => {
       services.require("render").start();

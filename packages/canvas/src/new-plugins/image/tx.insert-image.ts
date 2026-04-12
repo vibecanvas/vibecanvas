@@ -3,6 +3,7 @@ import type Konva from "konva";
 import type { TImageUploadFormat, TUploadImage } from "../../services/canvas/interface";
 import type { CrdtService } from "../../new-services/crdt/CrdtService";
 import type { HistoryService } from "../../new-services/history/HistoryService";
+import type { RenderOrderService } from "../../new-services/render-order/RenderOrderService";
 import type { RenderService } from "../../new-services/render/RenderService";
 import type { SelectionService } from "../../new-services/selection/SelectionService";
 import { fxCreateImageElement } from "./fn.create-image-element";
@@ -12,6 +13,7 @@ export type TPortalInsertImage = {
   crdt: CrdtService;
   history: HistoryService;
   render: RenderService;
+  renderOrder: RenderOrderService;
   selection: SelectionService;
   uploadImage?: TUploadImage;
   notification?: {
@@ -27,7 +29,6 @@ export type TPortalInsertImage = {
   createImageNode: (element: TElement) => Konva.Image;
   setupNode: (node: Konva.Image) => Konva.Image;
   toElement: (node: Konva.Image) => TElement;
-  setNodeZIndex: (node: Konva.Image, zIndex: string) => void;
 };
 
 export type TArgsInsertImage = {
@@ -81,6 +82,11 @@ export async function txInsertImage(
     const node = portal.setupNode(portal.createImageNode(element));
     node.setDraggable(true);
     portal.render.staticForegroundLayer.add(node);
+    portal.renderOrder.assignOrderOnInsert({
+      parent: portal.render.staticForegroundLayer,
+      nodes: [node],
+      position: "front",
+    });
     portal.render.staticForegroundLayer.batchDraw();
 
     const insertedElement = portal.toElement(node);
@@ -100,7 +106,8 @@ export async function txInsertImage(
         const recreatedNode = portal.setupNode(portal.createImageNode(insertedElement));
         recreatedNode.setDraggable(true);
         portal.render.staticForegroundLayer.add(recreatedNode);
-        portal.setNodeZIndex(recreatedNode, insertedElement.zIndex);
+        portal.renderOrder.setNodeZIndex(recreatedNode, insertedElement.zIndex);
+        portal.renderOrder.sortChildren(portal.render.staticForegroundLayer);
         portal.crdt.patch({ elements: [insertedElement], groups: [] });
         portal.selection.setSelection([recreatedNode]);
         portal.selection.setFocusedNode(recreatedNode);

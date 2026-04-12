@@ -1,4 +1,4 @@
-import { fxGetAbsolutePositionFromWorldPosition } from "../core/fn.world-position";
+import { fxGetAbsolutePositionFromWorldPosition } from "../../core/fn.world-position";
 import type { TElement, TTextData } from "@vibecanvas/service-automerge/types/canvas-doc.types";
 import type Konva from "konva";
 import type { RenderService } from "../../new-services/render/RenderService";

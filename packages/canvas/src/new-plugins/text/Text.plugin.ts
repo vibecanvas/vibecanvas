@@ -4,6 +4,7 @@ import type Konva from "konva";
 import type { CrdtService } from "../../new-services/crdt/CrdtService";
 import type { EditorService } from "../../new-services/editor/EditorService";
 import type { HistoryService } from "../../new-services/history/HistoryService";
+import type { RenderOrderService } from "../../new-services/render-order/RenderOrderService";
 import type { RenderService } from "../../new-services/render/RenderService";
 import type { SelectionService } from "../../new-services/selection/SelectionService";
 import { CanvasMode } from "../../new-services/selection/enum";
@@ -52,6 +53,7 @@ export function createTextPlugin(): IPlugin<{
   editor: EditorService;
   history: HistoryService;
   render: RenderService;
+  renderOrder: RenderOrderService;
   selection: SelectionService;
 }, IHooks> {
   return {
@@ -61,6 +63,7 @@ export function createTextPlugin(): IPlugin<{
       const editor = ctx.services.require("editor");
       const history = ctx.services.require("history");
       const render = ctx.services.require("render");
+      const renderOrder = ctx.services.require("renderOrder");
       const selection = ctx.services.require("selection");
       const document = render.container.ownerDocument;
 
@@ -138,6 +141,11 @@ export function createTextPlugin(): IPlugin<{
         const node = setupNode(createTextNode(render, element));
 
         render.staticForegroundLayer.add(node);
+        renderOrder.assignOrderOnInsert({
+          parent: render.staticForegroundLayer,
+          nodes: [node],
+          position: "front",
+        });
         render.staticForegroundLayer.batchDraw();
         selection.setSelection([node]);
         selection.setFocusedNode(node);
