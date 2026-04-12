@@ -1,5 +1,5 @@
 import type { IPlugin } from "@vibecanvas/runtime";
-import type { TElement } from "@vibecanvas/service-automerge/types/canvas-doc.types";
+import type { TElement, TGroup } from "@vibecanvas/service-automerge/types/canvas-doc.types";
 import type Konva from "konva";
 import type { CrdtService } from "../../new-services/crdt/CrdtService";
 import type { EditorService } from "../../new-services/editor/EditorService";
@@ -15,7 +15,7 @@ type TSceneStateSnapshot = {
   editingShape1dId: string | null;
 };
 
-function compareElementsForHydration(left: TElement, right: TElement) {
+function compareByPersistedOrder(left: { id: string; zIndex?: string }, right: { id: string; zIndex?: string }) {
   const zCompare = (left.zIndex ?? "").localeCompare(right.zIndex ?? "");
   if (zCompare !== 0) {
     return zCompare;
@@ -60,27 +60,107 @@ function restoreSceneState(render: RenderService, selection: SelectionService, e
   editor.setEditingShape1dId(findSceneNodeById(render, snapshot.editingShape1dId)?.id() ?? null);
 }
 
-function loadCanvas(crdt: CrdtService, editor: EditorService, render: RenderService) {
-  const doc = crdt.doc();
-  const elements = Object.values(doc.elements)
-    .filter((element) => element.parentGroupId === null)
-    .sort(compareElementsForHydration);
+function loadGroupsTopDown(args: {
+  groups: TGroup[];
+  editor: EditorService;
+  render: RenderService;
+}) {
+  const groupsById = new Map(args.groups.map((group) => [group.id, group]));
+  const remainingGroupIds = new Set(args.groups.map((group) => group.id));
+  const mountedGroups = new Map<string, Konva.Group>();
 
-  for (const element of elements) {
-    const node = editor.createShapeFromTElement(element);
-    if (!node) {
-      continue;
+  while (remainingGroupIds.size > 0) {
+    let loadedInPass = false;
+
+    for (const groupId of [...remainingGroupIds]) {
+      const group = groupsById.get(groupId);
+      if (!group) {
+        remainingGroupIds.delete(groupId);
+        continue;
+      }
+
+      const parent = group.parentGroupId
+        ? mountedGroups.get(group.parentGroupId)
+        : args.render.staticForegroundLayer;
+      if (!parent) {
+        continue;
+      }
+
+      const groupNode = args.editor.createGroupFromTGroup(group);
+      remainingGroupIds.delete(groupId);
+      if (!groupNode) {
+        continue;
+      }
+
+      parent.add(groupNode);
+      mountedGroups.set(groupId, groupNode);
+      loadedInPass = true;
     }
 
-    render.staticForegroundLayer.add(node);
+    if (!loadedInPass) {
+      break;
+    }
   }
+}
 
+function loadElementsTopDown(args: {
+  elements: TElement[];
+  editor: EditorService;
+  render: RenderService;
+}) {
+  const groupsById = new Map(
+    args.render.staticForegroundLayer.find((candidate: Konva.Node) => candidate instanceof args.render.Group)
+      .map((candidate) => [candidate.id(), candidate as Konva.Group]),
+  );
+
+  args.elements.forEach((element) => {
+    const parent = element.parentGroupId
+      ? groupsById.get(element.parentGroupId)
+      : args.render.staticForegroundLayer;
+    if (!parent) {
+      return;
+    }
+
+    const node = args.editor.createShapeFromTElement(element);
+    if (!node) {
+      return;
+    }
+
+    parent.add(node);
+  });
+}
+
+function sortSceneTopDown(render: RenderService, parent: Konva.Layer | Konva.Group) {
+  parent.getChildren()
+    .filter((candidate): candidate is TSceneNode => candidate instanceof render.Group || candidate instanceof render.Shape)
+    .slice()
+    .sort((left, right) => {
+      return compareByPersistedOrder(
+        { id: left.id(), zIndex: left.getAttr("vcZIndex") as string | undefined },
+        { id: right.id(), zIndex: right.getAttr("vcZIndex") as string | undefined },
+      );
+    })
+    .forEach((child, index) => {
+      child.zIndex(index);
+      if (child instanceof render.Group) {
+        sortSceneTopDown(render, child);
+      }
+    });
+}
+
+function loadCanvas(crdt: CrdtService, editor: EditorService, render: RenderService) {
+  const doc = crdt.doc();
+  const groups = Object.values(doc.groups).sort(compareByPersistedOrder);
+  const elements = Object.values(doc.elements).sort(compareByPersistedOrder);
+
+  loadGroupsTopDown({ groups, editor, render });
+  loadElementsTopDown({ elements, editor, render });
+  sortSceneTopDown(render, render.staticForegroundLayer);
   render.stage.batchDraw();
 }
 
 /**
- * Rebuilds runtime scene from CRDT document for migrated top-level elements.
- * Group hydration can come later with group plugin migration.
+ * Rebuilds runtime scene from CRDT document for migrated groups and elements.
  */
 export function createSceneHydratorPlugin(): IPlugin<{
   crdt: CrdtService;

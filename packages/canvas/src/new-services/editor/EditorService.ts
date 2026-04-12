@@ -1,6 +1,6 @@
 import type { IService } from "@vibecanvas/runtime";
 import { SyncHook } from "@vibecanvas/tapable";
-import type { TElement } from "@vibecanvas/service-automerge/types/canvas-doc.types";
+import type { TElement, TGroup } from "@vibecanvas/service-automerge/types/canvas-doc.types";
 import type Konva from "konva";
 
 /**
@@ -35,6 +35,8 @@ export type TEditorTool = {
 };
 
 export type TEditorToElement = (node: Konva.Node) => TElement | null;
+export type TEditorToGroup = (node: Konva.Node) => TGroup | null;
+export type TEditorCreateGroupFromTGroup = (group: TGroup) => Konva.Group | null;
 export type TEditorCreateShapeFromTElement = (element: TElement) => Konva.Shape | null;
 export type TEditorUpdateShapeFromTElement = (element: TElement) => boolean;
 
@@ -51,6 +53,8 @@ export interface TEditorServiceHooks {
   previewNodeChange: SyncHook<[Konva.Node | null]>;
   transformerChange: SyncHook<[Konva.Transformer | null]>;
   toElementRegistryChange: SyncHook<[]>;
+  toGroupRegistryChange: SyncHook<[]>;
+  createGroupFromTGroupRegistryChange: SyncHook<[]>;
   createShapeFromTElementRegistryChange: SyncHook<[]>;
   updateShapeFromTElementRegistryChange: SyncHook<[]>;
 }
@@ -70,12 +74,16 @@ export class EditorService implements IService<TEditorServiceHooks> {
     previewNodeChange: new SyncHook(),
     transformerChange: new SyncHook(),
     toElementRegistryChange: new SyncHook(),
+    toGroupRegistryChange: new SyncHook(),
+    createGroupFromTGroupRegistryChange: new SyncHook(),
     createShapeFromTElementRegistryChange: new SyncHook(),
     updateShapeFromTElementRegistryChange: new SyncHook(),
   };
 
   readonly tools = new Map<string, TEditorTool>();
   readonly toElementRegistry = new Map<string, TEditorToElement>();
+  readonly toGroupRegistry = new Map<string, TEditorToGroup>();
+  readonly createGroupFromTGroupRegistry = new Map<string, TEditorCreateGroupFromTGroup>();
   readonly createShapeFromTElementRegistry = new Map<string, TEditorCreateShapeFromTElement>();
   readonly updateShapeFromTElementRegistry = new Map<string, TEditorUpdateShapeFromTElement>();
 
@@ -233,6 +241,76 @@ export class EditorService implements IService<TEditorServiceHooks> {
       const element = toElement(node);
       if (element) {
         return element;
+      }
+    }
+
+    return null;
+  }
+
+  /**
+   * Registers one node -> group serializer.
+   * First serializer that returns a value wins.
+   */
+  registerToGroup(id: string, toGroup: TEditorToGroup) {
+    this.toGroupRegistry.set(id, toGroup);
+    this.hooks.toGroupRegistryChange.call();
+  }
+
+  /**
+   * Removes one node -> group serializer.
+   */
+  unregisterToGroup(id: string) {
+    const didDelete = this.toGroupRegistry.delete(id);
+    if (!didDelete) {
+      return;
+    }
+
+    this.hooks.toGroupRegistryChange.call();
+  }
+
+  /**
+   * Converts a node into a canvas group through registered serializers.
+   */
+  toGroup(node: Konva.Node) {
+    for (const toGroup of this.toGroupRegistry.values()) {
+      const group = toGroup(node);
+      if (group) {
+        return group;
+      }
+    }
+
+    return null;
+  }
+
+  /**
+   * Registers one group -> node creator.
+   * First creator that returns a node wins.
+   */
+  registerCreateGroupFromTGroup(id: string, createGroupFromTGroup: TEditorCreateGroupFromTGroup) {
+    this.createGroupFromTGroupRegistry.set(id, createGroupFromTGroup);
+    this.hooks.createGroupFromTGroupRegistryChange.call();
+  }
+
+  /**
+   * Removes one group -> node creator.
+   */
+  unregisterCreateGroupFromTGroup(id: string) {
+    const didDelete = this.createGroupFromTGroupRegistry.delete(id);
+    if (!didDelete) {
+      return;
+    }
+
+    this.hooks.createGroupFromTGroupRegistryChange.call();
+  }
+
+  /**
+   * Creates one runtime group from a canvas group through registered creators.
+   */
+  createGroupFromTGroup(group: TGroup) {
+    for (const createGroupFromTGroup of this.createGroupFromTGroupRegistry.values()) {
+      const node = createGroupFromTGroup(group);
+      if (node) {
+        return node;
       }
     }
 

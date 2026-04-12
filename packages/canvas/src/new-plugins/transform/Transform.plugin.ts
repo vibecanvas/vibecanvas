@@ -9,6 +9,7 @@ import type { HistoryService } from "../../new-services/history/HistoryService";
 import type { RenderService } from "../../new-services/render/RenderService";
 import type { SelectionService } from "../../new-services/selection/SelectionService";
 import type { IHooks } from "../../runtime";
+import { fxFilterSelection } from "../../core/fn.filter-selection";
 
 const GROUP_ANCHORS = [
   "top-left",
@@ -27,30 +28,6 @@ const DEFAULT_ANCHORS = [
   "bottom-center",
   "bottom-right",
 ] as const;
-
-function filterSelection(
-  render: RenderService,
-  selection: Array<Group | Shape<ShapeConfig>>,
-) {
-  let subSelection = selection.find((node) => node.getParent() instanceof render.Group);
-  if (!subSelection) {
-    return selection.filter((node) => node.getStage() !== null);
-  }
-
-  const findDeepestSubSelection = () => {
-    const deeperSubSelection = selection.find((node) => node.getParent() === subSelection);
-    if (!deeperSubSelection) {
-      return;
-    }
-
-    subSelection = deeperSubSelection;
-    findDeepestSubSelection();
-  };
-
-  findDeepestSubSelection();
-
-  return subSelection && subSelection.getStage() !== null ? [subSelection] : [];
-}
 
 function collectSerializableShapes(
   render: RenderService,
@@ -112,6 +89,26 @@ function applyElements(editor: EditorService, elements: TElement[]) {
   });
 }
 
+function normalizeSelectedGroupTransforms(render: RenderService, nodes: Konva.Node[]) {
+  nodes.forEach((node) => {
+    if (!(node instanceof render.Group)) {
+      return;
+    }
+
+    node.scale({ x: 1, y: 1 });
+    node.rotation(0);
+    node.skew({ x: 0, y: 0 });
+  });
+}
+
+function refreshSelectedGroups(render: RenderService, selection: SelectionService) {
+  selection.selection.forEach((node) => {
+    if (node instanceof render.Group) {
+      node.fire("transform");
+    }
+  });
+}
+
 function syncTransformer(args: {
   render: RenderService;
   editor: EditorService;
@@ -131,7 +128,7 @@ function syncTransformer(args: {
     return;
   }
 
-  const filteredSelection = filterSelection(args.render, args.selection.selection);
+  const filteredSelection = fxFilterSelection({ render: args.render, selection: args.selection.selection });
   const isSingleGroupSelection = filteredSelection.length === 1 && filteredSelection[0] instanceof args.render.Group;
   const isMultiSelection = filteredSelection.length > 1;
   const hasTextOnly = filteredSelection.length > 0 && filteredSelection.every((node) => node instanceof args.render.Text);
@@ -219,7 +216,9 @@ export function createTransformPlugin(): IPlugin<{
           }
 
           console.debug("[transform] transformend serialized elements", afterElements);
+          normalizeSelectedGroupTransforms(render, transformer.getNodes());
           applyElements(editor, afterElements);
+          refreshSelectedGroups(render, selection);
           refreshTransformer();
           crdt.patch({ elements: afterElements, groups: [] });
 
@@ -234,11 +233,13 @@ export function createTransformPlugin(): IPlugin<{
             label: "transform",
             undo: () => {
               applyElements(editor, undoElements);
+              refreshSelectedGroups(render, selection);
               refreshTransformer();
               crdt.patch({ elements: undoElements, groups: [] });
             },
             redo: () => {
               applyElements(editor, redoElements);
+              refreshSelectedGroups(render, selection);
               refreshTransformer();
               crdt.patch({ elements: redoElements, groups: [] });
             },
