@@ -59,14 +59,14 @@ export function CanvasContextMenu(props: {
         />
         <ContextMenu.Portal>
           <ContextMenu.Content
-            class="min-w-[180px] border border-black bg-white shadow-md py-1 z-[9999]"
+            class="min-w-[180px] border border-border bg-popover text-popover-foreground shadow-md py-1 z-[9999]"
           >
             <For each={props.items()}>
               {(item) => (
                 <ContextMenu.Item
                   disabled={item.disabled}
                   onSelect={() => item.onSelect()}
-                  class="cursor-pointer px-3 py-2 text-sm outline-none data-[highlighted]:bg-stone-200 data-[disabled]:cursor-not-allowed data-[disabled]:opacity-50"
+                  class="cursor-pointer px-3 py-2 text-sm outline-none data-[highlighted]:bg-accent data-[highlighted]:text-accent-foreground data-[disabled]:cursor-not-allowed data-[disabled]:opacity-50"
                 >
                   <ContextMenu.ItemLabel>{item.label}</ContextMenu.ItemLabel>
                 </ContextMenu.Item>

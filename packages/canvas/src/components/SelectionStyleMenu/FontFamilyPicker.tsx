@@ -11,9 +11,9 @@ export function FontFamilyPicker(props: {
         {(option) => (
           <button
             type="button"
-            class="h-6 min-w-[3.5rem] border border-border px-1 text-[9px] transition-colors hover:bg-stone-200"
+            class="h-6 min-w-[3.5rem] border border-border px-1 text-[9px] transition-colors hover:bg-accent hover:text-accent-foreground"
             classList={{
-              "bg-amber-500/20 text-amber-700 border-amber-500": props.value === option.value,
+              "bg-primary/15 text-foreground border-primary": props.value === option.value,
             }}
             title={option.name}
             onClick={() => props.onChange(option.value)}

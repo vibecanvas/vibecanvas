@@ -104,6 +104,7 @@ Use the leaf files for execution history and local context.
 - [x]: [B18](b/B18.md) - terminal image paste not working in deploy version
 - [x]: [B19](b/B19.md) - cli usage -> no realtime updates via automerge
 - [x]: [B20](b/B20.md) - pen tool: after stroke commit, stay in pen mode instead of switching to selection
+- [ ]: [B21] - can't do 1d edits
 
 ## A dditions
 - [x]: [A1] - file: support common CodeMirror languages
@@ -130,6 +131,12 @@ Use the leaf files for execution history and local context.
 - [x]: [A23](a/A23.md) - canvas CLI: document minimal required add args per element type and default optional fields
 - [x]: [A24](a/A24.md) - filetree: double click file opens preview beside tree inside camera view
 - [x]: [A25](a/A25.md) - canvas: react to live Automerge doc changes without page refresh
+- [ ]: [A26] - remember canvas position for each canvas locally
+- [ ]: [A27](a/A27.md) - theme: make canvas overlays and terminal fully theme-aware
+- [ ]: [A28](a/A28.md) - theme: add frontend theme picker and quick appearance controls
+- [ ]: [A29](a/A29.md) - theme: remember last light and dark theme choices when toggling
+- [ ]: [A30](a/A30.md) - theme: remove Tailwind from @vibecanvas/canvas and ship package CSS
+- [ ]: [A31](a/A31.md) - theme: remove Tailwind from frontend and stop scanning canvas sources
 
 ## S ubtractions
 - [ ]: [S1](s/S1.md) - double bun run dev -> find new port
@@ -157,13 +164,13 @@ Use the leaf files for execution history and local context.
 - [x]: [S25](s/S25.md) - db: remove filetrees table/schema; canvas-doc fully owns filetree state
 - [x]: [S26](s/S26.md) - db: add filesystems db table for local/remote machine identity
 - [x]: [S27](s/S27.md) - canvas CLI: remove unimplemented `render` command and help traces
-- [ ]: [S28](s/S28.md) - use runtime package in canvas, like cli does
+- [~]: [S28](s/S28.md) - use runtime package in canvas, like cli does
+- [ ]: [S29] - add debug config via localstorage for each plugin 
 
 ## E xplorations
 - [ ]: [E1](e/E1.md) - Tauri Research
 - [ ]: [E5](e/E5.md) - how to implement state machine system?
 - [ ]: [E6](e/E6.md) - should we include a task management
-- [ ]: [E7] - should we include agent
 - [x]: [E8](e/E8.md) - canvas CLI: query/edit surface exploration
 - [ ]: [E9] - tmux for persistant pty sessions
 - [ ]: [E10] - headless chrome to stream to canvas
@@ -179,7 +186,7 @@ Use the leaf files for execution history and local context.
 - [x]: [D1] - AI can edit the canvas directly
 - [x]: [D2] - Server plugin system
 - [x]: [D3] - Support pluggable filsystem architecture
-- [ ]: [D4] - Support sideloadable ui elements
+- [~]: [D4] - Support sideloadable ui elements
 - [ ]: [D5] - AI Canvas Element, attachable to other elements
 - [ ]: [D6] - Gateway support
 - [ ]: [D7] - Auth support

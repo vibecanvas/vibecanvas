@@ -20,8 +20,8 @@ export function ToolButton(props: ToolButtonProps) {
       onClick={props.onClick}
       class={`relative flex h-7 w-full items-center justify-center transition-colors ${
         props.isActive
-          ? "bg-amber-500/20 text-amber-700 dark:text-amber-400"
-          : "text-muted-foreground hover:bg-stone-200 dark:hover:bg-stone-800"
+          ? "bg-primary/15 text-foreground"
+          : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
       }`}
     >
       {props.icon}
@@ -29,8 +29,8 @@ export function ToolButton(props: ToolButtonProps) {
         <span
           class={`absolute bottom-0 left-px text-[7px] font-mono font-medium ${
             props.isActive
-              ? "text-amber-600 dark:text-amber-500"
-              : "text-stone-400 dark:text-stone-500"
+              ? "text-primary"
+              : "text-muted-foreground/80"
           }`}
         >
           {props.letterShortcut}
@@ -40,8 +40,8 @@ export function ToolButton(props: ToolButtonProps) {
         <span
           class={`absolute bottom-0 right-px text-[7px] font-mono font-medium ${
             props.isActive
-              ? "text-amber-600 dark:text-amber-500"
-              : "text-stone-400 dark:text-stone-500"
+              ? "text-primary"
+              : "text-muted-foreground/80"
           }`}
         >
           {props.shortcut}

@@ -12,7 +12,8 @@ export function OpacitySlider(props: {
         max="100"
         step="1"
         value={percentValue()}
-        class="w-28 accent-amber-500"
+        class="w-28"
+        style={{ accentColor: "var(--primary)" }}
         onInput={(event) => props.onChange(Number(event.currentTarget.value) / 100)}
       />
       <span class="w-9 text-right text-[10px] font-mono text-muted-foreground">{percentValue()}%</span>

@@ -12,7 +12,7 @@ function ShortcutKeys(props: { keys: string[] }) {
     <div class="flex flex-wrap items-center justify-end gap-1.5">
       <For each={props.keys}>
         {(key) => (
-          <kbd class="min-w-7 border border-border bg-secondary px-2 py-1 text-[10px] font-mono text-foreground">
+          <kbd class="min-w-7 border border-border bg-secondary px-2 py-1 text-[10px] font-mono text-foreground shadow-sm">
             {key}
           </kbd>
         )}
@@ -26,7 +26,7 @@ export function CanvasHelp(props: ICanvasHelpProps) {
     <Dialog open={props.open()} onOpenChange={props.onOpenChange}>
       <Dialog.Trigger
         type="button"
-        class="pointer-events-auto flex h-11 w-11 items-center justify-center border border-border bg-card text-foreground shadow-md transition-colors hover:bg-stone-200 dark:hover:bg-stone-800"
+        class="pointer-events-auto flex h-11 w-11 items-center justify-center border border-border bg-card text-foreground shadow-md transition-colors hover:bg-accent hover:text-accent-foreground"
         aria-label="Open canvas help"
         title="Help (?)"
       >
@@ -45,7 +45,7 @@ export function CanvasHelp(props: ICanvasHelpProps) {
             </div>
 
             <Dialog.CloseButton
-              class="flex h-9 w-9 items-center justify-center border border-border bg-card text-muted-foreground transition-colors hover:bg-stone-200 hover:text-foreground dark:hover:bg-stone-800"
+              class="flex h-9 w-9 items-center justify-center border border-border bg-card text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
               aria-label="Close help"
             >
               <span class="text-sm leading-none">x</span>

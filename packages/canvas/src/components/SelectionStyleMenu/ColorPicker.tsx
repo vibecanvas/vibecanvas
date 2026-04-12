@@ -79,9 +79,9 @@ function hsbToHex(h: number, s: number, v: number) {
 function renderSwatch(value: string) {
   if (value === "transparent") {
     return (
-      <div class="relative h-full w-full bg-white">
-        <div class="absolute inset-0 bg-neutral-200 opacity-40" />
-        <div class="absolute inset-0 flex items-center justify-center text-[10px] text-neutral-500">×</div>
+      <div class="relative h-full w-full bg-background">
+        <div class="absolute inset-0 bg-muted opacity-40" />
+        <div class="absolute inset-0 flex items-center justify-center text-[10px] text-muted-foreground">×</div>
       </div>
     );
   }
@@ -171,9 +171,9 @@ export function ColorPicker(props: {
           {(color) => (
             <button
               type="button"
-              class="h-7 w-7 overflow-hidden border border-border transition-colors hover:border-amber-500"
+              class="h-7 w-7 overflow-hidden border border-border transition-colors hover:border-primary"
               classList={{
-                "ring-1 ring-amber-500 ring-offset-1 ring-offset-card": currentValue() === normalizeColorValue(color.value),
+                "ring-1 ring-primary ring-offset-1 ring-offset-card": currentValue() === normalizeColorValue(color.value),
               }}
               title={color.name}
               onClick={() => applyColor(color.value)}
@@ -188,8 +188,8 @@ export function ColorPicker(props: {
 
       <button
         type="button"
-        class="flex h-7 w-7 items-center justify-center overflow-hidden border border-border transition-colors hover:border-amber-500"
-        classList={{ "border-amber-500": open() }}
+        class="flex h-7 w-7 items-center justify-center overflow-hidden border border-border transition-colors hover:border-primary"
+        classList={{ "border-primary": open() }}
         title="Open color panel"
         onClick={() => setOpen((value) => !value)}
       >
@@ -207,8 +207,8 @@ export function ColorPicker(props: {
                     type="button"
                     class="h-7 w-7 overflow-hidden border border-border"
                     classList={{
-                      "hover:border-amber-500": color !== null,
-                      "ring-1 ring-amber-500 ring-offset-1 ring-offset-popover": color !== null && currentValue() === color,
+                      "hover:border-primary": color !== null,
+                      "ring-1 ring-primary ring-offset-1 ring-offset-popover": color !== null && currentValue() === color,
                       "opacity-45": color === null,
                     }}
                     title={color ?? "Empty slot"}
@@ -231,9 +231,9 @@ export function ColorPicker(props: {
                 {(color) => (
                   <button
                     type="button"
-                    class="h-7 w-7 overflow-hidden border border-border hover:border-amber-500"
+                    class="h-7 w-7 overflow-hidden border border-border hover:border-primary"
                     classList={{
-                      "ring-1 ring-amber-500 ring-offset-1 ring-offset-popover": currentValue() === normalizeColorValue(color.value),
+                      "ring-1 ring-primary ring-offset-1 ring-offset-popover": currentValue() === normalizeColorValue(color.value),
                     }}
                     title={color.name}
                     onClick={() => applyColor(color.value)}
@@ -252,9 +252,9 @@ export function ColorPicker(props: {
                 {(color) => (
                   <button
                     type="button"
-                    class="h-7 w-7 overflow-hidden border border-border hover:border-amber-500"
+                    class="h-7 w-7 overflow-hidden border border-border hover:border-primary"
                     classList={{
-                      "ring-1 ring-amber-500 ring-offset-1 ring-offset-popover": currentValue() === color,
+                      "ring-1 ring-primary ring-offset-1 ring-offset-popover": currentValue() === color,
                     }}
                     title={color}
                     onClick={() => applyColor(color)}
@@ -284,7 +284,7 @@ export function ColorPicker(props: {
             <span class="text-[10px] font-mono text-muted-foreground uppercase tracking-wide">Hex code</span>
             <input
               value={hexInput()}
-              class="w-full h-8 border border-input bg-background px-2 text-xs text-foreground outline-none focus:border-amber-500"
+              class="w-full h-8 border border-input bg-background px-2 text-xs text-foreground outline-none focus:border-primary"
               onInput={(event) => setHexInput(event.currentTarget.value)}
               onChange={(event) => {
                 const next = normalizeColorValue(event.currentTarget.value);

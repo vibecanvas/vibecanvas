@@ -141,7 +141,7 @@ export function TerminalWidget(props: TTerminalWidgetProps) {
 
   const rootClass = props.showChrome !== false
     ? "flex h-full w-full flex-col border border-border bg-background font-mono text-sm"
-    : "flex h-full w-full flex-col bg-[#111214] font-mono text-sm";
+    : "flex h-full w-full flex-col font-mono text-sm";
 
   return (
     <div
@@ -150,7 +150,12 @@ export function TerminalWidget(props: TTerminalWidgetProps) {
       data-hosted-widget-focus-root="true"
       tabIndex={-1}
       class={rootClass}
-      style={{ "min-width": "0", "min-height": "0" }}
+      style={{
+        "min-width": "0",
+        "min-height": "0",
+        background: props.showChrome !== false ? undefined : "var(--vc-terminal-background, #111214)",
+        color: props.showChrome !== false ? undefined : "var(--vc-terminal-foreground, #e5e7eb)",
+      }}
       onFocusIn={(event) => {
         if (event.currentTarget !== event.target) return;
         clearFocusRetryTimers();
@@ -163,7 +168,7 @@ export function TerminalWidget(props: TTerminalWidgetProps) {
           <div class="flex items-center gap-2 text-muted-foreground">
             <span>{terminalLogic.status()}</span>
             <button
-              class="inline-flex h-5 w-5 items-center justify-center border border-border hover:bg-background"
+              class="inline-flex h-5 w-5 items-center justify-center border border-border hover:bg-accent hover:text-accent-foreground"
               onClick={() => {
                 void terminalLogic.restartFrontend().then(() => setMountRevision((value) => value + 1));
               }}
@@ -173,7 +178,7 @@ export function TerminalWidget(props: TTerminalWidgetProps) {
               <RefreshCw size={11} />
             </button>
             <button
-              class="border border-border px-1 py-0.5 text-[10px] hover:bg-background"
+              class="border border-border px-1 py-0.5 text-[10px] hover:bg-accent hover:text-accent-foreground"
               onClick={() => {
                 void terminalLogic.removeTerminal();
               }}
@@ -188,7 +193,8 @@ export function TerminalWidget(props: TTerminalWidgetProps) {
         <Show when={mountRevision()} keyed>
           <>
             <GhosttyTerminalMount
-              class="h-full w-full min-w-0 flex-1 overflow-hidden bg-[#111214]"
+              class="h-full w-full min-w-0 flex-1 overflow-hidden"
+              style={{ background: "var(--vc-terminal-background, #111214)" }}
               onReady={terminalLogic.handleTerminalReady}
               onData={terminalLogic.handleTerminalData}
               onResize={terminalLogic.handleTerminalResize}
@@ -198,7 +204,9 @@ export function TerminalWidget(props: TTerminalWidgetProps) {
           </>
         </Show>
       ) : (
-        <div class="flex h-full w-full flex-1 items-center justify-center bg-[#111214] px-3 text-center text-xs text-red-200">
+        <div class="flex h-full w-full flex-1 items-center justify-center px-3 text-center text-xs"
+          style={{ background: "var(--vc-terminal-background, #111214)", color: "var(--vc-terminal-error-foreground, #fecaca)" }}
+        >
           Terminal transport is not configured for this host.
         </div>
       )}

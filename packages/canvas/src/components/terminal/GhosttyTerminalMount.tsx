@@ -8,6 +8,20 @@ type TGhosttyTheme = {
   selectionBackground: string;
 };
 
+function getThemeValue(element: HTMLElement, cssVariable: string, fallback: string) {
+  const value = element.ownerDocument.defaultView?.getComputedStyle(element).getPropertyValue(cssVariable).trim();
+  return value && value.length > 0 ? value : fallback;
+}
+
+function fxGetGhosttyTheme(element: HTMLElement): TGhosttyTheme {
+  return {
+    background: getThemeValue(element, "--vc-terminal-background", "#111214"),
+    foreground: getThemeValue(element, "--vc-terminal-foreground", "#e5e7eb"),
+    cursor: getThemeValue(element, "--vc-terminal-cursor", "#f59e0b"),
+    selectionBackground: getThemeValue(element, "--vc-terminal-selection-background", "#374151"),
+  };
+}
+
 type TGhosttyTerminalOptions = {
   cursorBlink: boolean;
   cursorStyle: string;
@@ -377,12 +391,7 @@ export function GhosttyTerminalMount(props: TGhosttyTerminalMountProps) {
       fontFamily: "JetBrains Mono Variable, monospace",
       fontSize: 13,
       scrollback: 10000,
-      theme: {
-        background: "#111214",
-        foreground: "#e5e7eb",
-        cursor: "#f59e0b",
-        selectionBackground: "#374151",
-      },
+      theme: fxGetGhosttyTheme(hostRef),
     });
 
     term.open(rootRef);
@@ -619,8 +628,8 @@ export function GhosttyTerminalMount(props: TGhosttyTerminalMountProps) {
     <div
       ref={hostRef}
       data-ghostty-terminal-host="true"
-      class={props.class ?? "h-full w-full flex-1 overflow-hidden bg-[#111214]"}
-      style={{ "min-width": "0", "min-height": "0" }}
+      class={props.class ?? "h-full w-full flex-1 overflow-hidden"}
+      style={{ "min-width": "0", "min-height": "0", background: "var(--vc-terminal-background, #111214)" }}
     >
       <div
         ref={rootRef}
