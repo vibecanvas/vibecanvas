@@ -9,8 +9,14 @@ type TGhosttyTheme = {
 };
 
 function getThemeValue(element: HTMLElement, cssVariable: string, fallback: string) {
-  const value = element.ownerDocument.defaultView?.getComputedStyle(element).getPropertyValue(cssVariable).trim();
-  return value && value.length > 0 ? value : fallback;
+  const view = element.ownerDocument.defaultView;
+  const localValue = view?.getComputedStyle(element).getPropertyValue(cssVariable).trim();
+  if (localValue && localValue.length > 0) {
+    return localValue;
+  }
+
+  const rootValue = view?.getComputedStyle(element.ownerDocument.documentElement).getPropertyValue(cssVariable).trim();
+  return rootValue && rootValue.length > 0 ? rootValue : fallback;
 }
 
 function fxGetGhosttyTheme(element: HTMLElement): TGhosttyTheme {

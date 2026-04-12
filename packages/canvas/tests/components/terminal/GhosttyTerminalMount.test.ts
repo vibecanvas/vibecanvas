@@ -10,6 +10,7 @@ type TMockGhosttyTerminal = {
   input: ReturnType<typeof vi.fn>;
   attachCustomWheelEventHandler: ReturnType<typeof vi.fn>;
   customWheelEventHandler?: ((event: WheelEvent) => boolean) | undefined;
+  constructorArgs: unknown;
   wasmTerm: {
     isAlternateScreen: ReturnType<typeof vi.fn>;
     hasMouseTracking: ReturnType<typeof vi.fn>;
@@ -28,6 +29,7 @@ vi.mock("ghostty-web", () => {
     textarea: HTMLTextAreaElement | null = null;
     paste = vi.fn();
     input = vi.fn();
+    constructorArgs: unknown = null;
     customWheelEventHandler: ((event: WheelEvent) => boolean) | undefined;
     attachCustomWheelEventHandler = vi.fn((handler?: (event: WheelEvent) => boolean) => {
       this.customWheelEventHandler = handler;
@@ -41,7 +43,8 @@ vi.mock("ghostty-web", () => {
     #onData: ((data: string) => void) | null = null;
     #onResize: ((next: { cols: number; rows: number }) => void) | null = null;
 
-    constructor(_: unknown) {
+    constructor(args: unknown) {
+      this.constructorArgs = args;
       ghosttyInstances.push(this);
     }
 
@@ -160,6 +163,32 @@ afterEach(() => {
 });
 
 describe("GhosttyTerminalMount", () => {
+  test("reads Ghostty colors from shared terminal CSS vars", async () => {
+    document.documentElement.style.setProperty("--vc-terminal-background", "#101820");
+    document.documentElement.style.setProperty("--vc-terminal-foreground", "#f3f4f6");
+    document.documentElement.style.setProperty("--vc-terminal-cursor", "#22c55e");
+    document.documentElement.style.setProperty("--vc-terminal-selection-background", "#334155");
+
+    const mounted = await mountTerminal();
+    const constructorArgs = mounted.term.constructorArgs as {
+      theme: {
+        background: string;
+        foreground: string;
+        cursor: string;
+        selectionBackground: string;
+      };
+    };
+
+    expect(constructorArgs.theme).toEqual({
+      background: "#101820",
+      foreground: "#f3f4f6",
+      cursor: "#22c55e",
+      selectionBackground: "#334155",
+    });
+
+    mounted.dispose();
+  });
+
   test("uploads direct image paste and inserts shell-escaped path", async () => {
     const onUploadClipboardImage = vi.fn().mockResolvedValue("/tmp/demo/it's here.png");
     const mounted = await mountTerminal({ onUploadClipboardImage });
