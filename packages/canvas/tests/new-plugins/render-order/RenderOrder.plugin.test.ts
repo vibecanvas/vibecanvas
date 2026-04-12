@@ -146,4 +146,10 @@ describe("new RenderOrder plugin", () => {
 
     await harness.destroy();
   });
+
+  test.skip("context menu opens item actions on right click", async () => {
+    // blocked for now
+    // reason: no migrated context-menu plugin path in src/new-plugins
+    // old test belongs to old ContextMenuPlugin behavior, not render-order service itself
+  });
 });

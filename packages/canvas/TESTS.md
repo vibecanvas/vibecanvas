@@ -19,19 +19,26 @@ Legend:
 ## Current progress
 
 Migrated and passing on new runtime:
+- `tests/new-services/stateful-services.test.ts` — 5 passing
+- `tests/new-services/render-and-camera-services.test.ts` — 2 passing
+- `tests/new-services/crdt-service.test.ts` — 3 passing
+- `tests/new-services/render-order-service.test.ts` — 3 passing
 - `tests/new-plugins/camera/CameraControl.plugin.test.ts` — 3 passing
 - `tests/new-plugins/text/Text.click-create.plugin.test.ts` — 3 passing
 - `tests/new-plugins/text/Text.core.plugin.test.ts` — 6 passing
 - `tests/new-plugins/text/Text.editing.plugin.test.ts` — 5 passing
 - `tests/new-plugins/image/Image.plugin.test.ts` — 5 passing
-- `tests/new-plugins/render-order/RenderOrder.plugin.test.ts` — 3 passing
+- `tests/new-plugins/group/Group.plugin.test.ts` — 3 passing, 2 skipped
+- `tests/new-plugins/selection/Selection.plugin.test.ts` — 5 passing
+- `tests/new-plugins/render-order/RenderOrder.plugin.test.ts` — 3 passing, 1 skipped
 - `tests/new-plugins/scene-hydrator/SceneHydrator.plugin.test.ts` — 1 passing
 
 Last run:
-- `bunx vitest run tests/new-plugins/camera/CameraControl.plugin.test.ts tests/new-plugins/text/Text.click-create.plugin.test.ts tests/new-plugins/text/Text.core.plugin.test.ts tests/new-plugins/text/Text.editing.plugin.test.ts tests/new-plugins/image/Image.plugin.test.ts tests/new-plugins/render-order/RenderOrder.plugin.test.ts tests/new-plugins/scene-hydrator/SceneHydrator.plugin.test.ts`
-- result: `7 files passed, 26 tests passed`
+- `bunx vitest run tests/new-services/*.test.ts tests/new-plugins/camera/CameraControl.plugin.test.ts tests/new-plugins/text/Text.click-create.plugin.test.ts tests/new-plugins/text/Text.core.plugin.test.ts tests/new-plugins/text/Text.editing.plugin.test.ts tests/new-plugins/image/Image.plugin.test.ts tests/new-plugins/render-order/RenderOrder.plugin.test.ts tests/new-plugins/scene-hydrator/SceneHydrator.plugin.test.ts tests/new-plugins/group/Group.plugin.test.ts tests/new-plugins/selection/Selection.plugin.test.ts`
+- result: `13 files passed, 47 tests passed, 3 skipped`
 
 Big reality check from new runtime:
+- all current `src/new-services/*` now have direct test coverage
 - there is no new `shape2d` plugin yet
 - there is no new `shape1d` plugin yet
 - many old rect/diamond/ellipse/arrow/line based tests are not actually migratable yet
@@ -54,7 +61,7 @@ This table is based on what exists in:
 | `tests/plugins/recorder` | no | no `src/new-plugins/recorder` found |
 | `tests/plugins/render-order` | partial | `src/new-plugins/render-order` and `src/new-services/render-order` exist; migrated image-based tests pass, but old context-menu and old shape coverage do not map yet |
 | `tests/plugins/scene-hydrator` | partial | `src/new-plugins/scene-hydrator` exists; live rehydrate test migrated and passing, orphan cleanup still missing |
-| `tests/plugins/selection` | no | `src/new-plugins/select` exists, but most old selection scenarios depend on not-yet-migrated `shape2d` fixtures and attached-text behavior |
+| `tests/plugins/selection` | partial | `src/new-plugins/select` exists; some top-level and grouped-image selection behavior is now migrated, but delete and many old rect-based scenarios still depend on missing pieces |
 
 ---
 
@@ -162,31 +169,36 @@ Why blocked:
 ### `GroupPlugin.test.ts`
 Status: `partial`
 
-Can migrate now only after rewriting onto migrated node types:
-- grouping preserves child absolute positions under camera pan/zoom
-- ungrouping preserves child absolute positions and clears `parentGroupId`
-- group action undo/redo
-- ungroup action undo/redo
+Migrated now:
+- new file: `tests/new-plugins/group/Group.plugin.test.ts`
+- passing cases:
+  - grouping preserves child absolute positions under camera pan and zoom
+  - ungrouping preserves child absolute positions and clears `parentGroupId`
+  - group / ungroup support undo and redo
 
-Blocked right now from direct port:
+Tried and skipped for now:
+- grouping preserves grouped selection stack slot / ungroup restores child order
+- dragging one selected node moves all selected roots and undo restores them
+
+Why skipped:
+- rewrite on images shows current new runtime does not preserve old stack slot behavior yet
+- rewrite on images also shows multi-select drag passengers are not moving with dragged root in this scenario
+- keep skipped until behavior is fixed on purpose or expected semantics are changed on purpose
+
+Blocked from direct old port:
 - old file is rect-based
 - new runtime has no `src/new-plugins/shape2d`
 - no rect serializer/hydrator exists in new runtime yet
 
-Maybe later, after first pass:
-- grouping preserves grouped selection stack slot
-- ungrouping preserves children stack slot
-- multi-select drag tests
-
-Blocked for now:
+Still blocked or unverified:
 - clone-drag tests
   - `alt-dragging a cloned group adds exactly one more group`
   - `dragging a cloned group updates its boundary box during dragmove`
   - `alt-dragging one node in a mixed top-level multi-selection should clone all selected roots`
 
-Why blocked:
+Why blocked / later:
 - no migrated `shape2d` plugin yet
-- new group plugin comment says clone-drag parity can come later
+- clone-drag exists in code, but old scenarios are rect-heavy and need rewrite onto migrated node types before trusting parity
 
 ### `GroupPlugin.text.test.ts`
 Status: `partial`
@@ -252,14 +264,15 @@ Migrated now:
   - render-order service brings selected image to front
   - reordering does not mutate `createdAt` or `updatedAt`
 
-Blocked for now:
+Tried and skipped for now:
 - `context menu opens item actions on right click`
-- old rect-specific coverage that depends on non-migrated `shape2d`
 
-Why blocked:
-- new render-order service exists
-- context-menu behavior belongs with old `ContextMenuPlugin`, not migrated path
-- no new `shape2d` plugin yet
+Why skipped:
+- no migrated context-menu plugin path in `src/new-plugins`
+- old test belongs to old `ContextMenuPlugin` behavior, not render-order service itself
+
+Still blocked:
+- old rect-specific coverage that depends on non-migrated `shape2d`
 
 ---
 
@@ -285,21 +298,25 @@ Why blocked:
 ## `tests/plugins/selection`
 
 ### `SelectionPlugin.test.ts`
-Status: `no`
+Status: `partial`
 
-Blocked for now:
-- most old selection scenarios are built on rect fixtures from old `shape2d`
-- new runtime has no `src/new-plugins/shape2d`
-- delete cases also depend on attached-text parity and grouped subtree delete behavior
+Migrated now:
+- new file: `tests/new-plugins/selection/Selection.plugin.test.ts`
+- passing cases:
+  - shift pointerdown adds and removes top-level nodes from selection
+  - pointerdown focuses clicked node and empty stage clears focus
+  - pointerdown on grouped image selects outer group
+  - double click on nested image drills from outer group to inner group to leaf
+  - after drilling to leaf, pointerdown on sibling under outer group switches focus to sibling
 
-What is missing before real migration:
-- migrated `shape2d` plugin for rect-based fixtures
+Still blocked for now:
+- delete cases still depend on attached-text parity and grouped subtree delete behavior
+- many old scenarios are rect-based, while current rewrite uses images
+
+What is missing before fuller migration:
+- migrated `shape2d` plugin for direct rect-based fixture parity
 - attached-text parity in new text/runtime path
 - confidence that grouped delete behavior matches old owner-selection semantics
-
-Maybe later after prerequisites exist:
-- top-level select / shift-select cases can likely be rewritten onto `image` + `group`
-- nested drill tests can likely be rewritten onto grouped `image` / `text` nodes
 
 ---
 
@@ -313,11 +330,11 @@ Done now:
 5. `tests/new-plugins/scene-hydrator/SceneHydrator.plugin.test.ts`
 
 Best next batch:
-1. maybe a text-specific regression file for exact `Escape` and textarea sizing semantics
-2. group tests rewritten onto migrated node types (`image` / `text`) instead of rects
-3. maybe selection tests rewritten onto migrated node types after group rewrite exists
-4. maybe grouped text drill tests after group rewrite exists
-5. maybe pure delete tests for image node removal, but not backend file release, unless new delete wiring is added
+1. maybe grouped text drill tests after group rewrite exists
+2. more selection tests rewritten onto migrated node types
+3. maybe a text-specific regression file for exact `Escape` and textarea sizing semantics
+4. maybe pure delete tests for image node removal, but not backend file release, unless new delete wiring is added
+5. maybe revisit skipped group tests after behavior fixes
 
 Leave for later:
 - recorder
