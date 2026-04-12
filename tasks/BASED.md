@@ -133,8 +133,7 @@ Use the leaf files for execution history and local context.
 - [x]: [A25](a/A25.md) - canvas: react to live Automerge doc changes without page refresh
 - [ ]: [A26] - remember canvas position for each canvas locally
 - [x]: [A27](a/A27.md) - theme: make canvas overlays and terminal fully theme-aware
-- [ ]: [A28](a/A28.md) - theme: add frontend theme picker and quick appearance controls
-- [ ]: [A29](a/A29.md) - theme: remember last light and dark theme choices when toggling
+- [x]: [A29](a/A29.md) - theme: remember last light and dark theme choices when toggling
 - [ ]: [A30](a/A30.md) - theme: remove Tailwind from @vibecanvas/canvas and ship package CSS
 - [ ]: [A31](a/A31.md) - theme: remove Tailwind from frontend and stop scanning canvas sources
 

@@ -1,6 +1,5 @@
 import { Button } from "@kobalte/core/button";
 import * as ToggleButton from "@kobalte/core/toggle-button";
-import { THEME_ID_DARK, THEME_ID_LIGHT } from "@vibecanvas/service-theme";
 import { useLocation, useNavigate } from "@solidjs/router";
 import MoonStar from "lucide-solid/icons/moon-star";
 import Plus from "lucide-solid/icons/plus";
@@ -15,7 +14,7 @@ import { RenameDialog } from "./RenameDialog";
 import SidebarItem from "./SidebarItem";
 import { showErrorToast } from "@/components/ui/Toast";
 import { removeFromCache } from "@/services/automerge";
-import { themeService } from "@/services/theme";
+import { themeService, txSetThemeAppearance } from "@/services/theme";
 import { store, setStore } from "@/store";
 
 export type SidebarProps = {
@@ -95,7 +94,7 @@ const Sidebar: Component<SidebarProps> = (props) => {
   };
 
   const handleThemeToggle = (pressed: boolean) => {
-    themeService.setTheme(pressed ? THEME_ID_DARK : THEME_ID_LIGHT);
+    txSetThemeAppearance(pressed ? "dark" : "light");
   };
 
   return (
