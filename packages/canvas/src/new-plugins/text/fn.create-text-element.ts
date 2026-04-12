@@ -1,4 +1,5 @@
 import type { TElement } from "@vibecanvas/service-automerge/types/canvas-doc.types";
+import { fxGetNearestFontSizePreset } from "../../core/fn.text-style";
 
 export type TArgsCreateTextElement = {
   id: string;
@@ -28,6 +29,7 @@ export function fxCreateTextElement(args: TArgsCreateTextElement) {
       text: "",
       originalText: "",
       fontSize: 16,
+      fontSizePreset: fxGetNearestFontSizePreset(16),
       fontFamily: "Arial",
       textAlign: "left",
       verticalAlign: "top",

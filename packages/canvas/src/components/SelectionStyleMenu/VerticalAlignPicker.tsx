@@ -1,9 +1,15 @@
 import { For } from "solid-js";
-import { FONT_FAMILIES, type TFontFamily } from "./types";
+import type { TTextData } from "@vibecanvas/service-automerge/types/canvas-doc.types";
 
-export function FontFamilyPicker(props: {
-  value: TFontFamily | undefined;
-  onChange: (family: TFontFamily) => void;
+const OPTIONS = [
+  { label: "Top", value: "top" },
+  { label: "Middle", value: "middle" },
+  { label: "Bottom", value: "bottom" },
+] as const satisfies Array<{ label: string; value: TTextData["verticalAlign"] }>;
+
+export function VerticalAlignPicker(props: {
+  value: TTextData["verticalAlign"] | undefined;
+  onChange: (value: TTextData["verticalAlign"]) => void;
 }) {
   return (
     <div
@@ -13,7 +19,7 @@ export function FontFamilyPicker(props: {
         gap: "0.25rem",
       }}
     >
-      <For each={FONT_FAMILIES}>
+      <For each={OPTIONS}>
         {(option) => (
           <button
             type="button"
@@ -23,11 +29,11 @@ export function FontFamilyPicker(props: {
               background: props.value === option.value ? "var(--accent)" : "var(--background)",
               color: "var(--foreground)",
               "font-size": "0.6875rem",
+              padding: "0 0.5rem",
             }}
-            title={option.name}
             onClick={() => props.onChange(option.value)}
           >
-            {option.name}
+            {option.label}
           </button>
         )}
       </For>

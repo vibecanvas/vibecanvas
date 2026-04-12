@@ -81,6 +81,17 @@
   --vc-canvas-background: rgba(12, 10, 9, 0.92);
 }
 
+html {
+  line-height: 1.5;
+  -webkit-text-size-adjust: 100%;
+  tab-size: 4;
+}
+
+body {
+  margin: 0;
+  line-height: inherit;
+}
+
 *,
 *::before,
 *::after {
@@ -93,6 +104,84 @@ textarea,
 select {
   font: inherit;
   color: inherit;
+  letter-spacing: inherit;
+  margin: 0;
+}
+
+button,
+[type="button"],
+[type="reset"],
+[type="submit"] {
+  -webkit-appearance: button;
+  appearance: button;
+  background-color: transparent;
+  background-image: none;
+  border: 0 solid transparent;
+  padding: 0;
+}
+
+button:not(:disabled),
+[type="button"]:not(:disabled),
+[type="reset"]:not(:disabled),
+[type="submit"]:not(:disabled) {
+  cursor: pointer;
+}
+
+input,
+textarea,
+select {
+  border: 0 solid transparent;
+  border-radius: 0;
+}
+
+input:not([type="checkbox"]):not([type="radio"]),
+textarea,
+select {
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+p,
+figure,
+blockquote,
+dl,
+dd,
+pre {
+  margin: 0;
+}
+
+ol,
+ul,
+menu {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+fieldset,
+legend {
+  margin: 0;
+  padding: 0;
+}
+
+img,
+picture,
+video,
+canvas,
+svg,
+iframe {
+  display: block;
+  vertical-align: middle;
+}
+
+[hidden]:where(:not([hidden="until-found"])) {
+  display: none !important;
 }
 
 .absolute { position: absolute; }
@@ -190,6 +279,7 @@ select {
 .w-full { width: 100%; }
 .w-px { width: 1px; }
 [class~="w-[230px]"] { width: 230px; }
+[class~="w-[min(720px,calc(100vw-24px))]"] { width: min(720px, calc(100vw - 24px)); }
 [class~="w-[min(960px,calc(100vw-24px))]"] { width: min(960px, calc(100vw - 24px)); }
 .min-w-0 { min-width: 0; }
 .min-w-7 { min-width: 1.75rem; }
@@ -273,6 +363,7 @@ select {
 }
 
 .bg-background { background-color: var(--background); }
+.bg-accent { background-color: var(--accent); }
 .bg-border { background-color: var(--border); }
 .bg-card { background-color: var(--card); }
 .bg-current { background-color: currentColor; }
@@ -388,6 +479,7 @@ select {
 .dark [class~="dark:hover:bg-red-600"]:hover { background-color: var(--red-600); }
 
 [class~="last:border-b-0"]:last-child { border-bottom-width: 0; }
+[class~="last:mb-0"]:last-child { margin-bottom: 0; }
 
 @media (min-width: 768px) {
   .md\:grid-cols-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }

@@ -76,17 +76,47 @@ function hsbToHex(h: number, s: number, v: number) {
   return rgbToHex((r + m) * 255, (g + m) * 255, (b + m) * 255);
 }
 
+function swatchButtonStyle(args: { selected: boolean; disabled?: boolean }) {
+  return {
+    width: "1.75rem",
+    height: "1.75rem",
+    overflow: "hidden",
+    border: `1px solid ${args.selected ? "var(--primary)" : "var(--border)"}`,
+    opacity: args.disabled ? 0.45 : 1,
+  };
+}
+
 function renderSwatch(value: string) {
   if (value === "transparent") {
     return (
-      <div class="relative h-full w-full bg-background">
-        <div class="absolute inset-0 bg-muted opacity-40" />
-        <div class="absolute inset-0 flex items-center justify-center text-[10px] text-muted-foreground">×</div>
+      <div style={{ position: "relative", width: "100%", height: "100%", background: "var(--background)" }}>
+        <div style={{ position: "absolute", inset: 0, background: "var(--muted)", opacity: 0.4 }} />
+        <div
+          style={{
+            position: "absolute",
+            inset: 0,
+            display: "flex",
+            "align-items": "center",
+            "justify-content": "center",
+            "font-size": "10px",
+            color: "var(--muted-foreground)",
+          }}
+        >
+          ×
+        </div>
       </div>
     );
   }
 
-  return <div class="h-full w-full" style={{ background: value }} />;
+  return <div style={{ width: "100%", height: "100%", background: value }} />;
+}
+
+function sectionTitle(title: string) {
+  return (
+    <span style={{ "font-size": "10px", "font-family": "var(--font-mono)", color: "var(--muted-foreground)", "text-transform": "uppercase", "letter-spacing": "0.04em" }}>
+      {title}
+    </span>
+  );
 }
 
 export function ColorPicker(props: {
@@ -165,16 +195,13 @@ export function ColorPicker(props: {
   });
 
   return (
-    <div class="relative flex h-7 items-center gap-1">
-      <div class="flex items-center gap-1">
+    <div style={{ position: "relative", display: "flex", height: "1.75rem", "align-items": "center", gap: "0.25rem" }}>
+      <div style={{ display: "flex", "align-items": "center", gap: "0.25rem" }}>
         <For each={quickColors()}>
           {(color) => (
             <button
               type="button"
-              class="h-7 w-7 overflow-hidden border border-border transition-colors hover:border-primary"
-              classList={{
-                "ring-1 ring-primary ring-offset-1 ring-offset-card": currentValue() === normalizeColorValue(color.value),
-              }}
+              style={swatchButtonStyle({ selected: currentValue() === normalizeColorValue(color.value) })}
               title={color.name}
               onClick={() => applyColor(color.value)}
             >
@@ -184,12 +211,11 @@ export function ColorPicker(props: {
         </For>
       </div>
 
-      <div class="h-5 w-px self-center bg-border" aria-hidden="true" />
+      <div aria-hidden="true" style={{ width: "1px", height: "1.25rem", background: "var(--border)" }} />
 
       <button
         type="button"
-        class="flex h-7 w-7 items-center justify-center overflow-hidden border border-border transition-colors hover:border-primary"
-        classList={{ "border-primary": open() }}
+        style={swatchButtonStyle({ selected: open() })}
         title="Open color panel"
         onClick={() => setOpen((value) => !value)}
       >
@@ -197,25 +223,35 @@ export function ColorPicker(props: {
       </button>
 
       <Show when={open()}>
-        <div class="absolute left-full top-0 ml-2 z-50 w-[230px] bg-popover border border-border shadow-md p-3 flex flex-col gap-3">
-          <div class="flex flex-col gap-1">
-            <span class="text-[10px] font-mono text-muted-foreground uppercase tracking-wide">Last used</span>
-            <div class="grid grid-cols-6 gap-1">
+        <div
+          style={{
+            position: "absolute",
+            left: "calc(100% + 0.5rem)",
+            top: 0,
+            width: "230px",
+            border: "1px solid var(--border)",
+            background: "var(--popover)",
+            "box-shadow": "0 6px 18px rgba(0, 0, 0, 0.12)",
+            padding: "0.75rem",
+            display: "flex",
+            "flex-direction": "column",
+            gap: "0.75rem",
+            "z-index": 50,
+          }}
+        >
+          <div style={{ display: "flex", "flex-direction": "column", gap: "0.25rem" }}>
+            {sectionTitle("Last used")}
+            <div style={{ display: "grid", "grid-template-columns": "repeat(6, minmax(0, 1fr))", gap: "0.25rem" }}>
               <For each={Array.from({ length: MAX_RECENT_COLORS }, (_, index) => recentColors()[index] ?? null)}>
                 {(color) => (
                   <button
                     type="button"
-                    class="h-7 w-7 overflow-hidden border border-border"
-                    classList={{
-                      "hover:border-primary": color !== null,
-                      "ring-1 ring-primary ring-offset-1 ring-offset-popover": color !== null && currentValue() === color,
-                      "opacity-45": color === null,
-                    }}
+                    style={swatchButtonStyle({ selected: color !== null && currentValue() === color, disabled: color === null })}
                     title={color ?? "Empty slot"}
                     disabled={color === null}
                     onClick={() => color && applyColor(color)}
                   >
-                    <Show when={color !== null} fallback={<div class="h-full w-full bg-background" />}>
+                    <Show when={color !== null} fallback={<div style={{ width: "100%", height: "100%", background: "var(--background)" }} />}>
                       {renderSwatch(color as string)}
                     </Show>
                   </button>
@@ -224,17 +260,14 @@ export function ColorPicker(props: {
             </div>
           </div>
 
-          <div class="flex flex-col gap-1">
-            <span class="text-[10px] font-mono text-muted-foreground uppercase tracking-wide">Colors</span>
-            <div class="grid grid-cols-5 gap-1">
+          <div style={{ display: "flex", "flex-direction": "column", gap: "0.25rem" }}>
+            {sectionTitle("Colors")}
+            <div style={{ display: "grid", "grid-template-columns": "repeat(5, minmax(0, 1fr))", gap: "0.25rem" }}>
               <For each={panelColors()}>
                 {(color) => (
                   <button
                     type="button"
-                    class="h-7 w-7 overflow-hidden border border-border hover:border-primary"
-                    classList={{
-                      "ring-1 ring-primary ring-offset-1 ring-offset-popover": currentValue() === normalizeColorValue(color.value),
-                    }}
+                    style={swatchButtonStyle({ selected: currentValue() === normalizeColorValue(color.value) })}
                     title={color.name}
                     onClick={() => applyColor(color.value)}
                   >
@@ -245,17 +278,14 @@ export function ColorPicker(props: {
             </div>
           </div>
 
-          <div class="flex flex-col gap-1">
-            <span class="text-[10px] font-mono text-muted-foreground uppercase tracking-wide">Shades</span>
-            <div class="grid grid-cols-5 gap-1">
+          <div style={{ display: "flex", "flex-direction": "column", gap: "0.25rem" }}>
+            {sectionTitle("Shades")}
+            <div style={{ display: "grid", "grid-template-columns": "repeat(5, minmax(0, 1fr))", gap: "0.25rem" }}>
               <For each={shades()}>
                 {(color) => (
                   <button
                     type="button"
-                    class="h-7 w-7 overflow-hidden border border-border hover:border-primary"
-                    classList={{
-                      "ring-1 ring-primary ring-offset-1 ring-offset-popover": currentValue() === color,
-                    }}
+                    style={swatchButtonStyle({ selected: currentValue() === color })}
                     title={color}
                     onClick={() => applyColor(color)}
                   >
@@ -266,11 +296,11 @@ export function ColorPicker(props: {
             </div>
           </div>
 
-          <div class="flex flex-col gap-1">
-            <span class="text-[10px] font-mono text-muted-foreground uppercase tracking-wide">Picker</span>
+          <div style={{ display: "flex", "flex-direction": "column", gap: "0.25rem" }}>
+            {sectionTitle("Picker")}
             <input
               type="color"
-              class="h-24 w-full border border-border bg-background"
+              style={{ height: "6rem", width: "100%", border: "1px solid var(--border)", background: "var(--background)" }}
               value={hexInput()}
               onInput={(event) => {
                 const next = normalizeColorValue(event.currentTarget.value);
@@ -280,11 +310,20 @@ export function ColorPicker(props: {
             />
           </div>
 
-          <div class="flex flex-col gap-1">
-            <span class="text-[10px] font-mono text-muted-foreground uppercase tracking-wide">Hex code</span>
+          <div style={{ display: "flex", "flex-direction": "column", gap: "0.25rem" }}>
+            {sectionTitle("Hex code")}
             <input
               value={hexInput()}
-              class="w-full h-8 border border-input bg-background px-2 text-xs text-foreground outline-none focus:border-primary"
+              style={{
+                width: "100%",
+                height: "2rem",
+                border: "1px solid var(--input)",
+                background: "var(--background)",
+                padding: "0 0.5rem",
+                "font-size": "0.75rem",
+                color: "var(--foreground)",
+                outline: "none",
+              }}
               onInput={(event) => setHexInput(event.currentTarget.value)}
               onChange={(event) => {
                 const next = normalizeColorValue(event.currentTarget.value);

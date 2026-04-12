@@ -6,7 +6,7 @@ import type { SelectionService } from "../../new-services/selection/SelectionSer
 import type { IHooks } from "../../runtime";
 
 const SHOULD_RENDER_SELECTION = true;
-const SHOULD_RENDER_FOCUSED_ID = false;
+const SHOULD_RENDER_FOCUSED_ID = true;
 
 function formatCameraInfo(x: number, y: number, zoom: number) {
   return `x=${Math.round(x)} y=${Math.round(y)} zoom=${zoom.toFixed(2)}`;

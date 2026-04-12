@@ -21,6 +21,7 @@ export class SelectionService implements IService<TSelectionServiceHooks> {
   mode = CanvasMode.SELECT;
   selection: Array<Group | Shape<ShapeConfig>> = [];
   focusedId: string | null = null;
+  private suppressSelectionHandlingUntil = 0;
 
   setSelection(selection: Array<Group | Shape<ShapeConfig>>) {
     this.selection = selection;
@@ -34,6 +35,15 @@ export class SelectionService implements IService<TSelectionServiceHooks> {
 
   setFocusedNode(node: Group | Shape<ShapeConfig> | null) {
     this.setFocusedId(node?.id() ?? null);
+  }
+
+  suppressSelectionHandling(durationMs: number) {
+    const now = Date.now();
+    this.suppressSelectionHandlingUntil = Math.max(this.suppressSelectionHandlingUntil, now + durationMs);
+  }
+
+  isSelectionHandlingSuppressed() {
+    return Date.now() < this.suppressSelectionHandlingUntil;
   }
 
   clear() {

@@ -83,6 +83,7 @@ export const zTextData = z.object({
   text: z.string(),
   originalText: z.string(),
   fontSize: z.number(),
+  fontSizePreset: z.union([z.literal('S'), z.literal('M'), z.literal('L'), z.literal('XL')]).optional(),
   fontFamily: z.string(),
   textAlign: z.union([z.literal('left'), z.literal('center'), z.literal('right')]),
   verticalAlign: z.union([z.literal('top'), z.literal('middle'), z.literal('bottom')]),

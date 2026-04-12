@@ -92,6 +92,56 @@ function fxGrowAttachedHostElement(args: {
   return args.hostElement;
 }
 
+function findCurrentTextNode(portal: TPortalEnterEditMode, id: string) {
+  const node = portal.render.staticForegroundLayer.findOne((candidate: Konva.Node) => {
+    return candidate instanceof portal.render.Text && candidate.id() === id;
+  });
+
+  return node instanceof portal.render.Text ? node : null;
+}
+
+function restoreTextSelectionLater(portal: TPortalEnterEditMode, args: { nodeId: string }) {
+  portal.document.defaultView?.setTimeout(() => {
+    const selectedNode = findCurrentTextNode(portal, args.nodeId);
+    if (!selectedNode) {
+      portal.render.stage.container().dispatchEvent(new CustomEvent("vc-debug-text-edit", {
+        detail: {
+          phase: "restore-selection-miss",
+          nodeId: args.nodeId,
+          selectionIds: portal.selection.selection.map((node) => node.id()),
+          editingTextId: portal.editor.editingTextId,
+        },
+      }));
+      return;
+    }
+
+    portal.selection.setSelection([selectedNode]);
+    portal.selection.setFocusedNode(selectedNode);
+    portal.render.stage.container().dispatchEvent(new CustomEvent("vc-debug-text-edit", {
+      detail: {
+        phase: "restore-selection",
+        nodeId: args.nodeId,
+        selectedNodeId: selectedNode.id(),
+        selectionIds: portal.selection.selection.map((node) => node.id()),
+        editingTextId: portal.editor.editingTextId,
+      },
+    }));
+  }, 0);
+}
+
+function suppressNextSelectionHandling(portal: TPortalEnterEditMode, args: { reason: "commit" | "cancel" }) {
+  portal.selection.suppressSelectionHandling(120);
+  portal.render.stage.container().dispatchEvent(new CustomEvent("vc-debug-text-edit", {
+    detail: {
+      phase: "suppress-selection-handling",
+      reason: args.reason,
+      suppressMs: 120,
+      selectionIds: portal.selection.selection.map((node) => node.id()),
+      editingTextId: portal.editor.editingTextId,
+    },
+  }));
+}
+
 export function txEnterEditMode(portal: TPortalEnterEditMode, args: TArgsEnterEditMode) {
   const now = Date.now();
   const originalElement = fxToElement({ render: portal.render }, { node: args.node, createdAt: now, updatedAt: now });
@@ -113,6 +163,17 @@ export function txEnterEditMode(portal: TPortalEnterEditMode, args: TArgsEnterEd
   const initialAbsoluteScale = args.node.getAbsoluteScale();
   const initialScaledFontSize = args.node.fontSize() * initialAbsoluteScale.x;
   const initialHostHeight = originalHostElement ? fxGetShapeElementHeight(originalHostElement) : originalData.h;
+
+  portal.render.stage.container().dispatchEvent(new CustomEvent("vc-debug-text-edit", {
+    detail: {
+      phase: "start",
+      nodeId: args.node.id(),
+      isNew: args.isNew,
+      originalText,
+      selectionIds: portal.selection.selection.map((node) => node.id()),
+      editingTextId: portal.editor.editingTextId,
+    },
+  }));
 
   const syncAttachedEditingLayout = () => {
     if (!isAttachedText) {
@@ -221,6 +282,8 @@ export function txEnterEditMode(portal: TPortalEnterEditMode, args: TArgsEnterEd
   };
 
   const commit = () => {
+    suppressNextSelectionHandling(portal, { reason: "commit" });
+
     const newText = textarea.value;
     const absoluteScale = args.node.getAbsoluteScale();
     const fallbackScaledWidth = Math.max(args.node.width() * absoluteScale.x, 4);
@@ -313,8 +376,22 @@ export function txEnterEditMode(portal: TPortalEnterEditMode, args: TArgsEnterEd
     const nextElement = fxToElement({ render: portal.render }, { node: args.node, createdAt: originalElement.createdAt, updatedAt: nextNow });
     const patchElements = [nextHostElement, nextElement].filter((element): element is TElement => element !== null);
     portal.crdt.patch({ elements: patchElements, groups: [] });
-    portal.selection.setSelection([args.node]);
-    portal.selection.setFocusedNode(args.node);
+
+    const selectedNode = findCurrentTextNode(portal, args.node.id()) ?? args.node;
+    portal.selection.setSelection([selectedNode]);
+    portal.selection.setFocusedNode(selectedNode);
+    portal.render.stage.container().dispatchEvent(new CustomEvent("vc-debug-text-edit", {
+      detail: {
+        phase: "commit",
+        nodeId: args.node.id(),
+        selectedNodeId: selectedNode.id(),
+        textToSet,
+        patchElementIds: patchElements.map((element) => element.id),
+        selectionIds: portal.selection.selection.map((node) => node.id()),
+        editingTextId: portal.editor.editingTextId,
+      },
+    }));
+    restoreTextSelectionLater(portal, { nodeId: args.node.id() });
 
     const didHostChange = JSON.stringify(nextHostElement) !== JSON.stringify(originalHostElement);
     if (textToSet === originalText && !didHostChange) {
@@ -348,6 +425,7 @@ export function txEnterEditMode(portal: TPortalEnterEditMode, args: TArgsEnterEd
   };
 
   const cancel = () => {
+    suppressNextSelectionHandling(portal, { reason: "cancel" });
     cleanup();
 
     if (originalHostElement) {

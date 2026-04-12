@@ -8,6 +8,17 @@ import type { RenderService } from "../../new-services/render/RenderService";
 import type { SelectionService } from "../../new-services/selection/SelectionService";
 import type { IHooks } from "../../runtime";
 
+const SCENE_HYDRATOR_DEBUG_PREFIX = "[scene-hydrator:debug]";
+
+function logSceneHydratorDebug(message: string, payload?: Record<string, unknown>) {
+  if (payload) {
+    console.debug(SCENE_HYDRATOR_DEBUG_PREFIX, message, payload);
+    return;
+  }
+
+  console.debug(SCENE_HYDRATOR_DEBUG_PREFIX, message);
+}
+
 type TSceneNode = Konva.Group | Konva.Shape;
 type TSceneStateSnapshot = {
   selectionIds: string[];
@@ -247,9 +258,18 @@ export function createSceneHydratorPlugin(): IPlugin<{
 
         try {
           const snapshot = captureSceneState(selection, editor);
+          logSceneHydratorDebug("reload:start", {
+            snapshot,
+            docElementCount: Object.keys(crdt.doc().elements).length,
+          });
           render.staticForegroundLayer.destroyChildren();
           loadCanvas(crdt, editor, render);
           restoreSceneState(render, selection, editor, snapshot);
+          logSceneHydratorDebug("reload:done", {
+            selectionIds: selection.selection.map((node) => node.id()),
+            focusedId: selection.focusedId,
+            editingTextId: editor.editingTextId,
+          });
         } finally {
           isReloading = false;
         }
@@ -265,7 +285,13 @@ export function createSceneHydratorPlugin(): IPlugin<{
           return;
         }
 
-        if (crdt.consumePendingLocalChangeEvent()) {
+        const consumedLocalChange = crdt.consumePendingLocalChangeEvent();
+        logSceneHydratorDebug("crdt-change", {
+          consumedLocalChange,
+          selectionIds: selection.selection.map((node) => node.id()),
+          editingTextId: editor.editingTextId,
+        });
+        if (consumedLocalChange) {
           return;
         }
 

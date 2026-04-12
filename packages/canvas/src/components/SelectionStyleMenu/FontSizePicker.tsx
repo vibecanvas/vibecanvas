@@ -1,19 +1,21 @@
 import { For } from "solid-js";
-import { FONT_FAMILIES, type TFontFamily } from "./types";
+import { fxGetFontSizePresetOptions, type TFontSizePreset } from "../../core/fn.text-style";
 
-export function FontFamilyPicker(props: {
-  value: TFontFamily | undefined;
-  onChange: (family: TFontFamily) => void;
+export function FontSizePicker(props: {
+  value: TFontSizePreset | undefined;
+  onChange: (preset: TFontSizePreset) => void;
 }) {
+  const options = fxGetFontSizePresetOptions();
+
   return (
     <div
       style={{
         display: "grid",
-        "grid-template-columns": "repeat(3, minmax(0, 1fr))",
+        "grid-template-columns": "repeat(4, minmax(0, 1fr))",
         gap: "0.25rem",
       }}
     >
-      <For each={FONT_FAMILIES}>
+      <For each={options}>
         {(option) => (
           <button
             type="button"
@@ -22,12 +24,13 @@ export function FontFamilyPicker(props: {
               border: `1px solid ${props.value === option.value ? "var(--primary)" : "var(--border)"}`,
               background: props.value === option.value ? "var(--accent)" : "var(--background)",
               color: "var(--foreground)",
-              "font-size": "0.6875rem",
+              "font-size": "0.875rem",
+              "font-weight": 500,
             }}
-            title={option.name}
+            title={`${option.label} (${option.fontSize}px baseline)`}
             onClick={() => props.onChange(option.value)}
           >
-            {option.name}
+            {option.label}
           </button>
         )}
       </For>

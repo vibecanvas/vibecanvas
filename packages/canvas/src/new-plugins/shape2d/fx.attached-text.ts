@@ -98,8 +98,6 @@ export function fxSyncAttachedTextNodeToShape(portal: TPortalAttachedText, shape
   textNode.rotation(bounds.rotation);
   textNode.width(Math.max(4, bounds.width));
   textNode.height(Math.max(4, bounds.height));
-  textNode.align("center");
-  textNode.verticalAlign("middle");
   textNode.opacity(shapeNode.opacity());
   textNode.draggable(false);
   textNode.listening(false);

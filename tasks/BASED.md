@@ -134,8 +134,9 @@ Use the leaf files for execution history and local context.
 - [ ]: [A26] - remember canvas position for each canvas locally
 - [x]: [A27](a/A27.md) - theme: make canvas overlays and terminal fully theme-aware
 - [x]: [A29](a/A29.md) - theme: remember last light and dark theme choices when toggling
-- [ ]: [A30](a/A30.md) - theme: remove Tailwind from @vibecanvas/canvas and ship package CSS
-- [ ]: [A31](a/A31.md) - theme: remove Tailwind from frontend and stop scanning canvas sources
+- [x]: [A30](a/A30.md) - theme: remove Tailwind from @vibecanvas/canvas and ship package CSS
+- [x]: [A31](a/A31.md) - theme: remove Tailwind from frontend and stop scanning canvas sources
+- [ ]: [A32](a/A32.md) - hosted components: sandboxed Arrow runtime + per-component official packages
 
 ## S ubtractions
 - [ ]: [S1](s/S1.md) - double bun run dev -> find new port
@@ -165,6 +166,7 @@ Use the leaf files for execution history and local context.
 - [x]: [S27](s/S27.md) - canvas CLI: remove unimplemented `render` command and help traces
 - [~]: [S28](s/S28.md) - use runtime package in canvas, like cli does
 - [ ]: [S29] - add debug config via localstorage for each plugin 
+- [ ]: [S30](s/S30.md) - canvas: remove remaining Tailwind-style classes from component TSX
 
 ## E xplorations
 - [ ]: [E1](e/E1.md) - Tauri Research
@@ -177,7 +179,7 @@ Use the leaf files for execution history and local context.
 - [ ]: [E12] - https://github.com/superradcompany/microsandbox
 - [x]: [E13](e/E13.md) - Research Pluginsystem for server
 - [x]: [E14] - do we need packages/functional-core
-- [ ]: [E15](e/E15.md) - canvas UI extensions: sideloadable community widgets and ArrowJS exploration
+- [x]: [E15](e/E15.md) - canvas UI extensions: sideloadable community widgets and ArrowJS exploration
 - [x]: [E16] - filewatch performance. -> on big folders are slow
 - [ ]: [E17](e/E17.md) - automerge authority: optimistic local writes with server validation/reject path
 

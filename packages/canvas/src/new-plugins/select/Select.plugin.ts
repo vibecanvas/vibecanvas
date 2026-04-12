@@ -51,6 +51,10 @@ function txHandleStagePointerDown(args: {
   selectionRectangle: InstanceType<RenderService["Rect"]>;
   event: { target: Node };
 }) {
+  if (args.selection.isSelectionHandlingSuppressed()) {
+    return;
+  }
+
   const pointer = getSelectionLayerPointerPosition(args.render);
   if (!pointer) {
     return;
@@ -119,6 +123,10 @@ export function createSelectPlugin(): IPlugin<{
           return false;
         }
 
+        if (selection.isSelectionHandlingSuppressed()) {
+          return true;
+        }
+
         return txHandleElementPointerDown({ render, selection, hasSameSelectionOrder }, { event });
       });
 
@@ -127,11 +135,19 @@ export function createSelectPlugin(): IPlugin<{
           return false;
         }
 
+        if (selection.isSelectionHandlingSuppressed()) {
+          return true;
+        }
+
         return txHandleElementPointerDoubleClick({ render, selection, hasSameSelectionOrder }, { event });
       });
 
       ctx.hooks.pointerDown.tap((event) => {
         if (selection.mode !== CanvasMode.SELECT) {
+          return;
+        }
+
+        if (selection.isSelectionHandlingSuppressed()) {
           return;
         }
 

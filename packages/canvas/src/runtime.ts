@@ -6,7 +6,7 @@ import type { Group } from "konva/lib/Group";
 import type { KonvaEventObject } from "konva/lib/Node";
 import type { Shape, ShapeConfig } from "konva/lib/Shape";
 import { AsyncParallelHook, SyncExitHook, SyncHook } from "@vibecanvas/tapable";
-import { createCameraControlPlugin, createContextMenuPlugin, createEventListenerPlugin, createGridPlugin, createGroupPlugin, createHistoryControlPlugin, createImagePlugin, createPenPlugin, createRecorderPlugin, createRenderOrderPlugin, createSceneHydratorPlugin, createSelectPlugin, createShape1dPlugin, createShape2dPlugin, createTextPlugin, createToolbarPlugin, createTransformPlugin, createVisualDebugPlugin } from "./new-plugins";
+import { createCameraControlPlugin, createContextMenuPlugin, createEventListenerPlugin, createGridPlugin, createGroupPlugin, createHistoryControlPlugin, createImagePlugin, createPenPlugin, createRecorderPlugin, createRenderOrderPlugin, createSceneHydratorPlugin, createSelectPlugin, createSelectionStyleMenuPlugin, createShape1dPlugin, createShape2dPlugin, createTextPlugin, createToolbarPlugin, createTransformPlugin, createVisualDebugPlugin } from "./new-plugins";
 import { CameraService } from "./new-services/camera/CameraService";
 import { ContextMenuService } from "./new-services/context-menu/ContextMenuService";
 import { CrdtService } from "./new-services/crdt/CrdtService";
@@ -121,6 +121,7 @@ export function buildRuntime(config: IRuntimeConfig) {
     createEventListenerPlugin(),
     createGridPlugin(),
     createToolbarPlugin(),
+    createSelectionStyleMenuPlugin(),
     createContextMenuPlugin(),
     createHistoryControlPlugin(),
     createRenderOrderPlugin(),

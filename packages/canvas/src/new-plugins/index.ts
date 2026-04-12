@@ -10,6 +10,7 @@ export * from "./recorder/Recorder.plugin";
 export * from "./render-order/RenderOrder.plugin";
 export * from "./select/Select.plugin";
 export * from "./scene-hydrator/SceneHydrator.plugin";
+export * from "./selection-style-menu/SelectionStyleMenu.plugin";
 export * from "./shape1d/Shape1d.plugin";
 export * from "./shape2d/Shape2d.plugin";
 export * from "./text/Text.plugin";
