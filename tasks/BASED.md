@@ -165,9 +165,10 @@ Use the leaf files for execution history and local context.
 - [x]: [S26](s/S26.md) - db: add filesystems db table for local/remote machine identity
 - [x]: [S27](s/S27.md) - canvas CLI: remove unimplemented `render` command and help traces
 - [~]: [S28](s/S28.md) - use runtime package in canvas, like cli does
-- [ ]: [S29] - add debug config via localstorage for each plugin 
+- [ ]: [S29](s/S29.md) - canvas: add debug config via localstorage for each plugin and service
 - [ ]: [S30](s/S30.md) - canvas: remove remaining Tailwind-style classes from component TSX
 - [ ]: [S31] - how to deal with /Users/omarezzat/Workspace/vibecanvas/vibecanvas/packages/canvas/src/core/pretext.ts
+
 ## E xplorations
 - [ ]: [E1](e/E1.md) - Tauri Research
 - [ ]: [E5](e/E5.md) - how to implement state machine system?
