@@ -104,42 +104,17 @@ function restoreTextSelectionLater(portal: TPortalEnterEditMode, args: { nodeId:
   portal.document.defaultView?.setTimeout(() => {
     const selectedNode = findCurrentTextNode(portal, args.nodeId);
     if (!selectedNode) {
-      portal.render.stage.container().dispatchEvent(new CustomEvent("vc-debug-text-edit", {
-        detail: {
-          phase: "restore-selection-miss",
-          nodeId: args.nodeId,
-          selectionIds: portal.selection.selection.map((node) => node.id()),
-          editingTextId: portal.editor.editingTextId,
-        },
-      }));
       return;
     }
 
     portal.selection.setSelection([selectedNode]);
     portal.selection.setFocusedNode(selectedNode);
-    portal.render.stage.container().dispatchEvent(new CustomEvent("vc-debug-text-edit", {
-      detail: {
-        phase: "restore-selection",
-        nodeId: args.nodeId,
-        selectedNodeId: selectedNode.id(),
-        selectionIds: portal.selection.selection.map((node) => node.id()),
-        editingTextId: portal.editor.editingTextId,
-      },
-    }));
   }, 0);
 }
 
 function suppressNextSelectionHandling(portal: TPortalEnterEditMode, args: { reason: "commit" | "cancel" }) {
+  void args;
   portal.selection.suppressSelectionHandling(120);
-  portal.render.stage.container().dispatchEvent(new CustomEvent("vc-debug-text-edit", {
-    detail: {
-      phase: "suppress-selection-handling",
-      reason: args.reason,
-      suppressMs: 120,
-      selectionIds: portal.selection.selection.map((node) => node.id()),
-      editingTextId: portal.editor.editingTextId,
-    },
-  }));
 }
 
 export function txEnterEditMode(portal: TPortalEnterEditMode, args: TArgsEnterEditMode) {
@@ -163,17 +138,6 @@ export function txEnterEditMode(portal: TPortalEnterEditMode, args: TArgsEnterEd
   const initialAbsoluteScale = args.node.getAbsoluteScale();
   const initialScaledFontSize = args.node.fontSize() * initialAbsoluteScale.x;
   const initialHostHeight = originalHostElement ? fxGetShapeElementHeight(originalHostElement) : originalData.h;
-
-  portal.render.stage.container().dispatchEvent(new CustomEvent("vc-debug-text-edit", {
-    detail: {
-      phase: "start",
-      nodeId: args.node.id(),
-      isNew: args.isNew,
-      originalText,
-      selectionIds: portal.selection.selection.map((node) => node.id()),
-      editingTextId: portal.editor.editingTextId,
-    },
-  }));
 
   const syncAttachedEditingLayout = () => {
     if (!isAttachedText) {
@@ -380,17 +344,6 @@ export function txEnterEditMode(portal: TPortalEnterEditMode, args: TArgsEnterEd
     const selectedNode = findCurrentTextNode(portal, args.node.id()) ?? args.node;
     portal.selection.setSelection([selectedNode]);
     portal.selection.setFocusedNode(selectedNode);
-    portal.render.stage.container().dispatchEvent(new CustomEvent("vc-debug-text-edit", {
-      detail: {
-        phase: "commit",
-        nodeId: args.node.id(),
-        selectedNodeId: selectedNode.id(),
-        textToSet,
-        patchElementIds: patchElements.map((element) => element.id),
-        selectionIds: portal.selection.selection.map((node) => node.id()),
-        editingTextId: portal.editor.editingTextId,
-      },
-    }));
     restoreTextSelectionLater(portal, { nodeId: args.node.id() });
 
     const didHostChange = JSON.stringify(nextHostElement) !== JSON.stringify(originalHostElement);

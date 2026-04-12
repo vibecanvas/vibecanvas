@@ -21,17 +21,6 @@ import type { SelectionService } from "../../new-services/selection/SelectionSer
 import { findShape1dNodeById } from "../shape1d/Shape1d.shared";
 import type { IHooks } from "../../runtime";
 
-const STYLE_MENU_DEBUG_PREFIX = "[selection-style-menu:debug]";
-
-function logStyleMenuDebug(message: string, payload?: Record<string, unknown>) {
-  if (payload) {
-    console.debug(STYLE_MENU_DEBUG_PREFIX, message, payload);
-    return;
-  }
-
-  console.debug(STYLE_MENU_DEBUG_PREFIX, message);
-}
-
 function mountSelectionStyleMenu(args: {
   crdt: CrdtService;
   editor: EditorService;
@@ -49,30 +38,24 @@ function mountSelectionStyleMenu(args: {
   args.render.stage.container().appendChild(mountElement);
 
   const [version, setVersion] = createSignal(0);
-  const syncVersion = (reason: string, payload?: Record<string, unknown>) => {
-    logStyleMenuDebug(`sync-version:${reason}`, payload);
+  const syncVersion = () => {
     setVersion((value) => value + 1);
   };
 
   args.selection.hooks.change.tap(() => {
-    syncVersion("selection-change", {
-      selectionIds: args.selection.selection.map((node) => node.id()),
-      focusedId: args.selection.focusedId,
-    });
+    syncVersion();
   });
-  args.editor.hooks.editingTextChange.tap((id) => {
-    syncVersion("editing-text-change", { editingTextId: id });
+  args.editor.hooks.editingTextChange.tap(() => {
+    syncVersion();
   });
-  args.editor.hooks.editingShape1dChange.tap((id) => {
-    syncVersion("editing-shape1d-change", { editingShape1dId: id });
+  args.editor.hooks.editingShape1dChange.tap(() => {
+    syncVersion();
   });
   args.editor.hooks.toElementRegistryChange.tap(() => {
-    syncVersion("to-element-registry-change");
+    syncVersion();
   });
   args.crdt.hooks.change.tap(() => {
-    syncVersion("crdt-change", {
-      docElementCount: Object.keys(args.crdt.doc().elements).length,
-    });
+    syncVersion();
   });
 
   const disposeRender = renderSolid(() => {
@@ -113,16 +96,10 @@ function mountSelectionStyleMenu(args: {
       const textareaMounted = args.render.stage.container().querySelector("textarea") !== null;
       const isEditingTextActive = args.editor.editingTextId !== null && textareaMounted;
       if (isEditingTextActive) {
-        logStyleMenuDebug("visible=false:editing-active", {
-          focusedId: focusedId(),
-          editingTextId: args.editor.editingTextId,
-          textareaMounted,
-        });
         return false;
       }
 
       if (focusedId() === null) {
-        logStyleMenuDebug("visible=false:no-focused-id");
         return false;
       }
 
@@ -135,17 +112,6 @@ function mountSelectionStyleMenu(args: {
         || next.showLineTypePicker
         || next.showStartCapPicker
         || next.showEndCapPicker;
-
-      logStyleMenuDebug("visible-eval", {
-        focusedId: focusedId(),
-        editingTextId: args.editor.editingTextId,
-        textareaMounted,
-        selectionIds: args.selection.selection.map((node) => node.id()),
-        elementIds: elements().map((element) => element.id),
-        textElementIds: textElements().map((element) => element.id),
-        sections: next,
-        visible: nextVisible,
-      });
 
       return nextVisible;
     });
@@ -160,13 +126,6 @@ function mountSelectionStyleMenu(args: {
     });
 
     const applyStyle = (property: TSelectionStyleProperty, value: string | number) => {
-      logStyleMenuDebug("apply-style", {
-        property,
-        value,
-        focusedId: args.selection.focusedId,
-        selectionIds: args.selection.selection.map((node) => node.id()),
-      });
-
       txApplySelectionStyleChange({
         crdt: args.crdt,
         editor: args.editor,
@@ -189,7 +148,7 @@ function mountSelectionStyleMenu(args: {
           editingNode?.getLayer()?.batchDraw();
         },
       }, { property, value });
-      syncVersion("apply-style");
+      syncVersion();
     };
 
     return createComponent(SelectionStyleMenu, {
@@ -215,7 +174,6 @@ function mountSelectionStyleMenu(args: {
   return {
     mountElement,
     dispose() {
-      logStyleMenuDebug("dispose");
       disposeRender();
       mountElement.remove();
     },
@@ -241,7 +199,6 @@ export function createSelectionStyleMenuPlugin(): IPlugin<{
       const selection = ctx.services.require("selection");
 
       ctx.hooks.init.tap(() => {
-        logStyleMenuDebug("init");
         menuMount = mountSelectionStyleMenu({
           crdt,
           editor,

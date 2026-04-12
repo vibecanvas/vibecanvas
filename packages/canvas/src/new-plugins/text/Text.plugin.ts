@@ -19,7 +19,6 @@ import { txSetupTextNode } from "./tx.setup-text-node";
 import { txUpdateTextNodeFromElement } from "./tx.update-text-node-from-element";
 import { txDeleteSelection } from "../select/tx.delete-selection";
 
-const TEXT_DEBUG_PREFIX = "[text-plugin:debug]";
 const FREE_TEXT_NAME = "free-text";
 const ATTACHED_TEXT_NAME = "attached-text";
 const TEXT_USES_THEME_COLOR_ATTR = "vcUsesThemeTextColor";
@@ -35,15 +34,6 @@ function getTextFillColor(theme: ThemeService, element: Pick<TElement, "style">)
 
 function applyTextThemeState(node: Konva.Text, element: Pick<TElement, "style">) {
   node.setAttr(TEXT_USES_THEME_COLOR_ATTR, usesThemeTextColor(element));
-}
-
-function logTextDebug(message: string, payload?: Record<string, unknown>) {
-  if (payload) {
-    console.debug(TEXT_DEBUG_PREFIX, message, payload);
-    return;
-  }
-
-  console.debug(TEXT_DEBUG_PREFIX, message);
 }
 
 function createTextNode(render: RenderService, theme: ThemeService, element: TElement) {
@@ -106,11 +96,6 @@ export function createTextPlugin(): IPlugin<{
       const selection = ctx.services.require("selection");
       const theme = ctx.services.require("theme");
       const document = render.container.ownerDocument;
-      const onDebugTextEdit = ((event: Event) => {
-        const customEvent = event as CustomEvent<Record<string, unknown>>;
-        logTextDebug("tx-enter-edit-mode", customEvent.detail);
-      }) as EventListener;
-
       const syncThemeTextNodes = () => {
         render.staticForegroundLayer.find((candidate: Konva.Node) => {
           return candidate instanceof render.Text;
@@ -212,30 +197,8 @@ export function createTextPlugin(): IPlugin<{
         });
       });
 
-      ctx.hooks.init.tap(() => {
-        render.stage.container().addEventListener("vc-debug-text-edit", onDebugTextEdit);
-      });
-
       theme.hooks.change.tap(() => {
         syncThemeTextNodes();
-      });
-
-      selection.hooks.change.tap(() => {
-        logTextDebug("selection-change", {
-          selectionIds: selection.selection.map((node) => node.id()),
-          focusedId: selection.focusedId,
-        });
-      });
-      editor.hooks.editingTextChange.tap((id) => {
-        logTextDebug("editing-text-change", {
-          editingTextId: id,
-          textareaMounted: render.stage.container().querySelector("textarea") !== null,
-        });
-      });
-      crdt.hooks.change.tap(() => {
-        logTextDebug("crdt-change", {
-          docElementCount: Object.keys(crdt.doc().elements).length,
-        });
       });
 
       ctx.hooks.pointerUp.tap(() => {
@@ -273,12 +236,6 @@ export function createTextPlugin(): IPlugin<{
         selection.setFocusedNode(node);
         editor.setActiveTool("select");
 
-        logTextDebug("create-new-text:start-edit", {
-          nodeId: node.id(),
-          x: pointer.x,
-          y: pointer.y,
-        });
-
         txEnterEditMode(
           { crdt, document, editor, history, render, selection, theme },
           { freeTextName: FREE_TEXT_NAME, node, isNew: true },
@@ -294,10 +251,6 @@ export function createTextPlugin(): IPlugin<{
           return false;
         }
 
-        logTextDebug("double-click:start-edit", {
-          nodeId: event.currentTarget.id(),
-        });
-
         txEnterEditMode(
           { crdt, document, editor, history, render, selection, theme },
           { freeTextName: FREE_TEXT_NAME, node: event.currentTarget, isNew: false },
@@ -306,7 +259,6 @@ export function createTextPlugin(): IPlugin<{
       });
 
       ctx.hooks.destroy.tap(() => {
-        render.stage.container().removeEventListener("vc-debug-text-edit", onDebugTextEdit);
         contextMenu.unregisterProvider("text");
         editor.unregisterTool("text");
         editor.unregisterToElement("text");
