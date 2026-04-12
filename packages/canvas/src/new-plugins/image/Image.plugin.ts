@@ -801,10 +801,38 @@ export function createImagePlugin(): IPlugin<{
           return candidate instanceof render.Image && candidate.id() === element.id;
         });
         if (!(node instanceof render.Image)) {
+          console.debug("[image] updateShapeFromTElement missing node", { id: element.id });
           return false;
         }
 
+        console.debug("[image] updateShapeFromTElement", {
+          id: element.id,
+          x: element.x,
+          y: element.y,
+          rotation: element.rotation,
+          width: element.data.type === "image" ? element.data.w : undefined,
+          height: element.data.type === "image" ? element.data.h : undefined,
+          before: {
+            scaleX: node.scaleX(),
+            scaleY: node.scaleY(),
+            rotation: node.rotation(),
+            width: node.width(),
+            height: node.height(),
+          },
+        });
+
         updateImageNodeFromElement(render, node, element);
+
+        console.debug("[image] updateShapeFromTElement after", {
+          id: element.id,
+          after: {
+            scaleX: node.scaleX(),
+            scaleY: node.scaleY(),
+            rotation: node.rotation(),
+            width: node.width(),
+            height: node.height(),
+          },
+        });
         return true;
       });
 

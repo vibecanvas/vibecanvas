@@ -6,9 +6,30 @@ function isInsideHostedWidget(target: EventTarget | null) {
   return target instanceof HTMLElement && target.closest('[data-hosted-widget-root="true"]') !== null;
 }
 
+function isTransformerNode(render: RenderService, target: unknown) {
+  if (!(target instanceof render.Node)) {
+    return false;
+  }
+
+  let current: unknown = target;
+  while (current instanceof render.Node) {
+    if (current instanceof render.Transformer) {
+      return true;
+    }
+
+    current = current.getParent();
+  }
+
+  return false;
+}
+
 function getElementPointerEvent(render: RenderService, event: TPointerEvent) {
   const target = event.target;
   if (!(target instanceof render.Group || target instanceof render.Shape)) {
+    return null;
+  }
+
+  if (isTransformerNode(render, target)) {
     return null;
   }
 

@@ -70,14 +70,45 @@ function collectSerializableShapes(
 }
 
 function serializeSelection(editor: EditorService, render: RenderService, nodes: Konva.Node[]) {
-  return collectSerializableShapes(render, nodes)
-    .map((node) => editor.toElement(node))
+  const shapes = collectSerializableShapes(render, nodes);
+  const elements = shapes
+    .map((node) => {
+      const element = editor.toElement(node);
+      console.debug("[transform] serialize node", {
+        id: node.id(),
+        className: node.getClassName(),
+        scaleX: node.scaleX(),
+        scaleY: node.scaleY(),
+        rotation: node.rotation(),
+        width: "width" in node ? (node as Konva.Shape).width?.() : undefined,
+        height: "height" in node ? (node as Konva.Shape).height?.() : undefined,
+        serialized: element,
+      });
+      return element;
+    })
     .filter((element): element is TElement => element !== null);
+
+  console.debug("[transform] serialize selection summary", {
+    nodeCount: nodes.length,
+    shapeCount: shapes.length,
+    elementCount: elements.length,
+    elementTypes: elements.map((element) => element.data.type),
+  });
+
+  return elements;
 }
 
 function applyElements(editor: EditorService, elements: TElement[]) {
   elements.forEach((element) => {
-    editor.updateShapeFromTElement(element);
+    const didUpdate = editor.updateShapeFromTElement(element);
+    console.debug("[transform] apply element", {
+      id: element.id,
+      type: element.data.type,
+      didUpdate,
+      x: element.x,
+      y: element.y,
+      rotation: element.rotation,
+    });
   });
 }
 
@@ -87,6 +118,12 @@ function syncTransformer(args: {
   selection: SelectionService;
   transformer: Konva.Transformer;
 }) {
+  console.debug("[transform] syncTransformer input", {
+    editingTextId: args.editor.editingTextId,
+    editingShape1dId: args.editor.editingShape1dId,
+    selectionIds: args.selection.selection.map((node) => node.id()),
+    selectionClasses: args.selection.selection.map((node) => node.getClassName()),
+  });
   if (args.editor.editingTextId !== null || args.editor.editingShape1dId !== null) {
     args.transformer.setNodes([]);
     args.transformer.update();
@@ -105,6 +142,12 @@ function syncTransformer(args: {
   args.transformer.keepRatio(useCornerAnchors);
   args.transformer.enabledAnchors(useCornerAnchors ? [...GROUP_ANCHORS] : [...DEFAULT_ANCHORS]);
   args.transformer.setNodes(filteredSelection);
+  console.debug("[transform] syncTransformer output", {
+    filteredSelectionIds: filteredSelection.map((node) => node.id()),
+    filteredSelectionClasses: filteredSelection.map((node) => node.getClassName()),
+    transformerNodeIds: args.transformer.getNodes().map((node) => node.id()),
+    transformerNodeClasses: args.transformer.getNodes().map((node) => node.getClassName()),
+  });
   args.transformer.update();
   args.render.dynamicLayer.batchDraw();
 }
@@ -151,6 +194,10 @@ export function createTransformPlugin(): IPlugin<{
         editor.setTransformer(transformer);
 
         transformer.on("transformstart", () => {
+          console.debug("[transform] transformstart", {
+            nodeIds: (transformer?.getNodes() ?? []).map((node) => node.id()),
+            nodeClasses: (transformer?.getNodes() ?? []).map((node) => node.getClassName()),
+          });
           beforeElements = serializeSelection(editor, render, transformer?.getNodes() ?? []);
         });
 
@@ -159,11 +206,21 @@ export function createTransformPlugin(): IPlugin<{
             return;
           }
 
+          console.debug("[transform] transformend before serialize", {
+            nodeIds: transformer.getNodes().map((node) => node.id()),
+            nodeClasses: transformer.getNodes().map((node) => node.getClassName()),
+            scales: transformer.getNodes().map((node) => ({ id: node.id(), scaleX: node.scaleX(), scaleY: node.scaleY(), rotation: node.rotation() })),
+          });
+
           const afterElements = serializeSelection(editor, render, transformer.getNodes());
           if (afterElements.length === 0) {
+            console.debug("[transform] transformend no serialized elements");
             return;
           }
 
+          console.debug("[transform] transformend serialized elements", afterElements);
+          applyElements(editor, afterElements);
+          refreshTransformer();
           crdt.patch({ elements: afterElements, groups: [] });
 
           if (beforeElements.length === 0) {
@@ -191,6 +248,11 @@ export function createTransformPlugin(): IPlugin<{
         refreshTransformer();
 
         selection.hooks.change.tap(() => {
+          console.debug("[transform] selection change", {
+            mode: selection.mode,
+            selectionIds: selection.selection.map((node) => node.id()),
+            selectionClasses: selection.selection.map((node) => node.getClassName()),
+          });
           refreshTransformer();
         });
         editor.hooks.editingTextChange.tap(() => {
