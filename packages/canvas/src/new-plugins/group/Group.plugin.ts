@@ -4,6 +4,7 @@ import type { TGroup } from "@vibecanvas/service-automerge/types/canvas-doc.type
 import type Konva from "konva";
 import { getNodeZIndex, setNodeZIndex } from "../../core/render-order";
 import type { CameraService } from "../../new-services/camera/CameraService";
+import type { ContextMenuService } from "../../new-services/context-menu/ContextMenuService";
 import type { CrdtService } from "../../new-services/crdt/CrdtService";
 import type { EditorService } from "../../new-services/editor/EditorService";
 import type { HistoryService } from "../../new-services/history/HistoryService";
@@ -58,6 +59,7 @@ function sortChildrenByPersistedOrder(render: RenderService, parent: Konva.Layer
  */
 export function createGroupPlugin(): IPlugin<{
   camera: CameraService;
+  contextMenu: ContextMenuService;
   crdt: CrdtService;
   editor: EditorService;
   history: HistoryService;
@@ -69,6 +71,7 @@ export function createGroupPlugin(): IPlugin<{
     name: "group",
     apply(ctx) {
       const camera = ctx.services.require("camera");
+      const contextMenu = ctx.services.require("contextMenu");
       const crdt = ctx.services.require("crdt");
       const editor = ctx.services.require("editor");
       const history = ctx.services.require("history");
@@ -111,6 +114,36 @@ export function createGroupPlugin(): IPlugin<{
         }, { group });
       };
 
+      const runGroupSelection = () => {
+        txGroupSelection({
+          crdt,
+          editor,
+          history,
+          render,
+          selection,
+          setupNode,
+          createGroupNode: (group) => createGroupNode(render, group),
+          sortChildrenByPersistedOrder: (parent) => sortChildrenByPersistedOrder(render, parent),
+          getNodeZIndex,
+          now: () => Date.now(),
+          createId: () => crypto.randomUUID(),
+        }, {});
+      };
+
+      const runUngroupSelection = () => {
+        txUngroupSelection({
+          crdt,
+          editor,
+          history,
+          render,
+          selection,
+          setupNode,
+          createGroupNode: (group) => createGroupNode(render, group),
+          getNodeZIndex,
+          now: () => Date.now(),
+        }, {});
+      };
+
       selection.hooks.change.tap(() => {
         refreshBoundaries();
         syncDraggability();
@@ -123,6 +156,46 @@ export function createGroupPlugin(): IPlugin<{
       ctx.hooks.init.tap(() => {
         refreshBoundaries();
         syncDraggability();
+      });
+
+      contextMenu.registerProvider("group", ({ scope, activeSelection }) => {
+        const selectedGroups = [...activeSelection].reverse().filter((node): node is Konva.Group => {
+          return node instanceof render.Group;
+        });
+
+        const actions = [] as Array<{
+          id: string;
+          label: string;
+          disabled?: boolean;
+          priority?: number;
+          onSelect: () => void;
+        }>;
+
+        if (scope !== "canvas" && activeSelection.length > 1) {
+          actions.push({
+            id: "group-selection",
+            label: "Group",
+            priority: 200,
+            onSelect: () => {
+              selection.setSelection(activeSelection);
+              runGroupSelection();
+            },
+          });
+        }
+
+        if (scope !== "canvas" && selectedGroups.length > 0) {
+          actions.push({
+            id: "ungroup-selection",
+            label: "Ungroup",
+            priority: 210,
+            onSelect: () => {
+              selection.setSelection(activeSelection);
+              runUngroupSelection();
+            },
+          });
+        }
+
+        return actions;
       });
 
       editor.registerToGroup("group", (node) => {
@@ -156,33 +229,11 @@ export function createGroupPlugin(): IPlugin<{
         event.stopPropagation();
 
         if (event.shiftKey) {
-          txUngroupSelection({
-            crdt,
-            editor,
-            history,
-            render,
-            selection,
-            setupNode,
-            createGroupNode: (group) => createGroupNode(render, group),
-            getNodeZIndex,
-            now: () => Date.now(),
-          }, {});
+          runUngroupSelection();
           return;
         }
 
-        txGroupSelection({
-          crdt,
-          editor,
-          history,
-          render,
-          selection,
-          setupNode,
-          createGroupNode: (group) => createGroupNode(render, group),
-          sortChildrenByPersistedOrder: (parent) => sortChildrenByPersistedOrder(render, parent),
-          getNodeZIndex,
-          now: () => Date.now(),
-          createId: () => crypto.randomUUID(),
-        }, {});
+        runGroupSelection();
       });
 
       ctx.hooks.destroy.tap(() => {
@@ -191,6 +242,7 @@ export function createGroupPlugin(): IPlugin<{
           boundary.node.destroy();
         });
         boundaries.clear();
+        contextMenu.unregisterProvider("group");
         editor.unregisterToGroup("group");
         editor.unregisterCreateGroupFromTGroup("group");
       });

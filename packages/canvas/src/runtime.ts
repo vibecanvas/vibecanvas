@@ -6,8 +6,9 @@ import type { Group } from "konva/lib/Group";
 import type { KonvaEventObject } from "konva/lib/Node";
 import type { Shape, ShapeConfig } from "konva/lib/Shape";
 import { AsyncParallelHook, SyncExitHook, SyncHook } from "@vibecanvas/tapable";
-import { createCameraControlPlugin, createEventListenerPlugin, createGridPlugin, createGroupPlugin, createHistoryControlPlugin, createImagePlugin, createRecorderPlugin, createRenderOrderPlugin, createSceneHydratorPlugin, createSelectPlugin, createTextPlugin, createToolbarPlugin, createTransformPlugin, createVisualDebugPlugin } from "./new-plugins";
+import { createCameraControlPlugin, createContextMenuPlugin, createEventListenerPlugin, createGridPlugin, createGroupPlugin, createHistoryControlPlugin, createImagePlugin, createRecorderPlugin, createRenderOrderPlugin, createSceneHydratorPlugin, createSelectPlugin, createTextPlugin, createToolbarPlugin, createTransformPlugin, createVisualDebugPlugin } from "./new-plugins";
 import { CameraService } from "./new-services/camera/CameraService";
+import { ContextMenuService } from "./new-services/context-menu/ContextMenuService";
 import { CrdtService } from "./new-services/crdt/CrdtService";
 import { EditorService } from "./new-services/editor/EditorService";
 import { HistoryService } from "./new-services/history/HistoryService";
@@ -81,6 +82,7 @@ export interface IHooks {
 declare module "@vibecanvas/runtime" {
   interface IServiceMap {
     camera: CameraService;
+    contextMenu: ContextMenuService;
     crdt: CrdtService;
     editor: EditorService;
     history: HistoryService;
@@ -118,6 +120,7 @@ export function buildRuntime(config: IRuntimeConfig) {
     createEventListenerPlugin(),
     createGridPlugin(),
     createToolbarPlugin(),
+    createContextMenuPlugin(),
     createHistoryControlPlugin(),
     createRenderOrderPlugin(),
     createSelectPlugin(),
@@ -141,6 +144,7 @@ export function buildRuntime(config: IRuntimeConfig) {
   });
 
   services.provide("camera", new CameraService({ render }));
+  services.provide("contextMenu", new ContextMenuService());
   services.provide("crdt", new CrdtService({ docHandle: config.docHandle }));
   services.provide("editor", new EditorService());
   const history = new HistoryService();
