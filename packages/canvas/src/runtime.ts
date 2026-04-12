@@ -6,7 +6,7 @@ import type { Group } from "konva/lib/Group";
 import type { KonvaEventObject } from "konva/lib/Node";
 import type { Shape, ShapeConfig } from "konva/lib/Shape";
 import { AsyncParallelHook, SyncExitHook, SyncHook } from "@vibecanvas/tapable";
-import { createCameraControlPlugin, createEventListenerPlugin, createGridPlugin, createHistoryControlPlugin, createSelectPlugin, createToolbarPlugin, createVisualDebugPlugin } from "./new-plugins";
+import { createCameraControlPlugin, createEventListenerPlugin, createGridPlugin, createHistoryControlPlugin, createSelectPlugin, createToolbarPlugin, createTransformPlugin, createVisualDebugPlugin } from "./new-plugins";
 import { CameraService } from "./new-services/camera/CameraService";
 import { CrdtService } from "./new-services/crdt/CrdtService";
 import { EditorService } from "./new-services/editor/EditorService";
@@ -132,7 +132,7 @@ export function buildRuntime(config: IRuntimeConfig) {
   return createRuntime<IHooks, IRuntimeConfig>({
     config,
     hooks: createHooks(),
-    plugins: [createEventListenerPlugin(), createGridPlugin(), createToolbarPlugin(), createHistoryControlPlugin(), createSelectPlugin(), createVisualDebugPlugin(), createCameraControlPlugin()],
+    plugins: [createEventListenerPlugin(), createGridPlugin(), createToolbarPlugin(), createHistoryControlPlugin(), createSelectPlugin(), createTransformPlugin(), createVisualDebugPlugin(), createCameraControlPlugin()],
     services,
     boot: async ({ services, hooks }) => {
       services.require("render").start();

@@ -50,10 +50,12 @@ Current refactor direction:
 Current new-runtime snapshot:
 - `render` service exists and owns stage, layers, resize, and low-level engine refs
 - `camera` service exists and owns x/y/zoom plus `camera.hooks.change`
-- `editor` service now owns tool registry, active tool, and transient editor state
+- `editor` service now owns tool registry, active tool, transient editor state, and node<->element transform registries
 - `selection` service still owns mode, selection, and focused id
 - `theme` service exists but is still minimal
-- migrated runtime plugins so far: `event-listener`, `grid`, `camera-control`, `toolbar`, `select`, `visual-debug`
+- `history` service exists and owns undo/redo stacks
+- `crdt` service exists and owns document patch/delete reads+writes
+- migrated runtime plugins so far: `event-listener`, `grid`, `camera-control`, `history-control`, `toolbar`, `select`, `transform`, `visual-debug`
 - new toolbar currently registers base tools (`hand`, `select`) and renders from the editor registry
 - `grid` is now also a registered toolbar action tool (`g`) instead of legacy custom-event wiring
 

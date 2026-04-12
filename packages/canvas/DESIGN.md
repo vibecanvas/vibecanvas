@@ -4,11 +4,11 @@
 
 - [x] `render` - stage, layers, low-level engine refs, resize hook
 - [x] `camera` - x/y/zoom, pan/zoom ops, change hook
-- [x] `editor` - tool registry, active tool, editing state, previews, transform refs
+- [x] `editor` - tool registry, active tool, editing state, previews, transform refs, and node<->element registries
 - [x] `selection` - mode, selection, focused id
 - [x] `theme` - current theme
-- [ ] `history`
-- [ ] `crdt`
+- [x] `history`
+- [x] `crdt`
 - [ ] `canvasDocument`
 - [ ] `renderOrder`
 - [ ] `hostedWidgets`
@@ -27,13 +27,13 @@
 - [x] `CameraControlPlugin`
 - [x] `ToolbarPlugin`
 - [x] `VisualDebugPlugin`
-- [ ] `HistoryControlPlugin`
+- [x] `HistoryControlPlugin`
 - [ ] `SelectionStyleMenuPlugin`
 - [ ] `HelpPlugin`
 - [ ] `RecorderPlugin` (`DEV` only)
 - [ ] `RenderOrderPlugin`
 - [x] `SelectPlugin`
-- [ ] `TransformPlugin`
+- [x] `TransformPlugin`
 - [ ] `Shape1dPlugin`
 - [ ] `Shape2dPlugin`
 - [ ] `PenPlugin`

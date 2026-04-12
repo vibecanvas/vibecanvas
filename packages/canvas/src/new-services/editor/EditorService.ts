@@ -1,5 +1,6 @@
 import type { IService } from "@vibecanvas/runtime";
 import { SyncHook } from "@vibecanvas/tapable";
+import type { TElement } from "@vibecanvas/service-automerge/types/canvas-doc.types";
 import type Konva from "konva";
 
 /**
@@ -33,27 +34,46 @@ export type TEditorTool = {
     | { type: "modal" };
 };
 
+export type TEditorToElement = (node: Konva.Node) => TElement | null;
+export type TEditorUpdateShapeFromTElement = (element: TElement) => boolean;
+
 /**
  * Editor-local hook bag.
- * Used for tool registry changes and active tool changes.
+ * Used for tool registry, editing state, preview, transformer,
+ * and node<->element registry changes.
  */
 export interface TEditorServiceHooks {
   toolsChange: SyncHook<[]>;
   activeToolChange: SyncHook<[string]>;
+  editingTextChange: SyncHook<[string | null]>;
+  editingShape1dChange: SyncHook<[string | null]>;
+  previewNodeChange: SyncHook<[Konva.Node | null]>;
+  transformerChange: SyncHook<[Konva.Transformer | null]>;
+  toElementRegistryChange: SyncHook<[]>;
+  updateShapeFromTElementRegistryChange: SyncHook<[]>;
 }
 
 /**
  * Holds editor-only transient state.
- * Also owns the tool registry and current active tool.
+ * Also owns tool registry, current active tool,
+ * transform refs, and node<->element registries.
  */
 export class EditorService implements IService<TEditorServiceHooks> {
   readonly name = "editor";
   readonly hooks: TEditorServiceHooks = {
     toolsChange: new SyncHook(),
     activeToolChange: new SyncHook(),
+    editingTextChange: new SyncHook(),
+    editingShape1dChange: new SyncHook(),
+    previewNodeChange: new SyncHook(),
+    transformerChange: new SyncHook(),
+    toElementRegistryChange: new SyncHook(),
+    updateShapeFromTElementRegistryChange: new SyncHook(),
   };
 
   readonly tools = new Map<string, TEditorTool>();
+  readonly toElementRegistry = new Map<string, TEditorToElement>();
+  readonly updateShapeFromTElementRegistry = new Map<string, TEditorUpdateShapeFromTElement>();
 
   activeToolId = "select";
   editingTextId: string | null = null;
@@ -130,5 +150,122 @@ export class EditorService implements IService<TEditorServiceHooks> {
    */
   getActiveTool() {
     return this.tools.get(this.activeToolId);
+  }
+
+  /**
+   * Sets current editing text node id.
+   */
+  setEditingTextId(id: string | null) {
+    if (this.editingTextId === id) {
+      return;
+    }
+
+    this.editingTextId = id;
+    this.hooks.editingTextChange.call(id);
+  }
+
+  /**
+   * Sets current editing 1d shape node id.
+   */
+  setEditingShape1dId(id: string | null) {
+    if (this.editingShape1dId === id) {
+      return;
+    }
+
+    this.editingShape1dId = id;
+    this.hooks.editingShape1dChange.call(id);
+  }
+
+  /**
+   * Sets current preview node.
+   */
+  setPreviewNode(node: Konva.Node | null) {
+    if (this.previewNode === node) {
+      return;
+    }
+
+    this.previewNode = node;
+    this.hooks.previewNodeChange.call(node);
+  }
+
+  /**
+   * Sets shared transformer instance.
+   */
+  setTransformer(transformer: Konva.Transformer | null) {
+    if (this.transformer === transformer) {
+      return;
+    }
+
+    this.transformer = transformer;
+    this.hooks.transformerChange.call(transformer);
+  }
+
+  /**
+   * Registers one node -> element serializer.
+   * First serializer that returns a value wins.
+   */
+  registerToElement(id: string, toElement: TEditorToElement) {
+    this.toElementRegistry.set(id, toElement);
+    this.hooks.toElementRegistryChange.call();
+  }
+
+  /**
+   * Removes one node -> element serializer.
+   */
+  unregisterToElement(id: string) {
+    const didDelete = this.toElementRegistry.delete(id);
+    if (!didDelete) {
+      return;
+    }
+
+    this.hooks.toElementRegistryChange.call();
+  }
+
+  /**
+   * Converts a node into a canvas element through registered serializers.
+   */
+  toElement(node: Konva.Node) {
+    for (const toElement of this.toElementRegistry.values()) {
+      const element = toElement(node);
+      if (element) {
+        return element;
+      }
+    }
+
+    return null;
+  }
+
+  /**
+   * Registers one element -> node updater.
+   * First updater that handles the element wins.
+   */
+  registerUpdateShapeFromTElement(id: string, updateShapeFromTElement: TEditorUpdateShapeFromTElement) {
+    this.updateShapeFromTElementRegistry.set(id, updateShapeFromTElement);
+    this.hooks.updateShapeFromTElementRegistryChange.call();
+  }
+
+  /**
+   * Removes one element -> node updater.
+   */
+  unregisterUpdateShapeFromTElement(id: string) {
+    const didDelete = this.updateShapeFromTElementRegistry.delete(id);
+    if (!didDelete) {
+      return;
+    }
+
+    this.hooks.updateShapeFromTElementRegistryChange.call();
+  }
+
+  /**
+   * Applies an element onto an existing runtime node through registered updaters.
+   */
+  updateShapeFromTElement(element: TElement) {
+    for (const updateShapeFromTElement of this.updateShapeFromTElementRegistry.values()) {
+      if (updateShapeFromTElement(element)) {
+        return true;
+      }
+    }
+
+    return false;
   }
 }
