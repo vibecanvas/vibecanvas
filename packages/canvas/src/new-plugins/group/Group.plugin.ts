@@ -13,7 +13,7 @@ import type { RenderService } from "../../new-services/render/RenderService";
 import type { SelectionService } from "../../new-services/selection/SelectionService";
 import { CanvasMode } from "../../new-services/selection/enum";
 import type { IHooks } from "../../runtime";
-import { startGroupCloneDrag } from "./Group.clone";
+import { txCreateGroupCloneDrag } from "./tx.create-group-clone-drag";
 import { fxIsSceneNode } from "./fn.scene-node";
 import { fxToGroupPatch } from "./fn.to-group-patch";
 import { txGroupSelection } from "./tx.group-selection";
@@ -99,7 +99,7 @@ export function createGroupPlugin(): IPlugin<{
           hooks: ctx.hooks,
           refreshBoundaries,
           startCloneDrag: (groupNode) => {
-            startGroupCloneDrag({
+            txCreateGroupCloneDrag({
               crdt,
               editor,
               render,
@@ -107,7 +107,11 @@ export function createGroupPlugin(): IPlugin<{
               selection,
               setupGroupNode: setupNode,
               createId: () => crypto.randomUUID(),
-            }, groupNode);
+              getNodeZIndex,
+              setNodeZIndex,
+            }, {
+              sourceGroup: groupNode,
+            });
           },
           createThrottledPatch: (callback) => {
             return throttle(callback, 100);
