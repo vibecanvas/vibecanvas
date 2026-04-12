@@ -1,4 +1,6 @@
 import AlertTriangle from "lucide-solid/icons/alert-triangle";
+import "./shared.css";
+import "./ImageViewer.css";
 import ImageIcon from "lucide-solid/icons/image";
 import { Show, createSignal, onMount } from "solid-js";
 
@@ -19,25 +21,25 @@ export function ImageViewer(props: TImageViewerProps) {
   });
 
   return (
-    <div class="flex flex-1 items-center justify-center overflow-hidden bg-muted/20 p-2">
+    <div class="vc-image-viewer">
       <Show when={props.isDeleted} fallback={
         <Show when={!props.src} fallback={
-          <div class="relative flex h-full w-full items-center justify-center">
+          <div class="vc-image-stage">
             <Show when={imageLoading()}>
-              <div class="absolute inset-0 flex items-center justify-center bg-muted/20">
-                <div class="font-mono text-xs text-muted-foreground">Loading...</div>
+              <div class="vc-image-loading-overlay">
+                <div class="vc-viewer-state-message">Loading...</div>
               </div>
             </Show>
             <Show when={imageError()}>
-              <div class="flex flex-col items-center gap-3 text-center">
-                <AlertTriangle size={48} class="text-destructive" />
-                <div class="font-mono text-xs text-destructive">Failed to load image</div>
+              <div class="vc-viewer-state vc-viewer-state--danger">
+                <AlertTriangle size={48} class="vc-viewer-state-icon--danger" />
+                <div class="vc-viewer-state-message">Failed to load image</div>
               </div>
             </Show>
             <img
               src={props.src!}
               alt={props.path.split("/").pop() ?? "Image"}
-              class="max-h-full max-w-full object-contain"
+              class="vc-image-element"
               onLoad={(event) => {
                 setImageLoading(false);
                 setImageError(false);
@@ -53,16 +55,16 @@ export function ImageViewer(props: TImageViewerProps) {
             />
           </div>
         }>
-          <div class="flex flex-col items-center gap-3 text-center">
-            <ImageIcon size={48} class="text-muted-foreground" />
-            <div class="font-mono text-xs text-muted-foreground">No image data</div>
+          <div class="vc-viewer-state">
+            <ImageIcon size={48} class="vc-viewer-state-icon--muted" />
+            <div class="vc-viewer-state-message">No image data</div>
           </div>
         </Show>
       }>
-        <div class="flex flex-col items-center gap-3 text-center">
-          <AlertTriangle size={48} class="text-destructive" />
-          <div class="font-mono text-xs text-destructive">File deleted</div>
-          <div class="max-w-full truncate font-mono text-xs text-muted-foreground">{props.path}</div>
+        <div class="vc-viewer-state vc-viewer-state--danger">
+          <AlertTriangle size={48} class="vc-viewer-state-icon--danger" />
+          <div class="vc-viewer-state-message">File deleted</div>
+          <div class="vc-viewer-path">{props.path}</div>
         </div>
       </Show>
     </div>

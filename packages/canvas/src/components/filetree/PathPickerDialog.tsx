@@ -1,4 +1,5 @@
 import type { TOrpcSafeClient } from "@vibecanvas/orpc-client";
+import "./styles.css";
 import { Button } from "@kobalte/core/button";
 import { Dialog } from "@kobalte/core/dialog";
 import ArrowUp from "lucide-solid/icons/arrow-up";
@@ -84,36 +85,36 @@ export function PathPickerDialog(props: TPathPickerDialogProps) {
   return (
     <Dialog open={props.open} onOpenChange={props.onOpenChange}>
       <Dialog.Portal>
-        <Dialog.Overlay class="fixed inset-0 z-40 bg-black/50" />
+        <Dialog.Overlay class="vc-path-dialog-overlay" />
         <Dialog.Content
-          class="fixed left-1/2 top-1/2 z-50 flex max-h-[85vh] w-[min(720px,calc(100vw-24px))] -translate-x-1/2 -translate-y-1/2 flex-col border border-border bg-popover p-5 text-popover-foreground shadow-md"
+          class="vc-path-dialog"
           onWheel={(event: WheelEvent) => {
             event.stopPropagation();
             if (event.ctrlKey) event.preventDefault();
           }}
           style={{ "overscroll-behavior": "contain" }}
         >
-          <Dialog.Title class="mb-1 font-display text-base text-foreground">{props.title}</Dialog.Title>
+          <Dialog.Title class="vc-path-dialog-title">{props.title}</Dialog.Title>
           <Show when={props.description}>
-            <Dialog.Description class="mb-3 border border-border bg-secondary px-2 py-1.5 text-xs text-muted-foreground">
+            <Dialog.Description class="vc-path-dialog-description">
               {props.description}
             </Dialog.Description>
           </Show>
 
-          <div class="mb-2 flex items-center gap-2">
+          <div class="vc-path-dialog-row">
             <Button
-              class="border border-border bg-secondary px-2 py-1 text-xs text-secondary-foreground hover:bg-accent disabled:opacity-50"
+              class="vc-path-dialog-action"
               disabled={isLoading()}
               onClick={() => void loadHomeDirectory()}
               title="Go to home"
             >
-              <div class="flex items-center gap-1">
+              <div class="vc-filetree-toolbar-row">
                 <House size={12} />
                 Home
               </div>
             </Button>
             <Button
-              class="border border-border bg-secondary px-2 py-1 text-xs text-secondary-foreground hover:bg-accent disabled:opacity-50"
+              class="vc-path-dialog-action"
               disabled={isLoading() || !parentPath()}
               onClick={() => {
                 const parent = parentPath();
@@ -121,16 +122,16 @@ export function PathPickerDialog(props: TPathPickerDialogProps) {
               }}
               title="Go up"
             >
-              <div class="flex items-center gap-1">
+              <div class="vc-filetree-toolbar-row">
                 <ArrowUp size={12} />
                 Up
               </div>
             </Button>
           </div>
 
-          <div class="mb-2 flex items-center gap-2">
+          <div class="vc-path-dialog-row">
             <input
-              class="h-8 flex-1 border border-border bg-background px-2 text-xs"
+              class="vc-path-dialog-input"
               value={pathInput()}
               onInput={(event) => setPathInput(event.currentTarget.value)}
               onKeyDown={(event) => {
@@ -142,7 +143,7 @@ export function PathPickerDialog(props: TPathPickerDialogProps) {
               placeholder="Paste full path"
             />
             <Button
-              class="h-8 border border-border bg-secondary px-2 text-xs text-secondary-foreground hover:bg-accent disabled:opacity-50"
+              class="vc-path-dialog-action"
               disabled={isLoading() || !pathInput().trim()}
               onClick={() => {
                 const nextPath = pathInput().trim();
@@ -154,23 +155,23 @@ export function PathPickerDialog(props: TPathPickerDialogProps) {
             </Button>
           </div>
 
-          <div class="min-h-0 flex-1 overflow-auto border border-border bg-background">
-            <div class="p-1">
-              <Show when={!isLoading()} fallback={<div class="p-3 text-xs text-muted-foreground">Loading folders...</div>}>
-                <Show when={!errorMessage()} fallback={<div class="p-3 text-xs text-destructive">{errorMessage()}</div>}>
-                  <Show when={children().length > 0} fallback={<div class="p-3 text-xs text-muted-foreground">No subfolders</div>}>
+          <div class="vc-path-dialog-list">
+            <div class="vc-path-dialog-list-inner">
+              <Show when={!isLoading()} fallback={<div class="vc-path-dialog-state">Loading folders...</div>}>
+                <Show when={!errorMessage()} fallback={<div class="vc-path-dialog-state vc-path-dialog-state--error">{errorMessage()}</div>}>
+                  <Show when={children().length > 0} fallback={<div class="vc-path-dialog-state">No subfolders</div>}>
                     <For each={children()}>
                       {(child) => (
                         <button
                           type="button"
-                          class="mb-1 flex w-full items-center justify-between border border-border px-2 py-1.5 text-left text-xs text-foreground hover:bg-accent last:mb-0"
+                          class="vc-path-dialog-folder-row"
                           onClick={() => void loadDirectory(child.path)}
                         >
-                          <div class="flex min-w-0 items-center gap-1">
-                            <Folder size={12} class="shrink-0" />
-                            <span class="truncate">{child.name}</span>
+                          <div class="vc-path-dialog-folder-row-main">
+                            <Folder size={12} class="vc-path-dialog-folder-icon" />
+                            <span class="vc-path-dialog-folder-name">{child.name}</span>
                           </div>
-                          <ChevronRight size={12} class="shrink-0 text-muted-foreground" />
+                          <ChevronRight size={12} class="vc-path-dialog-folder-caret" />
                         </button>
                       )}
                     </For>
@@ -180,15 +181,15 @@ export function PathPickerDialog(props: TPathPickerDialogProps) {
             </div>
           </div>
 
-          <div class="mt-3 flex justify-end gap-2">
+          <div class="vc-path-dialog-footer">
             <Button
-              class="border border-border bg-secondary px-3 py-1.5 text-xs text-secondary-foreground hover:bg-accent"
+              class="vc-path-dialog-action"
               onClick={() => props.onOpenChange(false)}
             >
               Cancel
             </Button>
             <Button
-              class="bg-primary px-3 py-1.5 text-xs text-primary-foreground hover:bg-primary/85 disabled:opacity-50"
+              class="vc-path-dialog-confirm"
               disabled={isLoading() || !currentPath()}
               onClick={() => void props.onPathSelected(currentPath())}
             >

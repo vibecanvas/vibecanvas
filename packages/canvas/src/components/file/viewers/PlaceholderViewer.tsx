@@ -1,4 +1,5 @@
 import AlertTriangle from "lucide-solid/icons/alert-triangle";
+import "./shared.css";
 import FileArchive from "lucide-solid/icons/file-archive";
 import FileAudio from "lucide-solid/icons/file-audio";
 import FileIcon from "lucide-solid/icons/file";
@@ -50,41 +51,41 @@ export function PlaceholderViewer(props: TPlaceholderViewerProps) {
   const FileIconComponent = getFileIcon(props.renderer);
 
   return (
-    <div class="flex flex-1 items-center justify-center p-4">
+    <div class="vc-viewer-state">
       <Show when={!props.isDeleted} fallback={
-        <div class="flex flex-col items-center gap-3 text-center">
-          <AlertTriangle size={48} class="text-destructive" />
-          <div class="font-mono text-xs text-destructive">File deleted</div>
+        <div class="vc-viewer-state vc-viewer-state--danger">
+          <AlertTriangle size={48} class="vc-viewer-state-icon--danger" />
+          <div class="vc-viewer-state-message">File deleted</div>
         </div>
       }>
-        <div class="flex flex-col items-center gap-3 text-center">
-          <FileIconComponent size={48} class="text-muted-foreground" />
-          <div class="font-mono text-xs text-muted-foreground">{props.path}</div>
-          <div class="text-[10px] uppercase tracking-wide text-muted-foreground">Binary File</div>
+        <div class="vc-viewer-state">
+          <FileIconComponent size={48} class="vc-viewer-state-icon--muted" />
+          <div class="vc-viewer-path">{props.path}</div>
+          <div class="vc-viewer-label">Binary File</div>
 
           <Show when={props.size !== undefined || props.permissions || props.mimeType}>
-            <div class="mt-2 w-full max-w-[220px] border-t border-border pt-2">
-              <div class="flex flex-col gap-1 font-mono text-[10px] text-muted-foreground">
+            <div class="vc-viewer-meta-card">
+              <div class="vc-viewer-meta">
                 <Show when={props.size !== undefined}>
-                  <div class="flex justify-between">
+                  <div class="vc-viewer-meta-row">
                     <span>Size:</span>
                     <span>{formatFileSize(props.size!)}</span>
                   </div>
                 </Show>
                 <Show when={props.mimeType}>
-                  <div class="flex justify-between gap-3">
+                  <div class="vc-viewer-meta-row">
                     <span>Type:</span>
-                    <span class="max-w-[120px] truncate" title={props.mimeType!}>{props.mimeType}</span>
+                    <span class="vc-viewer-meta-value--truncate" title={props.mimeType!}>{props.mimeType}</span>
                   </div>
                 </Show>
                 <Show when={props.lastModified}>
-                  <div class="flex justify-between">
+                  <div class="vc-viewer-meta-row">
                     <span>Modified:</span>
                     <span>{formatDate(props.lastModified!)}</span>
                   </div>
                 </Show>
                 <Show when={props.permissions}>
-                  <div class="flex justify-between">
+                  <div class="vc-viewer-meta-row">
                     <span>Permissions:</span>
                     <span>{props.permissions}</span>
                   </div>

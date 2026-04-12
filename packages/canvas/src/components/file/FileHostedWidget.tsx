@@ -13,14 +13,14 @@ type TFileHostedWidgetProps = {
 export function FileHostedWidget(props: TFileHostedWidgetProps) {
   if (!props.apiService) {
     return (
-      <div class="flex h-full w-full flex-1 items-center justify-center px-4 text-center text-xs text-muted-foreground">
+      <div style={{ display: "flex", width: "100%", height: "100%", flex: 1, "align-items": "center", "justify-content": "center", padding: "0 1rem", "text-align": "center", "font-size": "0.75rem", color: "var(--muted-foreground)" }}>
         File transport is not configured for this host.
       </div>
     );
   }
 
   return (
-    <div class="h-full w-full min-h-0 min-w-0 flex-1">
+    <div style={{ width: "100%", height: "100%", "min-width": "0", "min-height": "0", flex: 1 }}>
       <FileWidget
         element={props.element}
         apiService={props.apiService}

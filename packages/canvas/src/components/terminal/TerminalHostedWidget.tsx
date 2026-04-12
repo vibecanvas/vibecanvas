@@ -14,7 +14,7 @@ type TTerminalHostedWidgetProps = {
 
 export function TerminalHostedWidget(props: TTerminalHostedWidgetProps) {
   return (
-    <div data-terminal-hosted-wrapper="true" class="h-full w-full min-h-0 min-w-0 flex-1">
+    <div data-terminal-hosted-wrapper="true" style={{ width: "100%", height: "100%", "min-width": "0", "min-height": "0", flex: 1 }}>
       <TerminalWidget
         terminalKey={props.element().id}
         workingDirectory={props.element().data.workingDirectory}

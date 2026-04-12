@@ -1,4 +1,5 @@
 import { autocompletion, closeBrackets, closeBracketsKeymap } from "@codemirror/autocomplete";
+import "./CodeEditor.css";
 import { defaultKeymap, history, historyKeymap } from "@codemirror/commands";
 import {
   bracketMatching,
@@ -167,11 +168,11 @@ export function CodeEditor(props: TCodeEditorProps) {
   });
 
   return (
-    <div class="flex min-h-0 flex-1 flex-col overflow-hidden">
-      <div ref={containerRef} class="min-h-0 flex-1" />
+    <div class="vc-code-editor">
+      <div ref={containerRef} class="vc-code-editor-surface" />
 
       <Show when={props.truncated}>
-        <div class="border-t border-border bg-muted p-1 font-mono text-xs text-muted-foreground">
+        <div class="vc-code-editor-truncated">
           File truncated (exceeds 512KB) - editing disabled
         </div>
       </Show>

@@ -1,4 +1,6 @@
 import { debounce, throttle } from "@solid-primitives/scheduled";
+import "./shared.css";
+import "./PdfViewer.css";
 import AlertTriangle from "lucide-solid/icons/alert-triangle";
 import ChevronLeft from "lucide-solid/icons/chevron-left";
 import ChevronRight from "lucide-solid/icons/chevron-right";
@@ -224,25 +226,25 @@ export function PdfViewer(props: TPdfViewerProps) {
   });
 
   return (
-    <div class="flex min-h-0 flex-1 flex-col bg-muted/20">
+    <div class="vc-pdf-viewer">
       <Show when={props.isDeleted} fallback={
         <>
-          <div class="flex h-8 items-center justify-between border-b border-border px-2 font-mono text-[11px]">
-            <div class="text-muted-foreground">PDF</div>
-            <div class="flex items-center gap-2">
+          <div class="vc-pdf-header">
+            <div class="vc-pdf-header-title">PDF</div>
+            <div class="vc-pdf-controls">
               <button
-                class="flex h-6 w-6 items-center justify-center border border-border disabled:opacity-40"
+                class="vc-pdf-nav"
                 disabled={pageNumber() <= 1 || !pdfDocument()}
                 onClick={() => setPageNumber((current) => Math.max(1, current - 1))}
                 title="Previous page"
               >
                 <ChevronLeft size={14} />
               </button>
-              <span class="min-w-[64px] text-center text-muted-foreground">
+              <span class="vc-pdf-page-label">
                 {pageCount() > 0 ? `${pageNumber()} / ${pageCount()}` : "-- / --"}
               </span>
               <button
-                class="flex h-6 w-6 items-center justify-center border border-border disabled:opacity-40"
+                class="vc-pdf-nav"
                 disabled={pageNumber() >= pageCount() || !pdfDocument()}
                 onClick={() => setPageNumber((current) => Math.min(pageCount(), current + 1))}
                 title="Next page"
@@ -252,37 +254,37 @@ export function PdfViewer(props: TPdfViewerProps) {
             </div>
           </div>
 
-          <div ref={containerElement} class="flex min-h-0 flex-1 items-start justify-center overflow-auto p-2">
+          <div ref={containerElement} class="vc-pdf-body">
             <Show when={props.src} fallback={
-              <div class="flex h-full w-full flex-col items-center justify-center gap-3 text-center">
-                <FileArchive size={48} class="text-muted-foreground" />
-                <div class="font-mono text-xs text-muted-foreground">No PDF data</div>
+              <div class="vc-viewer-state">
+                <FileArchive size={48} class="vc-pdf-state-icon--muted" />
+                <div class="vc-viewer-state-message">No PDF data</div>
               </div>
             }>
-              <div class="relative">
+              <div class="vc-pdf-canvas-wrap">
                 <Show when={loading()}>
-                  <div class="absolute inset-0 flex items-center justify-center bg-background/80 font-mono text-xs text-muted-foreground">
-                    Rendering...
+                  <div class="vc-pdf-overlay">
+                    <span class="vc-viewer-state-message">Rendering...</span>
                   </div>
                 </Show>
                 <Show when={error()}>
                   {(message) => (
-                    <div class="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-background/80 px-2 text-center">
-                      <AlertTriangle size={24} class="text-destructive" />
-                      <div class="font-mono text-xs text-destructive">{message()}</div>
+                    <div class="vc-pdf-overlay vc-pdf-overlay--error">
+                      <AlertTriangle size={24} class="vc-pdf-state-icon--danger" />
+                      <div class="vc-viewer-state-message">{message()}</div>
                     </div>
                   )}
                 </Show>
-                <canvas ref={canvasElement} class="border border-border bg-white" />
+                <canvas ref={canvasElement} class="vc-pdf-canvas" />
               </div>
             </Show>
           </div>
         </>
       }>
-        <div class="flex flex-1 flex-col items-center justify-center gap-3 text-center">
-          <AlertTriangle size={48} class="text-destructive" />
-          <div class="font-mono text-xs text-destructive">File deleted</div>
-          <div class="max-w-full truncate font-mono text-xs text-muted-foreground">{props.path}</div>
+        <div class="vc-viewer-state vc-viewer-state--danger">
+          <AlertTriangle size={48} class="vc-pdf-state-icon--danger" />
+          <div class="vc-viewer-state-message">File deleted</div>
+          <div class="vc-viewer-path">{props.path}</div>
         </div>
       </Show>
     </div>

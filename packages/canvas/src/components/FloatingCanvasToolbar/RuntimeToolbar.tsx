@@ -1,4 +1,5 @@
 import ArrowRight from "lucide-solid/icons/arrow-right";
+import "./styles.css";
 import Circle from "lucide-solid/icons/circle";
 import Diamond from "lucide-solid/icons/diamond";
 import Grid2x2 from "lucide-solid/icons/grid-2x2";
@@ -72,7 +73,7 @@ function getToolIcon(toolId: string) {
     return <Type size={14} />;
   }
 
-  return <span class="text-[10px] font-mono uppercase">{toolId.slice(0, 2)}</span>;
+  return <span class="vc-runtime-toolbar-fallback-label">{toolId.slice(0, 2)}</span>;
 }
 
 function getShortcutParts(shortcuts: string[] | undefined) {
@@ -93,17 +94,17 @@ export function RuntimeToolbar(props: TRuntimeToolbarProps) {
   const [isCollapsed, setIsCollapsed] = createSignal(false);
 
   return (
-    <div class="absolute top-3 right-3 pointer-events-none z-50 flex flex-row-reverse items-start gap-1.5">
-      <div class="pointer-events-auto flex flex-col bg-card shadow-md border border-border overflow-hidden text-card-foreground">
+    <div class="vc-canvas-toolbar-anchor">
+      <div class="vc-runtime-toolbar-panel">
         <button
           type="button"
           onClick={() => setIsCollapsed((value) => !value)}
-          class="w-9 px-1 py-0.5 font-display text-[10px] text-muted-foreground tracking-wide text-center border-b border-border hover:bg-accent hover:text-accent-foreground transition-colors"
+          class="vc-runtime-toolbar-collapse"
         >
           TOOLS
         </button>
         {isCollapsed() ? null : (
-          <div class="flex flex-col">
+          <div class="vc-runtime-toolbar-list">
             <For each={props.tools()}>
               {(tool) => {
                 const shortcutParts = getShortcutParts(tool.shortcuts);
@@ -122,13 +123,13 @@ export function RuntimeToolbar(props: TRuntimeToolbarProps) {
         )}
       </div>
 
-      <div class="opacity-50 flex flex-col gap-0.5 text-[9px] text-muted-foreground font-mono pt-0.5">
-        <div class="flex items-center gap-1">
-          <kbd class="w-10 px-1 py-0.5 bg-card border border-border text-[8px] text-center text-foreground">Middle</kbd>
+      <div class="vc-runtime-toolbar-hints">
+        <div class="vc-runtime-toolbar-hint">
+          <kbd class="vc-runtime-toolbar-keycap">Middle</kbd>
           <span>Pan</span>
         </div>
-        <div class="flex items-center gap-1">
-          <kbd class="w-10 px-1 py-0.5 bg-card border border-border text-[8px] text-center text-foreground">Space</kbd>
+        <div class="vc-runtime-toolbar-hint">
+          <kbd class="vc-runtime-toolbar-keycap">Space</kbd>
           <span>Drag</span>
         </div>
       </div>

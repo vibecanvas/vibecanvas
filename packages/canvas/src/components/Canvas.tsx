@@ -77,7 +77,7 @@ export function Canvas(props: CanvasPageProps) {
     activeHandle = null;
   });
 
-  return <div ref={containerRef} class="relative w-full h-full" style={{ background: "var(--vc-canvas-background, rgba(168, 162, 158, 0.10))" }}>
+  return <div ref={containerRef} style={{ position: "relative", width: "100%", height: "100%", background: "var(--vc-canvas-background, rgba(168, 162, 158, 0.10))" }}>
     <Switch>
       <Match when={docHandle.loading}>
         <div>Loading...</div>

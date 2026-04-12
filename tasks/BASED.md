@@ -104,7 +104,7 @@ Use the leaf files for execution history and local context.
 - [x]: [B18](b/B18.md) - terminal image paste not working in deploy version
 - [x]: [B19](b/B19.md) - cli usage -> no realtime updates via automerge
 - [x]: [B20](b/B20.md) - pen tool: after stroke commit, stay in pen mode instead of switching to selection
-- [ ]: [B21] - can't do 1d edits
+- [x]: [B21] - can't do 1d edits
 
 ## A dditions
 - [x]: [A1] - file: support common CodeMirror languages
@@ -164,9 +164,10 @@ Use the leaf files for execution history and local context.
 - [x]: [S25](s/S25.md) - db: remove filetrees table/schema; canvas-doc fully owns filetree state
 - [x]: [S26](s/S26.md) - db: add filesystems db table for local/remote machine identity
 - [x]: [S27](s/S27.md) - canvas CLI: remove unimplemented `render` command and help traces
-- [~]: [S28](s/S28.md) - use runtime package in canvas, like cli does
-- [ ]: [S29](s/S29.md) - canvas: add debug config via localstorage for each plugin and service
-- [ ]: [S30](s/S30.md) - canvas: remove remaining Tailwind-style classes from component TSX
+- [x]: [S28](s/S28.md) - use runtime package in canvas, like cli does
+- [~]: [S29](s/S29.md) - canvas: add debug config via localstorage for each plugin and service
+- [~]: [S30](s/S30.md) - canvas: remove remaining Tailwind-style classes from component TSX
+- [ ]: [S31](s/S31.md) - frontend: remove remaining Tailwind-pattern source from app UI
 - [ ]: [S31] - how to deal with /Users/omarezzat/Workspace/vibecanvas/vibecanvas/packages/canvas/src/core/pretext.ts
 
 ## E xplorations

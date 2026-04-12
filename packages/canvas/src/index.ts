@@ -1,4 +1,4 @@
-import "./styles.css";
+import "./base.css";
 
 export * from "./components/Canvas";
 export * from "./components/file";

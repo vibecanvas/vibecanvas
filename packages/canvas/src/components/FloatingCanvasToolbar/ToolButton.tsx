@@ -4,6 +4,7 @@
  */
 
 import type { JSX } from "solid-js";
+import "./styles.css";
 
 interface ToolButtonProps {
   icon: JSX.Element;
@@ -18,31 +19,28 @@ export function ToolButton(props: ToolButtonProps) {
     <button
       type="button"
       onClick={props.onClick}
-      class={`relative flex h-7 w-full items-center justify-center transition-colors ${
-        props.isActive
-          ? "bg-primary/15 text-foreground"
-          : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
-      }`}
+      class="vc-toolbar-button"
+      classList={{ "vc-toolbar-button--active": props.isActive }}
     >
       {props.icon}
       {props.letterShortcut && (
         <span
-          class={`absolute bottom-0 left-px text-[7px] font-mono font-medium ${
-            props.isActive
-              ? "text-primary"
-              : "text-muted-foreground/80"
-          }`}
+          class="vc-toolbar-button__shortcut vc-toolbar-button__shortcut--left"
+          classList={{
+            "vc-toolbar-button__shortcut--active": props.isActive,
+            "vc-toolbar-button__shortcut--muted": !props.isActive,
+          }}
         >
           {props.letterShortcut}
         </span>
       )}
       {props.shortcut && (
         <span
-          class={`absolute bottom-0 right-px text-[7px] font-mono font-medium ${
-            props.isActive
-              ? "text-primary"
-              : "text-muted-foreground/80"
-          }`}
+          class="vc-toolbar-button__shortcut vc-toolbar-button__shortcut--right"
+          classList={{
+            "vc-toolbar-button__shortcut--active": props.isActive,
+            "vc-toolbar-button__shortcut--muted": !props.isActive,
+          }}
         >
           {props.shortcut}
         </span>

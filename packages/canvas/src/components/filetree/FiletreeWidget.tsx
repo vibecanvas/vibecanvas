@@ -1,4 +1,5 @@
 import type { TOrpcSafeClient } from "@vibecanvas/orpc-client";
+import "./styles.css";
 import { Tooltip } from "@kobalte/core/tooltip";
 import { createEffect, createMemo, onCleanup, type Accessor } from "solid-js";
 import ArrowUp from "lucide-solid/icons/arrow-up";
@@ -58,11 +59,11 @@ export function FiletreeWidget(props: TFiletreeWidgetProps) {
       <button
         type="button"
         draggable={true}
-        class="flex w-full items-center gap-1 border-b border-border/60 px-2 py-1 text-left text-xs hover:bg-accent"
+        class="vc-filetree-row"
         classList={{
-          "bg-accent": isSelected(),
-          "bg-amber-200/60": isDropTarget(),
-          "text-destructive hover:bg-destructive/10": isUnreadable(),
+          "vc-filetree-row--selected": isSelected(),
+          "vc-filetree-row--drop-target": isDropTarget(),
+          "vc-filetree-row--unreadable": isUnreadable(),
         }}
         style={{ "padding-left": `${depth * 12 + 8}px` }}
         onDragStart={(event) => {
@@ -91,19 +92,19 @@ export function FiletreeWidget(props: TFiletreeWidgetProps) {
           props.onOpenFile?.(node.path);
         }}
       >
-        <Show when={node.is_dir && !isUnreadable()} fallback={<span class="w-3" />}>
-          <Show when={isOpen()} fallback={<ChevronRight size={12} class="text-muted-foreground" />}>
-            <ChevronDown size={12} class="text-muted-foreground" />
+        <Show when={node.is_dir && !isUnreadable()} fallback={<span class="vc-filetree-row-spacer" />}>
+          <Show when={isOpen()} fallback={<ChevronRight size={12} class="vc-filetree-row-icon--muted" />}>
+            <ChevronDown size={12} class="vc-filetree-row-icon--muted" />
           </Show>
         </Show>
 
-        <Show when={node.is_dir} fallback={<FileIcon size={12} class="text-muted-foreground" />}>
-          <Show when={isUnreadable()} fallback={<Show when={isOpen()} fallback={<Folder size={12} class="text-muted-foreground" />}><FolderOpen size={12} class="text-muted-foreground" /></Show>}>
-            <Folder size={12} class="text-destructive" />
+        <Show when={node.is_dir} fallback={<FileIcon size={12} class="vc-filetree-row-icon--muted" />}>
+          <Show when={isUnreadable()} fallback={<Show when={isOpen()} fallback={<Folder size={12} class="vc-filetree-row-icon--muted" />}><FolderOpen size={12} class="vc-filetree-row-icon--muted" /></Show>}>
+            <Folder size={12} class="vc-filetree-row-icon--danger" />
           </Show>
         </Show>
 
-        <span class="truncate">{node.name}</span>
+        <span class="vc-filetree-row-label">{node.name}</span>
       </button>
     );
 
@@ -118,7 +119,7 @@ export function FiletreeWidget(props: TFiletreeWidgetProps) {
               {row}
             </Tooltip.Trigger>
             <Tooltip.Portal>
-              <Tooltip.Content class="z-50 max-w-64 rounded border border-border bg-popover px-2 py-1 text-xs text-popover-foreground shadow-md">
+              <Tooltip.Content class="vc-filetree-tooltip">
                 {unreadableMessage()}
               </Tooltip.Content>
             </Tooltip.Portal>
@@ -137,13 +138,13 @@ export function FiletreeWidget(props: TFiletreeWidgetProps) {
       data-filetree-widget-root="true"
       data-hosted-widget-focus-root="true"
       tabIndex={-1}
-      class="flex h-full min-h-0 flex-1 flex-col bg-card text-card-foreground"
+      class="vc-filetree-widget"
     >
-      <div class="flex flex-col gap-2 border-b border-border p-2">
-        <div class="flex flex-wrap items-center gap-1">
+      <div class="vc-filetree-toolbar">
+        <div class="vc-filetree-toolbar-row">
           <button
             type="button"
-            class="inline-flex h-6 items-center gap-1 border border-border bg-secondary px-2 text-xs text-secondary-foreground hover:bg-accent"
+            class="vc-filetree-action vc-filetree-action--compact"
             onClick={() => void filetreeLogic.handleSetHome()}
             title="Home"
           >
@@ -151,7 +152,7 @@ export function FiletreeWidget(props: TFiletreeWidgetProps) {
           </button>
           <button
             type="button"
-            class="inline-flex h-6 items-center gap-1 border border-border bg-secondary px-2 text-xs text-secondary-foreground hover:bg-accent"
+            class="vc-filetree-action vc-filetree-action--compact"
             onClick={() => void filetreeLogic.handleSetParentPath()}
             title="Up"
           >
@@ -159,7 +160,7 @@ export function FiletreeWidget(props: TFiletreeWidgetProps) {
           </button>
           <button
             type="button"
-            class="inline-flex h-6 items-center gap-1 border border-border bg-secondary px-2 text-xs text-secondary-foreground hover:bg-accent"
+            class="vc-filetree-action vc-filetree-action--compact"
             onClick={() => {
               filetreeLogic.handleRefresh();
             }}
@@ -169,7 +170,7 @@ export function FiletreeWidget(props: TFiletreeWidgetProps) {
           </button>
           <button
             type="button"
-            class="inline-flex h-6 items-center gap-1 border border-border bg-secondary px-2 text-xs text-secondary-foreground hover:bg-accent"
+            class="vc-filetree-action vc-filetree-action--compact"
             onClick={() => filetreeLogic.setIsPathDialogOpen(true)}
             title="Pick folder"
           >
@@ -180,8 +181,8 @@ export function FiletreeWidget(props: TFiletreeWidgetProps) {
       </div>
 
       <div
-        class="min-h-0 flex-1 overflow-auto"
-        classList={{ "bg-amber-100/50": filetreeLogic.isRootDropTarget() }}
+        class="vc-filetree-body"
+        classList={{ "vc-filetree-body--drop-target": filetreeLogic.isRootDropTarget() }}
         onDragOver={(event) => {
           filetreeLogic.handleRootDragOver(event);
         }}
@@ -192,9 +193,9 @@ export function FiletreeWidget(props: TFiletreeWidgetProps) {
           filetreeLogic.handleRootDrop(event);
         }}
       >
-        <Show when={!filetreeLogic.isLoading()} fallback={<div class="p-3 text-xs text-muted-foreground">Loading files...</div>}>
-          <Show when={!filetreeLogic.errorMessage()} fallback={<div class="p-3 text-xs text-destructive">{filetreeLogic.errorMessage()}</div>}>
-            <Show when={(filetreeLogic.treeData()?.children.length ?? 0) > 0} fallback={<div class="p-3 text-xs text-muted-foreground">No files found</div>}>
+        <Show when={!filetreeLogic.isLoading()} fallback={<div class="vc-filetree-state">Loading files...</div>}>
+          <Show when={!filetreeLogic.errorMessage()} fallback={<div class="vc-filetree-state vc-filetree-state--error">{filetreeLogic.errorMessage()}</div>}>
+            <Show when={(filetreeLogic.treeData()?.children.length ?? 0) > 0} fallback={<div class="vc-filetree-state">No files found</div>}>
               <For each={filetreeLogic.treeData()?.children ?? []}>
                 {(node) => renderTree(node, 0, filetreeLogic.treeData()?.root ?? "")}
               </For>

@@ -1,4 +1,5 @@
 import { init as initGhostty, Terminal as GhosttyTerminal } from "ghostty-web";
+import "./GhosttyTerminalMount.css";
 import { onCleanup, onMount } from "solid-js";
 
 type TGhosttyTheme = {
@@ -634,13 +635,13 @@ export function GhosttyTerminalMount(props: TGhosttyTerminalMountProps) {
     <div
       ref={hostRef}
       data-ghostty-terminal-host="true"
-      class={props.class ?? "h-full w-full flex-1 overflow-hidden"}
+      class={props.class ?? "vc-terminal-mount"}
       style={{ "min-width": "0", "min-height": "0", background: "var(--vc-terminal-background, #111214)" }}
     >
       <div
         ref={rootRef}
         data-ghostty-terminal-root="true"
-        class="h-full w-full"
+        class="vc-terminal-root"
         style={{ "min-width": "0", "min-height": "0" }}
       />
     </div>

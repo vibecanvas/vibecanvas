@@ -1,4 +1,5 @@
 import type { TOrpcSafeClient } from "@vibecanvas/orpc-client";
+import "./file.css";
 import { createEffect, createMemo, createResource, createSignal, Match, onCleanup, onMount, Show, Suspense, Switch, lazy } from "solid-js";
 import type { THostedWidgetChrome, THostedWidgetElementMap } from "../../services/canvas/interface";
 import { getFileName, toDataUrlFromBinaryContent } from "./utils";
@@ -194,7 +195,7 @@ export function FileWidget(props: TFileWidgetProps) {
       data-file-widget-root="true"
       data-hosted-widget-focus-root="true"
       tabIndex={-1}
-      class="flex min-h-0 flex-1 flex-col bg-card text-card-foreground h-full"
+      class="vc-file-widget"
     >
       <Switch fallback={
         <PlaceholderViewer
@@ -208,15 +209,15 @@ export function FileWidget(props: TFileWidgetProps) {
         />
       }>
         <Match when={loading()}>
-          <div class="flex flex-1 items-center justify-center">
-            <span class="font-mono text-xs text-muted-foreground">Loading...</span>
+          <div class="vc-file-widget-state">
+            <span class="vc-file-widget-state-message">Loading...</span>
           </div>
         </Match>
 
         <Match when={error()}>
           {(message) => (
-            <div class="flex flex-1 items-center justify-center p-4">
-              <span class="break-all font-mono text-xs text-destructive">{message()}</span>
+            <div class="vc-file-widget-state vc-file-widget-state--error">
+              <span class="vc-file-widget-state-message">{message()}</span>
             </div>
           )}
         </Match>
@@ -243,7 +244,7 @@ export function FileWidget(props: TFileWidgetProps) {
         </Match>
 
         <Match when={renderer() === "pdf" && content()?.kind === "binary"}>
-          <Suspense fallback={<div class="flex flex-1 items-center justify-center"><span class="font-mono text-xs text-muted-foreground">Loading PDF viewer...</span></div>}>
+          <Suspense fallback={<div class="vc-file-widget-state"><span class="vc-file-widget-state-message">Loading PDF viewer...</span></div>}>
             <PdfViewer
               src={pdfSrc()}
               path={path()}
