@@ -1,9 +1,14 @@
 import type { IPlugin } from "@vibecanvas/runtime";
 import type { Node } from "konva/lib/Node";
+import type { CrdtService } from "../../new-services/crdt/CrdtService";
+import type { EditorService } from "../../new-services/editor/EditorService";
+import type { HistoryService } from "../../new-services/history/HistoryService";
+import type { RenderOrderService } from "../../new-services/render-order/RenderOrderService";
 import type { RenderService } from "../../new-services/render/RenderService";
 import type { SelectionService } from "../../new-services/selection/SelectionService";
 import type { IHooks } from "../../runtime";
 import { CanvasMode } from "../../new-services/selection/enum";
+import { txDeleteSelection } from "./tx.delete-selection";
 import { txHandleElementPointerDoubleClick } from "./tx.handle-element-pointer-double-click";
 import { txHandleElementPointerDown } from "./tx.handle-element-pointer-down";
 import { txHandleStagePointerMove } from "./tx.handle-stage-pointer-move";
@@ -67,13 +72,21 @@ function txHandleStagePointerDown(args: {
  * Uses SelectionService as the shared runtime state.
  */
 export function createSelectPlugin(): IPlugin<{
+  crdt: CrdtService;
+  editor: EditorService;
+  history: HistoryService;
   render: RenderService;
+  renderOrder: RenderOrderService;
   selection: SelectionService;
 }, IHooks> {
   return {
     name: "select",
     apply(ctx) {
+      const crdt = ctx.services.require("crdt");
+      const editor = ctx.services.require("editor");
+      const history = ctx.services.require("history");
       const render = ctx.services.require("render");
+      const renderOrder = ctx.services.require("renderOrder");
       const selection = ctx.services.require("selection");
       const selectionRectangle = new render.Rect({
         visible: false,
@@ -164,6 +177,7 @@ export function createSelectPlugin(): IPlugin<{
 
         event.preventDefault();
         event.stopPropagation();
+        txDeleteSelection({ crdt, editor, history, render, renderOrder, selection }, {});
       });
     },
   };
