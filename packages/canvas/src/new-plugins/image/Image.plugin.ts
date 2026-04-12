@@ -4,6 +4,7 @@ import { throttle } from "@solid-primitives/scheduled";
 import type Konva from "konva";
 import type { TCloneImage, TDeleteImage, TUploadImage } from "../../services/canvas/interface";
 import { getImageDimensions, getImageSource, getSupportedImageFormat, parseDataUrl } from "../../utils/image";
+import type { ContextMenuService } from "../../new-services/context-menu/ContextMenuService";
 import type { CrdtService } from "../../new-services/crdt/CrdtService";
 import type { EditorService } from "../../new-services/editor/EditorService";
 import type { HistoryService } from "../../new-services/history/HistoryService";
@@ -18,6 +19,7 @@ import { txCloneBackendFileForElement } from "./tx.clone-backend-file-for-elemen
 import { txInsertImage } from "./tx.insert-image";
 import { txSetupImageListeners } from "./tx.setup-image-listeners";
 import { txUpdateImageNodeFromElement } from "./tx.update-image-node-from-element";
+import { txDeleteSelection } from "../select/tx.delete-selection";
 
 const IMAGE_URL_ATTR = "vcImageUrl";
 const IMAGE_BASE64_ATTR = "vcImageBase64";
@@ -252,6 +254,7 @@ function filterSelection(render: RenderService, selection: Konva.Node[]) {
  * Supports picker, paste, drop, drag, and serialization hooks.
  */
 export function createImagePlugin(): IPlugin<{
+  contextMenu: ContextMenuService;
   crdt: CrdtService;
   editor: EditorService;
   history: HistoryService;
@@ -264,6 +267,7 @@ export function createImagePlugin(): IPlugin<{
   return {
     name: "image",
     apply(ctx) {
+      const contextMenu = ctx.services.require("contextMenu");
       const crdt = ctx.services.require("crdt");
       const editor = ctx.services.require("editor");
       const history = ctx.services.require("history");
@@ -351,6 +355,22 @@ export function createImagePlugin(): IPlugin<{
           toElement: (node) => toElement(render, node),
         }, args);
       };
+
+      contextMenu.registerProvider("image", ({ targetElement, activeSelection }) => {
+        if (targetElement?.data.type !== "image") {
+          return [];
+        }
+
+        return [{
+          id: "delete-image-selection",
+          label: "Delete",
+          priority: 300,
+          onSelect: () => {
+            selection.setSelection(activeSelection);
+            txDeleteSelection({ crdt, editor, history, render, renderOrder, selection }, {});
+          },
+        }];
+      });
 
       editor.registerTool({
         id: "image",
@@ -511,6 +531,7 @@ export function createImagePlugin(): IPlugin<{
       });
 
       ctx.hooks.destroy.tap(() => {
+        contextMenu.unregisterProvider("image");
         editor.unregisterTool("image");
         editor.unregisterToElement("image");
         editor.unregisterCreateShapeFromTElement("image");
