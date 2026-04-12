@@ -3,7 +3,9 @@ import { fxComputeTextWidth } from "./fx.compute-text-width";
 import { fxToElement } from "./fx.to-element";
 import { txUpdateTextNodeFromElement } from "./tx.update-text-node-from-element";
 import { measureTextLayout } from "../../core/pretext";
-import type { TTextData } from "@vibecanvas/service-automerge/types/canvas-doc.types";
+import { fxIsShape2dElementType } from "../../core/fn.shape2d";
+import type { TElement, TTextData } from "@vibecanvas/service-automerge/types/canvas-doc.types";
+import { fxGetShapeTextHostBounds } from "../shape2d/fn.text-host-bounds";
 import type { ThemeService } from "@vibecanvas/service-theme";
 import type { CrdtService } from "../../new-services/crdt/CrdtService";
 import type { EditorService } from "../../new-services/editor/EditorService";
@@ -28,26 +30,91 @@ export type TArgsEnterEditMode = {
   node: Konva.Text;
 };
 
+function findAttachedHostNode(portal: TPortalEnterEditMode, containerId: string) {
+  const node = portal.render.staticForegroundLayer.findOne((candidate: Konva.Node) => {
+    return candidate.id() === containerId
+      && (candidate instanceof portal.render.Rect || candidate instanceof portal.render.Ellipse || candidate instanceof portal.render.Line);
+  });
+
+  if (!(node instanceof portal.render.Rect) && !(node instanceof portal.render.Ellipse) && !(node instanceof portal.render.Line)) {
+    return null;
+  }
+
+  return node;
+}
+
+function fxGetShapeElementHeight(element: TElement) {
+  if (element.data.type === "ellipse") {
+    return element.data.ry * 2;
+  }
+
+  if (element.data.type === "rect" || element.data.type === "diamond") {
+    return element.data.h;
+  }
+
+  return 0;
+}
+
+function fxGrowAttachedHostElement(args: {
+  hostElement: TElement;
+  minHeight: number;
+}) {
+  if (args.hostElement.data.type === "rect") {
+    return {
+      ...args.hostElement,
+      data: {
+        ...args.hostElement.data,
+        h: Math.max(args.hostElement.data.h, args.minHeight),
+      },
+    } satisfies TElement;
+  }
+
+  if (args.hostElement.data.type === "diamond") {
+    return {
+      ...args.hostElement,
+      data: {
+        ...args.hostElement.data,
+        h: Math.max(args.hostElement.data.h, args.minHeight),
+      },
+    } satisfies TElement;
+  }
+
+  if (args.hostElement.data.type === "ellipse") {
+    return {
+      ...args.hostElement,
+      data: {
+        ...args.hostElement.data,
+        ry: Math.max(args.hostElement.data.ry * 2, args.minHeight) / 2,
+      },
+    } satisfies TElement;
+  }
+
+  return args.hostElement;
+}
+
 export function txEnterEditMode(portal: TPortalEnterEditMode, args: TArgsEnterEditMode) {
   const now = Date.now();
   const originalElement = fxToElement({ render: portal.render }, { node: args.node, createdAt: now, updatedAt: now });
   const originalText = args.node.text();
   const originalData = originalElement.data as TTextData;
   const isAttachedText = originalData.containerId !== null;
+  const attachedHostNode = isAttachedText && originalData.containerId
+    ? findAttachedHostNode(portal, originalData.containerId)
+    : null;
+  const originalHostElement = attachedHostNode
+    ? portal.editor.toElement(attachedHostNode)
+    : null;
 
   portal.editor.setEditingTextId(args.node.id());
   args.node.visible(false);
   portal.render.stage.batchDraw();
 
   const textarea = portal.document.createElement("textarea");
-  const absolutePosition = args.node.getAbsolutePosition();
-  const absoluteScale = args.node.getAbsoluteScale();
-  const absoluteRotation = args.node.getAbsoluteRotation();
-  const scaledFontSize = args.node.fontSize() * absoluteScale.x;
-  const scaledWidth = Math.max(args.node.width() * absoluteScale.x, 4);
-  const scaledHeight = Math.max(args.node.height() * absoluteScale.y, scaledFontSize);
+  const initialAbsoluteScale = args.node.getAbsoluteScale();
+  const initialScaledFontSize = args.node.fontSize() * initialAbsoluteScale.x;
+  const initialHostHeight = originalHostElement ? fxGetShapeElementHeight(originalHostElement) : originalData.h;
 
-  const syncFixedBoxLayout = () => {
+  const syncAttachedEditingLayout = () => {
     if (!isAttachedText) {
       return;
     }
@@ -60,11 +127,42 @@ export function txEnterEditMode(portal: TPortalEnterEditMode, args: TArgsEnterEd
       lineHeight: args.node.lineHeight(),
       width: args.node.width(),
     });
-    const remainingHeight = Math.max(0, scaledHeight - measured.height * absoluteScale.y);
+    const nextHostElement = originalHostElement && fxIsShape2dElementType(originalHostElement.data.type)
+      ? fxGrowAttachedHostElement({
+          hostElement: structuredClone(originalHostElement),
+          minHeight: Math.max(initialHostHeight, measured.height),
+        })
+      : null;
+
+    if (nextHostElement) {
+      portal.editor.updateShapeFromTElement(nextHostElement);
+    }
+
+    const hostBounds = attachedHostNode
+      ? fxGetShapeTextHostBounds({ render: portal.render, node: attachedHostNode })
+      : null;
+    if (hostBounds) {
+      args.node.position({ x: hostBounds.x, y: hostBounds.y });
+      args.node.rotation(hostBounds.rotation);
+      args.node.width(Math.max(4, hostBounds.width));
+      args.node.height(Math.max(4, hostBounds.height));
+    }
+
+    const absolutePosition = args.node.getAbsolutePosition();
+    const absoluteScale = args.node.getAbsoluteScale();
+    const absoluteRotation = args.node.getAbsoluteRotation();
+    const scaledWidth = Math.max(args.node.width() * absoluteScale.x, 4);
+    const scaledHeight = Math.max(args.node.height() * absoluteScale.y, initialScaledFontSize);
+    const contentHeight = measured.height * absoluteScale.y;
+    const remainingHeight = Math.max(0, scaledHeight - contentHeight);
     const verticalPadding = remainingHeight / 2;
 
+    textarea.style.top = `${absolutePosition.y}px`;
+    textarea.style.left = `${absolutePosition.x}px`;
     textarea.style.width = `${scaledWidth}px`;
     textarea.style.height = `${scaledHeight}px`;
+    textarea.style.minHeight = `${scaledHeight}px`;
+    textarea.style.transform = `rotate(${absoluteRotation}deg)`;
     textarea.style.paddingLeft = "0px";
     textarea.style.paddingRight = "0px";
     textarea.style.paddingTop = `${verticalPadding}px`;
@@ -74,10 +172,14 @@ export function txEnterEditMode(portal: TPortalEnterEditMode, args: TArgsEnterEd
 
   const autoGrow = () => {
     if (isAttachedText) {
-      syncFixedBoxLayout();
+      syncAttachedEditingLayout();
+      portal.render.staticForegroundLayer.batchDraw();
       return;
     }
 
+    const absoluteScale = args.node.getAbsoluteScale();
+    const scaledFontSize = args.node.fontSize() * absoluteScale.x;
+    const scaledWidth = Math.max(args.node.width() * absoluteScale.x, 4);
     textarea.style.width = "auto";
     textarea.style.width = `${Math.max(textarea.scrollWidth, scaledWidth)}px`;
     textarea.style.height = "auto";
@@ -87,15 +189,15 @@ export function txEnterEditMode(portal: TPortalEnterEditMode, args: TArgsEnterEd
   textarea.value = args.node.text();
   Object.assign(textarea.style, {
     position: "absolute",
-    top: `${absolutePosition.y}px`,
-    left: `${absolutePosition.x}px`,
-    width: `${scaledWidth}px`,
-    minHeight: `${scaledFontSize}px`,
-    fontSize: `${scaledFontSize}px`,
+    top: `${args.node.getAbsolutePosition().y}px`,
+    left: `${args.node.getAbsolutePosition().x}px`,
+    width: `${Math.max(args.node.width() * initialAbsoluteScale.x, 4)}px`,
+    minHeight: `${initialScaledFontSize}px`,
+    fontSize: `${initialScaledFontSize}px`,
     fontFamily: args.node.fontFamily(),
     lineHeight: String(args.node.lineHeight()),
     textAlign: args.node.align(),
-    transform: `rotate(${absoluteRotation}deg)`,
+    transform: `rotate(${args.node.getAbsoluteRotation()}deg)`,
     transformOrigin: "top left",
     whiteSpace: "pre-wrap",
     outline: "none",
@@ -120,14 +222,20 @@ export function txEnterEditMode(portal: TPortalEnterEditMode, args: TArgsEnterEd
 
   const commit = () => {
     const newText = textarea.value;
-    const screenWidth = parseFloat(textarea.style.width) || scaledWidth;
-    const screenHeight = parseFloat(textarea.style.height) || scaledFontSize;
+    const absoluteScale = args.node.getAbsoluteScale();
+    const fallbackScaledWidth = Math.max(args.node.width() * absoluteScale.x, 4);
+    const fallbackScaledHeight = Math.max(args.node.height() * absoluteScale.y, initialScaledFontSize);
+    const screenWidth = parseFloat(textarea.style.width) || fallbackScaledWidth;
+    const screenHeight = parseFloat(textarea.style.height) || fallbackScaledHeight;
     const worldWidth = screenWidth / absoluteScale.x;
     const worldHeight = screenHeight / absoluteScale.y;
 
     cleanup();
 
     if (args.isNew && newText === "") {
+      if (originalHostElement) {
+        portal.editor.updateShapeFromTElement(originalHostElement);
+      }
       args.node.destroy();
       portal.render.staticForegroundLayer.batchDraw();
       portal.crdt.deleteById({ elementIds: [args.node.id()] });
@@ -137,11 +245,31 @@ export function txEnterEditMode(portal: TPortalEnterEditMode, args: TArgsEnterEd
 
     const textToSet = !args.isNew && newText === "" ? originalText : newText;
     args.node.text(textToSet);
+    args.node.wrap(isAttachedText ? "word" : "none");
     args.node.setAttr("vcOriginalText", textToSet);
 
+    let nextHostElement: TElement | null = null;
+
     if (isAttachedText) {
-      args.node.width(originalData.w);
-      args.node.height(originalData.h);
+      if (originalHostElement && fxIsShape2dElementType(originalHostElement.data.type)) {
+        nextHostElement = fxGrowAttachedHostElement({
+          hostElement: structuredClone(originalHostElement),
+          minHeight: worldHeight,
+        });
+        portal.editor.updateShapeFromTElement(nextHostElement);
+      } else {
+        args.node.width(originalData.w);
+        args.node.height(Math.max(originalData.h, worldHeight));
+      }
+
+      const nextBounds = fxGetShapeTextHostBounds({
+        render: portal.render,
+        node: attachedHostNode ?? args.node,
+      });
+      if (nextBounds) {
+        args.node.width(Math.max(4, nextBounds.width));
+        args.node.height(Math.max(4, nextBounds.height));
+      }
     } else {
       const measured = measureTextLayout({
         text: textToSet,
@@ -167,34 +295,48 @@ export function txEnterEditMode(portal: TPortalEnterEditMode, args: TArgsEnterEd
 
     const nextNow = Date.now();
     const nextElement = fxToElement({ render: portal.render }, { node: args.node, createdAt: originalElement.createdAt, updatedAt: nextNow });
-    portal.crdt.patch({ elements: [nextElement], groups: [] });
+    const patchElements = [nextHostElement, nextElement].filter((element): element is TElement => element !== null);
+    portal.crdt.patch({ elements: patchElements, groups: [] });
     portal.selection.setSelection([args.node]);
     portal.selection.setFocusedNode(args.node);
 
-    if (textToSet === originalText) {
+    const didHostChange = JSON.stringify(nextHostElement) !== JSON.stringify(originalHostElement);
+    if (textToSet === originalText && !didHostChange) {
       return;
     }
 
     const undoElement = structuredClone(originalElement);
     const redoElement = structuredClone(nextElement);
+    const undoHostElement = originalHostElement ? structuredClone(originalHostElement) : null;
+    const redoHostElement = nextHostElement ? structuredClone(nextHostElement) : null;
 
     portal.history.record({
       label: "edit-text",
       undo: () => {
+        if (undoHostElement) {
+          portal.editor.updateShapeFromTElement(undoHostElement);
+        }
         txUpdateTextNodeFromElement({ render: portal.render, theme: portal.theme }, { element: undoElement, freeTextName: args.freeTextName });
         portal.render.staticForegroundLayer.batchDraw();
-        portal.crdt.patch({ elements: [undoElement], groups: [] });
+        portal.crdt.patch({ elements: [undoHostElement, undoElement].filter((element): element is TElement => element !== null), groups: [] });
       },
       redo: () => {
+        if (redoHostElement) {
+          portal.editor.updateShapeFromTElement(redoHostElement);
+        }
         txUpdateTextNodeFromElement({ render: portal.render, theme: portal.theme }, { element: redoElement, freeTextName: args.freeTextName });
         portal.render.staticForegroundLayer.batchDraw();
-        portal.crdt.patch({ elements: [redoElement], groups: [] });
+        portal.crdt.patch({ elements: [redoHostElement, redoElement].filter((element): element is TElement => element !== null), groups: [] });
       },
     });
   };
 
   const cancel = () => {
     cleanup();
+
+    if (originalHostElement) {
+      portal.editor.updateShapeFromTElement(originalHostElement);
+    }
 
     if (args.isNew) {
       args.node.destroy();
@@ -241,9 +383,6 @@ export function txEnterEditMode(portal: TPortalEnterEditMode, args: TArgsEnterEd
 
   portal.render.stage.container().appendChild(textarea);
   autoGrow();
-  if (isAttachedText) {
-    textarea.style.minHeight = `${scaledHeight}px`;
-  }
   textarea.focus();
   textarea.select();
 }

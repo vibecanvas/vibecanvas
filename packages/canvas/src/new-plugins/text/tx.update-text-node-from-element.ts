@@ -1,4 +1,5 @@
 import type { ThemeService } from "@vibecanvas/service-theme";
+import { fxGetNearestFontSizePreset } from "../../core/fn.text-style";
 import { fxGetAbsolutePositionFromWorldPosition } from "../../core/fn.world-position";
 import type { TElement, TTextData } from "@vibecanvas/service-automerge/types/canvas-doc.types";
 import type Konva from "konva";
@@ -50,8 +51,9 @@ export function txUpdateTextNodeFromElement(portal: TPortalUpdateTextNodeFromEle
   node.setAttr("vcContainerId", data.containerId ?? null);
   node.setAttr("vcOriginalText", data.originalText);
   node.setAttr("vcTextAutoResize", data.autoResize);
+  node.setAttr("vcFontSizePreset", data.fontSizePreset ?? fxGetNearestFontSizePreset(data.fontSize));
   node.scale({ x: 1, y: 1 });
-  node.wrap("none");
+  node.wrap(data.containerId === null ? "none" : "word");
   node.listening(data.containerId === null);
   node.draggable(data.containerId === null);
   node.name(data.containerId === null ? args.freeTextName : ATTACHED_TEXT_NAME);

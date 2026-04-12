@@ -10,6 +10,7 @@ import type { RenderOrderService } from "../../new-services/render-order/RenderO
 import type { RenderService } from "../../new-services/render/RenderService";
 import type { SelectionService } from "../../new-services/selection/SelectionService";
 import { CanvasMode } from "../../new-services/selection/enum";
+import { fxGetNearestFontSizePreset } from "../../core/fn.text-style";
 import type { IHooks } from "../../runtime";
 import { fxCreateTextElement } from "./fn.create-text-element";
 import { fxToElement } from "./fx.to-element";
@@ -55,7 +56,7 @@ function createTextNode(render: RenderService, theme: ThemeService, element: TEl
     align: data.textAlign,
     verticalAlign: data.verticalAlign,
     lineHeight: data.lineHeight,
-    wrap: "none",
+    wrap: isAttachedText ? "word" : "none",
     draggable: !isAttachedText,
     listening: !isAttachedText,
     fill: getTextFillColor(theme, element),
@@ -66,6 +67,7 @@ function createTextNode(render: RenderService, theme: ThemeService, element: TEl
   node.setAttr("vcContainerId", data.containerId ?? null);
   node.setAttr("vcOriginalText", data.originalText);
   node.setAttr("vcTextAutoResize", data.autoResize);
+  node.setAttr("vcFontSizePreset", data.fontSizePreset ?? fxGetNearestFontSizePreset(data.fontSize));
   node.name(isAttachedText ? ATTACHED_TEXT_NAME : FREE_TEXT_NAME);
   return node;
 }
