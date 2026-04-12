@@ -27,6 +27,7 @@ Migrated and passing on new runtime:
 - `tests/new-plugins/text/Text.click-create.plugin.test.ts` — 3 passing
 - `tests/new-plugins/text/Text.core.plugin.test.ts` — 6 passing
 - `tests/new-plugins/text/Text.editing.plugin.test.ts` — 5 passing
+- `tests/new-plugins/text/Text.regressions.plugin.test.ts` — 3 passing
 - `tests/new-plugins/image/Image.plugin.test.ts` — 5 passing
 - `tests/new-plugins/group/Group.plugin.test.ts` — 3 passing, 2 skipped
 - `tests/new-plugins/selection/Selection.plugin.test.ts` — 5 passing
@@ -34,8 +35,8 @@ Migrated and passing on new runtime:
 - `tests/new-plugins/scene-hydrator/SceneHydrator.plugin.test.ts` — 1 passing
 
 Last run:
-- `bunx vitest run tests/new-services/*.test.ts tests/new-plugins/camera/CameraControl.plugin.test.ts tests/new-plugins/text/Text.click-create.plugin.test.ts tests/new-plugins/text/Text.core.plugin.test.ts tests/new-plugins/text/Text.editing.plugin.test.ts tests/new-plugins/image/Image.plugin.test.ts tests/new-plugins/render-order/RenderOrder.plugin.test.ts tests/new-plugins/scene-hydrator/SceneHydrator.plugin.test.ts tests/new-plugins/group/Group.plugin.test.ts tests/new-plugins/selection/Selection.plugin.test.ts`
-- result: `13 files passed, 47 tests passed, 3 skipped`
+- `bunx vitest run tests/new-services/*.test.ts tests/new-plugins/camera/CameraControl.plugin.test.ts tests/new-plugins/text/Text.click-create.plugin.test.ts tests/new-plugins/text/Text.core.plugin.test.ts tests/new-plugins/text/Text.editing.plugin.test.ts tests/new-plugins/text/Text.regressions.plugin.test.ts tests/new-plugins/image/Image.plugin.test.ts tests/new-plugins/render-order/RenderOrder.plugin.test.ts tests/new-plugins/scene-hydrator/SceneHydrator.plugin.test.ts tests/new-plugins/group/Group.plugin.test.ts tests/new-plugins/selection/Selection.plugin.test.ts`
+- result: `14 files passed, 50 tests passed, 3 skipped`
 
 Big reality check from new runtime:
 - all current `src/new-services/*` now have direct test coverage
@@ -135,12 +136,16 @@ Status: `partial`
 
 Migrated now:
 - new file: `tests/new-plugins/text/Text.editing.plugin.test.ts`
+- new file: `tests/new-plugins/text/Text.regressions.plugin.test.ts`
 - passing cases:
   - multiline commit preserves newlines
   - textarea auto-sizes on open
   - leading/trailing whitespace preserved
   - undo/redo after multiline edit restores text
   - `Enter` inserts newline and keeps edit mode open
+  - `Escape` on newly created empty text removes the node
+  - `Escape` on existing text cancels edit and keeps original content
+  - long single-line text expands textarea width and committed node width
 
 Blocked for now:
 - group drilling tests
@@ -332,9 +337,9 @@ Done now:
 Best next batch:
 1. maybe grouped text drill tests after group rewrite exists
 2. more selection tests rewritten onto migrated node types
-3. maybe a text-specific regression file for exact `Escape` and textarea sizing semantics
-4. maybe pure delete tests for image node removal, but not backend file release, unless new delete wiring is added
-5. maybe revisit skipped group tests after behavior fixes
+3. maybe pure delete tests for image node removal, but not backend file release, unless new delete wiring is added
+4. maybe revisit skipped group tests after behavior fixes
+5. maybe revisit blocked delete selection tests once parity exists
 
 Leave for later:
 - recorder

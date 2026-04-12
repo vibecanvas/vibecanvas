@@ -1,0 +1,147 @@
+import Konva from "konva";
+import type { TElement } from "@vibecanvas/service-automerge/types/canvas-doc.types";
+import { describe, expect, test } from "vitest";
+import { createNewCanvasHarness, flushCanvasEffects } from "../../new-test-setup";
+
+function createTextElement(overrides?: Partial<TElement>): TElement {
+  return {
+    id: "text-1",
+    x: 100,
+    y: 120,
+    rotation: 0,
+    bindings: [],
+    locked: false,
+    parentGroupId: null,
+    zIndex: "",
+    createdAt: 1,
+    updatedAt: 1,
+    style: {
+      opacity: 1,
+      strokeColor: "#000000",
+    },
+    data: {
+      type: "text",
+      w: 200,
+      h: 30,
+      text: "hello",
+      originalText: "hello",
+      fontSize: 16,
+      fontFamily: "Arial",
+      textAlign: "left",
+      verticalAlign: "top",
+      lineHeight: 1.2,
+      link: null,
+      containerId: null,
+      autoResize: false,
+    },
+    ...overrides,
+  };
+}
+
+function firePointerUp(harness: Awaited<ReturnType<typeof createNewCanvasHarness>>, x: number, y: number) {
+  const originalGetPos = harness.staticForegroundLayer.getRelativePointerPosition.bind(harness.staticForegroundLayer);
+  harness.staticForegroundLayer.getRelativePointerPosition = () => ({ x, y });
+
+  harness.runtime.hooks.pointerUp.call({
+    target: harness.stage,
+    currentTarget: harness.stage,
+    evt: new PointerEvent("pointerup"),
+    cancelBubble: false,
+  } as unknown as Konva.KonvaEventObject<PointerEvent>);
+
+  harness.staticForegroundLayer.getRelativePointerPosition = originalGetPos;
+}
+
+function addHydratedTextNode(harness: Awaited<ReturnType<typeof createNewCanvasHarness>>, element?: TElement) {
+  const editor = harness.runtime.services.require("editor");
+  const node = editor.createShapeFromTElement(element ?? createTextElement());
+  if (!(node instanceof Konva.Text)) {
+    throw new Error("Expected text node");
+  }
+  harness.staticForegroundLayer.add(node);
+  harness.staticForegroundLayer.batchDraw();
+  return node;
+}
+
+async function openEdit(node: Konva.Text) {
+  node.fire("pointerdown", {
+    target: node,
+    currentTarget: node,
+    evt: new MouseEvent("pointerdown", { bubbles: true }),
+  });
+  await flushCanvasEffects();
+
+  node.fire("pointerdblclick", {
+    target: node,
+    currentTarget: node,
+    evt: new MouseEvent("pointerdblclick", { bubbles: true }),
+  });
+  await flushCanvasEffects();
+}
+
+describe("new Text plugin regressions", () => {
+  test("Escape on a newly created empty text removes the node", async () => {
+    const harness = await createNewCanvasHarness();
+    const editor = harness.runtime.services.require("editor");
+
+    editor.setActiveTool("text");
+    await flushCanvasEffects();
+
+    firePointerUp(harness, 100, 150);
+    await flushCanvasEffects();
+
+    const textarea = harness.stage.container().querySelector("textarea") as HTMLTextAreaElement;
+    expect(textarea).not.toBeNull();
+    expect(harness.staticForegroundLayer.find("Text")).toHaveLength(1);
+
+    textarea.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+    await flushCanvasEffects();
+
+    expect(harness.stage.container().querySelector("textarea")).toBeNull();
+    expect(harness.staticForegroundLayer.find("Text")).toHaveLength(0);
+    expect(editor.editingTextId).toBeNull();
+
+    await harness.destroy();
+  });
+
+  test("Escape on existing text cancels edit and keeps original content", async () => {
+    const harness = await createNewCanvasHarness();
+    const node = addHydratedTextNode(harness, createTextElement({ id: "escape-existing", data: { ...createTextElement().data, text: "original" } }));
+
+    await openEdit(node);
+    const textarea = harness.stage.container().querySelector("textarea") as HTMLTextAreaElement;
+    textarea.value = "changed but canceled";
+    textarea.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+    await flushCanvasEffects();
+
+    expect(harness.stage.container().querySelector("textarea")).toBeNull();
+    expect(node.text()).toBe("original");
+
+    await harness.destroy();
+  });
+
+  test("long single-line text expands textarea width and committed node width", async () => {
+    const harness = await createNewCanvasHarness();
+    const node = addHydratedTextNode(harness, createTextElement({ id: "wide-text", data: { ...createTextElement().data, text: "plain text" } }));
+
+    await openEdit(node);
+    const textarea = harness.stage.container().querySelector("textarea") as HTMLTextAreaElement;
+    const initialTextareaWidth = parseFloat(textarea.style.width);
+    const initialNodeWidth = node.width();
+
+    Object.defineProperty(textarea, "scrollWidth", { configurable: true, get: () => 420 });
+    Object.defineProperty(textarea, "scrollHeight", { configurable: true, get: () => 20 });
+    textarea.value = "this is all a single line of text but should stay on one line";
+    textarea.dispatchEvent(new Event("input"));
+
+    expect(parseFloat(textarea.style.width)).toBeGreaterThan(initialTextareaWidth);
+
+    textarea.dispatchEvent(new Event("blur"));
+    await flushCanvasEffects();
+
+    expect(node.width()).toBeGreaterThan(initialNodeWidth);
+    expect(node.text()).toBe("this is all a single line of text but should stay on one line");
+
+    await harness.destroy();
+  });
+});
