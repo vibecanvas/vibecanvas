@@ -65,7 +65,18 @@ export function createTextPlugin(): IPlugin<{
       const document = render.container.ownerDocument;
 
       const setupNode = (node: Konva.Text) => {
-        txSetupTextNode({ crdt, history, hooks: ctx.hooks, render }, { freeTextName: FREE_TEXT_NAME, node });
+        txSetupTextNode(
+          {
+            crdt,
+            crypto,
+            history,
+            hooks: ctx.hooks,
+            render,
+            selection,
+            setupNode,
+          },
+          { freeTextName: FREE_TEXT_NAME, node },
+        );
         return node;
       };
 

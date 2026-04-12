@@ -4,14 +4,18 @@ import type { TElement } from "@vibecanvas/service-automerge/types/canvas-doc.ty
 import type { CrdtService } from "../../new-services/crdt/CrdtService";
 import type { HistoryService } from "../../new-services/history/HistoryService";
 import type { RenderService } from "../../new-services/render/RenderService";
+import type { SelectionService } from "../../new-services/selection/SelectionService";
 import type { IHooks } from "../../runtime";
 import type Konva from "konva";
 
 export type TPortalSetupTextNode = {
   crdt: CrdtService;
+  crypto: typeof crypto;
   history: HistoryService;
   hooks: IHooks;
   render: RenderService;
+  selection: SelectionService;
+  setupNode: (node: Konva.Text) => Konva.Text;
 };
 
 export type TArgsSetupTextNode = {
@@ -19,8 +23,19 @@ export type TArgsSetupTextNode = {
   node: Konva.Text;
 };
 
+function stopDragSafely(node: Konva.Node) {
+  try {
+    if (node.isDragging()) {
+      node.stopDrag();
+    }
+  } catch {
+    return;
+  }
+}
+
 export function txSetupTextNode(portal: TPortalSetupTextNode, args: TArgsSetupTextNode) {
   let beforeDragElement: TElement | null = null;
+  let isCloneDrag = false;
 
   args.node.on("pointerclick", (event) => {
     portal.hooks.elementPointerClick.call(event);
@@ -52,12 +67,49 @@ export function txSetupTextNode(portal: TPortalSetupTextNode, args: TArgsSetupTe
     });
   });
 
-  args.node.on("dragstart", () => {
+  args.node.on("dragstart", (event) => {
+    if (event.evt?.altKey) {
+      isCloneDrag = true;
+      stopDragSafely(args.node);
+
+      const previewClone = new portal.render.Text(args.node.getAttrs());
+      previewClone.id(portal.crypto.randomUUID());
+      previewClone.name(args.freeTextName);
+      previewClone.draggable(true);
+      portal.render.dynamicLayer.add(previewClone);
+      previewClone.startDrag();
+
+      const finalizeCloneDrag = () => {
+        previewClone.off("dragend", finalizeCloneDrag);
+        stopDragSafely(previewClone);
+        previewClone.moveTo(portal.render.staticForegroundLayer);
+        const cloned = portal.setupNode(previewClone);
+        const now = Date.now();
+        const clonedElement = fxToElement(
+          { render: portal.render },
+          { node: cloned, createdAt: now, updatedAt: now },
+        );
+        portal.crdt.patch({ elements: [clonedElement], groups: [] });
+        portal.selection.setSelection([cloned]);
+        portal.selection.setFocusedNode(cloned);
+        portal.render.dynamicLayer.batchDraw();
+        portal.render.staticForegroundLayer.batchDraw();
+      };
+
+      previewClone.on("dragend", finalizeCloneDrag);
+      return;
+    }
+
     const now = Date.now();
     beforeDragElement = fxToElement({ render: portal.render }, { node: args.node, createdAt: now, updatedAt: now });
   });
 
   args.node.on("dragend", () => {
+    if (isCloneDrag) {
+      isCloneDrag = false;
+      beforeDragElement = null;
+      return;
+    }
     const now = Date.now();
     const afterDragElement = fxToElement({ render: portal.render }, { node: args.node, createdAt: beforeDragElement?.createdAt ?? now, updatedAt: now });
     portal.crdt.patch({ elements: [afterDragElement], groups: [] });
