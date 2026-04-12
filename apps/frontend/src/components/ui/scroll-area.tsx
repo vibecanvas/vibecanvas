@@ -9,7 +9,8 @@ type TScrollAreaProps = {
 export function ScrollArea(props: TScrollAreaProps) {
   return (
     <div
-      class={`min-h-0 overflow-y-auto overflow-x-hidden [scrollbar-width:thin] ${props.class ?? ""} ${props.viewportClass ?? ""}`}
+      class={`min-h-0 overflow-y-auto overflow-x-hidden ${props.class ?? ""} ${props.viewportClass ?? ""}`}
+      style={{ "scrollbar-width": "thin" }}
     >
       {props.children}
     </div>

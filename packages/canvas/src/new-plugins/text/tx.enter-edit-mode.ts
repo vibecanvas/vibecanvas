@@ -2,6 +2,8 @@ import { fxComputeTextHeight } from "./fn.compute-text-height";
 import { fxComputeTextWidth } from "./fx.compute-text-width";
 import { fxToElement } from "./fx.to-element";
 import { txUpdateTextNodeFromElement } from "./tx.update-text-node-from-element";
+import { measureTextLayout } from "../../core/pretext";
+import type { TTextData } from "@vibecanvas/service-automerge/types/canvas-doc.types";
 import type { ThemeService } from "@vibecanvas/service-theme";
 import type { CrdtService } from "../../new-services/crdt/CrdtService";
 import type { EditorService } from "../../new-services/editor/EditorService";
@@ -30,6 +32,8 @@ export function txEnterEditMode(portal: TPortalEnterEditMode, args: TArgsEnterEd
   const now = Date.now();
   const originalElement = fxToElement({ render: portal.render }, { node: args.node, createdAt: now, updatedAt: now });
   const originalText = args.node.text();
+  const originalData = originalElement.data as TTextData;
+  const isAttachedText = originalData.containerId !== null;
 
   portal.editor.setEditingTextId(args.node.id());
   args.node.visible(false);
@@ -41,8 +45,39 @@ export function txEnterEditMode(portal: TPortalEnterEditMode, args: TArgsEnterEd
   const absoluteRotation = args.node.getAbsoluteRotation();
   const scaledFontSize = args.node.fontSize() * absoluteScale.x;
   const scaledWidth = Math.max(args.node.width() * absoluteScale.x, 4);
+  const scaledHeight = Math.max(args.node.height() * absoluteScale.y, scaledFontSize);
+
+  const syncFixedBoxLayout = () => {
+    if (!isAttachedText) {
+      return;
+    }
+
+    const measured = measureTextLayout({
+      text: textarea.value,
+      fontSize: args.node.fontSize(),
+      fontFamily: args.node.fontFamily(),
+      fontStyle: args.node.fontStyle(),
+      lineHeight: args.node.lineHeight(),
+      width: args.node.width(),
+    });
+    const remainingHeight = Math.max(0, scaledHeight - measured.height * absoluteScale.y);
+    const verticalPadding = remainingHeight / 2;
+
+    textarea.style.width = `${scaledWidth}px`;
+    textarea.style.height = `${scaledHeight}px`;
+    textarea.style.paddingLeft = "0px";
+    textarea.style.paddingRight = "0px";
+    textarea.style.paddingTop = `${verticalPadding}px`;
+    textarea.style.paddingBottom = `${verticalPadding}px`;
+    textarea.style.overflow = "hidden";
+  };
 
   const autoGrow = () => {
+    if (isAttachedText) {
+      syncFixedBoxLayout();
+      return;
+    }
+
     textarea.style.width = "auto";
     textarea.style.width = `${Math.max(textarea.scrollWidth, scaledWidth)}px`;
     textarea.style.height = "auto";
@@ -59,10 +94,12 @@ export function txEnterEditMode(portal: TPortalEnterEditMode, args: TArgsEnterEd
     fontSize: `${scaledFontSize}px`,
     fontFamily: args.node.fontFamily(),
     lineHeight: String(args.node.lineHeight()),
+    textAlign: args.node.align(),
     transform: `rotate(${absoluteRotation}deg)`,
     transformOrigin: "top left",
-    whiteSpace: "pre",
-    outline: "2px solid var(--vc-canvas-text-editor-outline, #3b82f6)",
+    whiteSpace: "pre-wrap",
+    outline: "none",
+    boxShadow: "none",
     background: "transparent",
     border: "none",
     resize: "none",
@@ -100,8 +137,31 @@ export function txEnterEditMode(portal: TPortalEnterEditMode, args: TArgsEnterEd
 
     const textToSet = !args.isNew && newText === "" ? originalText : newText;
     args.node.text(textToSet);
-    args.node.width(Math.max(worldWidth, fxComputeTextWidth({ document: portal.document }, { node: args.node, text: textToSet })));
-    args.node.height(Math.max(worldHeight, fxComputeTextHeight({ fontSize: args.node.fontSize(), lineHeight: args.node.lineHeight(), padding: args.node.padding(), text: textToSet })));
+    args.node.setAttr("vcOriginalText", textToSet);
+
+    if (isAttachedText) {
+      args.node.width(originalData.w);
+      args.node.height(originalData.h);
+    } else {
+      const measured = measureTextLayout({
+        text: textToSet,
+        fontSize: args.node.fontSize(),
+        fontFamily: args.node.fontFamily(),
+        fontStyle: args.node.fontStyle(),
+        lineHeight: args.node.lineHeight(),
+        width: worldWidth,
+      });
+      const computedWidth = fxComputeTextWidth({ document: portal.document }, { node: args.node, text: textToSet });
+      const computedHeight = fxComputeTextHeight({
+        fontSize: args.node.fontSize(),
+        lineHeight: args.node.lineHeight(),
+        padding: args.node.padding(),
+        text: textToSet,
+      });
+      args.node.width(Math.max(worldWidth, measured.maxLineWidth, computedWidth));
+      args.node.height(Math.max(worldHeight, measured.height, computedHeight));
+    }
+
     args.node.visible(true);
     portal.render.staticForegroundLayer.batchDraw();
 
@@ -156,6 +216,11 @@ export function txEnterEditMode(portal: TPortalEnterEditMode, args: TArgsEnterEd
 
     if (event.key === "Escape") {
       event.preventDefault();
+      if (isAttachedText) {
+        textarea.blur();
+        return;
+      }
+
       cancel();
       return;
     }
@@ -176,6 +241,9 @@ export function txEnterEditMode(portal: TPortalEnterEditMode, args: TArgsEnterEd
 
   portal.render.stage.container().appendChild(textarea);
   autoGrow();
+  if (isAttachedText) {
+    textarea.style.minHeight = `${scaledHeight}px`;
+  }
   textarea.focus();
   textarea.select();
 }

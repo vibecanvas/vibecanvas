@@ -1,3 +1,5 @@
+import "./styles.css";
+
 export * from "./components/Canvas";
 export * from "./components/file";
 export * from "./components/filetree";

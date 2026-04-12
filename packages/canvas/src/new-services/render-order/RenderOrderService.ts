@@ -332,9 +332,15 @@ export class RenderOrderService implements IService<Record<string, never>> {
   }
 
   private applyOrderedChildren(parent: TParentContainer, orderedChildren: TOrderedNode[], persist: boolean) {
+    let persistedIndex = 0;
     orderedChildren.forEach((node, index) => {
       node.zIndex(index);
-      setNodeZIndex(node, createOrderedZIndex(index));
+      if (node.id() === "") {
+        return;
+      }
+
+      setNodeZIndex(node, createOrderedZIndex(persistedIndex));
+      persistedIndex += 1;
     });
 
     if (!persist) {
@@ -343,19 +349,27 @@ export class RenderOrderService implements IService<Record<string, never>> {
 
     const elementPatches: TElement[] = [];
     const groupPatches: TGroup[] = [];
+    persistedIndex = 0;
 
-    orderedChildren.forEach((node, index) => {
+    orderedChildren.forEach((node) => {
+      if (node.id() === "") {
+        return;
+      }
+
+      const zIndex = createOrderedZIndex(persistedIndex);
+      persistedIndex += 1;
+
       if (node instanceof Konva.Group) {
         groupPatches.push({
           id: node.id(),
-          zIndex: createOrderedZIndex(index),
+          zIndex,
         } as TGroup);
         return;
       }
 
       elementPatches.push({
         id: node.id(),
-        zIndex: createOrderedZIndex(index),
+        zIndex,
       } as TElement);
     });
 

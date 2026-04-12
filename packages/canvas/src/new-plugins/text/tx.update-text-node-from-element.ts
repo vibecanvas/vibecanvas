@@ -45,10 +45,13 @@ export function txUpdateTextNodeFromElement(portal: TPortalUpdateTextNodeFromEle
   node.opacity(args.element.style.opacity ?? 1);
   node.fill(args.element.style.strokeColor ?? portal.theme.getTheme().colors.canvasText);
   node.setAttr("vcUsesThemeTextColor", !args.element.style.strokeColor);
+  node.setAttr("vcContainerId", data.containerId ?? null);
+  node.setAttr("vcOriginalText", data.originalText);
+  node.setAttr("vcTextAutoResize", data.autoResize);
   node.scale({ x: 1, y: 1 });
   node.wrap("none");
-  node.listening(true);
-  node.draggable(true);
+  node.listening(data.containerId === null);
+  node.draggable(data.containerId === null);
   node.name(args.freeTextName);
   return true;
 }

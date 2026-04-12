@@ -55,7 +55,6 @@
   },
   "dependencies": {
     "@lastolivegames/becsy": "^0.15.5",
-    "bun-plugin-tailwind": "^0.1.2",
     "handlebars": "^4.7.9",
     "pixi.js": "^8.17.1"
   }

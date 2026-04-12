@@ -260,7 +260,13 @@ function deleteSelectionInternal(portal: TPortalDeleteSelection, args: TArgsDele
     return false;
   }
 
-  const collected = collectDeleteSnapshot(portal, roots);
+  const expandedRoots = collapseSelectionToDeleteRoots(roots.flatMap((root) => {
+    return portal.renderOrder.getOrderBundle(root).filter((candidate): candidate is TSceneNode => {
+      return isSceneNode(portal.render, candidate);
+    });
+  }));
+
+  const collected = collectDeleteSnapshot(portal, expandedRoots);
   if (!collected) {
     return false;
   }

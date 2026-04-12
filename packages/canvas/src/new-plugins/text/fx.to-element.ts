@@ -1,5 +1,6 @@
 import type { TElement, TElementStyle, TTextData } from "@vibecanvas/service-automerge/types/canvas-doc.types";
 import { fxGetWorldPosition } from "../../core/fn.world-position";
+import { getNodeZIndex } from "../../core/render-order";
 import type { RenderService } from "../../new-services/render/RenderService";
 import type Konva from "konva";
 
@@ -40,15 +41,15 @@ export function fxToElement(portal: TPortalToElement, args: TArgsToElement) {
     w: args.node.width() * textScaleX,
     h: args.node.height() * textScaleY,
     text: args.node.text(),
-    originalText: args.node.text(),
+    originalText: (args.node.getAttr("vcOriginalText") as string | undefined) ?? args.node.text(),
     fontSize: Math.max(1, args.node.fontSize() * textScaleX),
     fontFamily: args.node.fontFamily(),
     textAlign: args.node.align() as TTextData["textAlign"],
     verticalAlign: args.node.verticalAlign() as TTextData["verticalAlign"],
     lineHeight: args.node.lineHeight(),
     link: null,
-    containerId: null,
-    autoResize: false,
+    containerId: (args.node.getAttr("vcContainerId") as string | null | undefined) ?? null,
+    autoResize: (args.node.getAttr("vcTextAutoResize") as boolean | undefined) ?? false,
   };
 
   return {
@@ -61,7 +62,7 @@ export function fxToElement(portal: TPortalToElement, args: TArgsToElement) {
     updatedAt: args.updatedAt,
     locked: false,
     parentGroupId,
-    zIndex: "",
+    zIndex: getNodeZIndex(args.node),
     style,
     data,
   } satisfies TElement;

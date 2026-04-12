@@ -35,6 +35,24 @@ function fnNormalizeShortcut(shortcut: string) {
   return shortcut.trim().toLowerCase();
 }
 
+function txSyncCursor(render: RenderService, selection: SelectionService) {
+  switch (selection.mode) {
+    case CanvasMode.HAND:
+      render.stage.container().style.cursor = "grab";
+      return;
+    case CanvasMode.DRAW_CREATE:
+      render.stage.container().style.cursor = "crosshair";
+      return;
+    case CanvasMode.CLICK_CREATE:
+      render.stage.container().style.cursor = "pointer";
+      return;
+    case CanvasMode.SELECT:
+    default:
+      render.stage.container().style.cursor = "default";
+      return;
+  }
+}
+
 function txSelectTool(editor: EditorService, toolId: string) {
   const tool = editor.getTool(toolId);
   if (!tool) {
@@ -160,10 +178,12 @@ export function createToolbarPlugin(): IPlugin<{
             txSelectTool(editor, toolId);
           },
         });
+        txSyncCursor(render, selection);
       });
 
       editor.hooks.activeToolChange.tap((toolId) => {
         selection.mode = getModeFromTool(editor.getTool(toolId));
+        txSyncCursor(render, selection);
         ctx.hooks.toolSelect.call(toolId);
       });
 

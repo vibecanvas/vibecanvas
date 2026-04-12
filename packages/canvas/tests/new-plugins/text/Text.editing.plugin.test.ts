@@ -74,7 +74,7 @@ describe("new Text plugin editing", () => {
     await openEdit(node);
 
     const textarea = harness.stage.container().querySelector("textarea") as HTMLTextAreaElement;
-    expect(textarea.style.whiteSpace).toBe("pre");
+    expect(textarea.style.whiteSpace).toBe("pre-wrap");
 
     textarea.value = "Hello\nWorld\n  indented";
     textarea.dispatchEvent(new Event("blur"));

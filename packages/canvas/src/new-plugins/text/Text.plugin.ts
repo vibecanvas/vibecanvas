@@ -40,6 +40,7 @@ function nodeUsesThemeTextColor(node: Konva.Text) {
 function createTextNode(render: RenderService, theme: ThemeService, element: TElement) {
   const data = element.data as TTextData;
 
+  const isAttachedText = data.containerId !== null;
   const node = new render.Text({
     id: element.id,
     x: element.x,
@@ -54,13 +55,16 @@ function createTextNode(render: RenderService, theme: ThemeService, element: TEl
     verticalAlign: data.verticalAlign,
     lineHeight: data.lineHeight,
     wrap: "none",
-    draggable: true,
-    listening: true,
+    draggable: !isAttachedText,
+    listening: !isAttachedText,
     fill: getTextFillColor(theme, element),
     opacity: element.style.opacity ?? 1,
   });
 
   applyTextThemeState(node, element);
+  node.setAttr("vcContainerId", data.containerId ?? null);
+  node.setAttr("vcOriginalText", data.originalText);
+  node.setAttr("vcTextAutoResize", data.autoResize);
   node.name(FREE_TEXT_NAME);
   return node;
 }
@@ -155,10 +159,6 @@ export function createTextPlugin(): IPlugin<{
           return null;
         }
 
-        if (node.name() !== FREE_TEXT_NAME) {
-          return null;
-        }
-
         const now = Date.now();
         return fxToElement({ render }, { node, createdAt: now, updatedAt: now });
       });
@@ -173,10 +173,6 @@ export function createTextPlugin(): IPlugin<{
 
       editor.registerSetupExistingShape("text", (node) => {
         if (!(node instanceof render.Text)) {
-          return false;
-        }
-
-        if (node.name() !== FREE_TEXT_NAME) {
           return false;
         }
 

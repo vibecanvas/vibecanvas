@@ -23,18 +23,21 @@ type ToastProps = {
   variant?: ToastVariant;
 };
 
-const variantStyles: Record<ToastVariant, { container: string; progress: string }> = {
+const variantStyles: Record<ToastVariant, { container: string; progress: string; title: string }> = {
   default: {
     container: "bg-card border-border",
     progress: "bg-muted-foreground",
+    title: "text-foreground",
   },
   error: {
     container: "bg-destructive/10 border-destructive",
     progress: "bg-destructive",
+    title: "text-destructive",
   },
   success: {
     container: "bg-success/10 border-success",
     progress: "bg-success",
+    title: "text-foreground",
   },
 };
 
@@ -50,7 +53,7 @@ export function Toast(props: ToastProps) {
       <div class="flex items-start justify-between gap-2">
         <div class="flex-1">
           {props.title && (
-            <KobalteToast.Title class={`font-medium text-sm ${variant() === "error" ? "text-destructive" : "text-foreground"}`}>
+            <KobalteToast.Title class={`font-medium text-sm ${styles().title}`}>
               {props.title}
             </KobalteToast.Title>
           )}
@@ -61,11 +64,14 @@ export function Toast(props: ToastProps) {
           )}
         </div>
         <KobalteToast.CloseButton class="p-1 hover:bg-accent transition-colors">
-          <X size={14} class="text-[var(--text-muted)]" />
+          <X size={14} class="text-muted-foreground" />
         </KobalteToast.CloseButton>
       </div>
       <KobalteToast.ProgressTrack class="h-0.5 bg-accent/20 mt-2">
-        <KobalteToast.ProgressFill class={`h-full ${styles().progress} w-[var(--kb-toast-progress-fill-width)]`} />
+        <KobalteToast.ProgressFill
+          class={`h-full ${styles().progress}`}
+          style={{ width: "var(--kb-toast-progress-fill-width)" }}
+        />
       </KobalteToast.ProgressTrack>
     </KobalteToast>
   );

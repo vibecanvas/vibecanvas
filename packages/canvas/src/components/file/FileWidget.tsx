@@ -194,7 +194,7 @@ export function FileWidget(props: TFileWidgetProps) {
       data-file-widget-root="true"
       data-hosted-widget-focus-root="true"
       tabIndex={-1}
-      class="flex min-h-0 flex-1 flex-col bg-card text-card-foregroun h-full"
+      class="flex min-h-0 flex-1 flex-col bg-card text-card-foreground h-full"
     >
       <Switch fallback={
         <PlaceholderViewer

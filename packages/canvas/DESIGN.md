@@ -4,13 +4,14 @@
 
 - [x] `render` - stage, layers, low-level engine refs, resize hook
 - [x] `camera` - x/y/zoom, pan/zoom ops, change hook
-- [x] `editor` - tool registry, active tool, editing state, previews, transform refs, and node<->element registries
+- [x] `editor` - tool registry, active tool, editing state, previews, transform refs, node<->element registries, and clone/setup registries
 - [x] `selection` - mode, selection, focused id
-- [x] `theme` - current theme
+- [x] `theme`
 - [x] `history`
 - [x] `crdt`
+- [x] `renderOrder`
+- [x] `contextMenu`
 - [ ] `canvasDocument`
-- [ ] `renderOrder`
 - [ ] `hostedWidgets`
 - [ ] `shapeRegistry`
 - [ ] `groupRegistry`
@@ -30,28 +31,28 @@
 - [x] `HistoryControlPlugin`
 - [ ] `SelectionStyleMenuPlugin`
 - [ ] `HelpPlugin`
-- [ ] `RecorderPlugin` (`DEV` only)
-- [ ] `RenderOrderPlugin`
+- [x] `RecorderPlugin` (`DEV` only)
+- [x] `RenderOrderPlugin`
 - [x] `SelectPlugin`
 - [x] `TransformPlugin`
-- [ ] `Shape1dPlugin`
+- [x] `Shape1dPlugin`
 - [ ] `Shape2dPlugin`
-- [ ] `PenPlugin`
-- [x] `TextPlugin` *(free text create/edit/drag/transform + clone-drag; attached-text parity still missing)*
-- [ ] `ImagePlugin`
+- [x] `PenPlugin`
+- [x] `TextPlugin` *(free text create/edit/drag/transform + clone-drag + grouped transform persistence; attached-text parity still missing)*
+- [x] `ImagePlugin` *(insert/paste/drop/drag/clone + group clone hook migrated; broader parity still needs proving)*
 - [ ] `HostedSolidWidgetPlugin`
 - [ ] `IframeBrowserWidgetPlugin`
-- [ ] `GroupPlugin`
-- [ ] `ContextMenuPlugin`
+- [x] `GroupPlugin` *(group/ungroup, drag, transform boundary/draggability behavior, and alt-drag clone migrated; clone/history parity still needs proving)*
+- [x] `ContextMenuPlugin`
 - [ ] `ArrowJsPlugin`
-- [ ] `SceneHydratorPlugin`
+- [x] `SceneHydratorPlugin` *(top-down group + element hydration in new path)*
 
 ## Note
 
 High-level next direction only.
 This changes often.
 
-- keep old `Canvas.service` + old `plugins/` as behavior reference until replacement is proven
+- keep old `Canvas.service` + old `plugins/` as behavior reference until replacement is proven; some items below are migrated in code but still need parity hardening/tests
 - build new path around `runtime.ts`, `new-services/`, and `new-plugins/`
 - keep services as main effectful interface
 - keep plugins thin; move logic to `fn.*` / `fx.*` / `tx.*` helpers when it helps
