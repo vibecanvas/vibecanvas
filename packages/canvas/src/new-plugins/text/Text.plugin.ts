@@ -19,6 +19,7 @@ import { txUpdateTextNodeFromElement } from "./tx.update-text-node-from-element"
 import { txDeleteSelection } from "../select/tx.delete-selection";
 
 const FREE_TEXT_NAME = "free-text";
+const ATTACHED_TEXT_NAME = "attached-text";
 const TEXT_USES_THEME_COLOR_ATTR = "vcUsesThemeTextColor";
 
 function usesThemeTextColor(element: Pick<TElement, "style">) {
@@ -65,7 +66,7 @@ function createTextNode(render: RenderService, theme: ThemeService, element: TEl
   node.setAttr("vcContainerId", data.containerId ?? null);
   node.setAttr("vcOriginalText", data.originalText);
   node.setAttr("vcTextAutoResize", data.autoResize);
-  node.name(FREE_TEXT_NAME);
+  node.name(isAttachedText ? ATTACHED_TEXT_NAME : FREE_TEXT_NAME);
   return node;
 }
 

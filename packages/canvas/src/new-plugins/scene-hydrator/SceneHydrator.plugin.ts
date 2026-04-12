@@ -1,6 +1,7 @@
 import type { IPlugin } from "@vibecanvas/runtime";
 import type { TElement, TGroup } from "@vibecanvas/service-automerge/types/canvas-doc.types";
 import type Konva from "konva";
+import { ATTACHED_TEXT_NAME } from "../shape2d/fx.attached-text";
 import type { CrdtService } from "../../new-services/crdt/CrdtService";
 import type { EditorService } from "../../new-services/editor/EditorService";
 import type { RenderService } from "../../new-services/render/RenderService";
@@ -148,6 +149,57 @@ function sortSceneTopDown(render: RenderService, parent: Konva.Layer | Konva.Gro
     });
 }
 
+function isAttachedTextNode(render: RenderService, node: Konva.Node): node is Konva.Text {
+  return node instanceof render.Text
+    && node.name() === ATTACHED_TEXT_NAME
+    && typeof node.getAttr("vcContainerId") === "string";
+}
+
+function keepAttachedTextAboveHosts(render: RenderService, parent: Konva.Layer | Konva.Group) {
+  const orderedChildren = parent.getChildren()
+    .filter((candidate): candidate is TSceneNode => candidate instanceof render.Group || candidate instanceof render.Shape);
+  const attachedTextByHostId = new Map<string, Konva.Text[]>();
+  const detached: TSceneNode[] = [];
+
+  orderedChildren.forEach((child) => {
+    if (child instanceof render.Group) {
+      keepAttachedTextAboveHosts(render, child);
+      detached.push(child);
+      return;
+    }
+
+    if (!isAttachedTextNode(render, child)) {
+      detached.push(child);
+      return;
+    }
+
+    const hostId = child.getAttr("vcContainerId") as string;
+    const bucket = attachedTextByHostId.get(hostId) ?? [];
+    bucket.push(child);
+    attachedTextByHostId.set(hostId, bucket);
+  });
+
+  const nextChildren: TSceneNode[] = [];
+  detached.forEach((child) => {
+    nextChildren.push(child);
+    if (child instanceof render.Group) {
+      return;
+    }
+
+    const attachedTexts = attachedTextByHostId.get(child.id()) ?? [];
+    nextChildren.push(...attachedTexts);
+    attachedTextByHostId.delete(child.id());
+  });
+
+  for (const orphanTexts of attachedTextByHostId.values()) {
+    nextChildren.push(...orphanTexts);
+  }
+
+  nextChildren.forEach((child, index) => {
+    child.zIndex(index);
+  });
+}
+
 function loadCanvas(crdt: CrdtService, editor: EditorService, render: RenderService) {
   const doc = crdt.doc();
   const groups = Object.values(doc.groups).sort(compareByPersistedOrder);
@@ -156,6 +208,7 @@ function loadCanvas(crdt: CrdtService, editor: EditorService, render: RenderServ
   loadGroupsTopDown({ groups, editor, render });
   loadElementsTopDown({ elements, editor, render });
   sortSceneTopDown(render, render.staticForegroundLayer);
+  keepAttachedTextAboveHosts(render, render.staticForegroundLayer);
   render.stage.batchDraw();
 }
 

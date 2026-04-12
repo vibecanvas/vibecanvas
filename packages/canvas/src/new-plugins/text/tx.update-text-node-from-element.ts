@@ -14,6 +14,8 @@ export type TArgsUpdateTextNodeFromElement = {
   freeTextName: string;
 };
 
+const ATTACHED_TEXT_NAME = "attached-text";
+
 export function txUpdateTextNodeFromElement(portal: TPortalUpdateTextNodeFromElement, args: TArgsUpdateTextNodeFromElement) {
   if (args.element.data.type !== "text") {
     return false;
@@ -52,6 +54,6 @@ export function txUpdateTextNodeFromElement(portal: TPortalUpdateTextNodeFromEle
   node.wrap("none");
   node.listening(data.containerId === null);
   node.draggable(data.containerId === null);
-  node.name(args.freeTextName);
+  node.name(data.containerId === null ? args.freeTextName : ATTACHED_TEXT_NAME);
   return true;
 }

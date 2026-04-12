@@ -1,6 +1,7 @@
 import Konva from "konva";
-import type { TCanvasDoc, TElement, TGroup } from "@vibecanvas/service-automerge/types/canvas-doc.types";
+import type { TCanvasDoc, TElement, TGroup, TTextData } from "@vibecanvas/service-automerge/types/canvas-doc.types";
 import { describe, expect, test, vi } from "vitest";
+import { ATTACHED_TEXT_NAME } from "../../../src/new-plugins/shape2d/fx.attached-text";
 import { createMockDocHandle, createNewCanvasHarness, flushCanvasEffects } from "../../new-test-setup";
 
 vi.mock("../../../src/utils/image", () => ({
@@ -55,6 +56,66 @@ function createGroup(overrides?: Partial<TGroup>): TGroup {
   };
 }
 
+function createRectElement(overrides?: Partial<TElement>): TElement {
+  return {
+    id: "rect-1",
+    x: 120,
+    y: 140,
+    rotation: 0,
+    bindings: [],
+    createdAt: 1,
+    updatedAt: 2,
+    locked: false,
+    parentGroupId: null,
+    zIndex: "z00000000",
+    style: {
+      backgroundColor: "#ef4444",
+      opacity: 1,
+      strokeWidth: 0,
+    },
+    data: {
+      type: "rect",
+      w: 180,
+      h: 120,
+    },
+    ...overrides,
+  } satisfies TElement;
+}
+
+function createAttachedTextElement(containerId: string, overrides?: Partial<TElement>): TElement {
+  return {
+    id: "text-1",
+    x: 120,
+    y: 140,
+    rotation: 0,
+    bindings: [],
+    createdAt: 1,
+    updatedAt: 2,
+    locked: false,
+    parentGroupId: null,
+    zIndex: "",
+    style: {
+      opacity: 1,
+    },
+    data: {
+      type: "text",
+      w: 180,
+      h: 120,
+      text: "hello",
+      originalText: "hello",
+      fontSize: 24,
+      fontFamily: "Arial",
+      textAlign: "center",
+      verticalAlign: "middle",
+      lineHeight: 1.2,
+      link: null,
+      containerId,
+      autoResize: false,
+    } satisfies TTextData,
+    ...overrides,
+  } satisfies TElement;
+}
+
 describe("new RenderOrder plugin", () => {
   test("hydrates mixed top-level groups and elements in zIndex order", async () => {
     const group = createGroup({ id: "group-top", zIndex: "z00000001" });
@@ -75,6 +136,34 @@ describe("new RenderOrder plugin", () => {
       .map((node) => node.id());
 
     expect(orderedIds).toEqual([bottomImage.id, group.id, topImage.id]);
+    await harness.destroy();
+  });
+
+  test("hydration keeps attached text above its shape host", async () => {
+    const rect = createRectElement({ id: "rect-host", zIndex: "z00000010" });
+    const text = createAttachedTextElement(rect.id, { id: "text-attached", zIndex: "" });
+    const docHandle = createMockDocHandle({
+      elements: {
+        [text.id]: text,
+        [rect.id]: rect,
+      },
+    });
+
+    const harness = await createNewCanvasHarness({ docHandle });
+
+    const ordered = harness.staticForegroundLayer.getChildren()
+      .filter((node) => node instanceof Konva.Shape)
+      .map((node) => ({
+        id: node.id(),
+        name: node.name(),
+        containerId: node.getAttr("vcContainerId") as string | null | undefined,
+      }))
+      .filter((node) => node.id === rect.id || node.id === text.id);
+
+    expect(ordered.map((item) => item.id)).toEqual([rect.id, text.id]);
+    expect(ordered[1]?.name).toBe(ATTACHED_TEXT_NAME);
+    expect(ordered[1]?.containerId).toBe(rect.id);
+
     await harness.destroy();
   });
 
