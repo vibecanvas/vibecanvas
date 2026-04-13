@@ -13,6 +13,7 @@
 - [x] `contextMenu`
 - [ ] `canvasDocument`
 - [ ] `hostedWidgets`
+- [ ] `hostedComponents`
 - [ ] `shapeRegistry`
 - [ ] `groupRegistry`
 - [ ] `notification`
@@ -42,6 +43,7 @@
 - [x] `ImagePlugin` *(insert/paste/drop/drag/clone + group clone hook migrated; broader parity still needs proving)*
 - [ ] `HostedSolidWidgetPlugin`
 - [ ] `IframeBrowserWidgetPlugin`
+- [ ] `HostedComponentPlugin`
 - [x] `GroupPlugin` *(group/ungroup, drag, transform boundary/draggability behavior, and alt-drag clone migrated; clone/history parity still needs proving)*
 - [x] `ContextMenuPlugin`
 - [ ] `ArrowJsPlugin`
@@ -62,6 +64,7 @@ This changes often.
 - move tool state and tool registry through `EditorService`; toolbar should render from registry, not hardcoded tool lists
 - migrate next feature plugins by moving tool registration + feature logic one plugin at a time
 - reduce direct engine type leakage from state services over time
+- hosted component target architecture doc: `packages/canvas/HOSTED_COMPONENTS_ARCHITECTURE.md`
 
 ## Migration reminders
 

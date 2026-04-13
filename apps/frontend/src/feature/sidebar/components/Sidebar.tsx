@@ -6,21 +6,23 @@ import Plus from "lucide-solid/icons/plus";
 import Sun from "lucide-solid/icons/sun";
 import type { Component } from "solid-js";
 import { For, createSignal } from "solid-js";
-import { orpcWebsocketService } from "../../../services/orpc-websocket";
+import { showErrorToast } from "@/components/ui/Toast";
+import { removeFromCache } from "@/services/automerge";
+import { orpcWebsocketService } from "@/services/orpc-websocket";
+import { themeService, txSetThemeAppearance } from "@/services/theme";
+import { setStore, store } from "@/store";
 import type { TBackendCanvas } from "../../../types/backend.types";
 import { CreateCanvasDialog } from "./CreateCanvasDialog";
 import { DeleteCanvasDialog } from "./DeleteCanvasDialog";
 import { RenameDialog } from "./RenameDialog";
 import SidebarItem from "./SidebarItem";
-import { showErrorToast } from "@/components/ui/Toast";
-import { removeFromCache } from "@/services/automerge";
-import { themeService, txSetThemeAppearance } from "@/services/theme";
-import { store, setStore } from "@/store";
+import styles from "./Sidebar.module.css";
 
 export type SidebarProps = {
   visible?: boolean;
   onSettingsClick?: () => void;
 };
+
 const Sidebar: Component<SidebarProps> = (props) => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -30,18 +32,15 @@ const Sidebar: Component<SidebarProps> = (props) => {
     return match ? match[1] : null;
   };
 
-  // Rename dialog state
   const [renameDialogOpen, setRenameDialogOpen] = createSignal(false);
   const [canvasToRename, setCanvasToRename] = createSignal<{
     id: string;
     name: string;
   } | null>(null);
 
-  // Delete dialog state
   const [deleteDialogOpen, setDeleteDialogOpen] = createSignal(false);
   const [canvasToDelete, setCanvasToDelete] = createSignal<TBackendCanvas | null>(null);
 
-  // Create dialog state
   const [createDialogOpen, setCreateDialogOpen] = createSignal(false);
 
   const handleOpenRenameDialog = (canvasId: string, canvasName: string) => {
@@ -57,10 +56,10 @@ const Sidebar: Component<SidebarProps> = (props) => {
   const handleRename = async (newName: string) => {
     const canvas = canvasToRename();
     if (canvas) {
-      const [err, data] = await orpcWebsocketService.apiService.api.canvas.update({ params: { id: canvas.id }, body: { name: newName } })
-      if (err) showErrorToast(err.message)
+      const [err, data] = await orpcWebsocketService.apiService.api.canvas.update({ params: { id: canvas.id }, body: { name: newName } });
+      if (err) showErrorToast(err.message);
       if (data) {
-        setStore("canvases", c => c.id === canvas.id, data)
+        setStore("canvases", (c) => c.id === canvas.id, data);
       }
     }
   };
@@ -69,22 +68,22 @@ const Sidebar: Component<SidebarProps> = (props) => {
     const canvas = canvasToDelete();
     if (canvas) {
       const isActive = activeCanvasId() === canvas.id;
-      const [err, data] = await orpcWebsocketService.apiService.api.canvas.remove({ params: { id: canvas.id } })
-      if (err) showErrorToast(err.message)
+      const [err, data] = await orpcWebsocketService.apiService.api.canvas.remove({ params: { id: canvas.id } });
+      if (err) showErrorToast(err.message);
       if (data) {
-        removeFromCache(data.automerge_url)
-        setStore("canvases", prev => prev.filter(c => c.id !== data.id))
+        removeFromCache(data.automerge_url);
+        setStore("canvases", (prev) => prev.filter((c) => c.id !== data.id));
         if (isActive) navigate("/");
       }
     }
   };
 
   const handleCreateCanvas = async (title: string) => {
-    const [err, data] = await orpcWebsocketService.apiService.api.canvas.create({ name: title })
-    if (err) showErrorToast(err.message)
+    const [err, data] = await orpcWebsocketService.apiService.api.canvas.create({ name: title });
+    if (err) showErrorToast(err.message);
     if (data) {
-      setStore("canvases", prev => [...prev, data])
-      navigate(`/c/${data.id}`)
+      setStore("canvases", (prev) => [...prev, data]);
+      navigate(`/c/${data.id}`);
     }
   };
 
@@ -97,21 +96,18 @@ const Sidebar: Component<SidebarProps> = (props) => {
     txSetThemeAppearance(pressed ? "dark" : "light");
   };
 
+  const sidebarClass = () => {
+    return [styles.sidebar, props.visible === false ? styles.sidebarHidden : ""].filter(Boolean).join(" ");
+  };
+
   return (
     <>
-      <aside
-        class="h-screen bg-card border-r border-border flex flex-col overflow-hidden transition-[width] duration-200"
-        classList={{ "w-64": props.visible !== false, "w-0 border-r-0": props.visible === false }}
-      >
-        {/* Header */}
-        <div class="px-3 py-3 border-b border-border">
-          <h1 class="font-display text-sm tracking-[0.25em] text-foreground">
-            VIBECANVAS
-          </h1>
+      <aside class={sidebarClass()}>
+        <div class={styles.header}>
+          <h1 class={styles.brand}>VIBECANVAS</h1>
         </div>
 
-        {/* Canvas List */}
-        <div class="flex-1 overflow-y-auto">
+        <div class={styles.list}>
           <For each={store.canvases}>
             {(canvas) => (
               <SidebarItem
@@ -124,35 +120,33 @@ const Sidebar: Component<SidebarProps> = (props) => {
             )}
           </For>
 
-          {/* New Canvas Button */}
           <Button
-            class="w-full text-left px-3 py-1.5 flex items-center gap-2 hover:bg-stone-200 dark:hover:bg-stone-800 transition-colors"
+            class={styles.createButton}
             onClick={() => setCreateDialogOpen(true)}
           >
-            <Plus size={14} class="text-muted-foreground" />
-            <span class="font-medium text-xs text-foreground">New Canvas</span>
+            <Plus size={14} class={styles.createIcon} />
+            <span class={styles.createLabel}>New Canvas</span>
           </Button>
         </div>
 
-        <div class="border-t border-border p-3">
+        <div class={styles.footer}>
           <ToggleButton.Root
             pressed={isDarkTheme()}
             onChange={handleThemeToggle}
-            class="w-full flex items-center justify-between gap-2 border border-border bg-secondary px-3 py-2 text-xs text-secondary-foreground hover:bg-accent transition-colors data-[pressed]:bg-primary/15 data-[pressed]:text-foreground"
+            class={styles.themeToggle}
             aria-label="Toggle dark theme"
           >
-            <div class="flex items-center gap-2">
-              {isDarkTheme() ? <MoonStar size={14} class="text-primary" /> : <Sun size={14} class="text-warning" />}
-              <span class="font-medium">Dark mode</span>
+            <div class={styles.themeToggleLead}>
+              {isDarkTheme() ? <MoonStar size={14} class={styles.themeIconDark} /> : <Sun size={14} class={styles.themeIconLight} />}
+              <span class={styles.themeToggleLabel}>Dark mode</span>
             </div>
-            <span class="font-mono text-[10px] text-muted-foreground">
+            <span class={styles.themeStatus}>
               {isDarkTheme() ? "ON" : "OFF"}
             </span>
           </ToggleButton.Root>
         </div>
       </aside>
 
-      {/* Rename Dialog */}
       <RenameDialog
         open={renameDialogOpen()}
         onOpenChange={setRenameDialogOpen}
@@ -160,7 +154,6 @@ const Sidebar: Component<SidebarProps> = (props) => {
         onRename={handleRename}
       />
 
-      {/* Delete Dialog */}
       <DeleteCanvasDialog
         open={deleteDialogOpen()}
         onOpenChange={setDeleteDialogOpen}
@@ -168,7 +161,6 @@ const Sidebar: Component<SidebarProps> = (props) => {
         onDelete={handleDelete}
       />
 
-      {/* Create Canvas Dialog */}
       <CreateCanvasDialog
         open={createDialogOpen()}
         onOpenChange={setCreateDialogOpen}
