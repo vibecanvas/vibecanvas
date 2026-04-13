@@ -1,10 +1,9 @@
 import type { IPlugin } from "@vibecanvas/runtime";
 import Square from "lucide-static/icons/square.svg?raw";
+import { HOSTED_COMPONENT_TOOL_ID } from "./CONSTANTS";
 import type { CrdtService, EditorService, RenderOrderService, RenderService, SelectionService } from "../../new-services";
 import type { IHooks } from "../../runtime";
 import { txSetupHostedComponent } from "./tx.setup";
-
-const TOOL_ID = "hosted-component";
 
 function createCreateId(render: RenderService) {
   let fallbackId = 0;
@@ -16,7 +15,7 @@ function createCreateId(render: RenderService) {
     }
 
     fallbackId += 1;
-    return `hosted-component-${Date.now()}-${fallbackId}`;
+    return `${HOSTED_COMPONENT_TOOL_ID}-${Date.now()}-${fallbackId}`;
   };
 }
 
@@ -28,7 +27,7 @@ export function createHostedComponentPlugin(): IPlugin<{
   selection: SelectionService;
 }, IHooks> {
   return {
-    name: TOOL_ID,
+    name: HOSTED_COMPONENT_TOOL_ID,
     apply(ctx) {
       const render = ctx.services.require("render");
 

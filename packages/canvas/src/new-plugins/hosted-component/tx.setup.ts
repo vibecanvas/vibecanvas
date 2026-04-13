@@ -1,5 +1,10 @@
 import type { TCustomData, TElement } from "@vibecanvas/service-automerge/types/canvas-doc.types";
 import type Konva from "konva";
+import { fxGetHostedComponentCreatePointer } from "./fx.get-hosted-component-create-pointer";
+import { fxToHostedComponentElement } from "./fx.to-hosted-component-element";
+import { txCreateHostedComponentOnPointerUp } from "./tx.create-hosted-component-on-pointer-up";
+import { txSyncHostedComponentGroup } from "./tx.sync-hosted-component-group";
+import { txSyncHostedComponentOverlays } from "./tx.sync-hosted-component-overlays";
 import type { CrdtService } from "../../new-services/crdt/CrdtService";
 import type { EditorService, TEditorToolIcon } from "../../new-services/editor/EditorService";
 import type { RenderOrderService } from "../../new-services/render-order/RenderOrderService";
@@ -29,6 +34,17 @@ const TITLE_NAME = "hosted-component-title";
 const CONTROL_CLOSE_NAME = "hosted-component-control-close";
 const CONTROL_MINIMIZE_NAME = "hosted-component-control-minimize";
 const CONTROL_FULLSCREEN_NAME = "hosted-component-control-fullscreen";
+const DEFAULT_WIDTH = 160;
+const DEFAULT_HEIGHT = 120;
+const DEFAULT_BACKGROUND = "#6b7280";
+const WINDOW_BACKGROUND = "#f8fafc";
+const WINDOW_STROKE = "rgba(15, 23, 42, 0.18)";
+const TITLE_COLOR = "rgba(15, 23, 42, 0.72)";
+const CLOSE_COLOR = "#ef4444";
+const MINIMIZE_COLOR = "#f59e0b";
+const FULLSCREEN_COLOR = "#22c55e";
+const OVERLAY_BACKGROUND = "rgba(59, 130, 246, 0.35)";
+const OVERLAY_BORDER = "1px solid rgba(59, 130, 246, 0.75)";
 
 type THostedComponentPayload = {
   kind: typeof TOOL_ID;
@@ -55,44 +71,6 @@ export type TPortalSetupHostedComponent = {
 
 export type TArgsSetupHostedComponent = {};
 
-function createHostedComponentElement(args: {
-  id: string;
-  x: number;
-  y: number;
-  createdAt: number;
-  updatedAt: number;
-}): TElement {
-  const data: TCustomData = {
-    type: "custom",
-    w: 160,
-    h: 120,
-    expanded: true,
-    payload: {
-      kind: TOOL_ID,
-      backgroundColor: "#6b7280",
-    },
-  };
-
-  return {
-    id: args.id,
-    x: args.x,
-    y: args.y,
-    rotation: 0,
-    bindings: [],
-    createdAt: args.createdAt,
-    updatedAt: args.updatedAt,
-    locked: false,
-    parentGroupId: null,
-    zIndex: "",
-    style: {
-      backgroundColor: "#6b7280",
-      opacity: 1,
-      strokeWidth: 0,
-    },
-    data,
-  };
-}
-
 function isHostedComponentElement(element: TElement): element is THostedComponentElement {
   return element.data.type === "custom"
     && typeof element.data.payload === "object"
@@ -103,7 +81,7 @@ function isHostedComponentElement(element: TElement): element is THostedComponen
 function getHostedBackgroundColor(element: THostedComponentElement) {
   return typeof element.data.payload.backgroundColor === "string"
     ? element.data.payload.backgroundColor
-    : (element.style.backgroundColor ?? "#6b7280");
+    : (element.style.backgroundColor ?? DEFAULT_BACKGROUND);
 }
 
 function findHostedComponentGroup(render: RenderService, node: Konva.Node) {
@@ -121,64 +99,6 @@ function findHostedComponentGroup(render: RenderService, node: Konva.Node) {
 
 function findChild<TNode extends Konva.Node>(group: Konva.Group, predicate: (node: Konva.Node) => boolean) {
   return group.getChildren().find(predicate) as TNode | undefined;
-}
-
-function syncHostedComponentGroup(render: RenderService, group: Konva.Group, element: THostedComponentElement) {
-  const width = element.data.w;
-  const height = element.data.h;
-  const bodyColor = getHostedBackgroundColor(element);
-
-  group.position({ x: element.x, y: element.y });
-  group.rotation(element.rotation);
-  group.scale({ x: 1, y: 1 });
-  group.skew({ x: 0, y: 0 });
-  group.opacity(element.style.opacity ?? 1);
-  group.draggable(true);
-  group.listening(true);
-  group.setAttr(GROUP_KIND_ATTR, TOOL_ID);
-  group.setAttr(CREATED_AT_ATTR, element.createdAt);
-  group.setAttr(WIDTH_ATTR, width);
-  group.setAttr(HEIGHT_ATTR, height);
-  group.setAttr(BACKGROUND_ATTR, bodyColor);
-
-  const hit = findChild<Konva.Rect>(group, (node) => node instanceof render.Rect && node.name() === HIT_NAME);
-  hit?.position({ x: 0, y: 0 });
-  hit?.size({ width, height });
-
-  const windowRect = findChild<Konva.Rect>(group, (node) => node instanceof render.Rect && node.name() === WINDOW_NAME);
-  windowRect?.position({ x: 0, y: 0 });
-  windowRect?.size({ width, height });
-  windowRect?.cornerRadius(WINDOW_RADIUS_PX);
-  windowRect?.fill("#f8fafc");
-  windowRect?.stroke("rgba(15, 23, 42, 0.18)");
-  windowRect?.strokeWidth(1);
-
-  const headerRect = findChild<Konva.Rect>(group, (node) => node instanceof render.Rect && node.name() === HEADER_NAME);
-  headerRect?.position({ x: 0, y: 0 });
-  headerRect?.size({ width, height: HEADER_HEIGHT_PX });
-  headerRect?.cornerRadius([WINDOW_RADIUS_PX, WINDOW_RADIUS_PX, 0, 0]);
-  headerRect?.fill("#f8fafc");
-
-  const bodyRect = findChild<Konva.Rect>(group, (node) => node instanceof render.Rect && node.name() === BODY_NAME);
-  bodyRect?.position({ x: 0, y: HEADER_HEIGHT_PX });
-  bodyRect?.size({ width, height: Math.max(0, height - HEADER_HEIGHT_PX) });
-  bodyRect?.cornerRadius([0, 0, WINDOW_RADIUS_PX, WINDOW_RADIUS_PX]);
-  bodyRect?.fill(bodyColor);
-
-  const title = findChild<Konva.Text>(group, (node) => node instanceof render.Text && node.name() === TITLE_NAME);
-  title?.position({ x: 0, y: 0 });
-  title?.width(width);
-  title?.height(HEADER_HEIGHT_PX);
-  title?.text(HEADER_TITLE);
-
-  const closeControl = findChild<Konva.Circle>(group, (node) => node instanceof render.Circle && node.name() === CONTROL_CLOSE_NAME);
-  closeControl?.position({ x: CONTROL_START_X_PX, y: CONTROL_Y_PX });
-
-  const minimizeControl = findChild<Konva.Circle>(group, (node) => node instanceof render.Circle && node.name() === CONTROL_MINIMIZE_NAME);
-  minimizeControl?.position({ x: CONTROL_START_X_PX + CONTROL_RADIUS_PX * 2 + CONTROL_GAP_PX, y: CONTROL_Y_PX });
-
-  const fullscreenControl = findChild<Konva.Circle>(group, (node) => node instanceof render.Circle && node.name() === CONTROL_FULLSCREEN_NAME);
-  fullscreenControl?.position({ x: CONTROL_START_X_PX + (CONTROL_RADIUS_PX * 2 + CONTROL_GAP_PX) * 2, y: CONTROL_Y_PX });
 }
 
 function createHostedComponentNode(render: RenderService, element: TElement) {
@@ -214,8 +134,8 @@ function createHostedComponentNode(render: RenderService, element: TElement) {
     width: element.data.w,
     height: element.data.h,
     cornerRadius: WINDOW_RADIUS_PX,
-    fill: "#f8fafc",
-    stroke: "rgba(15, 23, 42, 0.18)",
+    fill: WINDOW_BACKGROUND,
+    stroke: WINDOW_STROKE,
     strokeWidth: 1,
     listening: false,
   });
@@ -227,7 +147,7 @@ function createHostedComponentNode(render: RenderService, element: TElement) {
     width: element.data.w,
     height: HEADER_HEIGHT_PX,
     cornerRadius: [WINDOW_RADIUS_PX, WINDOW_RADIUS_PX, 0, 0],
-    fill: "#f8fafc",
+    fill: WINDOW_BACKGROUND,
     listening: false,
   });
 
@@ -252,7 +172,7 @@ function createHostedComponentNode(render: RenderService, element: TElement) {
     align: "center",
     verticalAlign: "middle",
     fontSize: 12,
-    fill: "rgba(15, 23, 42, 0.72)",
+    fill: TITLE_COLOR,
     listening: false,
   });
 
@@ -261,7 +181,7 @@ function createHostedComponentNode(render: RenderService, element: TElement) {
     x: CONTROL_START_X_PX,
     y: CONTROL_Y_PX,
     radius: CONTROL_RADIUS_PX,
-    fill: "#ef4444",
+    fill: CLOSE_COLOR,
     listening: false,
   });
 
@@ -270,7 +190,7 @@ function createHostedComponentNode(render: RenderService, element: TElement) {
     x: CONTROL_START_X_PX + CONTROL_RADIUS_PX * 2 + CONTROL_GAP_PX,
     y: CONTROL_Y_PX,
     radius: CONTROL_RADIUS_PX,
-    fill: "#f59e0b",
+    fill: MINIMIZE_COLOR,
     listening: false,
   });
 
@@ -279,7 +199,7 @@ function createHostedComponentNode(render: RenderService, element: TElement) {
     x: CONTROL_START_X_PX + (CONTROL_RADIUS_PX * 2 + CONTROL_GAP_PX) * 2,
     y: CONTROL_Y_PX,
     radius: CONTROL_RADIUS_PX,
-    fill: "#22c55e",
+    fill: FULLSCREEN_COLOR,
     listening: false,
   });
 
@@ -292,49 +212,36 @@ function createHostedComponentNode(render: RenderService, element: TElement) {
   group.add(fullscreenControl);
   group.add(hit);
 
-  syncHostedComponentGroup(render, group, element);
+  txSyncHostedComponentGroup({ render }, {
+    group,
+    element,
+    groupKindAttr: GROUP_KIND_ATTR,
+    createdAtAttr: CREATED_AT_ATTR,
+    widthAttr: WIDTH_ATTR,
+    heightAttr: HEIGHT_ATTR,
+    backgroundAttr: BACKGROUND_ATTR,
+    kind: TOOL_ID,
+    hitName: HIT_NAME,
+    windowName: WINDOW_NAME,
+    headerName: HEADER_NAME,
+    bodyName: BODY_NAME,
+    titleName: TITLE_NAME,
+    controlCloseName: CONTROL_CLOSE_NAME,
+    controlMinimizeName: CONTROL_MINIMIZE_NAME,
+    controlFullscreenName: CONTROL_FULLSCREEN_NAME,
+    windowRadiusPx: WINDOW_RADIUS_PX,
+    headerHeightPx: HEADER_HEIGHT_PX,
+    controlRadiusPx: CONTROL_RADIUS_PX,
+    controlGapPx: CONTROL_GAP_PX,
+    controlStartXPx: CONTROL_START_X_PX,
+    controlYPx: CONTROL_Y_PX,
+    headerTitle: HEADER_TITLE,
+    windowBackground: WINDOW_BACKGROUND,
+    windowStroke: WINDOW_STROKE,
+    titleColor: TITLE_COLOR,
+    defaultBackgroundColor: DEFAULT_BACKGROUND,
+  });
   return group;
-}
-
-function toHostedComponentElement(render: RenderService, node: Konva.Node, now: () => number): TElement | null {
-  const group = findHostedComponentGroup(render, node);
-  if (!(group instanceof render.Group)) {
-    return null;
-  }
-
-  const updatedAt = now();
-  const width = Number(group.getAttr(WIDTH_ATTR) ?? 160) * group.scaleX();
-  const height = Number(group.getAttr(HEIGHT_ATTR) ?? 120) * group.scaleY();
-  const backgroundColor = String(group.getAttr(BACKGROUND_ATTR) ?? "#6b7280");
-  const parent = group.getParent();
-
-  return {
-    id: group.id(),
-    x: group.x(),
-    y: group.y(),
-    rotation: group.rotation(),
-    bindings: [],
-    createdAt: Number(group.getAttr(CREATED_AT_ATTR) ?? updatedAt),
-    updatedAt,
-    locked: false,
-    parentGroupId: parent instanceof render.Group ? parent.id() : null,
-    zIndex: String(group.getAttr("vcZIndex") ?? ""),
-    style: {
-      backgroundColor,
-      opacity: group.opacity(),
-      strokeWidth: 0,
-    },
-    data: {
-      type: "custom",
-      w: width,
-      h: height,
-      expanded: true,
-      payload: {
-        kind: TOOL_ID,
-        backgroundColor,
-      },
-    },
-  };
 }
 
 function updateHostedComponentNode(render: RenderService, element: TElement) {
@@ -350,59 +257,35 @@ function updateHostedComponentNode(render: RenderService, element: TElement) {
     return false;
   }
 
-  syncHostedComponentGroup(render, node, element);
-  return true;
-}
-
-function getHostedComponentNodes(render: RenderService) {
-  return render.staticForegroundLayer.find((candidate: Konva.Node) => {
-    return candidate instanceof render.Group && candidate.getAttr(GROUP_KIND_ATTR) === TOOL_ID;
-  }).filter((candidate): candidate is Konva.Group => candidate instanceof render.Group);
-}
-
-function syncHostedComponentOverlays(args: {
-  render: RenderService;
-  root: HTMLDivElement;
-  overlays: Map<string, HTMLDivElement>;
-}) {
-  const activeIds = new Set<string>();
-
-  getHostedComponentNodes(args.render).forEach((node) => {
-    const id = node.id();
-    activeIds.add(id);
-
-    let overlay = args.overlays.get(id);
-    if (!overlay) {
-      overlay = args.render.container.ownerDocument.createElement("div");
-      overlay.dataset.hostedComponentOverlayId = id;
-      overlay.style.position = "absolute";
-      overlay.style.pointerEvents = "none";
-      overlay.style.background = "rgba(59, 130, 246, 0.35)";
-      overlay.style.border = "1px solid rgba(59, 130, 246, 0.75)";
-      overlay.style.boxSizing = "border-box";
-      args.root.appendChild(overlay);
-      args.overlays.set(id, overlay);
-    }
-
-    const rect = node.getClientRect();
-    const width = Math.max(0, rect.width - OVERLAY_INSET_PX * 2);
-    const height = Math.max(0, rect.height - HEADER_HEIGHT_PX - OVERLAY_INSET_PX * 2);
-
-    overlay.style.display = width <= 0 || height <= 0 ? "none" : "block";
-    overlay.style.left = `${rect.x + OVERLAY_INSET_PX}px`;
-    overlay.style.top = `${rect.y + HEADER_HEIGHT_PX + OVERLAY_INSET_PX}px`;
-    overlay.style.width = `${width}px`;
-    overlay.style.height = `${height}px`;
+  return txSyncHostedComponentGroup({ render }, {
+    group: node,
+    element,
+    groupKindAttr: GROUP_KIND_ATTR,
+    createdAtAttr: CREATED_AT_ATTR,
+    widthAttr: WIDTH_ATTR,
+    heightAttr: HEIGHT_ATTR,
+    backgroundAttr: BACKGROUND_ATTR,
+    kind: TOOL_ID,
+    hitName: HIT_NAME,
+    windowName: WINDOW_NAME,
+    headerName: HEADER_NAME,
+    bodyName: BODY_NAME,
+    titleName: TITLE_NAME,
+    controlCloseName: CONTROL_CLOSE_NAME,
+    controlMinimizeName: CONTROL_MINIMIZE_NAME,
+    controlFullscreenName: CONTROL_FULLSCREEN_NAME,
+    windowRadiusPx: WINDOW_RADIUS_PX,
+    headerHeightPx: HEADER_HEIGHT_PX,
+    controlRadiusPx: CONTROL_RADIUS_PX,
+    controlGapPx: CONTROL_GAP_PX,
+    controlStartXPx: CONTROL_START_X_PX,
+    controlYPx: CONTROL_Y_PX,
+    headerTitle: HEADER_TITLE,
+    windowBackground: WINDOW_BACKGROUND,
+    windowStroke: WINDOW_STROKE,
+    titleColor: TITLE_COLOR,
+    defaultBackgroundColor: DEFAULT_BACKGROUND,
   });
-
-  for (const [id, overlay] of args.overlays.entries()) {
-    if (activeIds.has(id)) {
-      continue;
-    }
-
-    overlay.remove();
-    args.overlays.delete(id);
-  }
 }
 
 function setupHostedComponentOverlay(portal: TPortalSetupHostedComponent) {
@@ -415,10 +298,15 @@ function setupHostedComponentOverlay(portal: TPortalSetupHostedComponent) {
       return;
     }
 
-    syncHostedComponentOverlays({
-      render: portal.render,
+    txSyncHostedComponentOverlays({ render: portal.render }, {
       root,
       overlays,
+      kind: TOOL_ID,
+      groupKindAttr: GROUP_KIND_ATTR,
+      overlayInsetPx: OVERLAY_INSET_PX,
+      headerHeightPx: HEADER_HEIGHT_PX,
+      overlayBackground: OVERLAY_BACKGROUND,
+      overlayBorder: OVERLAY_BORDER,
     });
   };
 
@@ -455,7 +343,8 @@ function setupHostedComponentOverlay(portal: TPortalSetupHostedComponent) {
   });
 }
 
-export function txSetupHostedComponent(portal: TPortalSetupHostedComponent, _args: TArgsSetupHostedComponent) {
+export function txSetupHostedComponent(portal: TPortalSetupHostedComponent, args: TArgsSetupHostedComponent) {
+  void args;
   setupHostedComponentOverlay(portal);
 
   portal.editor.registerTool({
@@ -468,7 +357,19 @@ export function txSetupHostedComponent(portal: TPortalSetupHostedComponent, _arg
   });
 
   portal.editor.registerToElement(TOOL_ID, (node) => {
-    return toHostedComponentElement(portal.render, node, portal.now);
+    return fxToHostedComponentElement({ render: portal.render }, {
+      node,
+      kind: TOOL_ID,
+      groupKindAttr: GROUP_KIND_ATTR,
+      createdAtAttr: CREATED_AT_ATTR,
+      widthAttr: WIDTH_ATTR,
+      heightAttr: HEIGHT_ATTR,
+      backgroundAttr: BACKGROUND_ATTR,
+      defaultWidth: DEFAULT_WIDTH,
+      defaultHeight: DEFAULT_HEIGHT,
+      defaultBackgroundColor: DEFAULT_BACKGROUND,
+      now: portal.now,
+    });
   });
 
   portal.editor.registerCreateShapeFromTElement(TOOL_ID, (element) => {
@@ -539,44 +440,42 @@ export function txSetupHostedComponent(portal: TPortalSetupHostedComponent, _arg
       return;
     }
 
-    const pointer = portal.render.staticForegroundLayer.getRelativePointerPosition();
+    const pointer = fxGetHostedComponentCreatePointer({ render: portal.render }, {});
     if (!pointer) {
       return;
     }
 
-    const timestamp = portal.now();
-    const element = createHostedComponentElement({
-      id: portal.createId(),
-      x: pointer.x - 80,
-      y: pointer.y - 60,
-      createdAt: timestamp,
-      updatedAt: timestamp,
+    txCreateHostedComponentOnPointerUp({
+      crdt: portal.crdt,
+      editor: portal.editor,
+      render: portal.render,
+      renderOrder: portal.renderOrder,
+      selection: portal.selection,
+      createId: portal.createId,
+      now: portal.now,
+    }, {
+      pointer,
+      kind: TOOL_ID,
+      defaultWidth: DEFAULT_WIDTH,
+      defaultHeight: DEFAULT_HEIGHT,
+      defaultBackgroundColor: DEFAULT_BACKGROUND,
+      createNode: (element) => portal.editor.createShapeFromTElement(element),
+      toElement: (node) => {
+        return fxToHostedComponentElement({ render: portal.render }, {
+          node,
+          kind: TOOL_ID,
+          groupKindAttr: GROUP_KIND_ATTR,
+          createdAtAttr: CREATED_AT_ATTR,
+          widthAttr: WIDTH_ATTR,
+          heightAttr: HEIGHT_ATTR,
+          backgroundAttr: BACKGROUND_ATTR,
+          defaultWidth: DEFAULT_WIDTH,
+          defaultHeight: DEFAULT_HEIGHT,
+          defaultBackgroundColor: DEFAULT_BACKGROUND,
+          now: portal.now,
+        });
+      },
     });
-    const node = portal.editor.createShapeFromTElement(element);
-    if (!(node instanceof portal.render.Group)) {
-      return;
-    }
-
-    portal.render.staticForegroundLayer.add(node);
-    portal.renderOrder.assignOrderOnInsert({
-      parent: portal.render.staticForegroundLayer,
-      nodes: [node],
-      position: "front",
-    });
-
-    const createdElement = toHostedComponentElement(portal.render, node, portal.now);
-    if (!createdElement) {
-      node.destroy();
-      portal.render.staticForegroundLayer.batchDraw();
-      portal.editor.setActiveTool("select");
-      return;
-    }
-
-    portal.crdt.patch({ elements: [createdElement], groups: [] });
-    portal.selection.setSelection([node]);
-    portal.selection.setFocusedNode(node);
-    portal.editor.setActiveTool("select");
-    portal.render.staticForegroundLayer.batchDraw();
   });
 
   portal.hooks.destroy.tap(() => {
