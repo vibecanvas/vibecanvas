@@ -38,7 +38,7 @@ export type TEditorTool = {
 export type TEditorToElement = (node: Konva.Node) => TElement | null;
 export type TEditorToGroup = (node: Konva.Node) => TGroup | null;
 export type TEditorCreateGroupFromTGroup = (group: TGroup) => Konva.Group | null;
-export type TEditorCreateShapeFromTElement = (element: TElement) => Konva.Shape | null;
+export type TEditorCreateShapeFromTElement = (element: TElement) => Konva.Group | Konva.Shape | null;
 export type TEditorSetupExistingShape = (node: Konva.Node) => boolean;
 export type TEditorUpdateShapeFromTElement = (element: TElement) => boolean;
 export type TEditorCloneElement = (args: { sourceElement: TElement; clonedElement: TElement }) => boolean;

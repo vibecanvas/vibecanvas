@@ -2,9 +2,9 @@ import type { IPlugin } from "@vibecanvas/runtime";
 import Square from "lucide-static/icons/square.svg?raw";
 import type { CrdtService, EditorService, RenderOrderService, RenderService, SelectionService } from "../../new-services";
 import type { IHooks } from "../../runtime";
-import { txSetupExampleUi } from "./tx.setup";
+import { txSetupHostedComponent } from "./tx.setup";
 
-const TOOL_ID = "example-ui";
+const TOOL_ID = "hosted-component";
 
 function createCreateId(render: RenderService) {
   let fallbackId = 0;
@@ -16,11 +16,11 @@ function createCreateId(render: RenderService) {
     }
 
     fallbackId += 1;
-    return `example-ui-${Date.now()}-${fallbackId}`;
+    return `hosted-component-${Date.now()}-${fallbackId}`;
   };
 }
 
-export function createExampleUiPlugin(): IPlugin<{
+export function createHostedComponentPlugin(): IPlugin<{
   crdt: CrdtService;
   render: RenderService;
   renderOrder: RenderOrderService;
@@ -32,7 +32,7 @@ export function createExampleUiPlugin(): IPlugin<{
     apply(ctx) {
       const render = ctx.services.require("render");
 
-      txSetupExampleUi({
+      txSetupHostedComponent({
         crdt: ctx.services.require("crdt"),
         editor: ctx.services.require("editor"),
         hooks: ctx.hooks,

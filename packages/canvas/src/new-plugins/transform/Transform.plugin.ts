@@ -44,13 +44,14 @@ type TTransformDragProxyState = {
   throttledPatch: (element: TElement) => void;
 };
 
-function collectSerializableShapes(
+function collectSerializableNodes(
+  editor: EditorService,
   render: RenderService,
   nodes: Konva.Node[],
-): Array<Shape<ShapeConfig>> {
+): Array<Group | Shape<ShapeConfig>> {
   return nodes.flatMap((node) => {
     if (node instanceof render.Group) {
-      return collectSerializableShapes(render, node.getChildren());
+      return editor.toElement(node) ? [node] : collectSerializableNodes(editor, render, node.getChildren());
     }
 
     if (node instanceof render.Shape) {
@@ -62,8 +63,8 @@ function collectSerializableShapes(
 }
 
 function serializeSelection(editor: EditorService, render: RenderService, nodes: Konva.Node[]) {
-  const shapes = collectSerializableShapes(render, nodes);
-  return shapes
+  const serializableNodes = collectSerializableNodes(editor, render, nodes);
+  return serializableNodes
     .map((node) => editor.toElement(node))
     .filter((element): element is TElement => element !== null);
 }
