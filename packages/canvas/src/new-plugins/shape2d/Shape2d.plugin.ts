@@ -57,8 +57,8 @@ function isShape2dTextHostNode(render: RenderService, node: Konva.Node | null | 
     && fxGetShape2dNodeType({ render, node }) !== null;
 }
 
-function getFocusedShape2dTextHost(render: RenderService, selection: SelectionService) {
-  const filtered = fxFilterSelection({ render, selection: selection.selection });
+function getFocusedShape2dTextHost(render: RenderService, editor: EditorService, selection: SelectionService) {
+  const filtered = fxFilterSelection({ render, editor, selection: selection.selection });
   if (filtered.length !== 1) {
     return null;
   }
@@ -258,6 +258,7 @@ export function createShape2dPlugin(): IPlugin<{
           filterSelection: (nodes) => {
             return fxFilterSelection({
               render,
+              editor,
               selection: nodes.filter((candidate): candidate is Konva.Group | Konva.Shape => {
                 return candidate instanceof render.Group || candidate instanceof render.Shape;
               }),
@@ -640,7 +641,7 @@ export function createShape2dPlugin(): IPlugin<{
           return;
         }
 
-        const shapeNode = getFocusedShape2dTextHost(render, selection);
+        const shapeNode = getFocusedShape2dTextHost(render, editor, selection);
         if (!shapeNode) {
           return;
         }

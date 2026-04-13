@@ -14,6 +14,7 @@ import type { RenderService } from "../../new-services/render/RenderService";
 import type { SelectionService } from "../../new-services/selection/SelectionService";
 import { CanvasMode } from "../../new-services/selection/enum";
 import type { IHooks } from "../../runtime";
+import { fxIsCanvasGroupNode } from "../../core/fn.canvas-node-semantics";
 import { txCreateGroupCloneDrag } from "./tx.create-group-clone-drag";
 import { fxIsSceneNode } from "./fn.scene-node";
 import { fxToGroupPatch } from "./fn.to-group-patch";
@@ -24,12 +25,16 @@ import { txSyncGroupBoundaries, type TGroupBoundary } from "./tx.sync-group-boun
 import { txUngroupSelection } from "./tx.ungroup-selection";
 import { txDeleteSelection } from "../select/tx.delete-selection";
 
+const CANVAS_NODE_KIND_ATTR = "vcCanvasNodeKind";
+const CANVAS_GROUP_NODE_KIND = "group";
+
 function createGroupNode(render: RenderService, group: TGroup) {
   const node = new render.Group({
     id: group.id,
     draggable: true,
   });
 
+  node.setAttr(CANVAS_NODE_KIND_ATTR, CANVAS_GROUP_NODE_KIND);
   node.setAttr("vcGroupCreatedAt", group.createdAt);
   setNodeZIndex(node, group.zIndex);
   return node;
@@ -85,11 +90,11 @@ export function createGroupPlugin(): IPlugin<{
       const boundaries = new Map<string, TGroupBoundary>();
 
       const refreshBoundaries = () => {
-        txSyncGroupBoundaries({ render, selection, theme, boundaries }, {});
+        txSyncGroupBoundaries({ editor, render, selection, theme, boundaries }, {});
       };
 
       const syncDraggability = () => {
-        txSyncDraggability({ render, selection }, {});
+        txSyncDraggability({ editor, render, selection }, {});
       };
 
       const setupNode = (group: Konva.Group) => {
@@ -173,7 +178,7 @@ export function createGroupPlugin(): IPlugin<{
 
       contextMenu.registerProvider("group", ({ scope, activeSelection }) => {
         const selectedGroups = [...activeSelection].reverse().filter((node): node is Konva.Group => {
-          return node instanceof render.Group;
+          return fxIsCanvasGroupNode({ editor, node });
         });
 
         const actions = [] as Array<{
@@ -221,11 +226,12 @@ export function createGroupPlugin(): IPlugin<{
       });
 
       editor.registerToGroup("group", (node) => {
-        if (!(node instanceof render.Group)) {
+        if (!(node instanceof render.Group) || node.getAttr(CANVAS_NODE_KIND_ATTR) !== CANVAS_GROUP_NODE_KIND) {
           return null;
         }
 
         return fxToGroupPatch({
+          editor,
           render,
           group: node,
           getNodeZIndex,

@@ -6,6 +6,7 @@ import type { TRenderOrderSnapshot } from "../../runtime";
 import type { CrdtService } from "../crdt/CrdtService";
 import type { HistoryService } from "../history/HistoryService";
 import type { RenderService } from "../render/RenderService";
+import type { EditorService } from "../editor/EditorService";
 
 export type TOrderedNode = Konva.Group | Konva.Shape;
 export type TParentContainer = Konva.Layer | Konva.Group;
@@ -16,6 +17,7 @@ export type TRenderOrderServiceArgs = {
   crdt: CrdtService;
   history: HistoryService;
   render: RenderService;
+  editor: EditorService;
   syncDomOrder?: () => void;
 };
 
@@ -82,6 +84,7 @@ export class RenderOrderService implements IService<Record<string, never>> {
   readonly crdt: CrdtService;
   readonly history: HistoryService;
   readonly render: RenderService;
+  readonly editor: EditorService;
   readonly syncDomOrder?: () => void;
   #bundleResolvers = new Map<string, TRenderOrderBundleResolver>();
 
@@ -89,6 +92,7 @@ export class RenderOrderService implements IService<Record<string, never>> {
     this.crdt = args.crdt;
     this.history = args.history;
     this.render = args.render;
+    this.editor = args.editor;
     this.syncDomOrder = args.syncDomOrder;
   }
 
@@ -187,7 +191,7 @@ export class RenderOrderService implements IService<Record<string, never>> {
       items: getImmediateOrderedChildren(parent).map((node) => ({
         id: node.id(),
         zIndex: getNodeZIndex(node),
-        kind: node instanceof Konva.Group ? "group" : "element",
+        kind: this.editor.toGroup(node) ? "group" : "element",
       })),
     };
   }
@@ -359,7 +363,7 @@ export class RenderOrderService implements IService<Record<string, never>> {
       const zIndex = createOrderedZIndex(persistedIndex);
       persistedIndex += 1;
 
-      if (node instanceof Konva.Group) {
+      if (this.editor.toGroup(node)) {
         groupPatches.push({
           id: node.id(),
           zIndex,
@@ -367,10 +371,12 @@ export class RenderOrderService implements IService<Record<string, never>> {
         return;
       }
 
-      elementPatches.push({
-        id: node.id(),
-        zIndex,
-      } as TElement);
+      if (this.editor.toElement(node)) {
+        elementPatches.push({
+          id: node.id(),
+          zIndex,
+        } as TElement);
+      }
     });
 
     if (elementPatches.length > 0 || groupPatches.length > 0) {

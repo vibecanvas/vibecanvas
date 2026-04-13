@@ -1,6 +1,7 @@
 import type { IPlugin } from "@vibecanvas/runtime";
 import type { TElement, TGroup } from "@vibecanvas/service-automerge/types/canvas-doc.types";
 import type Konva from "konva";
+import { fxIsCanvasGroupNode } from "../../core/fn.canvas-node-semantics";
 import { ATTACHED_TEXT_NAME } from "../shape2d/fx.attached-text";
 import type { CrdtService } from "../../new-services/crdt/CrdtService";
 import type { EditorService } from "../../new-services/editor/EditorService";
@@ -110,8 +111,9 @@ function loadElementsTopDown(args: {
   render: RenderService;
 }) {
   const groupsById = new Map(
-    args.render.staticForegroundLayer.find((candidate: Konva.Node) => candidate instanceof args.render.Group)
-      .map((candidate) => [candidate.id(), candidate as Konva.Group]),
+    args.render.staticForegroundLayer.find((candidate: Konva.Node) => {
+      return fxIsCanvasGroupNode({ editor: args.editor, node: candidate });
+    }).map((candidate) => [candidate.id(), candidate as Konva.Group]),
   );
 
   args.elements.forEach((element) => {
@@ -131,7 +133,7 @@ function loadElementsTopDown(args: {
   });
 }
 
-function sortSceneTopDown(render: RenderService, parent: Konva.Layer | Konva.Group) {
+function sortSceneTopDown(render: RenderService, editor: EditorService, parent: Konva.Layer | Konva.Group) {
   parent.getChildren()
     .filter((candidate): candidate is TSceneNode => candidate instanceof render.Group || candidate instanceof render.Shape)
     .slice()
@@ -143,8 +145,8 @@ function sortSceneTopDown(render: RenderService, parent: Konva.Layer | Konva.Gro
     })
     .forEach((child, index) => {
       child.zIndex(index);
-      if (child instanceof render.Group) {
-        sortSceneTopDown(render, child);
+      if (fxIsCanvasGroupNode({ editor, node: child })) {
+        sortSceneTopDown(render, editor, child as Konva.Group);
       }
     });
 }
@@ -155,15 +157,15 @@ function isAttachedTextNode(render: RenderService, node: Konva.Node): node is Ko
     && typeof node.getAttr("vcContainerId") === "string";
 }
 
-function keepAttachedTextAboveHosts(render: RenderService, parent: Konva.Layer | Konva.Group) {
+function keepAttachedTextAboveHosts(render: RenderService, editor: EditorService, parent: Konva.Layer | Konva.Group) {
   const orderedChildren = parent.getChildren()
     .filter((candidate): candidate is TSceneNode => candidate instanceof render.Group || candidate instanceof render.Shape);
   const attachedTextByHostId = new Map<string, Konva.Text[]>();
   const detached: TSceneNode[] = [];
 
   orderedChildren.forEach((child) => {
-    if (child instanceof render.Group) {
-      keepAttachedTextAboveHosts(render, child);
+    if (fxIsCanvasGroupNode({ editor, node: child })) {
+      keepAttachedTextAboveHosts(render, editor, child as Konva.Group);
       detached.push(child);
       return;
     }
@@ -182,7 +184,7 @@ function keepAttachedTextAboveHosts(render: RenderService, parent: Konva.Layer |
   const nextChildren: TSceneNode[] = [];
   detached.forEach((child) => {
     nextChildren.push(child);
-    if (child instanceof render.Group) {
+    if (fxIsCanvasGroupNode({ editor, node: child })) {
       return;
     }
 
@@ -207,8 +209,8 @@ function loadCanvas(crdt: CrdtService, editor: EditorService, render: RenderServ
 
   loadGroupsTopDown({ groups, editor, render });
   loadElementsTopDown({ elements, editor, render });
-  sortSceneTopDown(render, render.staticForegroundLayer);
-  keepAttachedTextAboveHosts(render, render.staticForegroundLayer);
+  sortSceneTopDown(render, editor, render.staticForegroundLayer);
+  keepAttachedTextAboveHosts(render, editor, render.staticForegroundLayer);
   render.stage.batchDraw();
 }
 

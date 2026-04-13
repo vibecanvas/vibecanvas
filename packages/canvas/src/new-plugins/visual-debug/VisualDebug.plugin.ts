@@ -1,6 +1,7 @@
 import type { IPlugin } from "@vibecanvas/runtime";
 import type { ThemeService } from "@vibecanvas/service-theme";
 import type { CameraService } from "../../new-services/camera/CameraService";
+import type { EditorService } from "../../new-services/editor/EditorService";
 import type { RenderService } from "../../new-services/render/RenderService";
 import type { SelectionService } from "../../new-services/selection/SelectionService";
 import type { IHooks } from "../../runtime";
@@ -12,13 +13,36 @@ function formatCameraInfo(x: number, y: number, zoom: number) {
   return `x=${Math.round(x)} y=${Math.round(y)} zoom=${zoom.toFixed(2)}`;
 }
 
-function formatSelectionInfo(selection: SelectionService) {
+function formatCanvasNodeType(editor: EditorService, node: { getClassName(): string }) {
+  if (editor.toGroup(node as never)) {
+    return "group";
+  }
+
+  const element = editor.toElement(node as never);
+  if (element) {
+    if (element.data.type === "custom") {
+      const kind = typeof element.data.payload === "object"
+        && element.data.payload !== null
+        && "kind" in element.data.payload
+        && typeof element.data.payload.kind === "string"
+        ? element.data.payload.kind
+        : "unknown";
+      return `custom:${kind}`;
+    }
+
+    return element.data.type;
+  }
+
+  return node.getClassName();
+}
+
+function formatSelectionInfo(editor: EditorService, selection: SelectionService) {
   const lines: string[] = [];
 
   if (SHOULD_RENDER_SELECTION) {
     const selectedTypes = selection.selection.length === 0
       ? "[]"
-      : `[${selection.selection.map((node) => node.getClassName()).join(", ")}]`;
+      : `[${selection.selection.map((node) => formatCanvasNodeType(editor, node)).join(", ")}]`;
     lines.push(`selection ${selectedTypes}`);
   }
 
@@ -31,6 +55,7 @@ function formatSelectionInfo(selection: SelectionService) {
 
 export function createVisualDebugPlugin(): IPlugin<{
   camera: CameraService;
+  editor: EditorService;
   render: RenderService;
   selection: SelectionService;
   theme: ThemeService;
@@ -41,11 +66,11 @@ export function createVisualDebugPlugin(): IPlugin<{
       ctx.hooks.init.tap(() => {
         const render = ctx.services.require("render");
         const camera = ctx.services.require("camera");
+        const editor = ctx.services.require("editor");
         const selection = ctx.services.require("selection");
         const theme = ctx.services.require("theme");
         const text = new render.Text({
           x: 12,
-          y: 12,
           text: "",
           fontSize: 12,
           fontFamily: "monospace",
@@ -54,13 +79,14 @@ export function createVisualDebugPlugin(): IPlugin<{
 
         const syncText = () => {
           const lines = [formatCameraInfo(camera.x, camera.y, camera.zoom)];
-          const selectionInfo = formatSelectionInfo(selection);
+          const selectionInfo = formatSelectionInfo(editor, selection);
           if (selectionInfo.length > 0) {
             lines.push(selectionInfo);
           }
 
           text.text(lines.join("\n"));
           text.fill(theme.getTheme().colors.canvasDebugText);
+          text.y(Math.max(12, render.stage.height() - text.height() - 12));
           render.staticBackgroundLayer.batchDraw();
         };
 
@@ -73,7 +99,16 @@ export function createVisualDebugPlugin(): IPlugin<{
         selection.hooks.change.tap(() => {
           syncText();
         });
+        editor.hooks.toElementRegistryChange.tap(() => {
+          syncText();
+        });
+        editor.hooks.toGroupRegistryChange.tap(() => {
+          syncText();
+        });
         theme.hooks.change.tap(() => {
+          syncText();
+        });
+        render.hooks.resize.tap(() => {
           syncText();
         });
       });

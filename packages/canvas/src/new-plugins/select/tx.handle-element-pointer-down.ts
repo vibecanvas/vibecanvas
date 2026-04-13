@@ -1,9 +1,12 @@
 import { fxGetSelectionPath } from "./fn.get-selection-path";
+import type { EditorService } from "../../new-services/editor/EditorService";
 import type { RenderService } from "../../new-services/render/RenderService";
+import { fxIsCanvasGroupNode } from "../../core/fn.canvas-node-semantics";
 import type { SelectionService } from "../../new-services/selection/SelectionService";
 import type { TElementPointerEvent } from "../../runtime";
 
 export type TPortalHandleElementPointerDown = {
+  editor: EditorService;
   render: RenderService;
   selection: SelectionService;
   hasSameSelectionOrder: (
@@ -38,7 +41,7 @@ export function txHandleElementPointerDown(
   portal: TPortalHandleElementPointerDown,
   args: TArgsHandleElementPointerDown,
 ) {
-  const path = fxGetSelectionPath({ render: portal.render, node: args.event.currentTarget });
+  const path = fxGetSelectionPath({ render: portal.render, editor: portal.editor, node: args.event.currentTarget });
   const nextDepth = Math.min(Math.max(portal.selection.selection.length, 1), path.length);
   const nextSelection = path.slice(0, nextDepth);
 
@@ -63,7 +66,7 @@ export function txHandleElementPointerDown(
 
   const topLevelNode = path[0];
   const isFlatMultiSelect = portal.selection.selection.length > 1
-    && !portal.selection.selection.some((node) => node.parent instanceof portal.render.Group);
+    && !portal.selection.selection.some((node) => fxIsCanvasGroupNode({ editor: portal.editor, node: node.getParent() }));
 
   if (isFlatMultiSelect && topLevelNode && portal.selection.selection.includes(topLevelNode)) {
     applyFocusedNode(portal, { node: topLevelNode });

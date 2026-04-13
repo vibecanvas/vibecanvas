@@ -5,6 +5,7 @@ import type { EditorService } from "../../new-services/editor/EditorService";
 import type { HistoryService } from "../../new-services/history/HistoryService";
 import type { RenderService } from "../../new-services/render/RenderService";
 import type { SelectionService } from "../../new-services/selection/SelectionService";
+import { fxGetCanvasNodeKind, fxIsCanvasGroupNode } from "../../core/fn.canvas-node-semantics";
 import { fxGetSelectionBounds } from "./fn.get-selection-bounds";
 import { fxFindSceneNodeById, fxGetGroupChildren, fxGetSelectionGroupParent, fxIsSceneParent, fxIsSceneNode, type TSceneNode } from "./fn.scene-node";
 import { fxToGroupPatch } from "./fn.to-group-patch";
@@ -47,7 +48,7 @@ export function txGroupSelection(
   const zIndex = portal.getNodeZIndex(selection[selection.length - 1] ?? selection[0]);
   const groupNode = portal.setupNode(portal.createGroupNode({
     id: groupId,
-    parentGroupId: parent instanceof portal.render.Group ? parent.id() : null,
+    parentGroupId: fxIsCanvasGroupNode({ editor: portal.editor, node: parent }) ? parent.id() : null,
     zIndex,
     locked: false,
     createdAt,
@@ -60,6 +61,7 @@ export function txGroupSelection(
 
   const elementPatches: TElement[] = [];
   const groupPatches: TGroup[] = [fxToGroupPatch({
+    editor: portal.editor,
     render: portal.render,
     group: groupNode,
     getNodeZIndex: portal.getNodeZIndex,
@@ -71,7 +73,8 @@ export function txGroupSelection(
     groupNode.add(node);
     node.setAbsolutePosition(absolutePosition);
 
-    if (node instanceof portal.render.Group) {
+    const kind = fxGetCanvasNodeKind({ editor: portal.editor, node });
+    if (kind === "group") {
       const groupPatch = portal.editor.toGroup(node);
       if (groupPatch) {
         groupPatches.push(groupPatch);
@@ -79,9 +82,11 @@ export function txGroupSelection(
       return;
     }
 
-    const element = portal.editor.toElement(node);
-    if (element) {
-      elementPatches.push(element);
+    if (kind === "element") {
+      const element = portal.editor.toElement(node);
+      if (element) {
+        elementPatches.push(element);
+      }
     }
   });
 
@@ -96,16 +101,20 @@ export function txGroupSelection(
   portal.history.record({
     label: "group",
     undo() {
-      const currentGroup = fxFindSceneNodeById({ render: portal.render, id: groupId });
-      if (!(currentGroup instanceof portal.render.Group)) {
+      const currentGroupNode = fxFindSceneNodeById({ render: portal.render, id: groupId });
+      if (!fxIsCanvasGroupNode({ editor: portal.editor, node: currentGroupNode })) {
         return;
       }
 
+      const currentGroup = currentGroupNode;
+
       const children = fxGetGroupChildren({ group: currentGroup, render: portal.render });
-      const currentParent = currentGroup.getParent();
-      if (!fxIsSceneParent({ render: portal.render, node: currentParent })) {
+      const currentParentNode = currentGroup.getParent();
+      if (!fxIsSceneParent({ render: portal.render, node: currentParentNode })) {
         return;
       }
+
+      const currentParent = currentParentNode as Konva.Group | Konva.Layer;
 
       const undoElementPatches: TElement[] = [];
       const undoGroupPatches: TGroup[] = [];
@@ -115,7 +124,8 @@ export function txGroupSelection(
         currentParent.add(child);
         child.setAbsolutePosition(absolutePosition);
 
-        if (child instanceof portal.render.Group) {
+        const kind = fxGetCanvasNodeKind({ editor: portal.editor, node: child });
+        if (kind === "group") {
           const patch = portal.editor.toGroup(child);
           if (patch) {
             undoGroupPatches.push(patch);
@@ -123,9 +133,11 @@ export function txGroupSelection(
           return;
         }
 
-        const element = portal.editor.toElement(child);
-        if (element) {
-          undoElementPatches.push(element);
+        if (kind === "element") {
+          const element = portal.editor.toElement(child);
+          if (element) {
+            undoElementPatches.push(element);
+          }
         }
       });
 
@@ -152,7 +164,7 @@ export function txGroupSelection(
 
       const recreated = portal.setupNode(portal.createGroupNode({
         id: groupId,
-        parentGroupId: redoParent instanceof portal.render.Group ? redoParent.id() : null,
+        parentGroupId: fxIsCanvasGroupNode({ editor: portal.editor, node: redoParent }) ? redoParent.id() : null,
         zIndex,
         locked: false,
         createdAt,
@@ -165,6 +177,7 @@ export function txGroupSelection(
 
       const redoElementPatches: TElement[] = [];
       const redoGroupPatches: TGroup[] = [fxToGroupPatch({
+        editor: portal.editor,
         render: portal.render,
         group: recreated,
         getNodeZIndex: portal.getNodeZIndex,
@@ -176,7 +189,8 @@ export function txGroupSelection(
         recreated.add(node);
         node.setAbsolutePosition(absolutePosition);
 
-        if (node instanceof portal.render.Group) {
+        const kind = fxGetCanvasNodeKind({ editor: portal.editor, node });
+        if (kind === "group") {
           const patch = portal.editor.toGroup(node);
           if (patch) {
             redoGroupPatches.push(patch);
@@ -184,9 +198,11 @@ export function txGroupSelection(
           return;
         }
 
-        const element = portal.editor.toElement(node);
-        if (element) {
-          redoElementPatches.push(element);
+        if (kind === "element") {
+          const element = portal.editor.toElement(node);
+          if (element) {
+            redoElementPatches.push(element);
+          }
         }
       });
 

@@ -155,7 +155,8 @@ export function buildRuntime(config: IRuntimeConfig) {
   services.provide("camera", new CameraService({ render }));
   services.provide("contextMenu", new ContextMenuService());
   services.provide("crdt", new CrdtService({ docHandle: config.docHandle }));
-  services.provide("editor", new EditorService());
+  const editor = new EditorService();
+  services.provide("editor", editor);
   const history = new HistoryService();
 
   services.provide("history", history);
@@ -165,6 +166,7 @@ export function buildRuntime(config: IRuntimeConfig) {
     crdt: services.require("crdt"),
     history,
     render,
+    editor,
   }));
   services.provide("selection", new SelectionService());
   services.provide("theme", config.themeService ?? new ThemeService());

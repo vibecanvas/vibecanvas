@@ -11,6 +11,7 @@ import type { HistoryService } from "../../new-services/history/HistoryService";
 import type { RenderService } from "../../new-services/render/RenderService";
 import type { SelectionService } from "../../new-services/selection/SelectionService";
 import type { IHooks } from "../../runtime";
+import { fxIsCanvasGroupNode } from "../../core/fn.canvas-node-semantics";
 import { fxFilterSelection } from "../../core/fn.filter-selection";
 import { isShape1dNode } from "../shape1d/Shape1d.shared";
 
@@ -87,9 +88,9 @@ function normalizeSelectedGroupTransforms(render: RenderService, nodes: Konva.No
   });
 }
 
-function refreshSelectedGroups(render: RenderService, selection: SelectionService) {
+function refreshSelectedGroups(editor: EditorService, selection: SelectionService) {
   selection.selection.forEach((node) => {
-    if (node instanceof render.Group) {
+    if (fxIsCanvasGroupNode({ editor, node })) {
       node.fire("transform");
     }
   });
@@ -144,6 +145,7 @@ function getProxyDragTarget(args: {
   const rawSelection = args.selection.selection;
   const filteredSelection = fxFilterSelection({
     render: args.render,
+    editor: args.editor,
     selection: rawSelection,
   });
 
@@ -210,8 +212,8 @@ function syncTransformer(args: {
     return;
   }
 
-  const filteredSelection = fxFilterSelection({ render: args.render, selection: args.selection.selection });
-  const isSingleGroupSelection = filteredSelection.length === 1 && filteredSelection[0] instanceof args.render.Group;
+  const filteredSelection = fxFilterSelection({ render: args.render, editor: args.editor, selection: args.selection.selection });
+  const isSingleGroupSelection = filteredSelection.length === 1 && fxIsCanvasGroupNode({ editor: args.editor, node: filteredSelection[0] });
   const isMultiSelection = filteredSelection.length > 1;
   const hasTextOnly = filteredSelection.length > 0 && filteredSelection.every((node) => node instanceof args.render.Text);
   const hasShape1dOnly = filteredSelection.length > 0 && filteredSelection.every((node) => isShape1dNode(node));
@@ -463,7 +465,7 @@ export function createTransformPlugin(): IPlugin<{
 
           normalizeSelectedGroupTransforms(render, transformer.getNodes());
           applyElements(editor, afterElements);
-          refreshSelectedGroups(render, selection);
+          refreshSelectedGroups(editor, selection);
           refreshTransformer();
           refreshDragProxy();
           crdt.patch({ elements: afterElements, groups: [] });
@@ -479,14 +481,14 @@ export function createTransformPlugin(): IPlugin<{
             label: "transform",
             undo: () => {
               applyElements(editor, undoElements);
-              refreshSelectedGroups(render, selection);
+              refreshSelectedGroups(editor, selection);
               refreshTransformer();
               refreshDragProxy();
               crdt.patch({ elements: undoElements, groups: [] });
             },
             redo: () => {
               applyElements(editor, redoElements);
-              refreshSelectedGroups(render, selection);
+              refreshSelectedGroups(editor, selection);
               refreshTransformer();
               refreshDragProxy();
               crdt.patch({ elements: redoElements, groups: [] });

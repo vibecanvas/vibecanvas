@@ -1,10 +1,13 @@
 import type { Group } from "konva/lib/Group";
 import type { Node } from "konva/lib/Node";
 import type { Shape, ShapeConfig } from "konva/lib/Shape";
+import type { EditorService } from "../../new-services/editor/EditorService";
 import type { RenderService } from "../../new-services/render/RenderService";
+import { fxIsCanvasNode } from "../../core/fn.canvas-node-semantics";
 
 export type TArgsGetSelectionPath = {
   render: RenderService;
+  editor: EditorService;
   node: Group | Shape<ShapeConfig>;
 };
 
@@ -13,8 +16,8 @@ export function fxGetSelectionPath(args: TArgsGetSelectionPath) {
   let current: Node | null = args.node;
 
   while (current && current !== args.render.staticForegroundLayer) {
-    if (current instanceof args.render.Group || current instanceof args.render.Shape) {
-      path.push(current);
+    if (fxIsCanvasNode({ editor: args.editor, node: current })) {
+      path.push(current as Group | Shape<ShapeConfig>);
     }
 
     current = current.getParent();

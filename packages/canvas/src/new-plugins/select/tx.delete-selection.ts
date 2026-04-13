@@ -8,6 +8,7 @@ import type { HistoryService } from "../../new-services/history/HistoryService";
 import type { RenderOrderService } from "../../new-services/render-order/RenderOrderService";
 import type { RenderService } from "../../new-services/render/RenderService";
 import type { SelectionService } from "../../new-services/selection/SelectionService";
+import { fxGetCanvasNodeKind, fxIsCanvasGroupNode } from "../../core/fn.canvas-node-semantics";
 
 export type TPortalDeleteSelection = {
   crdt: CrdtService;
@@ -88,11 +89,11 @@ function sortSceneTopDown(portal: TPortalDeleteSelection, parent: Group | Instan
   portal.renderOrder.sortChildren(parent);
 
   parent.getChildren().forEach((child) => {
-    if (!(child instanceof portal.render.Group)) {
+    if (!fxIsCanvasGroupNode({ editor: portal.editor, node: child })) {
       return;
     }
 
-    sortSceneTopDown(portal, child);
+    sortSceneTopDown(portal, child as Group);
   });
 }
 
@@ -113,7 +114,13 @@ function collectDeleteSnapshot(portal: TPortalDeleteSelection, roots: TSceneNode
     visitedNodeIds.add(node.id());
     visitedNodes.push(node);
 
-    if (node instanceof portal.render.Group) {
+    const kind = fxGetCanvasNodeKind({ editor: portal.editor, node });
+    if (kind === "group") {
+      if (!fxIsCanvasGroupNode({ editor: portal.editor, node })) {
+        didFail = true;
+        return;
+      }
+
       const group = portal.editor.toGroup(node);
       if (!group) {
         didFail = true;
@@ -125,7 +132,7 @@ function collectDeleteSnapshot(portal: TPortalDeleteSelection, roots: TSceneNode
         groups.push(group);
       }
 
-      node.getChildren().forEach((child) => {
+      (node as Group).getChildren().forEach((child: Node) => {
         if (!isSceneNode(portal.render, child)) {
           return;
         }
@@ -135,16 +142,21 @@ function collectDeleteSnapshot(portal: TPortalDeleteSelection, roots: TSceneNode
       return;
     }
 
-    const element = portal.editor.toElement(node);
-    if (!element) {
-      didFail = true;
+    if (kind === "element") {
+      const element = portal.editor.toElement(node);
+      if (!element) {
+        didFail = true;
+        return;
+      }
+
+      if (!elementIds.has(node.id())) {
+        elementIds.add(node.id());
+        elements.push(element);
+      }
       return;
     }
 
-    if (!elementIds.has(node.id())) {
-      elementIds.add(node.id());
-      elements.push(element);
-    }
+    didFail = true;
   };
 
   roots.forEach((root) => {
@@ -169,7 +181,7 @@ function collectDeleteSnapshot(portal: TPortalDeleteSelection, roots: TSceneNode
           return false;
         }
 
-        if (!(candidate instanceof portal.render.Group)) {
+        if (!fxIsCanvasGroupNode({ editor: portal.editor, node: candidate })) {
           return false;
         }
 
@@ -200,7 +212,7 @@ function restoreDeleteSnapshot(portal: TPortalDeleteSelection, snapshot: TDelete
       if (
         group.parentGroupId !== null
         && !createdGroups.has(group.parentGroupId)
-        && !(parentNode instanceof portal.render.Group)
+        && !fxIsCanvasGroupNode({ editor: portal.editor, node: parentNode })
       ) {
         continue;
       }

@@ -75,6 +75,7 @@ export function fxResolveSelectionStyleElements(
 
   const filteredSelection = fxFilterSelection({
     render: portal.render,
+    editor: portal.editor,
     selection: portal.selection.selection,
   });
   const rootNodes = filteredSelection.filter((node, index) => {

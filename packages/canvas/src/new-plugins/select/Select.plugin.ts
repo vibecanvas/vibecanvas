@@ -127,7 +127,7 @@ export function createSelectPlugin(): IPlugin<{
           return true;
         }
 
-        return txHandleElementPointerDown({ render, selection, hasSameSelectionOrder }, { event });
+        return txHandleElementPointerDown({ editor, render, selection, hasSameSelectionOrder }, { event });
       });
 
       ctx.hooks.elementPointerDoubleClick.tap((event) => {
@@ -139,7 +139,7 @@ export function createSelectPlugin(): IPlugin<{
           return true;
         }
 
-        return txHandleElementPointerDoubleClick({ render, selection, hasSameSelectionOrder }, { event });
+        return txHandleElementPointerDoubleClick({ editor, render, selection, hasSameSelectionOrder }, { event });
       });
 
       ctx.hooks.pointerDown.tap((event) => {

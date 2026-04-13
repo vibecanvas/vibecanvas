@@ -1,12 +1,15 @@
 import type { ThemeService } from "@vibecanvas/service-theme";
 import type Konva from "konva";
+import type { EditorService } from "../../new-services/editor/EditorService";
 import type { RenderService } from "../../new-services/render/RenderService";
 import type { SelectionService } from "../../new-services/selection/SelectionService";
+import { fxIsCanvasGroupNode } from "../../core/fn.canvas-node-semantics";
 import { fxCreateGroupBoundary } from "./fx.create-group-boundary";
 
 export type TGroupBoundary = ReturnType<typeof fxCreateGroupBoundary>;
 
 export type TPortalSyncGroupBoundaries = {
+  editor: EditorService;
   render: RenderService;
   selection: SelectionService;
   theme: ThemeService;
@@ -22,7 +25,7 @@ export function txSyncGroupBoundaries(
   const markedToRemove = new Set(portal.boundaries.keys());
 
   portal.selection.selection
-    .filter((node): node is Konva.Group => node instanceof portal.render.Group)
+    .filter((node): node is Konva.Group => fxIsCanvasGroupNode({ editor: portal.editor, node }))
     .forEach((group) => {
       const boundary = portal.boundaries.get(group.id()) ?? fxCreateGroupBoundary({ render: portal.render, theme: portal.theme }, { group });
       boundary.syncTheme();

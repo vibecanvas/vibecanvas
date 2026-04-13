@@ -1,9 +1,11 @@
 import { fxGetSelectionPath } from "./fn.get-selection-path";
+import type { EditorService } from "../../new-services/editor/EditorService";
 import type { RenderService } from "../../new-services/render/RenderService";
 import type { SelectionService } from "../../new-services/selection/SelectionService";
 import type { TElementPointerEvent } from "../../runtime";
 
 export type TPortalHandleElementPointerDoubleClick = {
+  editor: EditorService;
   render: RenderService;
   selection: SelectionService;
   hasSameSelectionOrder: (
@@ -42,7 +44,7 @@ export function txHandleElementPointerDoubleClick(
   portal: TPortalHandleElementPointerDoubleClick,
   args: TArgsHandleElementPointerDoubleClick,
 ) {
-  const path = fxGetSelectionPath({ render: portal.render, node: args.event.currentTarget });
+  const path = fxGetSelectionPath({ render: portal.render, editor: portal.editor, node: args.event.currentTarget });
 
   if (!isSelectionPathPrefix(portal.selection.selection, path)) {
     return false;
