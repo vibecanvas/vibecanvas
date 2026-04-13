@@ -1,3 +1,4 @@
+import type { TThemeColorPickerPalette } from "@vibecanvas/service-theme";
 import { Show, createMemo } from "solid-js";
 import { CapPicker } from "./CapPicker";
 import { ColorPicker } from "./ColorPicker";
@@ -54,7 +55,7 @@ export function SelectionStyleMenu(props: {
   sections: () => TSelectionStyleMenuSections;
   values: () => TSelectionStyleMenuValues;
   strokeWidthOptions?: () => TStrokeWidthOption[];
-  colorStorageKey?: string | null;
+  colorPalette: () => TThemeColorPickerPalette;
   onFillChange: (color: string) => void;
   onStrokeChange: (color: string) => void;
   onStrokeWidthChange: (width: number) => void;
@@ -109,7 +110,7 @@ export function SelectionStyleMenu(props: {
                   onChange={props.onFillChange}
                   showTransparent
                   mode="fill"
-                  storageKey={props.colorStorageKey ? `${props.colorStorageKey}:fill` : null}
+                  palette={props.colorPalette()}
                 />
               </div>
             </Show>
@@ -121,7 +122,7 @@ export function SelectionStyleMenu(props: {
                   value={props.values().strokeColor}
                   onChange={props.onStrokeChange}
                   mode="stroke"
-                  storageKey={props.colorStorageKey ? `${props.colorStorageKey}:stroke` : null}
+                  palette={props.colorPalette()}
                 />
               </div>
             </Show>

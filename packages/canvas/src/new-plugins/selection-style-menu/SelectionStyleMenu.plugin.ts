@@ -3,6 +3,7 @@ import type Konva from "konva";
 import { createComponent, createMemo, createSignal } from "solid-js";
 import { render as renderSolid } from "solid-js/web";
 import { SelectionStyleMenu } from "../../components/SelectionStyleMenu";
+import type { ThemeService } from "@vibecanvas/service-theme";
 import type { TCapStyle, TFontFamily, TLineType } from "../../components/SelectionStyleMenu/types";
 import { fxResolveFocusedSelectionStyleElements } from "../../core/fx.resolve-selection-style-elements";
 import { fxResolveSelectionStyleTextElements } from "../../core/fx.resolve-selection-style-text-elements";
@@ -27,6 +28,7 @@ function mountSelectionStyleMenu(args: {
   history: HistoryService;
   render: RenderService;
   selection: SelectionService;
+  theme: ThemeService;
 }) {
   const mountElement = args.render.container.ownerDocument.createElement("div");
   Object.assign(mountElement.style, {
@@ -55,6 +57,9 @@ function mountSelectionStyleMenu(args: {
     syncVersion();
   });
   args.crdt.hooks.change.tap(() => {
+    syncVersion();
+  });
+  args.theme.hooks.change.tap(() => {
     syncVersion();
   });
 
@@ -124,6 +129,10 @@ function mountSelectionStyleMenu(args: {
     const strokeWidthOptions = createMemo(() => {
       return fxGetSelectionStyleStrokeWidthOptions(elements());
     });
+    const colorPalette = createMemo(() => {
+      version();
+      return args.theme.getThemeColorPickerPalette();
+    });
 
     const applyStyle = (property: TSelectionStyleProperty, value: string | number) => {
       txApplySelectionStyleChange({
@@ -156,7 +165,7 @@ function mountSelectionStyleMenu(args: {
       sections,
       values,
       strokeWidthOptions,
-      colorStorageKey: "canvas-selection-style-menu",
+      colorPalette,
       onFillChange: (color) => applyStyle("fill", color),
       onStrokeChange: (color) => applyStyle("stroke", color),
       onStrokeWidthChange: (width) => applyStyle("strokeWidth", width),
@@ -186,6 +195,7 @@ export function createSelectionStyleMenuPlugin(): IPlugin<{
   history: HistoryService;
   render: RenderService;
   selection: SelectionService;
+  theme: ThemeService;
 }, IHooks> {
   let menuMount: ReturnType<typeof mountSelectionStyleMenu> | null = null;
 
@@ -197,6 +207,7 @@ export function createSelectionStyleMenuPlugin(): IPlugin<{
       const history = ctx.services.require("history");
       const render = ctx.services.require("render");
       const selection = ctx.services.require("selection");
+      const theme = ctx.services.require("theme");
 
       ctx.hooks.init.tap(() => {
         menuMount = mountSelectionStyleMenu({
@@ -205,6 +216,7 @@ export function createSelectionStyleMenuPlugin(): IPlugin<{
           history,
           render,
           selection,
+          theme,
         });
       });
 
