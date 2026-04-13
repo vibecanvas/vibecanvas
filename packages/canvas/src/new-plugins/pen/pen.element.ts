@@ -2,8 +2,9 @@ import type { TElement, TElementStyle, TPenData } from "@vibecanvas/service-auto
 import type { RenderService } from "../../new-services/render/RenderService";
 import { resolveThemeColor, type ThemeService } from "@vibecanvas/service-theme";
 import Konva from "konva";
-import { getWorldPosition, setWorldPosition } from "../../core/node-space";
-import { getNodeZIndex, setNodeZIndex } from "../../core/render-order";
+import { fxGetAbsolutePositionFromWorldPosition, fxGetWorldPosition } from "../../core/fn.world-position";
+import { fxGetNodeZIndex } from "../../core/fn.get-node-z-index";
+import { setNodeZIndex } from "../../core/render-order";
 import { getStrokePathFromPenData, scalePenDataPoints } from "./pen.math";
 import { DEFAULT_FILL, DEFAULT_OPACITY, DEFAULT_STROKE_WIDTH } from "./pen.constants";
 
@@ -93,7 +94,10 @@ export function updatePenPathFromElement(node: Konva.Path, theme: ThemeService, 
   }
 
   node.id(element.id);
-  setWorldPosition(node, { x: element.x, y: element.y });
+  node.absolutePosition(fxGetAbsolutePositionFromWorldPosition({
+    worldPosition: { x: element.x, y: element.y },
+    parentTransform: node.getLayer()?.getAbsoluteTransform() ?? null,
+  }));
   node.rotation(element.rotation);
   node.data(getStrokePathFromPenData(element, {
     size: getPenStrokeWidthFromStyle(element.style),
@@ -119,7 +123,10 @@ export function penPathToElement(render: RenderService, node: Konva.Path): TElem
   const layerScaleY = layer?.scaleY() ?? 1;
   const scaleX = absoluteScale.x / layerScaleX;
   const scaleY = absoluteScale.y / layerScaleY;
-  const worldPosition = getWorldPosition(node);
+  const worldPosition = fxGetWorldPosition({
+    absolutePosition: node.absolutePosition(),
+    parentTransform: node.getLayer()?.getAbsoluteTransform() ?? null,
+  });
   const parent = node.getParent();
   const parentGroupId = parent instanceof render.Group ? parent.id() : null;
 
@@ -133,7 +140,7 @@ export function penPathToElement(render: RenderService, node: Konva.Path): TElem
     locked: false,
     parentGroupId,
     updatedAt: Date.now(),
-    zIndex: getNodeZIndex(node),
+    zIndex: fxGetNodeZIndex(node),
     data: {
       ...baseData,
       points: scalePenDataPoints(baseData.points, scaleX, scaleY),
