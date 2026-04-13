@@ -1,6 +1,6 @@
 import type { TArrowData, TElement, TElementStyle, TLineData } from "@vibecanvas/service-automerge/types/canvas-doc.types";
 import Konva from "konva";
-import { getWorldPosition } from "../../core/node-space";
+import { fxGetWorldPosition } from "../../core/fn.world-position";
 import type { RenderService } from "../../new-services/render/RenderService";
 import { resolveThemeColor, type ThemeService } from "@vibecanvas/service-theme";
 
@@ -81,7 +81,10 @@ export function getColorStyleKey(style: TElementStyle): "backgroundColor" | "str
 }
 
 export function toPositionPatch(render: RenderService, node: TShape1dNode) {
-  const worldPosition = getWorldPosition(node);
+  const worldPosition = fxGetWorldPosition({
+    absolutePosition: node.absolutePosition(),
+    parentTransform: node.getLayer()?.getAbsoluteTransform() ?? null,
+  });
   const parent = node.getParent();
 
   return {

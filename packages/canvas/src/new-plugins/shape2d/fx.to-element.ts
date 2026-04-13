@@ -1,5 +1,6 @@
 import type Konva from "konva";
 import type { TElement, TElementStyle } from "@vibecanvas/service-automerge/types/canvas-doc.types";
+import { fxGetNodeZIndex } from "../../core/fn.get-node-z-index";
 import { fxCreateShape2dElement } from "../../core/fn.shape2d";
 import { fxGetWorldPosition } from "../../core/fn.world-position";
 import type { RenderService } from "../../new-services/render/RenderService";
@@ -9,7 +10,6 @@ const ELEMENT_STYLE_ATTR = "vcElementStyle";
 
 export type TPortalToShape2dElement = {
   render: RenderService;
-  getNodeZIndex: (node: Konva.Shape) => string;
   now: () => number;
 };
 
@@ -106,7 +106,7 @@ export function fxToShape2dElement(portal: TPortalToShape2dElement, args: TArgsT
     createdAt,
     updatedAt,
     parentGroupId: parent instanceof portal.render.Group ? parent.id() : null,
-    zIndex: portal.getNodeZIndex(node),
+    zIndex: fxGetNodeZIndex(node),
     style: getNodeStyle(node),
   }) satisfies TElement;
 }

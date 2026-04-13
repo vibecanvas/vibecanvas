@@ -1,7 +1,8 @@
 import type { TElement, TElementStyle } from "@vibecanvas/service-automerge/types/canvas-doc.types";
 import Konva from "konva";
-import { getWorldPosition, setWorldPosition } from "../../core/node-space";
-import { getNodeZIndex, setNodeZIndex } from "../../core/render-order";
+import { fxGetAbsolutePositionFromWorldPosition, fxGetWorldPosition } from "../../core/fn.world-position";
+import { fxGetNodeZIndex } from "../../core/fn.get-node-z-index";
+import { setNodeZIndex } from "../../core/render-order";
 import type { ThemeService } from "@vibecanvas/service-theme";
 import { createShapeFromElement } from "./Shape1d.render";
 import {
@@ -42,7 +43,10 @@ export function updateShapeFromElement(theme: ThemeService, node: TShape1dNode, 
 
   const strokeWidth = getStrokeWidthFromStyle(element.style);
   const color = getStrokeColorFromStyle(theme, element.style);
-  setWorldPosition(node, { x: element.x, y: element.y });
+  node.absolutePosition(fxGetAbsolutePositionFromWorldPosition({
+    worldPosition: { x: element.x, y: element.y },
+    parentTransform: node.getLayer()?.getAbsoluteTransform() ?? null,
+  }));
   node.rotation(element.rotation);
   node.stroke(color);
   node.fill(color);
@@ -67,7 +71,10 @@ export function toTElement(node: TShape1dNode): TElement {
   const layer = node.getLayer();
   const scaleX = absoluteScale.x / (layer?.scaleX() ?? 1);
   const scaleY = absoluteScale.y / (layer?.scaleY() ?? 1);
-  const { x, y } = getWorldPosition(node);
+  const { x, y } = fxGetWorldPosition({
+    absolutePosition: node.absolutePosition(),
+    parentTransform: node.getLayer()?.getAbsoluteTransform() ?? null,
+  });
   const parent = node.getParent();
   const now = Date.now();
 
@@ -81,7 +88,7 @@ export function toTElement(node: TShape1dNode): TElement {
     locked: false,
     parentGroupId: parent instanceof Konva.Group ? parent.id() : null,
     updatedAt: now,
-    zIndex: getNodeZIndex(node),
+    zIndex: fxGetNodeZIndex(node),
     data: {
       ...baseData,
       points: baseData.points.map(([px, py]) => [px * scaleX, py * scaleY] as TPoint),

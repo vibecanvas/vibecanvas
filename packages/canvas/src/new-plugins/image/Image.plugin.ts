@@ -13,8 +13,9 @@ import type { RenderOrderService } from "../../new-services/render-order/RenderO
 import type { RenderService } from "../../new-services/render/RenderService";
 import type { SelectionService } from "../../new-services/selection/SelectionService";
 import type { IHooks } from "../../runtime";
-import { getWorldPosition, setWorldPosition } from "../../core/node-space";
-import { getNodeZIndex, setNodeZIndex } from "../../core/render-order";
+import { fxGetNodeZIndex } from "../../core/fn.get-node-z-index";
+import { fxGetWorldPosition } from "../../core/fn.world-position";
+import { setNodeZIndex } from "../../core/render-order";
 import { fxToImageElement } from "./fn.to-image-element";
 import { txCloneBackendFileForElement } from "./tx.clone-backend-file-for-element";
 import { txInsertImage } from "./tx.insert-image";
@@ -153,7 +154,6 @@ function createImageNode(render: RenderService, element: TElement) {
 
 function updateImageNodeFromElement(render: RenderService, node: Konva.Image, element: TElement) {
   return txUpdateImageNodeFromElement({
-    setWorldPosition,
     setNodeZIndex,
     syncNodeMetadata,
     getImageSource,
@@ -168,7 +168,10 @@ function updateImageNodeFromElement(render: RenderService, node: Konva.Image, el
 }
 
 function toElement(render: RenderService, node: Konva.Image): TElement {
-  const worldPosition = getWorldPosition(node);
+  const worldPosition = fxGetWorldPosition({
+    absolutePosition: node.absolutePosition(),
+    parentTransform: node.getLayer()?.getAbsoluteTransform() ?? null,
+  });
   const absoluteScale = node.getAbsoluteScale();
   const layer = node.getLayer();
   const layerScaleX = layer?.scaleX() ?? 1;
@@ -193,7 +196,7 @@ function toElement(render: RenderService, node: Konva.Image): TElement {
     createdAt: Number(node.getAttr(ELEMENT_CREATED_AT_ATTR) ?? Date.now()),
     updatedAt: Date.now(),
     parentGroupId,
-    zIndex: getNodeZIndex(node),
+    zIndex: fxGetNodeZIndex(node),
     opacity: node.opacity(),
     url: (node.getAttr(IMAGE_URL_ATTR) as string | null) ?? null,
     base64: (node.getAttr(IMAGE_BASE64_ATTR) as string | null) ?? null,
@@ -277,7 +280,6 @@ export function createImagePlugin(): IPlugin<{
       const selection = ctx.services.require("selection");
 
       const updateImageNodeFromElementPortal = {
-        setWorldPosition,
         setNodeZIndex,
         syncNodeMetadata,
         getImageSource,

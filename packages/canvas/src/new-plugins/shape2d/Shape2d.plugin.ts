@@ -7,7 +7,7 @@ import type Konva from "konva";
 import Square from "lucide-static/icons/square.svg?raw";
 import { fxCreateShape2dElement, fxGetShape2dDraftBounds, fxGetShape2dElementTypeFromTool, fxIsShape2dElementType, fxIsShape2dToolId, type TShape2dToolId } from "../../core/fn.shape2d";
 import { fxFilterSelection } from "../../core/fn.filter-selection";
-import { getNodeZIndex, setNodeZIndex } from "../../core/render-order";
+import { setNodeZIndex } from "../../core/render-order";
 import type { ContextMenuService } from "../../new-services/context-menu/ContextMenuService";
 import type { CrdtService } from "../../new-services/crdt/CrdtService";
 import type { EditorService } from "../../new-services/editor/EditorService";
@@ -102,7 +102,6 @@ export function createShape2dPlugin(): IPlugin<{
       const toElement = (node: Konva.Node) => {
         return fxToShape2dElement({
           render,
-          getNodeZIndex,
           now,
         }, {
           node,

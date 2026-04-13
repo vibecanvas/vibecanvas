@@ -583,7 +583,7 @@ export function createShape1dPlugin(): IPlugin<{
       });
 
       editor.registerCreateShapeFromTElement("shape1d", (element) => {
-        if (!isSupportedElementType(element.data.type)) {
+        if (!element.data || !isSupportedElementType(element.data.type)) {
           return null;
         }
 
@@ -605,7 +605,7 @@ export function createShape1dPlugin(): IPlugin<{
       });
 
       editor.registerUpdateShapeFromTElement("shape1d", (element) => {
-        if (!isSupportedElementType(element.data.type)) {
+        if (!element.data || !isSupportedElementType(element.data.type)) {
           return false;
         }
 

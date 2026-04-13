@@ -1,5 +1,5 @@
 import Konva from "konva";
-import { setWorldPosition } from "../../core/node-space";
+import { fxGetAbsolutePositionFromWorldPosition } from "../../core/fn.world-position";
 import {
   CURVE_TENSION,
   getElementData,
@@ -81,7 +81,10 @@ export function applyAnchorDrag(
 
   const nextData = structuredClone(data);
   if (drag.pointIndex === 0) {
-    setWorldPosition(node, worldPoint);
+    node.absolutePosition(fxGetAbsolutePositionFromWorldPosition({
+      worldPosition: worldPoint,
+      parentTransform: node.getLayer()?.getAbsoluteTransform() ?? null,
+    }));
     nextData.points = drag.beforePoints.map((point, index) => {
       if (index === 0) {
         return [0, 0];
