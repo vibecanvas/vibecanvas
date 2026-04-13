@@ -1,5 +1,6 @@
 
 import type { IPlugin } from "@vibecanvas/runtime";
+import Square from "lucide-static/icons/square.svg?raw";
 import type { RenderService, EditorService } from "../../new-services";
 import type { IHooks, TElementPointerEvent, TMouseEvent, TPointerEvent, TWheelEvent } from "../../runtime";
 
@@ -19,8 +20,8 @@ export function createExampleUiPlugin(): IPlugin<{
         editorSrv.registerTool({
           id: 'example-tool',
           label: 'Example Tool',
+          icon: Square,
           behavior: { type: 'mode', mode: 'click-create' },
-          icon: 
         })
 
       });

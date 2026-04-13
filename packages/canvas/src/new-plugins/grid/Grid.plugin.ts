@@ -1,5 +1,6 @@
 import type { IPlugin } from "@vibecanvas/runtime";
 import type { ThemeService } from "@vibecanvas/service-theme";
+import Grid2x2 from "lucide-static/icons/grid-2x2.svg?raw";
 import type { CameraService } from "../../new-services/camera/CameraService";
 import type { EditorService } from "../../new-services/editor/EditorService";
 import type { RenderService } from "../../new-services/render/RenderService";
@@ -23,6 +24,7 @@ export function createGridPlugin(): IPlugin<{
         editor.registerTool({
           id: "grid",
           label: "Grid",
+          icon: Grid2x2,
           shortcuts: ["g"],
           priority: 9000,
           active: visible,

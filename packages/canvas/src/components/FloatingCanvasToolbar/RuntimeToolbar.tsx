@@ -1,15 +1,6 @@
-import ArrowRight from "lucide-solid/icons/arrow-right";
+import DOMPurify from "dompurify";
 import "./styles.css";
-import Circle from "lucide-solid/icons/circle";
-import Diamond from "lucide-solid/icons/diamond";
-import Grid2x2 from "lucide-solid/icons/grid-2x2";
-import Hand from "lucide-solid/icons/hand";
-import Image from "lucide-solid/icons/image";
-import Minus from "lucide-solid/icons/minus";
-import MousePointer2 from "lucide-solid/icons/mouse-pointer-2";
-import Pencil from "lucide-solid/icons/pencil";
-import Square from "lucide-solid/icons/square";
-import Type from "lucide-solid/icons/type";
+import type { TEditorToolIcon } from "../../new-services/editor/EditorService";
 import type { Accessor } from "solid-js";
 import { For, createSignal } from "solid-js";
 import { ToolButton } from "./ToolButton";
@@ -17,7 +8,7 @@ import { ToolButton } from "./ToolButton";
 export type TRuntimeToolbarTool = {
   id: string;
   label: string;
-  icon?: string;
+  icon?: TEditorToolIcon;
   shortcuts?: string[];
   active?: boolean;
 };
@@ -28,52 +19,12 @@ export type TRuntimeToolbarProps = {
   onToolSelect: (toolId: string) => void;
 };
 
-function getToolIcon(toolId: string) {
-  if (toolId === "hand") {
-    return <Hand size={14} />;
-  }
-
-  if (toolId === "select") {
-    return <MousePointer2 size={14} />;
-  }
-
-  if (toolId === "grid") {
-    return <Grid2x2 size={14} />;
-  }
-
-  if (toolId === "rectangle") {
-    return <Square size={14} />;
-  }
-
-  if (toolId === "diamond") {
-    return <Diamond size={14} />;
-  }
-
-  if (toolId === "ellipse") {
-    return <Circle size={14} />;
-  }
-
-  if (toolId === "arrow") {
-    return <ArrowRight size={14} />;
-  }
-
-  if (toolId === "line") {
-    return <Minus size={14} />;
-  }
-
-  if (toolId === "pen") {
-    return <Pencil size={14} />;
-  }
-
-  if (toolId === "image") {
-    return <Image size={14} />;
-  }
-
-  if (toolId === "text") {
-    return <Type size={14} />;
-  }
-
-  return <span class="vc-runtime-toolbar-fallback-label">{toolId.slice(0, 2)}</span>;
+function sanitizeToolIcon(icon: string) {
+  return DOMPurify.sanitize(icon, {
+    USE_PROFILES: { svg: true, svgFilters: true },
+    FORBID_TAGS: ["script", "foreignObject"],
+    FORBID_ATTR: ["onload", "onclick", "onerror", "style"],
+  });
 }
 
 function getShortcutParts(shortcuts: string[] | undefined) {
@@ -108,9 +59,12 @@ export function RuntimeToolbar(props: TRuntimeToolbarProps) {
             <For each={props.tools()}>
               {(tool) => {
                 const shortcutParts = getShortcutParts(tool.shortcuts);
+                const icon = tool.icon;
                 return (
                   <ToolButton
-                    icon={getToolIcon(tool.icon ?? tool.id)}
+                    icon={icon
+                      ? <span class="vc-toolbar-button__icon" innerHTML={sanitizeToolIcon(icon)} />
+                      : <span class="vc-runtime-toolbar-fallback-label">{tool.id.slice(0, 2)}</span>}
                     shortcut={shortcutParts.shortcut}
                     letterShortcut={shortcutParts.letterShortcut}
                     isActive={props.activeToolId() === tool.id || Boolean(tool.active)}

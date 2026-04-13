@@ -1,5 +1,7 @@
 import type { IPlugin } from "@vibecanvas/runtime";
+import ArrowRight from "lucide-static/icons/arrow-right.svg?raw";
 import type Konva from "konva";
+import Minus from "lucide-static/icons/minus.svg?raw";
 import type { CameraService } from "../../new-services/camera/CameraService";
 import type { ContextMenuService } from "../../new-services/context-menu/ContextMenuService";
 import type { CrdtService } from "../../new-services/crdt/CrdtService";
@@ -554,6 +556,7 @@ export function createShape1dPlugin(): IPlugin<{
       editor.registerTool({
         id: "arrow",
         label: "Arrow",
+        icon: ArrowRight,
         shortcuts: ["5", "a"],
         priority: 50,
         behavior: { type: "mode", mode: "draw-create" },
@@ -561,6 +564,7 @@ export function createShape1dPlugin(): IPlugin<{
       editor.registerTool({
         id: "line",
         label: "Line",
+        icon: Minus,
         shortcuts: ["6", "l"],
         priority: 60,
         behavior: { type: "mode", mode: "draw-create" },

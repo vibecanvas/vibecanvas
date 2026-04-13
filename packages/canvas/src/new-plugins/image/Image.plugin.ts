@@ -1,6 +1,7 @@
+import { throttle } from "@solid-primitives/scheduled";
 import type { IPlugin } from "@vibecanvas/runtime";
 import type { TElement, TImageData } from "@vibecanvas/service-automerge/types/canvas-doc.types";
-import { throttle } from "@solid-primitives/scheduled";
+import ImageIcon from "lucide-static/icons/image.svg?raw";
 import type Konva from "konva";
 import type { TCloneImage, TDeleteImage, TUploadImage } from "../../services/canvas/interface";
 import { getImageDimensions, getImageSource, getSupportedImageFormat, parseDataUrl } from "../../utils/image";
@@ -375,6 +376,7 @@ export function createImagePlugin(): IPlugin<{
       editor.registerTool({
         id: "image",
         label: "Image",
+        icon: ImageIcon,
         shortcuts: ["9"],
         priority: 90,
         behavior: { type: "action" },

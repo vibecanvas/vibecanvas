@@ -69,6 +69,22 @@
   transition: background-color 150ms ease, color 150ms ease;
 }
 
+.vc-toolbar-button__icon {
+  display: inline-flex;
+  width: 14px;
+  height: 14px;
+  color: currentColor;
+  flex: 0 0 auto;
+}
+
+.vc-toolbar-button__icon svg {
+  display: block;
+  width: 14px;
+  height: 14px;
+  color: currentColor;
+  stroke: currentColor;
+}
+
 .vc-toolbar-button--active {
   background: color-mix(in srgb, var(--primary) 15%, transparent);
   color: var(--foreground);

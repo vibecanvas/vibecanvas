@@ -1,6 +1,7 @@
 import type { IPlugin } from "@vibecanvas/runtime";
 import type { TElement } from "@vibecanvas/service-automerge/types/canvas-doc.types";
 import type Konva from "konva";
+import Pencil from "lucide-static/icons/pencil.svg?raw";
 import type { ContextMenuService } from "../../new-services/context-menu/ContextMenuService";
 import type { CrdtService } from "../../new-services/crdt/CrdtService";
 import type { EditorService } from "../../new-services/editor/EditorService";
@@ -256,7 +257,7 @@ export function createPenPlugin(): IPlugin<{
       editor.registerTool({
         id: "pen",
         label: "Pen",
-        icon: "pen",
+        icon: Pencil,
         shortcuts: ["7", "p"],
         priority: 70,
         behavior: { type: "mode", mode: "draw-create" },

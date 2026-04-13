@@ -1,4 +1,6 @@
 import type { IPlugin } from "@vibecanvas/runtime";
+import Hand from "lucide-static/icons/hand.svg?raw";
+import MousePointer2 from "lucide-static/icons/mouse-pointer-2.svg?raw";
 import { createComponent, createMemo, createSignal } from "solid-js";
 import { render } from "solid-js/web";
 import { RuntimeToolbar } from "../../components/FloatingCanvasToolbar/RuntimeToolbar";
@@ -156,6 +158,7 @@ export function createToolbarPlugin(): IPlugin<{
       editor.registerTool({
         id: "hand",
         label: "Hand",
+        icon: Hand,
         shortcuts: ["h"],
         priority: 0,
         behavior: { type: "mode", mode: "hand" },
@@ -163,6 +166,7 @@ export function createToolbarPlugin(): IPlugin<{
       editor.registerTool({
         id: "select",
         label: "Select",
+        icon: MousePointer2,
         shortcuts: ["1", "escape"],
         priority: 10,
         behavior: { type: "mode", mode: "select" },

@@ -1,5 +1,6 @@
 import type { IPlugin } from "@vibecanvas/runtime";
 import { resolveThemeColor, type ThemeService } from "@vibecanvas/service-theme";
+import Type from "lucide-static/icons/type.svg?raw";
 import type { TElement, TTextData } from "@vibecanvas/service-automerge/types/canvas-doc.types";
 import type Konva from "konva";
 import type { ContextMenuService } from "../../new-services/context-menu/ContextMenuService";
@@ -156,6 +157,7 @@ export function createTextPlugin(): IPlugin<{
       editor.registerTool({
         id: "text",
         label: "Text",
+        icon: Type,
         shortcuts: ["t"],
         priority: 50,
         behavior: { type: "mode", mode: "click-create" },

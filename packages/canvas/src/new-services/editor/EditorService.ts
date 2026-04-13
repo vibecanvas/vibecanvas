@@ -1,6 +1,6 @@
+import type { TElement, TGroup } from "@vibecanvas/service-automerge/types/canvas-doc.types";
 import type { IService } from "@vibecanvas/runtime";
 import { SyncHook } from "@vibecanvas/tapable";
-import type { TElement, TGroup } from "@vibecanvas/service-automerge/types/canvas-doc.types";
 import type Konva from "konva";
 
 /**
@@ -14,6 +14,7 @@ export type TEditorToolMode = "select" | "hand" | "draw-create" | "click-create"
  * Examples: `5`, `r`, `ctrl+b`.
  */
 export type TEditorToolShortcut = string;
+export type TEditorToolIcon = string;
 
 /**
  * Tool metadata registered by feature plugins.
@@ -22,9 +23,9 @@ export type TEditorToolShortcut = string;
 export type TEditorTool = {
   id: string;
   label: string;
-  icon?: string;
+  icon?: TEditorToolIcon;
   shortcuts?: TEditorToolShortcut[];
-  group?: string;
+  group?: string; // planned for dropdown
   priority?: number;
   active?: boolean;
   onSelect?: () => void;

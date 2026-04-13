@@ -1,7 +1,10 @@
 import { throttle } from "@solid-primitives/scheduled";
 import type { IPlugin } from "@vibecanvas/runtime";
 import type { TElement } from "@vibecanvas/service-automerge/types/canvas-doc.types";
+import Circle from "lucide-static/icons/circle.svg?raw";
+import Diamond from "lucide-static/icons/diamond.svg?raw";
 import type Konva from "konva";
+import Square from "lucide-static/icons/square.svg?raw";
 import { fxCreateShape2dElement, fxGetShape2dDraftBounds, fxGetShape2dElementTypeFromTool, fxIsShape2dElementType, fxIsShape2dToolId, type TShape2dToolId } from "../../core/fn.shape2d";
 import { fxFilterSelection } from "../../core/fn.filter-selection";
 import { getNodeZIndex, setNodeZIndex } from "../../core/render-order";
@@ -381,6 +384,7 @@ export function createShape2dPlugin(): IPlugin<{
       editor.registerTool({
         id: "rectangle",
         label: "Rectangle",
+        icon: Square,
         shortcuts: ["2", "r"],
         priority: 20,
         behavior: { type: "mode", mode: "draw-create" },
@@ -388,6 +392,7 @@ export function createShape2dPlugin(): IPlugin<{
       editor.registerTool({
         id: "diamond",
         label: "Diamond",
+        icon: Diamond,
         shortcuts: ["3", "d"],
         priority: 30,
         behavior: { type: "mode", mode: "draw-create" },
@@ -395,6 +400,7 @@ export function createShape2dPlugin(): IPlugin<{
       editor.registerTool({
         id: "ellipse",
         label: "Ellipse",
+        icon: Circle,
         shortcuts: ["4", "o"],
         priority: 40,
         behavior: { type: "mode", mode: "draw-create" },
