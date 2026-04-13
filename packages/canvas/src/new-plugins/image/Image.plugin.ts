@@ -13,6 +13,8 @@ import type { RenderOrderService } from "../../new-services/render-order/RenderO
 import type { RenderService } from "../../new-services/render/RenderService";
 import type { SelectionService } from "../../new-services/selection/SelectionService";
 import type { IHooks } from "../../runtime";
+import { fxGetCanvasParentGroupId } from "../../core/fn.canvas-node-semantics";
+import { fxFilterSelection } from "../../core/fn.filter-selection";
 import { fxGetNodeZIndex } from "../../core/fn.get-node-z-index";
 import { fxGetWorldPosition } from "../../core/fn.world-position";
 import { setNodeZIndex } from "../../core/render-order";
@@ -167,7 +169,7 @@ function updateImageNodeFromElement(render: RenderService, node: Konva.Image, el
   });
 }
 
-function toElement(render: RenderService, node: Konva.Image): TElement {
+function toElement(render: RenderService, editor: EditorService, node: Konva.Image): TElement {
   const worldPosition = fxGetWorldPosition({
     absolutePosition: node.absolutePosition(),
     parentTransform: node.getLayer()?.getAbsoluteTransform() ?? null,
@@ -176,8 +178,7 @@ function toElement(render: RenderService, node: Konva.Image): TElement {
   const layer = node.getLayer();
   const layerScaleX = layer?.scaleX() ?? 1;
   const layerScaleY = layer?.scaleY() ?? 1;
-  const parent = node.getParent();
-  const parentGroupId = parent instanceof render.Group ? parent.id() : null;
+  const parentGroupId = fxGetCanvasParentGroupId({ editor, node });
 
   const crop = structuredClone(node.getAttr(IMAGE_CROP_ATTR) ?? {
     x: 0,
@@ -232,25 +233,14 @@ function safeStopDrag(node: Konva.Node) {
   }
 }
 
-function filterSelection(render: RenderService, selection: Konva.Node[]) {
-  let subSelection = selection.find((node) => node.getParent() instanceof render.Group);
-  if (!subSelection) {
-    return selection.filter((node) => node.getStage() !== null);
-  }
-
-  const findDeepestSubSelection = () => {
-    const deeperSubSelection = selection.find((node) => node.getParent() === subSelection);
-    if (!deeperSubSelection) {
-      return;
-    }
-
-    subSelection = deeperSubSelection;
-    findDeepestSubSelection();
-  };
-
-  findDeepestSubSelection();
-
-  return subSelection && subSelection.getStage() !== null ? [subSelection] : [];
+function filterSelection(render: RenderService, editor: EditorService, selection: Konva.Node[]) {
+  return fxFilterSelection({
+    render,
+    editor,
+    selection: selection.filter((node): node is Konva.Group | Konva.Shape => {
+      return node instanceof render.Group || node instanceof render.Shape;
+    }),
+  });
 }
 
 /**
@@ -315,13 +305,13 @@ export function createImagePlugin(): IPlugin<{
             createPreviewClone: (sourceNode) => createPreviewClone(render, sourceNode),
             createImageNode: (element) => createImageNode(render, element),
             setupNode,
-            toElement: (imageNode) => toElement(render, imageNode),
+            toElement: (imageNode) => toElement(render, editor, imageNode),
             now: () => Date.now(),
           },
           updateImageNodeFromElementPortal,
-          filterSelection: (nodes) => filterSelection(render, nodes),
+          filterSelection: (nodes) => filterSelection(render, editor, nodes),
           safeStopDrag,
-          toElement: (imageNode) => toElement(render, imageNode),
+          toElement: (imageNode) => toElement(render, editor, imageNode),
           createThrottledPatch: () => {
             return throttle((element: TElement) => {
               crdt.patch({ elements: [element], groups: [] });
@@ -355,7 +345,7 @@ export function createImagePlugin(): IPlugin<{
           getViewportWorldSize: () => getViewportWorldSize(render),
           createImageNode: (element) => createImageNode(render, element),
           setupNode,
-          toElement: (node) => toElement(render, node),
+          toElement: (node) => toElement(render, editor, node),
         }, args);
       };
 
@@ -390,7 +380,7 @@ export function createImagePlugin(): IPlugin<{
           return null;
         }
 
-        return toElement(render, node);
+        return toElement(render, editor, node);
       });
 
       editor.registerCreateShapeFromTElement("image", (element) => {

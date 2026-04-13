@@ -1,6 +1,7 @@
 import { throttle } from "@solid-primitives/scheduled";
 import type { TElement } from "@vibecanvas/service-automerge/types/canvas-doc.types";
 import type Konva from "konva";
+import { fxGetCanvasAncestorGroups, fxGetCanvasNodeKind, fxIsCanvasGroupNode } from "../../core/fn.canvas-node-semantics";
 import { fxFilterSelection } from "../../core/fn.filter-selection";
 import type { CrdtService } from "../../new-services/crdt/CrdtService";
 import type { EditorService } from "../../new-services/editor/EditorService";
@@ -41,24 +42,26 @@ function applyElement(portal: TPortalShape1dRuntime, element: TElement) {
     return;
   }
 
-  let parent = findSceneNodeById(portal.render, element.id)?.getParent();
-  while (parent instanceof portal.render.Group) {
-    parent.fire("transform");
-    parent = parent.getParent();
-  }
+  fxGetCanvasAncestorGroups({
+    editor: portal.editor,
+    node: findSceneNodeById(portal.render, element.id),
+  }).forEach((group) => {
+    group.fire("transform");
+  });
 }
 
 function serializeNodeElements(portal: TPortalShape1dRuntime, node: Konva.Node) {
-  if (node instanceof portal.render.Shape) {
+  const kind = fxGetCanvasNodeKind({ editor: portal.editor, node });
+  if (kind === "element") {
     const element = portal.editor.toElement(node);
     return element ? [structuredClone(element)] : [];
   }
 
-  if (node instanceof portal.render.Group) {
+  if (kind === "group" && fxIsCanvasGroupNode({ editor: portal.editor, node })) {
     return fxSerializeSubtreeElements({
       editor: portal.editor,
       render: portal.render,
-      group: node,
+      group: node as Konva.Group,
     }).map((element) => structuredClone(element));
   }
 
@@ -157,6 +160,7 @@ export function setupShapeListeners(portal: TPortalShape1dRuntime, node: TShape1
 
     const selected = fxFilterSelection({
       render: portal.render,
+      editor: portal.editor,
       selection: portal.selection.selection,
     });
     selected.forEach((selectedNode) => {
@@ -197,6 +201,7 @@ export function setupShapeListeners(portal: TPortalShape1dRuntime, node: TShape1
 
     const selected = fxFilterSelection({
       render: portal.render,
+      editor: portal.editor,
       selection: portal.selection.selection,
     });
     if (selected.length <= 1) {
@@ -242,6 +247,7 @@ export function setupShapeListeners(portal: TPortalShape1dRuntime, node: TShape1
 
     const selected = fxFilterSelection({
       render: portal.render,
+      editor: portal.editor,
       selection: portal.selection.selection,
     });
     const passengers = selected.filter((selectedNode) => selectedNode !== node);

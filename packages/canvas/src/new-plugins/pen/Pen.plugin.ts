@@ -140,7 +140,7 @@ export function createPenPlugin(): IPlugin<{
             }, previewNode);
           },
           filterSelection: (nodes) => {
-            return fxFilterSelection({ render, selection: nodes.filter((node): node is Konva.Group | Konva.Shape => {
+            return fxFilterSelection({ render, editor, selection: nodes.filter((node): node is Konva.Group | Konva.Shape => {
               return node instanceof render.Group || node instanceof render.Shape;
             }) });
           },

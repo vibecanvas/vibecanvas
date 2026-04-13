@@ -7,6 +7,7 @@ import type { HistoryService } from "../../new-services/history/HistoryService";
 import type { RenderService } from "../../new-services/render/RenderService";
 import type { SelectionService } from "../../new-services/selection/SelectionService";
 import type { IHooks, TElementPointerEvent } from "../../runtime";
+import { fxGetCanvasAncestorGroups, fxGetCanvasNodeKind, fxGetCanvasParentGroupId, fxIsCanvasGroupNode } from "../../core/fn.canvas-node-semantics";
 import { getWorldPosition } from "../../core/node-space";
 import { isPenNode } from "./pen.element";
 import { fxSerializeSubtreeElements } from "../group/fn.serialize-subtree-elements";
@@ -36,15 +37,14 @@ export function safeStopPenDrag(node: Konva.Node) {
   }
 }
 
-export function penNodeToPositionPatch(render: RenderService, node: Konva.Path) {
+export function penNodeToPositionPatch(editor: EditorService, node: Konva.Path) {
   const worldPosition = getWorldPosition(node);
-  const parent = node.getParent();
 
   return {
     id: node.id(),
     x: worldPosition.x,
     y: worldPosition.y,
-    parentGroupId: parent instanceof render.Group ? parent.id() : null,
+    parentGroupId: fxGetCanvasParentGroupId({ editor, node }),
     updatedAt: Date.now(),
   } satisfies Pick<TElement, "id" | "x" | "y" | "parentGroupId" | "updatedAt">;
 }
@@ -67,24 +67,26 @@ function applyElement(portal: TPenListenersPortal, element: TElement) {
     return;
   }
 
-  let parent = findSceneNodeById(portal.render, element.id)?.getParent();
-  while (parent instanceof portal.render.Group) {
-    parent.fire("transform");
-    parent = parent.getParent();
-  }
+  fxGetCanvasAncestorGroups({
+    editor: portal.editor,
+    node: findSceneNodeById(portal.render, element.id),
+  }).forEach((group) => {
+    group.fire("transform");
+  });
 }
 
 function serializeNodeElements(portal: TPenListenersPortal, node: Konva.Node) {
-  if (node instanceof portal.render.Shape) {
+  const kind = fxGetCanvasNodeKind({ editor: portal.editor, node });
+  if (kind === "element") {
     const element = portal.editor.toElement(node);
     return element ? [structuredClone(element)] : [];
   }
 
-  if (node instanceof portal.render.Group) {
+  if (kind === "group" && fxIsCanvasGroupNode({ editor: portal.editor, node })) {
     return fxSerializeSubtreeElements({
       editor: portal.editor,
       render: portal.render,
-      group: node,
+      group: node as Konva.Group,
     }).map((element) => structuredClone(element));
   }
 
@@ -234,7 +236,7 @@ export function setupPenShapeListeners(portal: TPenListenersPortal, node: Konva.
       return;
     }
 
-    throttledPatch(penNodeToPositionPatch(portal.render, node));
+    throttledPatch(penNodeToPositionPatch(portal.editor, node));
 
     const selected = portal.filterSelection(portal.selection.selection);
     if (selected.length <= 1) {
