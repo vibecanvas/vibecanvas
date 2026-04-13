@@ -1,30 +1,48 @@
-
 import type { IPlugin } from "@vibecanvas/runtime";
 import Square from "lucide-static/icons/square.svg?raw";
-import type { RenderService, EditorService } from "../../new-services";
-import type { IHooks, TElementPointerEvent, TMouseEvent, TPointerEvent, TWheelEvent } from "../../runtime";
+import type { CrdtService, EditorService, RenderOrderService, RenderService, SelectionService } from "../../new-services";
+import type { IHooks } from "../../runtime";
+import { txSetupExampleUi } from "./tx.setup";
 
-/**
- *
- */
+const TOOL_ID = "example-ui";
+
+function createCreateId(render: RenderService) {
+  let fallbackId = 0;
+
+  return () => {
+    const cryptoApi = render.container.ownerDocument.defaultView?.crypto;
+    if (cryptoApi?.randomUUID) {
+      return cryptoApi.randomUUID();
+    }
+
+    fallbackId += 1;
+    return `example-ui-${Date.now()}-${fallbackId}`;
+  };
+}
+
 export function createExampleUiPlugin(): IPlugin<{
+  crdt: CrdtService;
   render: RenderService;
+  renderOrder: RenderOrderService;
   editor: EditorService;
+  selection: SelectionService;
 }, IHooks> {
   return {
-    name: "example-ui",
+    name: TOOL_ID,
     apply(ctx) {
-      ctx.hooks.init.tap(() => {
-        console.log('starting example ui')
-        const editorSrv = ctx.services.require('editor')
-        editorSrv.registerTool({
-          id: 'example-tool',
-          label: 'Example Tool',
-          icon: Square,
-          behavior: { type: 'mode', mode: 'click-create' },
-        })
+      const render = ctx.services.require("render");
 
-      });
+      txSetupExampleUi({
+        crdt: ctx.services.require("crdt"),
+        editor: ctx.services.require("editor"),
+        hooks: ctx.hooks,
+        icon: Square,
+        now: () => Date.now(),
+        createId: createCreateId(render),
+        render,
+        renderOrder: ctx.services.require("renderOrder"),
+        selection: ctx.services.require("selection"),
+      }, {});
     },
   };
 }

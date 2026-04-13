@@ -109,6 +109,17 @@ export const zImageData = z.object({
   }),
 });
 
+export const zCustomData = z.object({
+  type: z.literal('custom'),
+  w: z.number(),
+  h: z.number(),
+  expanded: z.boolean(),
+  payload: z.any()
+});
+
+/**
+ * @deprecated will be replaced with custom
+ */
 export const zFiletreeData = z.object({
   type: z.literal('filetree'),
   w: z.number(),
@@ -118,6 +129,9 @@ export const zFiletreeData = z.object({
   id: z.string().optional()
 });
 
+/**
+ * @deprecated will be replaced with custom
+ */
 export const zTerminalData = z.object({
   type: z.literal('terminal'),
   w: z.number(),
@@ -126,6 +140,9 @@ export const zTerminalData = z.object({
   workingDirectory: z.string(),
 });
 
+/**
+ * @deprecated will be replaced with custom
+ */
 export const zFileData = z.object({
   type: z.literal('file'),
   w: z.number(),
@@ -144,12 +161,18 @@ export const zFileData = z.object({
   ]),
 });
 
+/**
+ * @deprecated will be replaced with custom
+ */
 export const zIframeBrowserTab = z.object({
   id: z.string(),
   url: z.string(),
   title: z.string(),
 });
 
+/**
+ * @deprecated will be replaced with custom
+ */
 export const zIframeBrowserData = z.object({
   type: z.literal('iframe-browser'),
   w: z.number(),
@@ -168,6 +191,7 @@ export const zElementData = z.union([
   zPenData,
   zTextData,
   zImageData,
+  zCustomData,
   zFiletreeData,
   zTerminalData,
   zFileData,
