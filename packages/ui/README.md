@@ -1,117 +1,104 @@
 # @vibecanvas/ui
 
-Tiny shared types for hosted UI bundles.
+Small SDK for Vibecanvas hosted UI packages.
 
-This package should stay small.
+Use it inside hosted Arrow UI code.
 
-It does not know official components.
-It does not mount UI.
-It does not fetch bundles.
-It does not resolve anything.
-It only defines the shape shared between host code and hosted UI packages.
+It gives end users:
+- typed `api`
+- typed `TVibecanvasManifest`
+- typed tool button metadata
+- helper to prepare Arrow sandbox source maps
 
-## What it exports
-
-- `THostedComponentManifest`
-- `THostedComponentBundle`
-- `THostedComponentBridge`
-
-Source:
-- `src/hosted-components.ts`
-
-## Install / import
-
-```json
-{
-  "dependencies": {
-    "@vibecanvas/ui": "workspace:*"
-  }
-}
-```
+## Example
 
 ```ts
-import type {
-  THostedComponentManifest,
-  THostedComponentBundle,
-  THostedComponentBridge,
-} from "@vibecanvas/ui";
+import { component, html } from '@arrow-js/core'
+import type { Props } from '@arrow-js/core'
+import { api } from '@vibecanvas/ui'
+
+type User = { id: string; name: string }
+
+const UserName = component(
+  async ({ id }: Props<{ id: string }>) => {
+    const user = await api.users.get(id)
+    return user.name
+  },
+  { fallback: html`<span>Loading user…</span>` }
+)
+
+export default component((props: Props<{ id: string }>) =>
+  html`<article>${UserName(props)}</article>`
+)
 ```
 
 ## Manifest
 
-Manifest is just metadata for one hosted UI bundle.
+Create `vibecanvas.manifest.ts` beside your source.
 
 ```ts
-import type { THostedComponentManifest } from "@vibecanvas/ui";
+import type { TVibecanvasManifest } from '@vibecanvas/ui'
 
-const manifest: THostedComponentManifest = {
-  id: "my-ui",
-  version: "0.1.0",
-  apiVersion: 1,
-  permissions: ["component.chrome", "file.read"],
+export default {
+  id: 'user-card',
+  permissions: ['users.read'],
+  toolButton: {
+    icon: 'user',
+    label: 'User Card',
+  },
   defaultSize: {
-    width: 420,
-    height: 320,
+    width: 280,
+    height: 160,
   },
-};
+} satisfies TVibecanvasManifest
 ```
 
-Fields:
-- `id`: package or bundle id
-- `version`: bundle version
-- `apiVersion`: shared hosted-ui contract version
-- `permissions`: strings requested by bundle
-- `defaultSize`: optional preferred size
+## Preparing sandbox source
 
-## Bundle
-
-Bundle is manifest plus source files.
+Arrow sandbox wants:
 
 ```ts
-import type { THostedComponentBundle } from "@vibecanvas/ui";
-
-const bundle: THostedComponentBundle = {
-  manifest,
-  source: {
-    "main.ts": "export default {}",
-    "main.css": "",
-  },
-};
+source: Record<string, string>
 ```
 
-`source` is a virtual file map.
-
-## Bridge
-
-Bridge is generic.
-
-Host decides what bridge modules exist.
-Hosted UI imports or uses what host exposes.
+Use `prepareVibecanvasSandboxSource()` after host reads package `src/` files.
 
 ```ts
-import type { THostedComponentBridge } from "@vibecanvas/ui";
+import { prepareVibecanvasSandboxSource } from '@vibecanvas/ui'
 
-const bridge: THostedComponentBridge = {
-  "host:vibecanvas/component": {
-    async setChrome() {
-      return undefined;
-    },
-  },
-};
+const source = prepareVibecanvasSandboxSource({
+  'main.ts': '...',
+  'UserCard.ts': '...',
+  'UserName.ts': '...',
+  'main.css': '...',
+})
 ```
 
-Bridge values are:
-- module key -> object
-- function name -> async function
+This helper:
+- checks there is exactly one `main.ts` or `main.js`
+- rewrites `@vibecanvas/ui` imports to a sandbox shim
+- injects `__vibecanvas_ui__.ts`
 
-Keep args and return values serializable.
+Host still must provide Arrow host bridge module:
+- `host:vibecanvas/ui`
 
-## Rule
+Expected bridge functions today:
+- `getUser(id)`
+- `listUsers()`
 
-If data crosses boundary between trusted host and hosted bundle, put the type here.
+## Exports
 
-If code is runtime behavior, do not put it here.
+- `api`
+- `type TUser`
+- `type TVibecanvasApi`
+- `type TVibecanvasToolButton`
+- `type TVibecanvasManifest`
+- `prepareVibecanvasSandboxSource()`
+- `createVibecanvasUiShimSource()`
+- `type TVibecanvasSandboxSource`
 
-## Related doc
+## Notes
 
-- `packages/canvas/HOSTED_COMPONENTS_ARCHITECTURE.md`
+- `api` is host-provided at runtime
+- permissions should match the API surface the host exposes
+- this package stays small and author-facing
