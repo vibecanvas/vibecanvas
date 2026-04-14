@@ -1,8 +1,7 @@
 import DOMPurify from "dompurify";
 import "./styles.css";
-import type { TEditorToolIcon } from "../../services/editor/EditorService";
-import type { Accessor } from "solid-js";
-import { For, createSignal } from "solid-js";
+import type { EditorService, TEditorToolIcon } from "../../services/editor/EditorService";
+import { For, createSignal, onCleanup } from "solid-js";
 import { ToolButton } from "./ToolButton";
 
 export type TRuntimeToolbarTool = {
@@ -14,8 +13,7 @@ export type TRuntimeToolbarTool = {
 };
 
 export type TRuntimeToolbarProps = {
-  tools: Accessor<TRuntimeToolbarTool[]>;
-  activeToolId: Accessor<string>;
+  editor: EditorService;
   onToolSelect: (toolId: string) => void;
 };
 
@@ -43,6 +41,21 @@ function getShortcutParts(shortcuts: string[] | undefined) {
 
 export function RuntimeToolbar(props: TRuntimeToolbarProps) {
   const [isCollapsed, setIsCollapsed] = createSignal(false);
+  const [tools, setTools] = createSignal(props.editor.getTools());
+  const [activeToolId, setActiveToolId] = createSignal(props.editor.activeToolId);
+
+  const offToolsChange = props.editor.hooks.toolsChange.tap(() => {
+    setTools(props.editor.getTools());
+  });
+
+  const offActiveToolChange = props.editor.hooks.activeToolChange.tap((toolId) => {
+    setActiveToolId(toolId);
+  });
+
+  onCleanup(() => {
+    offToolsChange();
+    offActiveToolChange();
+  });
 
   return (
     <div class="vc-canvas-toolbar-anchor">
@@ -56,7 +69,7 @@ export function RuntimeToolbar(props: TRuntimeToolbarProps) {
         </button>
         {isCollapsed() ? null : (
           <div class="vc-runtime-toolbar-list">
-            <For each={props.tools()}>
+            <For each={tools()}>
               {(tool) => {
                 const shortcutParts = getShortcutParts(tool.shortcuts);
                 const icon = tool.icon;
@@ -67,7 +80,7 @@ export function RuntimeToolbar(props: TRuntimeToolbarProps) {
                       : <span class="vc-runtime-toolbar-fallback-label">{tool.id.slice(0, 2)}</span>}
                     shortcut={shortcutParts.shortcut}
                     letterShortcut={shortcutParts.letterShortcut}
-                    isActive={props.activeToolId() === tool.id || Boolean(tool.active)}
+                    isActive={activeToolId() === tool.id || Boolean(tool.active)}
                     onClick={() => props.onToolSelect(tool.id)}
                   />
                 );

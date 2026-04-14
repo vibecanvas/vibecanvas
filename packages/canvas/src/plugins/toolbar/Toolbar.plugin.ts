@@ -1,7 +1,7 @@
 import type { IPlugin } from "@vibecanvas/runtime";
 import Hand from "lucide-static/icons/hand.svg?raw";
 import MousePointer2 from "lucide-static/icons/mouse-pointer-2.svg?raw";
-import { createComponent, createMemo, createSignal } from "solid-js";
+import { createComponent } from "solid-js";
 import { render } from "solid-js/web";
 import { RuntimeToolbar } from "../../components/FloatingCanvasToolbar/RuntimeToolbar";
 import type { EditorService, TEditorTool } from "../../services/editor/EditorService";
@@ -102,27 +102,9 @@ function mountToolbar(args: {
   mountElement.className = "absolute inset-0 pointer-events-none";
   args.scene.stage.container().appendChild(mountElement);
 
-  const [version, setVersion] = createSignal(0);
-  const tools = createMemo(() => {
-    version();
-    return args.editor.getTools();
-  });
-  const activeToolId = createMemo(() => {
-    version();
-    return args.editor.activeToolId;
-  });
-
-  args.editor.hooks.toolsChange.tap(() => {
-    setVersion((value) => value + 1);
-  });
-  args.editor.hooks.activeToolChange.tap(() => {
-    setVersion((value) => value + 1);
-  });
-
   const disposeRender = render(() => {
     return createComponent(RuntimeToolbar, {
-      tools,
-      activeToolId,
+      editor: args.editor,
       onToolSelect: args.onToolSelect,
     });
   }, mountElement);
