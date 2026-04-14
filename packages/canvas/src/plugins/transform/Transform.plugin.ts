@@ -98,21 +98,94 @@ function refreshSelectedGroups(canvasRegistry: CanvasRegistryService, selection:
   });
 }
 
-function hasPenOnlySelection(args: {
+function getSelectionTransformOptions(args: {
   Konva: typeof Konva;
-  scene: SceneService;
   canvasRegistry: CanvasRegistryService;
   selection: Array<Group | Shape<ShapeConfig>>;
 }) {
-  void args.scene;
-  return args.selection.length > 0 && args.selection.every((node) => {
-    if (!(node instanceof args.Konva.Path)) {
-      return false;
-    }
+  const isSingleGroupSelection = args.selection.length === 1
+    && fxIsCanvasGroupNode({}, { editor: args.canvasRegistry, node: args.selection[0] });
+  const isMultiSelection = args.selection.length > 1;
+  const hasTextOnly = args.selection.length > 0 && args.selection.every((node) => node instanceof args.Konva.Text);
+  const hasShape1dOnly = args.selection.length > 0 && args.selection.every((node) => fxIsShape1dNode({ Shape: args.Konva.Shape }, { node }));
 
-    const element = args.canvasRegistry.toElement(node);
-    return element?.data.type === "pen";
-  });
+  const defaultUseCornerAnchors = isSingleGroupSelection || hasTextOnly || hasShape1dOnly || isMultiSelection;
+  let enabledAnchors: string[] = defaultUseCornerAnchors ? [...GROUP_ANCHORS] : [...DEFAULT_ANCHORS];
+  let keepRatio = defaultUseCornerAnchors;
+  let flipEnabled = true;
+
+  for (const node of args.selection) {
+    const transformOptions = args.canvasRegistry.getTransformOptions({
+      node,
+      selection: args.selection,
+    });
+
+    if (args.selection.length === 1 && transformOptions.enabledAnchors) {
+      enabledAnchors = [...transformOptions.enabledAnchors];
+    }
+    if (transformOptions.keepRatio === true) {
+      keepRatio = true;
+    }
+    if (args.selection.length === 1 && transformOptions.keepRatio === false) {
+      keepRatio = false;
+    }
+    if (transformOptions.flipEnabled === false) {
+      flipEnabled = false;
+    }
+    if (args.selection.length === 1 && transformOptions.flipEnabled === true) {
+      flipEnabled = true;
+    }
+  }
+
+  return {
+    borderEnabled: !isSingleGroupSelection,
+    borderDash: isMultiSelection ? [2, 2] : [0, 0],
+    enabledAnchors,
+    keepRatio,
+    flipEnabled,
+  };
+}
+
+function txApplySelectionTransformHooks(args: {
+  canvasRegistry: CanvasRegistryService;
+  selection: Array<Group | Shape<ShapeConfig>>;
+}) {
+  let result = { cancel: false, crdt: false };
+
+  for (const node of args.selection) {
+    const nextResult = args.canvasRegistry.onTransform({
+      node,
+      selection: args.selection,
+    });
+
+    result = {
+      cancel: result.cancel || nextResult.cancel,
+      crdt: result.crdt || nextResult.crdt,
+    };
+  }
+
+  return result;
+}
+
+function txFinalizeSelectionTransform(args: {
+  canvasRegistry: CanvasRegistryService;
+  selection: Array<Group | Shape<ShapeConfig>>;
+}) {
+  let result = { cancel: false, crdt: false };
+
+  for (const node of args.selection) {
+    const nextResult = args.canvasRegistry.afterTransform({
+      node,
+      selection: args.selection,
+    });
+
+    result = {
+      cancel: result.cancel || nextResult.cancel,
+      crdt: result.crdt || nextResult.crdt,
+    };
+  }
+
+  return result;
 }
 
 function isProxyDragCandidate(args: {
@@ -223,22 +296,17 @@ function syncTransformer(args: {
   }
 
   const filteredSelection = fxFilterSelection({ Konva }, { editor: args.canvasRegistry, selection: args.selection.selection });
-  const isSingleGroupSelection = filteredSelection.length === 1 && fxIsCanvasGroupNode({}, { editor: args.canvasRegistry, node: filteredSelection[0] });
-  const isMultiSelection = filteredSelection.length > 1;
-  const hasTextOnly = filteredSelection.length > 0 && filteredSelection.every((node) => node instanceof args.Konva.Text);
-  const hasShape1dOnly = filteredSelection.length > 0 && filteredSelection.every((node) => fxIsShape1dNode({ Shape: args.Konva.Shape }, { node }));
-  const hasPenOnly = hasPenOnlySelection({
-    Konva: args.Konva,
-    scene: args.scene,
+  const transformOptions = getSelectionTransformOptions({
+    Konva,
     canvasRegistry: args.canvasRegistry,
     selection: filteredSelection,
   });
-  const useCornerAnchors = isSingleGroupSelection || hasTextOnly || hasShape1dOnly || hasPenOnly || isMultiSelection;
 
-  args.transformer.borderEnabled(!isSingleGroupSelection);
-  args.transformer.borderDash(isMultiSelection ? [2, 2] : [0, 0]);
-  args.transformer.keepRatio(useCornerAnchors);
-  args.transformer.enabledAnchors(useCornerAnchors ? [...GROUP_ANCHORS] : [...DEFAULT_ANCHORS]);
+  args.transformer.borderEnabled(transformOptions.borderEnabled);
+  args.transformer.borderDash(transformOptions.borderDash);
+  args.transformer.keepRatio(transformOptions.keepRatio);
+  args.transformer.flipEnabled(transformOptions.flipEnabled);
+  args.transformer.enabledAnchors(transformOptions.enabledAnchors);
   args.transformer.setNodes(filteredSelection);
   args.transformer.update();
   args.scene.dynamicLayer.batchDraw();
@@ -310,7 +378,7 @@ export function createTransformPlugin(): IPlugin<{
           return;
         }
 
-        const target = getProxyDragTarget({ render, canvasRegistry, selection });
+        const target = getProxyDragTarget({ scene: render, canvasRegistry, selection });
         if (!target) {
           hideDragProxy();
           return;
@@ -359,7 +427,7 @@ export function createTransformPlugin(): IPlugin<{
             return;
           }
 
-          const target = getProxyDragTarget({ render, canvasRegistry, selection });
+          const target = getProxyDragTarget({ scene: render, canvasRegistry, selection });
 
           if (event.evt?.altKey) {
             dragProxy.stopDrag();
@@ -468,17 +536,37 @@ export function createTransformPlugin(): IPlugin<{
           beforeElements = serializeSelection(canvasRegistry, render, transformer?.getNodes() ?? []);
         });
 
+        transformer.on("transform", () => {
+          if (!transformer) {
+            return;
+          }
+
+          txApplySelectionTransformHooks({
+            canvasRegistry,
+            selection: transformer.getNodes() as Array<Group | Shape<ShapeConfig>>,
+          });
+          transformer.forceUpdate();
+          render.dynamicLayer.batchDraw();
+          refreshDragProxy();
+        });
+
         transformer.on("transformend", () => {
           if (!transformer) {
             return;
           }
 
-          const afterElements = serializeSelection(canvasRegistry, render, transformer.getNodes());
+          const nodes = transformer.getNodes();
+          txFinalizeSelectionTransform({
+            canvasRegistry,
+            selection: nodes as Array<Group | Shape<ShapeConfig>>,
+          });
+
+          const afterElements = serializeSelection(canvasRegistry, render, nodes);
           if (afterElements.length === 0) {
             return;
           }
 
-          normalizeSelectedGroupTransforms(render, transformer.getNodes());
+          normalizeSelectedGroupTransforms(render, nodes);
           applyElements(canvasRegistry, afterElements);
           refreshSelectedGroups(canvasRegistry, selection);
           refreshTransformer();

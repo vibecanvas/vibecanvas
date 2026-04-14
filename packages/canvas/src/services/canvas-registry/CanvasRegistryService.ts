@@ -5,7 +5,18 @@ import type Konva from "konva";
 
 export type TCanvasNodeType = TElement["data"]["type"] | "group";
 
-export type TCanvasRegistryElementDefinition = {
+export type TCanvasRegistryTransformHookResult = {
+  cancel: boolean;
+  crdt: boolean;
+};
+
+export type TCanvasRegistryTransformOptions = {
+  enabledAnchors?: string[];
+  keepRatio?: boolean;
+  flipEnabled?: boolean;
+};
+
+export interface TCanvasRegistryElementDefinition {
   /**
    * Unique registration id for this definition.
    * This is a registration identity, not necessarily the persisted element type.
@@ -63,6 +74,15 @@ export type TCanvasRegistryElementDefinition = {
    */
   updateElement?: (element: TElement) => boolean | void;
   /**
+   * Optional transformer UI behavior for this node type.
+   * Runs in priority order and later definitions may override earlier fields.
+   */
+  getTransformOptions?: (args: {
+    node: Konva.Node;
+    element: TElement;
+    selection: Array<Konva.Group | Konva.Shape>;
+  }) => TCanvasRegistryTransformOptions | void;
+  /**
    * Called on every transform event.
    * Publishes the transform event to the CRDT if `crdt` is true.
    */
@@ -70,7 +90,7 @@ export type TCanvasRegistryElementDefinition = {
     node: Konva.Node;
     element: TElement;
     selection: Array<Konva.Group | Konva.Shape>;
-  }) => { cancel: boolean, crdt: boolean }
+  }) => TCanvasRegistryTransformHookResult | void;
   /**
    * Called after the transform event has been handled.
    */
@@ -78,8 +98,8 @@ export type TCanvasRegistryElementDefinition = {
     node: Konva.Node;
     element: TElement;
     selection: Array<Konva.Group | Konva.Shape>;
-  }) => { cancel: boolean, crdt: boolean };
-};
+  }) => TCanvasRegistryTransformHookResult | void;
+}
 
 export type TCanvasRegistryGroupDefinition = {
   /**
@@ -368,4 +388,96 @@ export class CanvasRegistryService implements IService<TCanvasRegistryServiceHoo
     return didUpdate;
   }
 
+  getTransformOptions(args: {
+    node: Konva.Node;
+    selection: Array<Konva.Group | Konva.Shape>;
+  }) {
+    const element = this.toElement(args.node);
+    if (!element) {
+      return {} satisfies TCanvasRegistryTransformOptions;
+    }
+
+    const definitions = this.getMatchingElementDefinitionsByNode(args.node);
+    let options: TCanvasRegistryTransformOptions = {};
+
+    for (const definition of definitions) {
+      const nextOptions = definition.getTransformOptions?.({
+        node: args.node,
+        element,
+        selection: args.selection,
+      });
+      if (!nextOptions) {
+        continue;
+      }
+
+      options = {
+        ...options,
+        ...nextOptions,
+      };
+    }
+
+    return options;
+  }
+
+  onTransform(args: {
+    node: Konva.Node;
+    selection: Array<Konva.Group | Konva.Shape>;
+  }) {
+    const element = this.toElement(args.node);
+    if (!element) {
+      return { cancel: false, crdt: false } satisfies TCanvasRegistryTransformHookResult;
+    }
+
+    const definitions = this.getMatchingElementDefinitionsByNode(args.node);
+    let result: TCanvasRegistryTransformHookResult = { cancel: false, crdt: false };
+
+    for (const definition of definitions) {
+      const nextResult = definition.onTransform?.({
+        node: args.node,
+        element,
+        selection: args.selection,
+      });
+      if (!nextResult) {
+        continue;
+      }
+
+      result = {
+        cancel: result.cancel || nextResult.cancel,
+        crdt: result.crdt || nextResult.crdt,
+      };
+    }
+
+    return result;
+  }
+
+  afterTransform(args: {
+    node: Konva.Node;
+    selection: Array<Konva.Group | Konva.Shape>;
+  }) {
+    const element = this.toElement(args.node);
+    if (!element) {
+      return { cancel: false, crdt: false } satisfies TCanvasRegistryTransformHookResult;
+    }
+
+    const definitions = this.getMatchingElementDefinitionsByNode(args.node);
+    let result: TCanvasRegistryTransformHookResult = { cancel: false, crdt: false };
+
+    for (const definition of definitions) {
+      const nextResult = definition.afterTransform?.({
+        node: args.node,
+        element,
+        selection: args.selection,
+      });
+      if (!nextResult) {
+        continue;
+      }
+
+      result = {
+        cancel: result.cancel || nextResult.cancel,
+        crdt: result.crdt || nextResult.crdt,
+      };
+    }
+
+    return result;
+  }
 }

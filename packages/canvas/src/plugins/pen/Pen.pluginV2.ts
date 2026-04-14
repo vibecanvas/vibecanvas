@@ -15,6 +15,12 @@ import { txUpdatePenPathFromElement } from "./tx.path";
 
 const DRAFT_POINTS_ATTR = "vcDraftStrokePoints";
 const PEN_NODE_SETUP_ATTR = "vcPenNodeSetup";
+const PEN_TRANSFORM_ANCHORS = [
+  "top-left",
+  "top-right",
+  "bottom-left",
+  "bottom-right",
+];
 
 function fxCreatePenElementFromDraft(args: {
   id: string;
@@ -171,6 +177,53 @@ function txSetupPenNode(args: {
   return true;
 }
 
+function txKeepPenTransformRatio(args: {
+  node: Konva.Node;
+}) {
+  if (!(args.node instanceof Konva.Path)) {
+    return false;
+  }
+
+  const nextScale = Math.max(
+    Math.abs(args.node.scaleX()),
+    Math.abs(args.node.scaleY()),
+    0.0001,
+  );
+
+  args.node.scale({ x: nextScale, y: nextScale });
+  return true;
+}
+
+function txCommitPenTransform(args: {
+  canvasRegistry: CanvasRegistryService;
+  render: SceneService;
+  theme: ThemeService;
+  now: () => number;
+  node: Konva.Node;
+}) {
+  if (!(args.node instanceof Konva.Path)) {
+    return false;
+  }
+
+  const element = fxToPenElement(args.canvasRegistry, args.now, args.node);
+  if (!element) {
+    return false;
+  }
+
+  txUpdatePenPathFromElement({
+    Path: Konva.Path,
+    render: args.render,
+    theme: args.theme,
+    getStroke,
+    resolveThemeColor,
+  }, {
+    node: args.node,
+    element,
+  });
+
+  return true;
+}
+
 /**
  * Owns pen draw-create flow, pen node hydration, drag, and clone wiring.
  * Keeps pen tool state in EditorService and scene behavior in SelectionService.
@@ -197,6 +250,28 @@ export function createPenPlugin(): IPlugin<{
         toElement: (node) => fxToPenElement(canvasRegistry, now, node),
         createNode: (element) => fxCreatePenRuntimeNode(theme, element),
         attachListeners: (node) => txSetupPenNode({ hooks: ctx.hooks, node }),
+        getTransformOptions: () => ({
+          enabledAnchors: [...PEN_TRANSFORM_ANCHORS],
+          keepRatio: true,
+          flipEnabled: false,
+        }),
+        onTransform: ({ node }) => {
+          txKeepPenTransformRatio({ node });
+          return {
+            cancel: false,
+            crdt: false,
+          };
+        },
+        afterTransform: ({ node }) => ({
+          cancel: false,
+          crdt: txCommitPenTransform({
+            canvasRegistry,
+            render,
+            theme,
+            now,
+            node,
+          }),
+        }),
       });
 
       ctx.hooks.init.tap(() => {
