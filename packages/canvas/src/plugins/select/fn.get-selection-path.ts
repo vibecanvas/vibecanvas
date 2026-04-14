@@ -1,13 +1,13 @@
 import type { Group } from "konva/lib/Group";
 import type { Node } from "konva/lib/Node";
 import type { Shape, ShapeConfig } from "konva/lib/Shape";
-import type { EditorService } from "../../services/editor/EditorService";
+import type { TCanvasSemanticsEditor } from "../../core/fx.canvas-node-semantics";
 import type { SceneService } from "../../services/scene/SceneService";
 import { fxIsCanvasNode } from "../../core/fx.canvas-node-semantics";
 
 export type TArgsGetSelectionPath = {
   render: SceneService;
-  editor: EditorService;
+  editor: TCanvasSemanticsEditor;
   node: Group | Shape<ShapeConfig>;
 };
 

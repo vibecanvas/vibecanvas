@@ -289,6 +289,34 @@ export class EditorServiceV2 implements IService<TEditorServiceHooks> {
   }
 
   /**
+   * Returns persisted element data for one runtime node.
+   */
+  toElement(node: Konva.Node) {
+    return this.canvasRegistry.toElement(node);
+  }
+
+  /**
+   * Returns persisted group data for one runtime node.
+   */
+  toGroup(node: Konva.Node) {
+    return this.canvasRegistry.toGroup(node);
+  }
+
+  /**
+   * Creates one runtime group node from persisted group data.
+   */
+  createGroupFromTGroup(group: TGroup) {
+    return this.canvasRegistry.createNodeFromGroup(group);
+  }
+
+  /**
+   * Creates one runtime shape or group node from persisted element data.
+   */
+  createShapeFromTElement(element: TElement) {
+    return this.canvasRegistry.createNodeFromElement(element);
+  }
+
+  /**
    * Sets current editing text node id.
    */
   setEditingTextId(id: string | null) {

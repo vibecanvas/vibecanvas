@@ -4,16 +4,22 @@ import type { Group } from "konva/lib/Group";
 import type { Node } from "konva/lib/Node";
 import type { Shape, ShapeConfig } from "konva/lib/Shape";
 import type { CrdtService } from "../../services/crdt/CrdtService";
-import type { EditorService } from "../../services/editor/EditorService";
 import type { HistoryService } from "../../services/history/HistoryService";
 import type { RenderOrderService } from "../../services/render-order/RenderOrderService";
 import type { SceneService } from "../../services/scene/SceneService";
 import type { SelectionService } from "../../services/selection/SelectionService";
 import { fxGetCanvasNodeKind, fxIsCanvasGroupNode } from "../../core/fx.canvas-node-semantics";
 
+export type TDeleteSelectionEditor = {
+  toElement(node: Konva.Node): TElement | null;
+  toGroup(node: Konva.Node): TGroup | null;
+  createGroupFromTGroup(group: TGroup): Konva.Group | null;
+  createShapeFromTElement(element: TElement): Konva.Group | Konva.Shape | null;
+};
+
 export type TPortalDeleteSelection = {
   crdt: CrdtService;
-  editor: EditorService;
+  editor: TDeleteSelectionEditor;
   history: HistoryService;
   render: SceneService;
   renderOrder: RenderOrderService;

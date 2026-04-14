@@ -3,7 +3,7 @@ import type { ThemeService } from "@vibecanvas/service-theme";
 import Konva from "konva";
 import type { Node } from "konva/lib/Node";
 import type { CrdtService } from "../../services/crdt/CrdtService";
-import type { EditorService } from "../../services/editor/EditorService";
+import type { EditorServiceV2 } from "../../services/editor/EditorServiceV2";
 import type { HistoryService } from "../../services/history/HistoryService";
 import type { RenderOrderService } from "../../services/render-order/RenderOrderService";
 import type { SceneService } from "../../services/scene/SceneService";
@@ -79,7 +79,7 @@ function txHandleStagePointerDown(args: {
  */
 export function createSelectPlugin(): IPlugin<{
   crdt: CrdtService;
-  editor: EditorService;
+  editor2: EditorServiceV2;
   history: HistoryService;
   scene: SceneService;
   renderOrder: RenderOrderService;
@@ -90,7 +90,7 @@ export function createSelectPlugin(): IPlugin<{
     name: "select",
     apply(ctx) {
       const crdt = ctx.services.require("crdt");
-      const editor = ctx.services.require("editor");
+      const editor = ctx.services.require("editor2");
       const history = ctx.services.require("history");
       const render = ctx.services.require("scene");
       const renderOrder = ctx.services.require("renderOrder");

@@ -1,12 +1,12 @@
 import { fxGetSelectionPath } from "./fn.get-selection-path";
-import type { EditorService } from "../../services/editor/EditorService";
+import type { TCanvasSemanticsEditor } from "../../core/fx.canvas-node-semantics";
 import type { SceneService } from "../../services/scene/SceneService";
 import { fxIsCanvasGroupNode } from "../../core/fx.canvas-node-semantics";
 import type { SelectionService } from "../../services/selection/SelectionService";
 import type { TElementPointerEvent } from "../../runtime";
 
 export type TPortalHandleElementPointerDown = {
-  editor: EditorService;
+  editor: TCanvasSemanticsEditor;
   render: SceneService;
   selection: SelectionService;
   hasSameSelectionOrder: (

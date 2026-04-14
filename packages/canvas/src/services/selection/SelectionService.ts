@@ -23,6 +23,15 @@ export class SelectionService implements IService<TSelectionServiceHooks> {
   focusedId: string | null = null;
   private suppressSelectionHandlingUntil = 0;
 
+  setMode(mode: CanvasMode) {
+    if (this.mode === mode) {
+      return;
+    }
+
+    this.mode = mode;
+    this.hooks.change.call();
+  }
+
   setSelection(selection: Array<Group | Shape<ShapeConfig>>) {
     this.selection = selection;
     this.hooks.change.call();
