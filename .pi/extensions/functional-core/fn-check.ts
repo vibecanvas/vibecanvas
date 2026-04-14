@@ -1,6 +1,6 @@
-import { readFile } from "node:fs/promises";
 import path from "node:path";
 import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
+import { buildEditedContentPreview } from "./lib/edit-preview";
 import { RUNTIME_GLOBAL_BLOCK_NOTE, validateNoDirectRuntimeGlobals } from "./lib/runtime-global-usage";
 
 type TEditInput = {
@@ -406,56 +406,6 @@ function validateFnFileContent(filePath: string, content: string): string[] {
   ].map((error) => `${path.basename(filePath)}: ${error}`);
 }
 
-async function buildEditedContent(absolutePath: string, input: TEditInput): Promise<{ content?: string; error?: string }> {
-  let original: string;
-
-  try {
-    original = await readFile(absolutePath, "utf8");
-  } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    return { error: `fn-check could not read file before edit: ${message}` };
-  }
-
-  const matches = input.edits.map((edit, index) => {
-    const firstIndex = original.indexOf(edit.oldText);
-    if (firstIndex === -1) {
-      return { index, error: `edit ${index + 1}: oldText not found` };
-    }
-
-    const secondIndex = original.indexOf(edit.oldText, firstIndex + Math.max(1, edit.oldText.length));
-    if (secondIndex !== -1) {
-      return { index, error: `edit ${index + 1}: oldText is not unique` };
-    }
-
-    return {
-      index,
-      start: firstIndex,
-      end: firstIndex + edit.oldText.length,
-      newText: edit.newText,
-    };
-  });
-
-  const failed = matches.find((match) => "error" in match);
-  if (failed && "error" in failed) {
-    return { error: `fn-check could not validate edit: ${failed.error}` };
-  }
-
-  const ranges = matches as Array<{ index: number; start: number; end: number; newText: string }>;
-  const sorted = [...ranges].sort((a, b) => a.start - b.start);
-
-  for (let index = 1; index < sorted.length; index += 1) {
-    if (sorted[index - 1]!.end > sorted[index]!.start) {
-      return { error: "fn-check could not validate edit: edit ranges overlap" };
-    }
-  }
-
-  let next = original;
-  for (const range of [...sorted].sort((a, b) => b.start - a.start)) {
-    next = next.slice(0, range.start) + range.newText + next.slice(range.end);
-  }
-
-  return { content: next };
-}
 
 function formatViolations(filePath: string, violations: string[]): string {
   return [
@@ -503,7 +453,7 @@ export default function fnCheckExtension(pi: ExtensionAPI) {
       if (!Array.isArray(input.edits)) {
         return { block: true, reason: "fn-check could not validate edit: missing edits" };
       }
-      const result = await buildEditedContent(absolutePath, input as TEditInput);
+      const result = await buildEditedContentPreview(absolutePath, input as TEditInput, "fn-check");
       nextContent = result.content;
       buildError = result.error;
     }
