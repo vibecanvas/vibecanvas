@@ -105,6 +105,7 @@ Use the leaf files for execution history and local context.
 - [x]: [B19](b/B19.md) - cli usage -> no realtime updates via automerge
 - [x]: [B20](b/B20.md) - pen tool: after stroke commit, stay in pen mode instead of switching to selection
 - [x]: [B21] - can't do 1d edits
+- [x]: [B22] - style color pallet breaks layout
 
 ## A dditions
 - [x]: [A1] - file: support common CodeMirror languages
@@ -171,8 +172,8 @@ Use the leaf files for execution history and local context.
 - [ ]: [S31] - how to deal with /Users/omarezzat/Workspace/vibecanvas/vibecanvas/packages/canvas/src/core/pretext.ts
 - [ ]: [S32] - show stylemenu already in create mode when tool like rect,pen is pressed. ux -> user knows where to draw
 - [ ]: [S33] - canvas architecture: rename SceneService -> SceneService and split EditorService so editor keeps only edit/transform state while scene registries/mapping move to SceneService
-- [ ]: [S34] - test canvas/core if all fn fx file function are correct
-- [ ]: [S35](s/S35.md) - canvas/core: align fn fx tx file boundaries, injected portals, and callers
+- [x]: [S34] - test canvas/core if all fn fx file function are correct
+- [x]: [S35](s/S35.md) - canvas/core: align fn fx tx file boundaries, injected portals, and callers
 
 ## E xplorations
 - [ ]: [E1](e/E1.md) - Tauri Research
