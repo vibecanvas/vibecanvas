@@ -1,6 +1,6 @@
 export type TPortalMountArrowSandbox = {
+  HTMLElement: typeof HTMLElement;
   root: HTMLDivElement;
-  logging: import("../../new-services/logging/LoggingService").LoggingService;
   arrow: {
     html: typeof import("@arrow-js/core").html;
     render: typeof import("@arrow-js/framework").render;
@@ -81,17 +81,6 @@ const source = {
 
 export function txMountArrowSandbox(portal: TPortalMountArrowSandbox, args: TArgsMountArrowSandbox) {
   void args;
-  portal.logging.log({
-    kind: "plugin",
-    name: "hosted-component",
-    level: 1,
-    event: "arrow.mount.start",
-    payload: {
-      overlayId: portal.root.dataset.hostedComponentOverlayId ?? null,
-      rootClientWidth: portal.root.clientWidth,
-      rootClientHeight: portal.root.clientHeight,
-    },
-  });
   portal.root.replaceChildren();
   portal.root.style.width = "100%";
   portal.root.style.height = "100%";
@@ -106,34 +95,9 @@ export function txMountArrowSandbox(portal: TPortalMountArrowSandbox, args: TArg
   host.style.overflow = "hidden";
   portal.root.appendChild(host);
 
-  portal.logging.log({
-    kind: "plugin",
-    name: "hosted-component",
-    level: 2,
-    event: "arrow.mount.host-created",
-    payload: {
-      overlayId: portal.root.dataset.hostedComponentOverlayId ?? null,
-      hostStyleWidth: host.style.width,
-      hostStyleHeight: host.style.height,
-      hostPosition: host.style.position,
-      rootScaleX: portal.root.style.getPropertyValue("--vc-hosted-component-scale-x"),
-      rootScaleY: portal.root.style.getPropertyValue("--vc-hosted-component-scale-y"),
-    },
-  });
-
   void portal.arrow.render(host, portal.arrow.html`${portal.arrow.sandbox({ source })}`).then(() => {
     const sandboxElement = host.querySelector("arrow-sandbox");
-    if (!(sandboxElement instanceof portal.root.ownerDocument.defaultView?.HTMLElement)) {
-      portal.logging.warn({
-        kind: "plugin",
-        name: "hosted-component",
-        level: 1,
-        event: "arrow.mount.missing-sandbox-element",
-        payload: {
-          overlayId: portal.root.dataset.hostedComponentOverlayId ?? null,
-          childCount: host.childElementCount,
-        },
-      });
+    if (!(sandboxElement instanceof portal.HTMLElement)) {
       return;
     }
 
@@ -145,34 +109,5 @@ export function txMountArrowSandbox(portal: TPortalMountArrowSandbox, args: TArg
     sandboxElement.style.transformOrigin = "top left";
     sandboxElement.style.transform = "scale(var(--vc-hosted-component-scale-x), var(--vc-hosted-component-scale-y))";
     sandboxElement.style.overflow = "hidden";
-
-    portal.logging.log({
-      kind: "plugin",
-      name: "hosted-component",
-      level: 2,
-      event: "arrow.mount.complete",
-      payload: {
-        overlayId: portal.root.dataset.hostedComponentOverlayId ?? null,
-        rootRect: portal.root.getBoundingClientRect().toJSON?.() ?? {
-          x: portal.root.getBoundingClientRect().x,
-          y: portal.root.getBoundingClientRect().y,
-          width: portal.root.getBoundingClientRect().width,
-          height: portal.root.getBoundingClientRect().height,
-        },
-        hostRect: host.getBoundingClientRect().toJSON?.() ?? {
-          x: host.getBoundingClientRect().x,
-          y: host.getBoundingClientRect().y,
-          width: host.getBoundingClientRect().width,
-          height: host.getBoundingClientRect().height,
-        },
-        sandboxRect: sandboxElement.getBoundingClientRect().toJSON?.() ?? {
-          x: sandboxElement.getBoundingClientRect().x,
-          y: sandboxElement.getBoundingClientRect().y,
-          width: sandboxElement.getBoundingClientRect().width,
-          height: sandboxElement.getBoundingClientRect().height,
-        },
-        shadowChildTag: sandboxElement.shadowRoot?.firstElementChild?.tagName ?? null,
-      },
-    });
   });
 }

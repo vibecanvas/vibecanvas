@@ -1,6 +1,6 @@
 import type { TElement } from "@vibecanvas/service-automerge/types/canvas-doc.types";
 import type Konva from "konva";
-import type { RenderService } from "../../new-services/render/RenderService";
+import type { RenderService } from "../../../new-services/render/RenderService";
 
 export type TPortalSyncHostedComponentGroup = {
   render: RenderService;

@@ -1,13 +1,12 @@
 import type { IPlugin } from "@vibecanvas/runtime";
-import Square from "lucide-static/icons/square.svg?raw";
+import icon from "lucide-static/icons/pickaxe.svg?raw";
 import { html } from "@arrow-js/core";
 import { render as renderArrowView } from "@arrow-js/framework";
 import { sandbox as createArrowSandbox } from "@arrow-js/sandbox";
-import { HOSTED_COMPONENT_TOOL_ID } from "./CONSTANTS";
-import type { CrdtService, EditorService, RenderOrderService, RenderService, SelectionService } from "../../new-services";
-import type { LoggingService } from "../../new-services/logging/LoggingService";
+import { HOSTED_COMPONENT_TOOL_ID } from "./old/CONSTANTS";
+import type { CameraService, CrdtService, EditorService, RenderOrderService, RenderService, SelectionService } from "../../new-services";
 import type { IHooks } from "../../runtime";
-import { txSetupHostedComponent } from "./tx.setup";
+import { txSetupHostedComponent } from "./old/tx.setup";
 
 function createCreateId(render: RenderService) {
   let fallbackId = 0;
@@ -24,11 +23,11 @@ function createCreateId(render: RenderService) {
 }
 
 export function createHostedComponentPlugin(): IPlugin<{
+  camera: CameraService;
   crdt: CrdtService;
   render: RenderService;
   renderOrder: RenderOrderService;
   editor: EditorService;
-  logging: LoggingService;
   selection: SelectionService;
 }, IHooks> {
   return {
@@ -37,10 +36,11 @@ export function createHostedComponentPlugin(): IPlugin<{
       const render = ctx.services.require("render");
 
       txSetupHostedComponent({
+        camera: ctx.services.require("camera"),
         crdt: ctx.services.require("crdt"),
         editor: ctx.services.require("editor"),
         hooks: ctx.hooks,
-        icon: Square,
+        icon,
         now: () => Date.now(),
         createId: createCreateId(render),
         render,
@@ -49,7 +49,6 @@ export function createHostedComponentPlugin(): IPlugin<{
           render: renderArrowView,
           sandbox: createArrowSandbox,
         },
-        logging: ctx.services.require("logging"),
         renderOrder: ctx.services.require("renderOrder"),
         selection: ctx.services.require("selection"),
       }, {});

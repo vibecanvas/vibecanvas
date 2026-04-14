@@ -1,8 +1,8 @@
 import type { TElement } from "@vibecanvas/service-automerge/types/canvas-doc.types";
 import type Konva from "konva";
 import { fxHostedComponentSnapshotToElement } from "./fn.hosted-component-snapshot-to-element";
-import { fxGetCanvasParentGroupId } from "../../core/fn.canvas-node-semantics";
-import type { RenderService } from "../../new-services/render/RenderService";
+import { fxGetCanvasParentGroupId } from "../../../core/fn.canvas-node-semantics";
+import type { RenderService } from "../../../new-services/render/RenderService";
 
 export type TPortalToHostedComponentElement = {
   editor: { toGroup(node: Konva.Node): unknown };

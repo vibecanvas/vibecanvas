@@ -1,52 +1,52 @@
 import type { TCustomData, TElement } from "@vibecanvas/service-automerge/types/canvas-doc.types";
 import type Konva from "konva";
+import { HOSTED_COMPONENT_BACKGROUND_ATTR, HOSTED_COMPONENT_BODY_NAME, HOSTED_COMPONENT_CONTROL_CLOSE_NAME, HOSTED_COMPONENT_CONTROL_FULLSCREEN_NAME, HOSTED_COMPONENT_CONTROL_GAP_PX, HOSTED_COMPONENT_CONTROL_MINIMIZE_NAME, HOSTED_COMPONENT_CONTROL_RADIUS_PX, HOSTED_COMPONENT_CONTROL_START_X_PX, HOSTED_COMPONENT_CONTROL_Y_PX, HOSTED_COMPONENT_CREATED_AT_ATTR, HOSTED_COMPONENT_DEFAULT_BACKGROUND, HOSTED_COMPONENT_DEFAULT_HEIGHT, HOSTED_COMPONENT_DEFAULT_WIDTH, HOSTED_COMPONENT_GROUP_KIND_ATTR, HOSTED_COMPONENT_HEADER_HEIGHT_PX, HOSTED_COMPONENT_HEADER_NAME, HOSTED_COMPONENT_HEADER_TITLE, HOSTED_COMPONENT_HEIGHT_ATTR, HOSTED_COMPONENT_HIT_NAME, HOSTED_COMPONENT_MINIMIZE_COLOR, HOSTED_COMPONENT_OVERLAY_BACKGROUND, HOSTED_COMPONENT_OVERLAY_BORDER, HOSTED_COMPONENT_OVERLAY_INSET_PX, HOSTED_COMPONENT_TITLE_COLOR, HOSTED_COMPONENT_TITLE_NAME, HOSTED_COMPONENT_TOOL_ID, HOSTED_COMPONENT_WIDTH_ATTR, HOSTED_COMPONENT_WINDOW_BACKGROUND, HOSTED_COMPONENT_WINDOW_NAME, HOSTED_COMPONENT_WINDOW_RADIUS_PX, HOSTED_COMPONENT_WINDOW_STROKE, HOSTED_COMPONENT_CLOSE_COLOR, HOSTED_COMPONENT_FULLSCREEN_COLOR } from "./CONSTANTS";
 import { fxGetHostedComponentCreatePointer } from "./fx.get-hosted-component-create-pointer";
 import { fxToHostedComponentElement } from "./fx.to-hosted-component-element";
 import { txCreateHostedComponentOnPointerUp } from "./tx.create-hosted-component-on-pointer-up";
 import { txMountArrowSandbox } from "./tx.mount-arrow-sandbox";
 import { txSyncHostedComponentGroup } from "./tx.sync-hosted-component-group";
 import { txSyncHostedComponentOverlays } from "./tx.sync-hosted-component-overlays";
-import type { CrdtService } from "../../new-services/crdt/CrdtService";
-import type { EditorService, TEditorToolIcon } from "../../new-services/editor/EditorService";
-import type { LoggingService } from "../../new-services/logging/LoggingService";
-import type { RenderOrderService } from "../../new-services/render-order/RenderOrderService";
-import type { RenderService } from "../../new-services/render/RenderService";
-import type { SelectionService } from "../../new-services/selection/SelectionService";
-import type { IHooks } from "../../runtime";
+import type { CrdtService } from "../../../new-services/crdt/CrdtService";
+import type { EditorService, TEditorToolIcon } from "../../../new-services/editor/EditorService";
+import type { RenderOrderService } from "../../../new-services/render-order/RenderOrderService";
+import type { RenderService } from "../../../new-services/render/RenderService";
+import type { SelectionService } from "../../../new-services/selection/SelectionService";
+import type { IHooks } from "../../../runtime";
 
-const TOOL_ID = "hosted-component";
-const GROUP_KIND_ATTR = "vcHostedComponentKind";
-const CREATED_AT_ATTR = "vcHostedComponentCreatedAt";
-const WIDTH_ATTR = "vcHostedComponentWidth";
-const HEIGHT_ATTR = "vcHostedComponentHeight";
-const BACKGROUND_ATTR = "vcHostedComponentBackground";
-const OVERLAY_INSET_PX = 5;
-const WINDOW_RADIUS_PX = 10;
-const HEADER_HEIGHT_PX = 28;
-const CONTROL_RADIUS_PX = 4;
-const CONTROL_GAP_PX = 6;
-const CONTROL_START_X_PX = 14;
-const CONTROL_Y_PX = 14;
-const HEADER_TITLE = "Hosted Component";
-const HIT_NAME = "hosted-component-hit";
-const WINDOW_NAME = "hosted-component-window";
-const HEADER_NAME = "hosted-component-header";
-const BODY_NAME = "hosted-component-body";
-const TITLE_NAME = "hosted-component-title";
-const CONTROL_CLOSE_NAME = "hosted-component-control-close";
-const CONTROL_MINIMIZE_NAME = "hosted-component-control-minimize";
-const CONTROL_FULLSCREEN_NAME = "hosted-component-control-fullscreen";
-const DEFAULT_WIDTH = 160;
-const DEFAULT_HEIGHT = 120;
-const DEFAULT_BACKGROUND = "#6b7280";
-const WINDOW_BACKGROUND = "#f8fafc";
-const WINDOW_STROKE = "rgba(15, 23, 42, 0.18)";
-const TITLE_COLOR = "rgba(15, 23, 42, 0.72)";
-const CLOSE_COLOR = "#ef4444";
-const MINIMIZE_COLOR = "#f59e0b";
-const FULLSCREEN_COLOR = "#22c55e";
-const OVERLAY_BACKGROUND = "rgba(59, 130, 246, 0.35)";
-const OVERLAY_BORDER = "1px solid rgba(59, 130, 246, 0.75)";
+const TOOL_ID = HOSTED_COMPONENT_TOOL_ID;
+const GROUP_KIND_ATTR = HOSTED_COMPONENT_GROUP_KIND_ATTR;
+const CREATED_AT_ATTR = HOSTED_COMPONENT_CREATED_AT_ATTR;
+const WIDTH_ATTR = HOSTED_COMPONENT_WIDTH_ATTR;
+const HEIGHT_ATTR = HOSTED_COMPONENT_HEIGHT_ATTR;
+const BACKGROUND_ATTR = HOSTED_COMPONENT_BACKGROUND_ATTR;
+const OVERLAY_INSET_PX = HOSTED_COMPONENT_OVERLAY_INSET_PX;
+const WINDOW_RADIUS_PX = HOSTED_COMPONENT_WINDOW_RADIUS_PX;
+const HEADER_HEIGHT_PX = HOSTED_COMPONENT_HEADER_HEIGHT_PX;
+const CONTROL_RADIUS_PX = HOSTED_COMPONENT_CONTROL_RADIUS_PX;
+const CONTROL_GAP_PX = HOSTED_COMPONENT_CONTROL_GAP_PX;
+const CONTROL_START_X_PX = HOSTED_COMPONENT_CONTROL_START_X_PX;
+const CONTROL_Y_PX = HOSTED_COMPONENT_CONTROL_Y_PX;
+const HEADER_TITLE = HOSTED_COMPONENT_HEADER_TITLE;
+const HIT_NAME = HOSTED_COMPONENT_HIT_NAME;
+const WINDOW_NAME = HOSTED_COMPONENT_WINDOW_NAME;
+const HEADER_NAME = HOSTED_COMPONENT_HEADER_NAME;
+const BODY_NAME = HOSTED_COMPONENT_BODY_NAME;
+const TITLE_NAME = HOSTED_COMPONENT_TITLE_NAME;
+const CONTROL_CLOSE_NAME = HOSTED_COMPONENT_CONTROL_CLOSE_NAME;
+const CONTROL_MINIMIZE_NAME = HOSTED_COMPONENT_CONTROL_MINIMIZE_NAME;
+const CONTROL_FULLSCREEN_NAME = HOSTED_COMPONENT_CONTROL_FULLSCREEN_NAME;
+const DEFAULT_WIDTH = HOSTED_COMPONENT_DEFAULT_WIDTH;
+const DEFAULT_HEIGHT = HOSTED_COMPONENT_DEFAULT_HEIGHT;
+const DEFAULT_BACKGROUND = HOSTED_COMPONENT_DEFAULT_BACKGROUND;
+const WINDOW_BACKGROUND = HOSTED_COMPONENT_WINDOW_BACKGROUND;
+const WINDOW_STROKE = HOSTED_COMPONENT_WINDOW_STROKE;
+const TITLE_COLOR = HOSTED_COMPONENT_TITLE_COLOR;
+const CLOSE_COLOR = HOSTED_COMPONENT_CLOSE_COLOR;
+const MINIMIZE_COLOR = HOSTED_COMPONENT_MINIMIZE_COLOR;
+const FULLSCREEN_COLOR = HOSTED_COMPONENT_FULLSCREEN_COLOR;
+const OVERLAY_BACKGROUND = HOSTED_COMPONENT_OVERLAY_BACKGROUND;
+const OVERLAY_BORDER = HOSTED_COMPONENT_OVERLAY_BORDER;
 
 type THostedComponentPayload = {
   kind: typeof TOOL_ID;
@@ -60,6 +60,7 @@ type THostedComponentElement = Omit<TElement, "data"> & {
 };
 
 export type TPortalSetupHostedComponent = {
+  camera: import("../../../new-services/camera/CameraService").CameraService;
   crdt: CrdtService;
   editor: EditorService;
   hooks: IHooks;
@@ -72,7 +73,6 @@ export type TPortalSetupHostedComponent = {
     render: typeof import("@arrow-js/framework").render;
     sandbox: typeof import("@arrow-js/sandbox").sandbox;
   };
-  logging: LoggingService;
   renderOrder: RenderOrderService;
   selection: SelectionService;
 };
@@ -297,17 +297,15 @@ function updateHostedComponentNode(render: RenderService, element: TElement) {
 }
 
 function setupHostedComponentOverlay(portal: TPortalSetupHostedComponent) {
-  portal.logging.log({ kind: "plugin", name: TOOL_ID, level: 1, event: "overlay.setup" });
   const overlays = new Map<string, HTMLDivElement>();
   let root: HTMLDivElement | null = null;
-  let rafId = 0;
 
   const sync = () => {
     if (!root) {
       return;
     }
 
-    txSyncHostedComponentOverlays({ render: portal.render, logging: portal.logging }, {
+    txSyncHostedComponentOverlays({ render: portal.render }, {
       root,
       overlays,
       kind: TOOL_ID,
@@ -317,28 +315,20 @@ function setupHostedComponentOverlay(portal: TPortalSetupHostedComponent) {
       overlayBackground: OVERLAY_BACKGROUND,
       overlayBorder: OVERLAY_BORDER,
       onCreateOverlay: (overlay) => {
-        portal.logging.log({
-          kind: "plugin",
-          name: TOOL_ID,
-          level: 1,
-          event: "overlay.create",
-          payload: { overlayId: overlay.dataset.hostedComponentOverlayId ?? null },
-        });
         overlay.style.pointerEvents = "auto";
       },
       onMountOverlay: (overlay) => {
-        txMountArrowSandbox({ root: overlay, arrow: portal.arrow, logging: portal.logging }, {});
+        const HTMLElement = portal.render.container.ownerDocument.defaultView?.HTMLElement;
+        if (!HTMLElement) {
+          return;
+        }
+
+        txMountArrowSandbox({ root: overlay, arrow: portal.arrow, HTMLElement }, {});
       },
     });
   };
 
-  const tick = () => {
-    sync();
-    rafId = portal.render.container.ownerDocument.defaultView?.requestAnimationFrame(tick) ?? 0;
-  };
-
   portal.hooks.init.tap(() => {
-    portal.logging.log({ kind: "plugin", name: TOOL_ID, level: 1, event: "overlay.root.init" });
     const document = portal.render.container.ownerDocument;
     root = document.createElement("div");
     root.dataset.hostedComponentOverlayRoot = "true";
@@ -350,22 +340,25 @@ function setupHostedComponentOverlay(portal: TPortalSetupHostedComponent) {
     portal.render.container.style.position = "relative";
     portal.render.container.appendChild(root);
     sync();
-    rafId = document.defaultView?.requestAnimationFrame(tick) ?? 0;
+  });
+
+  portal.camera.hooks.change.tap(() => {
+    sync();
+  });
+
+  portal.render.hooks.resize.tap(() => {
+    sync();
+  });
+
+  portal.hooks.pointerMove.tap(() => {
+    sync();
+  });
+
+  portal.hooks.pointerUp.tap(() => {
+    sync();
   });
 
   portal.hooks.destroy.tap(() => {
-    portal.logging.log({
-      kind: "plugin",
-      name: TOOL_ID,
-      level: 1,
-      event: "overlay.root.destroy",
-      payload: { overlayCount: overlays.size },
-    });
-    if (rafId !== 0) {
-      portal.render.container.ownerDocument.defaultView?.cancelAnimationFrame(rafId);
-      rafId = 0;
-    }
-
     overlays.forEach((overlay) => overlay.remove());
     overlays.clear();
     root?.remove();

@@ -1,11 +1,11 @@
 import type { TElement } from "@vibecanvas/service-automerge/types/canvas-doc.types";
 import type Konva from "konva";
 import { fxCreateHostedComponentElement } from "./fn.create-hosted-component-element";
-import type { CrdtService } from "../../new-services/crdt/CrdtService";
-import type { EditorService } from "../../new-services/editor/EditorService";
-import type { RenderOrderService } from "../../new-services/render-order/RenderOrderService";
-import type { RenderService } from "../../new-services/render/RenderService";
-import type { SelectionService } from "../../new-services/selection/SelectionService";
+import type { CrdtService } from "../../../new-services/crdt/CrdtService";
+import type { EditorService } from "../../../new-services/editor/EditorService";
+import type { RenderOrderService } from "../../../new-services/render-order/RenderOrderService";
+import type { RenderService } from "../../../new-services/render/RenderService";
+import type { SelectionService } from "../../../new-services/selection/SelectionService";
 
 export type TPortalCreateHostedComponentOnPointerUp = {
   crdt: CrdtService;

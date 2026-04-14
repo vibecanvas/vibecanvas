@@ -1,4 +1,4 @@
-import type { RenderService } from "../../new-services/render/RenderService";
+import type { RenderService } from "../../../new-services/render/RenderService";
 
 export type TPortalGetHostedComponentCreatePointer = {
   render: RenderService;
