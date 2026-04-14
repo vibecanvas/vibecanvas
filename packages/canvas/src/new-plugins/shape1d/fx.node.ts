@@ -45,14 +45,14 @@ export function fxHasRenderableRuntime(portal: TPortalFxHasRenderableRuntime, ar
     && typeof args.node.sceneFunc?.() === "function";
 }
 
-export type TPortalFxFindShape1dNodeById = { render: SceneService };
+export type TPortalFxFindShape1dNodeById = { Shape: typeof Konva.Shape; render: SceneService };
 export type TArgsFxFindShape1dNodeById = { id: string };
 export function fxFindShape1dNodeById(portal: TPortalFxFindShape1dNodeById, args: TArgsFxFindShape1dNodeById): TShape1dNode | null {
   const candidate = portal.render.staticForegroundLayer.findOne((node: Konva.Node) => {
-    return fxIsShape1dNode({ Shape: portal.render.Shape }, { node }) && node.id() === args.id;
+    return fxIsShape1dNode({ Shape: portal.Shape }, { node }) && node.id() === args.id;
   });
 
-  return fxIsShape1dNode({ Shape: portal.render.Shape }, { node: candidate }) ? (candidate as TShape1dNode) : null;
+  return fxIsShape1dNode({ Shape: portal.Shape }, { node: candidate }) ? (candidate as TShape1dNode) : null;
 }
 
 export type TPortalFxGetElementData = {};

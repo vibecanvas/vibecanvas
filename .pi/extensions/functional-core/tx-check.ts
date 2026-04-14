@@ -1,5 +1,6 @@
 import path from "node:path";
 import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
+import { recordBlockedToolCall } from "./lib/blocked-tool-log";
 import { buildEditedContentPreview } from "./lib/edit-preview";
 import { RUNTIME_GLOBAL_BLOCK_NOTE, validateNoDirectRuntimeGlobals } from "./lib/runtime-global-usage";
 
@@ -530,20 +531,33 @@ export default function txCheckExtension(pi: ExtensionAPI) {
     }
 
     const absolutePath = resolveToolPath(ctx.cwd, input.path);
+    async function block(reason: string) {
+      await recordBlockedToolCall(ctx.cwd, {
+        checkName: "tx-check",
+        toolName: event.toolName,
+        cwd: ctx.cwd,
+        filePath: input.path ?? absolutePath,
+        absolutePath,
+        reason,
+        input: event.input,
+        createdAt: new Date().toISOString(),
+      });
+      return { block: true, reason };
+    }
 
     let nextContent: string | undefined;
     let buildError: string | undefined;
 
     if (event.toolName === "write") {
       if (typeof input.content !== "string") {
-        return { block: true, reason: "tx-check could not validate write: missing content" };
+        return block("tx-check could not validate write: missing content");
       }
       nextContent = input.content;
     }
 
     if (event.toolName === "edit") {
       if (!Array.isArray(input.edits)) {
-        return { block: true, reason: "tx-check could not validate edit: missing edits" };
+        return block("tx-check could not validate edit: missing edits");
       }
       const result = await buildEditedContentPreview(absolutePath, input as TEditInput, "tx-check");
       nextContent = result.content;
@@ -554,11 +568,11 @@ export default function txCheckExtension(pi: ExtensionAPI) {
       if (ctx.hasUI) {
         ctx.ui.notify(buildError, "warning");
       }
-      return { block: true, reason: buildError };
+      return block(buildError);
     }
 
     if (typeof nextContent !== "string") {
-      return { block: true, reason: "tx-check could not validate file content" };
+      return block("tx-check could not validate file content");
     }
 
     const violations = validateTxFileContent(absolutePath, nextContent);
@@ -570,6 +584,6 @@ export default function txCheckExtension(pi: ExtensionAPI) {
     if (ctx.hasUI) {
       ctx.ui.notify(`tx-check blocked ${input.path}`, "warning");
     }
-    return { block: true, reason };
+    return block(reason);
   });
 }

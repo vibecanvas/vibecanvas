@@ -14,6 +14,7 @@ export type TPortalSyncGroupBoundaries = {
   selection: SelectionService;
   theme: ThemeService;
   boundaries: Map<string, TGroupBoundary>;
+  createGroupBoundary: (group: Konva.Group) => TGroupBoundary;
 };
 
 export type TArgsSyncGroupBoundaries = Record<string, never>;
@@ -27,7 +28,7 @@ export function txSyncGroupBoundaries(
   portal.selection.selection
     .filter((node): node is Konva.Group => fxIsCanvasGroupNode({}, { editor: portal.editor, node }))
     .forEach((group) => {
-      const boundary = portal.boundaries.get(group.id()) ?? fxCreateGroupBoundary({ render: portal.render, theme: portal.theme }, { group });
+      const boundary = portal.boundaries.get(group.id()) ?? portal.createGroupBoundary(group);
       boundary.syncTheme();
       portal.boundaries.set(group.id(), boundary);
       portal.render.dynamicLayer.add(boundary.node);

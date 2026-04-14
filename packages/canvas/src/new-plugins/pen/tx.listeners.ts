@@ -29,6 +29,8 @@ export function txSafeStopPenDrag(portal: TPortalTxSafeStopPenDrag, args: TArgsT
 type TThrottlePatch = (patch: Pick<TElement, "id" | "x" | "y" | "parentGroupId" | "updatedAt">) => void;
 
 export type TPortalTxSetupPenShapeListeners = {
+  Group: typeof Konva.Group;
+  Shape: typeof Konva.Shape;
   crdt: CrdtService;
   editor: EditorService;
   history: HistoryService;
@@ -64,10 +66,10 @@ function penNodeToPositionPatch(portal: TPortalTxSetupPenShapeListeners, node: K
 
 function findSceneNodeById(portal: TPortalTxSetupPenShapeListeners, id: string) {
   const node = portal.render.staticForegroundLayer.findOne((candidate: Konva.Node) => {
-    return (candidate instanceof portal.render.Group || candidate instanceof portal.render.Shape) && candidate.id() === id;
+    return (candidate instanceof portal.Group || candidate instanceof portal.Shape) && candidate.id() === id;
   });
 
-  if (!(node instanceof portal.render.Group) && !(node instanceof portal.render.Shape)) {
+  if (!(node instanceof portal.Group) && !(node instanceof portal.Shape)) {
     return null;
   }
 
@@ -98,7 +100,7 @@ function serializeNodeElements(portal: TPortalTxSetupPenShapeListeners, node: Ko
   if (kind === "group" && fxIsCanvasGroupNode({}, { editor: portal.editor, node })) {
     return fxSerializeSubtreeElements({
       editor: portal.editor,
-      render: portal.render,
+      Shape: portal.Shape,
       group: node as Konva.Group,
     }).map((element) => structuredClone(element));
   }

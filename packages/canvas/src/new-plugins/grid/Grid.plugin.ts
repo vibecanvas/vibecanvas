@@ -1,6 +1,7 @@
 import type { IPlugin } from "@vibecanvas/runtime";
 import type { ThemeService } from "@vibecanvas/service-theme";
 import Grid2x2 from "lucide-static/icons/grid-2x2.svg?raw";
+import Konva from "konva";
 import type { CameraService } from "../../new-services/camera/CameraService";
 import type { EditorService } from "../../new-services/editor/EditorService";
 import type { SceneService } from "../../new-services/scene/SceneService";
@@ -10,7 +11,7 @@ import { txDrawGrid } from "./tx.draw";
 export function createGridPlugin(): IPlugin<{
   camera: CameraService;
   editor: EditorService;
-  render: SceneService;
+  scene: SceneService;
   theme: ThemeService;
 }, IHooks> {
   let visible = true;
@@ -38,16 +39,16 @@ export function createGridPlugin(): IPlugin<{
       syncGridTool();
 
       ctx.hooks.init.tap(() => {
-        const render = ctx.services.require("scene");
+        const scene = ctx.services.require("scene");
         const camera = ctx.services.require("camera");
         const theme = ctx.services.require("theme");
-        const gridShape = new render.Shape({
+        const gridShape = new Konva.Shape({
           listening: false,
-          sceneFunc: (shapeContext) => {
+          sceneFunc: (shapeContext: Konva.Context) => {
             if (!visible) return;
 
-            const width = render.stage.width();
-            const height = render.stage.height();
+            const width = scene.stage.width();
+            const height = scene.stage.height();
             if (width <= 0 || height <= 0) return;
 
             const activeTheme = theme.getTheme();
@@ -64,25 +65,25 @@ export function createGridPlugin(): IPlugin<{
           },
         });
 
-        render.staticBackgroundLayer.add(gridShape);
-        render.staticBackgroundLayer.batchDraw();
+        scene.staticBackgroundLayer.add(gridShape);
+        scene.staticBackgroundLayer.batchDraw();
 
         camera.hooks.change.tap(() => {
-          render.staticBackgroundLayer.batchDraw();
+          scene.staticBackgroundLayer.batchDraw();
         });
 
         theme.hooks.change.tap(() => {
-          render.staticBackgroundLayer.batchDraw();
+          scene.staticBackgroundLayer.batchDraw();
         });
 
-        render.hooks.resize.tap(() => {
-          render.staticBackgroundLayer.batchDraw();
+        scene.hooks.resize.tap(() => {
+          scene.staticBackgroundLayer.batchDraw();
         });
 
         ctx.hooks.gridVisible.tap((value) => {
           visible = value;
           syncGridTool();
-          render.staticBackgroundLayer.batchDraw();
+          scene.staticBackgroundLayer.batchDraw();
         });
       });
 

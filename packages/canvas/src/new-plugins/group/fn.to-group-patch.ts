@@ -1,11 +1,9 @@
 import type { TGroup } from "@vibecanvas/service-automerge/types/canvas-doc.types";
 import type Konva from "konva";
 import type { EditorService } from "../../new-services/editor/EditorService";
-import type { SceneService } from "../../new-services/scene/SceneService";
 
 export type TArgsToGroupPatch = {
   editor: EditorService;
-  render: SceneService;
   group: Konva.Group;
   getNodeZIndex: (node: Konva.Group) => string;
   fallbackCreatedAt: number;

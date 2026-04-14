@@ -3,6 +3,7 @@ import type Konva from "konva";
 import type { SceneService } from "../../new-services/scene/SceneService";
 
 export type TPortalCreateGroupBoundary = {
+  Rect: typeof Konva.Rect;
   render: SceneService;
   theme: ThemeService;
 };
@@ -15,7 +16,7 @@ export function fxCreateGroupBoundary(
   portal: TPortalCreateGroupBoundary,
   args: TArgsCreateGroupBoundary,
 ) {
-  const boundary = new portal.render.Rect({
+  const boundary = new portal.Rect({
     x: 0,
     y: 0,
     width: 0,

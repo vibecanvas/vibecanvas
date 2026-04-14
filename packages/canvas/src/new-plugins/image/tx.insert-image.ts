@@ -1,6 +1,6 @@
 import type { TElement } from "@vibecanvas/service-automerge/types/canvas-doc.types";
 import type Konva from "konva";
-import type { TImageUploadFormat, TUploadImage } from "../../services/canvas/interface";
+import type { TImageUploadFormat, TUploadImage } from "../../runtime";
 import type { CrdtService } from "../../new-services/crdt/CrdtService";
 import type { HistoryService } from "../../new-services/history/HistoryService";
 import type { RenderOrderService } from "../../new-services/render-order/RenderOrderService";

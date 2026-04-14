@@ -11,6 +11,9 @@ import { fxGetShape2dNodeType } from "./fn.node";
 const ELEMENT_STYLE_ATTR = "vcElementStyle";
 
 export type TPortalToShape2dElement = {
+  Rect: typeof Konva.Rect;
+  Line: typeof Konva.Line;
+  Ellipse: typeof Konva.Ellipse;
   editor: EditorService;
   render: SceneService;
   now: () => number;
@@ -57,7 +60,7 @@ function getDiamondBaseSize(node: Konva.Line) {
 }
 
 export function fxToShape2dElement(portal: TPortalToShape2dElement, args: TArgsToShape2dElement) {
-  const type = fxGetShape2dNodeType({ render: portal.render, node: args.node });
+  const type = fxGetShape2dNodeType({ Rect: portal.Rect, Line: portal.Line, Ellipse: portal.Ellipse, node: args.node });
   if (!type) {
     return null;
   }
@@ -81,14 +84,14 @@ export function fxToShape2dElement(portal: TPortalToShape2dElement, args: TArgsT
   let width = 0;
   let height = 0;
 
-  if (type === "rect" && args.node instanceof portal.render.Rect) {
+  if (type === "rect" && args.node instanceof portal.Rect) {
     width = args.node.width() * scaleX;
     height = args.node.height() * scaleY;
-  } else if (type === "diamond" && args.node instanceof portal.render.Line) {
+  } else if (type === "diamond" && args.node instanceof portal.Line) {
     const baseSize = getDiamondBaseSize(args.node);
     width = baseSize.width * scaleX;
     height = baseSize.height * scaleY;
-  } else if (type === "ellipse" && args.node instanceof portal.render.Ellipse) {
+  } else if (type === "ellipse" && args.node instanceof portal.Ellipse) {
     width = args.node.radiusX() * 2 * scaleX;
     height = args.node.radiusY() * 2 * scaleY;
     x = worldPosition.x - width / 2;
@@ -108,7 +111,7 @@ export function fxToShape2dElement(portal: TPortalToShape2dElement, args: TArgsT
     createdAt,
     updatedAt,
     parentGroupId: fxGetCanvasParentGroupId({}, { editor: portal.editor, node }),
-    zIndex: fnGetNodeZIndex({}, { node }),
+    zIndex: fnGetNodeZIndex({ node }),
     style: getNodeStyle(node),
   }) satisfies TElement;
 }

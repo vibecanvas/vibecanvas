@@ -15,6 +15,7 @@ export type TPortalSetupGroupNode = {
   render: SceneService;
   selection: SelectionService;
   hooks: IHooks;
+  Shape: typeof Konva.Shape;
   refreshBoundaries: () => void;
   startCloneDrag: (group: Konva.Group) => void;
   createThrottledPatch: (callback: (elements: TElement[]) => void) => (elements: TElement[]) => void;
@@ -86,7 +87,7 @@ export function txSetupGroupNode(
 
     beforeElements = fxSerializeSubtreeElements({
       editor: portal.editor,
-      render: portal.render,
+      Shape: portal.Shape,
       group: args.group,
     }).map((element) => structuredClone(element));
   });
@@ -111,7 +112,7 @@ export function txSetupGroupNode(
     portal.refreshBoundaries();
     throttledPatch(fxSerializeSubtreeElements({
       editor: portal.editor,
-      render: portal.render,
+      Shape: portal.Shape,
       group: args.group,
     }));
   });
@@ -129,7 +130,7 @@ export function txSetupGroupNode(
 
     const afterElements = fxSerializeSubtreeElements({
       editor: portal.editor,
-      render: portal.render,
+      Shape: portal.Shape,
       group: args.group,
     }).map((element) => structuredClone(element));
     portal.crdt.patch({ elements: afterElements, groups: [] });

@@ -1,4 +1,4 @@
-import type { TThemeColorPickerPalette, TThemeColorSwatch } from "@vibecanvas/service-theme";
+import { isThemeColorToken, type TThemeColorPickerPalette, type TThemeColorSwatch, type TThemeColorToken } from "@vibecanvas/service-theme";
 import { For, Show, createMemo, createSignal } from "solid-js";
 
 type TMode = "fill" | "stroke";
@@ -10,7 +10,7 @@ function normalizeSelectionValue(value: string | undefined) {
     return "@transparent";
   }
 
-  return value ?? "";
+  return value;
 }
 
 function swatchButtonStyle(args: { selected: boolean; disabled?: boolean }) {
@@ -75,7 +75,14 @@ export function ColorPicker(props: {
     return new Map(entries.map((swatch) => [swatch.token, swatch]));
   });
   const currentValue = createMemo(() => normalizeSelectionValue(props.value));
-  const currentSwatch = createMemo(() => swatchByToken().get(currentValue()));
+  const currentToken = createMemo<TThemeColorToken | undefined>(() => {
+    const value = currentValue();
+    return isThemeColorToken(value) ? value : undefined;
+  });
+  const currentSwatch = createMemo(() => {
+    const token = currentToken();
+    return token ? swatchByToken().get(token) : undefined;
+  });
   const currentSwatchColor = createMemo(() => {
     if (currentSwatch()) {
       return currentSwatch()!.color;

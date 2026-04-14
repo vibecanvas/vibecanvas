@@ -41,10 +41,10 @@ export type TArgsTxSetupShapeListeners = { node: TShape1dNode };
 
 function findSceneNodeById(portal: TPortalTxShape1dRuntime, id: string) {
   const node = portal.render.staticForegroundLayer.findOne((candidate: Konva.Node) => {
-    return (candidate instanceof portal.render.Group || candidate instanceof portal.render.Shape) && candidate.id() === id;
+    return (candidate instanceof portal.Konva.Group || candidate instanceof portal.Konva.Shape) && candidate.id() === id;
   });
 
-  if (!(node instanceof portal.render.Group) && !(node instanceof portal.render.Shape)) {
+  if (!(node instanceof portal.Konva.Group) && !(node instanceof portal.Konva.Shape)) {
     return null;
   }
 
@@ -70,7 +70,11 @@ function serializeNodeElements(portal: TPortalTxShape1dRuntime, node: Konva.Node
   }
 
   if (kind === "group" && fxIsCanvasGroupNode({}, { editor: portal.editor, node })) {
-    return fxSerializeSubtreeElements({ editor: portal.editor, render: portal.render, group: node as Konva.Group }).map((element) => structuredClone(element));
+    return fxSerializeSubtreeElements({
+      editor: portal.editor,
+      Shape: portal.Konva.Shape,
+      group: node as Konva.Group,
+    }).map((element) => structuredClone(element));
   }
 
   return [] as TElement[];

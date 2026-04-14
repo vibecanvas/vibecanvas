@@ -14,6 +14,7 @@ type TGetStroke = (
 ) => number[][];
 
 export type TPortalTxCreatePenPreviewClone = {
+  Path: typeof Konva.Path;
   crdt: CrdtService;
   render: SceneService;
   renderOrder: RenderOrderService;
@@ -34,6 +35,7 @@ export function txCreatePenPreviewClone(portal: TPortalTxCreatePenPreviewClone, 
   const element = portal.toElement(args.node);
   const now = portal.now();
   const clone = txCreatePenPathFromElement({
+    Path: portal.Path,
     render: portal.render,
     theme: portal.theme,
     getStroke: portal.getStroke,

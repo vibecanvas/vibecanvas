@@ -7,6 +7,9 @@ import type { ThemeService } from "@vibecanvas/service-theme";
 const ELEMENT_STYLE_ATTR = "vcElementStyle";
 
 export type TPortalCreateShape2dNode = {
+  Rect: typeof Konva.Rect;
+  Line: typeof Konva.Line;
+  Ellipse: typeof Konva.Ellipse;
   render: SceneService;
   theme: ThemeService;
   setNodeZIndex: (node: Konva.Shape, zIndex: string) => void;
@@ -22,7 +25,7 @@ export function fxCreateShape2dNode(portal: TPortalCreateShape2dNode, args: TArg
   const stroke = portal.theme.resolveThemeColor(style.strokeColor);
 
   if (args.element.data.type === "rect") {
-    const node = new portal.render.Rect({
+    const node = new portal.Rect({
       id: args.element.id,
       x: args.element.x,
       y: args.element.y,
@@ -45,7 +48,7 @@ export function fxCreateShape2dNode(portal: TPortalCreateShape2dNode, args: TArg
   }
 
   if (args.element.data.type === "diamond") {
-    const node = new portal.render.Line({
+    const node = new portal.Line({
       id: args.element.id,
       x: args.element.x,
       y: args.element.y,
@@ -71,7 +74,7 @@ export function fxCreateShape2dNode(portal: TPortalCreateShape2dNode, args: TArg
   }
 
   if (args.element.data.type === "ellipse") {
-    const node = new portal.render.Ellipse({
+    const node = new portal.Ellipse({
       id: args.element.id,
       x: args.element.x + args.element.data.rx,
       y: args.element.y + args.element.data.ry,

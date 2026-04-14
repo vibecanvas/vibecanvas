@@ -11,6 +11,9 @@ import { fxFindSceneNodeById, fxGetGroupChildren, fxGetSelectionGroupParent, fxI
 import { fxToGroupPatch } from "./fn.to-group-patch";
 
 export type TPortalGroupSelection = {
+  Group: typeof Konva.Group;
+  Shape: typeof Konva.Shape;
+  Layer: typeof Konva.Layer;
   crdt: CrdtService;
   editor: EditorService;
   history: HistoryService;
@@ -31,13 +34,13 @@ export function txGroupSelection(
   args: TArgsGroupSelection,
 ) {
   const selection = portal.selection.selection.filter((node): node is TSceneNode => {
-    return fxIsSceneNode({ render: portal.render, node });
+    return fxIsSceneNode({ Group: portal.Group, Shape: portal.Shape, render: portal.render, node });
   });
   if (selection.length <= 1) {
     return;
   }
 
-  const parent = fxGetSelectionGroupParent({ render: portal.render, selection });
+  const parent = fxGetSelectionGroupParent({ Group: portal.Group, Layer: portal.Layer, render: portal.render, selection });
   if (!parent) {
     return;
   }
@@ -62,7 +65,6 @@ export function txGroupSelection(
   const elementPatches: TElement[] = [];
   const groupPatches: TGroup[] = [fxToGroupPatch({
     editor: portal.editor,
-    render: portal.render,
     group: groupNode,
     getNodeZIndex: portal.getNodeZIndex,
     fallbackCreatedAt: createdAt,
@@ -101,16 +103,16 @@ export function txGroupSelection(
   portal.history.record({
     label: "group",
     undo() {
-      const currentGroupNode = fxFindSceneNodeById({ render: portal.render, id: groupId });
+      const currentGroupNode = fxFindSceneNodeById({ Group: portal.Group, Shape: portal.Shape, render: portal.render, id: groupId });
       if (!fxIsCanvasGroupNode({}, { editor: portal.editor, node: currentGroupNode })) {
         return;
       }
 
-      const currentGroup = currentGroupNode;
+      const currentGroup = currentGroupNode as Konva.Group;
 
-      const children = fxGetGroupChildren({ group: currentGroup, render: portal.render });
+      const children = fxGetGroupChildren({ Group: portal.Group, Shape: portal.Shape, group: currentGroup, render: portal.render });
       const currentParentNode = currentGroup.getParent();
-      if (!fxIsSceneParent({ render: portal.render, node: currentParentNode })) {
+      if (!fxIsSceneParent({ Group: portal.Group, Layer: portal.Layer, render: portal.render, node: currentParentNode })) {
         return;
       }
 
@@ -150,14 +152,14 @@ export function txGroupSelection(
     },
     redo() {
       const nodes = childIds
-        .map((id) => fxFindSceneNodeById({ render: portal.render, id }))
+        .map((id) => fxFindSceneNodeById({ Group: portal.Group, Shape: portal.Shape, render: portal.render, id }))
         .filter((node): node is TSceneNode => node !== null);
 
       if (nodes.length !== childIds.length) {
         return;
       }
 
-      const redoParent = fxGetSelectionGroupParent({ render: portal.render, selection: nodes });
+      const redoParent = fxGetSelectionGroupParent({ Group: portal.Group, Layer: portal.Layer, render: portal.render, selection: nodes });
       if (!redoParent) {
         return;
       }
@@ -178,7 +180,6 @@ export function txGroupSelection(
       const redoElementPatches: TElement[] = [];
       const redoGroupPatches: TGroup[] = [fxToGroupPatch({
         editor: portal.editor,
-        render: portal.render,
         group: recreated,
         getNodeZIndex: portal.getNodeZIndex,
         fallbackCreatedAt: createdAt,

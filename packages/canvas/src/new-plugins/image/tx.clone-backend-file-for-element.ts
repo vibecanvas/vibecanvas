@@ -1,15 +1,14 @@
 import type { TElement, TImageData } from "@vibecanvas/service-automerge/types/canvas-doc.types";
 import type Konva from "konva";
-import type { TCloneImage } from "../../services/canvas/interface";
+import type { TCloneImage } from "../../runtime";
 import type { CrdtService } from "../../new-services/crdt/CrdtService";
-import type { SceneService } from "../../new-services/scene/SceneService";
 import { txUpdateImageNodeFromElement } from "./tx.update-image-node-from-element";
 import type { TPortalUpdateImageNodeFromElement } from "./tx.update-image-node-from-element";
 
 export type TPortalCloneBackendFileForElement = {
   cloneImage?: TCloneImage;
   crdt: CrdtService;
-  render: SceneService;
+  findImageNodeById: (id: string) => Konva.Image | null;
   notification?: {
     showError(title: string, description?: string): void;
   };
@@ -36,14 +35,12 @@ export function txCloneBackendFileForElement(
   }
 
   void portal.cloneImage({ url: sourceUrl })
-    .then(({ url }) => {
+    .then(({ url }: { url: string }) => {
       if (url === sourceUrl) {
         return;
       }
 
-      const currentNode = portal.render.staticForegroundLayer.findOne((candidate: Konva.Node) => {
-        return candidate instanceof portal.render.Image && candidate.id() === args.element.id;
-      });
+      const currentNode = portal.findImageNodeById(args.element.id);
 
       const nextElement: TElement = {
         ...args.element,
@@ -54,7 +51,7 @@ export function txCloneBackendFileForElement(
         },
       };
 
-      if (currentNode instanceof portal.render.Image) {
+      if (currentNode) {
         txUpdateImageNodeFromElement(portal.updateImageNodeFromElementPortal, {
           node: currentNode,
           element: nextElement,
@@ -63,7 +60,7 @@ export function txCloneBackendFileForElement(
 
       portal.crdt.patch({ elements: [nextElement], groups: [] });
     })
-    .catch((error) => {
+    .catch((error: unknown) => {
       portal.notification?.showError(
         args.errorTitle ?? "Failed to clone image file",
         error instanceof Error ? error.message : "Unknown image clone error",

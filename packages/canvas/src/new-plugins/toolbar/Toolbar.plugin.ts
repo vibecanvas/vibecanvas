@@ -94,7 +94,7 @@ function fnGetShortcutToolId(editor: EditorService, event: KeyboardEvent) {
 }
 
 function mountToolbar(args: {
-  render: SceneService;
+  scene: SceneService;
   editor: EditorService;
   onToolSelect: (toolId: string) => void;
 }) {
@@ -142,7 +142,7 @@ function mountToolbar(args: {
  */
 export function createToolbarPlugin(): IPlugin<{
   editor: EditorService;
-  render: SceneService;
+  scene: SceneService;
   selection: SelectionService;
 }, IHooks> {
   let toolbarMount: ReturnType<typeof mountToolbar> | null = null;

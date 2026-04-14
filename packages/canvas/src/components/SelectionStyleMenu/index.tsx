@@ -1,5 +1,5 @@
 import type { TThemeColorPickerPalette } from "@vibecanvas/service-theme";
-import { Show, createMemo } from "solid-js";
+import { Show, createMemo, type JSX } from "solid-js";
 import { CapPicker } from "./CapPicker";
 import { ColorPicker } from "./ColorPicker";
 import { FontFamilyPicker } from "./FontFamilyPicker";
@@ -38,13 +38,13 @@ export type TSelectionStyleMenuValues = {
   endCap?: TCapStyle;
 };
 
-const sectionStyle = {
+const sectionStyle: JSX.CSSProperties = {
   display: "flex",
   "flex-direction": "column",
   gap: "0.25rem",
 };
 
-const labelStyle = {
+const labelStyle: JSX.CSSProperties = {
   "font-size": "10px",
   color: "var(--muted-foreground)",
   "font-family": "var(--font-mono)",

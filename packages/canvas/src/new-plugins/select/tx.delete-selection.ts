@@ -1,4 +1,5 @@
 import type { TElement, TGroup } from "@vibecanvas/service-automerge/types/canvas-doc.types";
+import type Konva from "konva";
 import type { Group } from "konva/lib/Group";
 import type { Node } from "konva/lib/Node";
 import type { Shape, ShapeConfig } from "konva/lib/Shape";
@@ -40,11 +41,13 @@ type TCollectedDeleteData = {
 };
 
 function isSceneNode(render: SceneService, node: Node | null | undefined): node is TSceneNode {
-  return Boolean(node) && (node instanceof render.Group || node instanceof render.Shape);
+  void render;
+  return Boolean(node) && (node instanceof Konva.Group || node instanceof Konva.Shape);
 }
 
-function isSceneParent(render: SceneService, node: Node | null | undefined): node is Group | InstanceType<SceneService["Layer"]> {
-  return Boolean(node) && (node instanceof render.Group || node instanceof render.Layer);
+function isSceneParent(render: SceneService, node: Node | null | undefined): node is Group | Konva.Layer {
+  void render;
+  return Boolean(node) && (node instanceof Konva.Group || node instanceof Konva.Layer);
 }
 
 function isNodeDescendantOf(node: Node, ancestor: Node) {

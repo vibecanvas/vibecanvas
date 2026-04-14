@@ -3,7 +3,7 @@ import type { IPlugin } from "@vibecanvas/runtime";
 import type { TElement, TImageData } from "@vibecanvas/service-automerge/types/canvas-doc.types";
 import ImageIcon from "lucide-static/icons/image.svg?raw";
 import Konva from "konva";
-import type { TCloneImage, TDeleteImage, TUploadImage } from "../../services/canvas/interface";
+import type { TCloneImage, TDeleteImage, TUploadImage } from "../../runtime";
 import { getImageDimensions, getImageSource, getSupportedImageFormat, parseDataUrl } from "../../utils/image";
 import type { ContextMenuService } from "../../new-services/context-menu/ContextMenuService";
 import type { CrdtService } from "../../new-services/crdt/CrdtService";
@@ -138,7 +138,7 @@ function loadImageIntoNode(node: Konva.Image, source: string | null) {
 
 function createImageNode(render: SceneService, element: TElement) {
   const data = element.data as TImageData;
-  const node = new render.Image({
+  const node = new Konva.Image({
     id: element.id,
     x: element.x,
     y: element.y,
@@ -199,7 +199,7 @@ function toElement(render: SceneService, editor: EditorService, node: Konva.Imag
     createdAt: Number(node.getAttr(ELEMENT_CREATED_AT_ATTR) ?? Date.now()),
     updatedAt: Date.now(),
     parentGroupId,
-    zIndex: fnGetNodeZIndex({}, { node }),
+    zIndex: fnGetNodeZIndex({ node }),
     opacity: node.opacity(),
     url: (node.getAttr(IMAGE_URL_ATTR) as string | null) ?? null,
     base64: (node.getAttr(IMAGE_BASE64_ATTR) as string | null) ?? null,
@@ -210,7 +210,7 @@ function toElement(render: SceneService, editor: EditorService, node: Konva.Imag
 }
 
 function createPreviewClone(render: SceneService, node: Konva.Image) {
-  const clone = new render.Image({
+  const clone = new Konva.Image({
     ...node.getAttrs(),
     id: crypto.randomUUID(),
     draggable: true,
@@ -241,7 +241,7 @@ function filterSelection(render: SceneService, editor: EditorService, selection:
   }, {
     editor,
     selection: selection.filter((node): node is Konva.Group | Konva.Shape => {
-      return node instanceof render.Group || node instanceof render.Shape;
+      return node instanceof Konva.Group || node instanceof Konva.Shape;
     }),
   });
 }
@@ -255,7 +255,7 @@ export function createImagePlugin(): IPlugin<{
   crdt: CrdtService;
   editor: EditorService;
   history: HistoryService;
-  render: SceneService;
+  scene: SceneService;
   renderOrder: RenderOrderService;
   selection: SelectionService;
 }, IHooks> {
@@ -285,7 +285,13 @@ export function createImagePlugin(): IPlugin<{
       const cloneBackendFileForElementPortal = {
         cloneImage: getImageCapabilities(ctx.config)?.cloneImage,
         crdt,
-        render,
+        findImageNodeById: (id: string) => {
+          const node = render.staticForegroundLayer.findOne((candidate: Konva.Node) => {
+            return candidate instanceof Konva.Image && candidate.id() === id;
+          });
+
+          return node instanceof Konva.Image ? node : null;
+        },
         notification: getNotification(ctx.config),
         updateImageNodeFromElementPortal,
       };
@@ -379,7 +385,7 @@ export function createImagePlugin(): IPlugin<{
       });
 
       editor.registerToElement("image", (node) => {
-        if (!(node instanceof render.Image)) {
+        if (!(node instanceof Konva.Image)) {
           return null;
         }
 
@@ -395,7 +401,7 @@ export function createImagePlugin(): IPlugin<{
       });
 
       editor.registerSetupExistingShape("image", (node) => {
-        if (!(node instanceof render.Image)) {
+        if (!(node instanceof Konva.Image)) {
           return false;
         }
 
@@ -422,9 +428,9 @@ export function createImagePlugin(): IPlugin<{
         }
 
         const node = render.staticForegroundLayer.findOne((candidate: Konva.Node) => {
-          return candidate instanceof render.Image && candidate.id() === element.id;
+          return candidate instanceof Konva.Image && candidate.id() === element.id;
         });
-        if (!(node instanceof render.Image)) {
+        if (!(node instanceof Konva.Image)) {
           return false;
         }
 

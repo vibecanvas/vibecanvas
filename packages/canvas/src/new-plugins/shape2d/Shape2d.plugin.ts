@@ -4,6 +4,7 @@ import type { TElement } from "@vibecanvas/service-automerge/types/canvas-doc.ty
 import Circle from "lucide-static/icons/circle.svg?raw";
 import Diamond from "lucide-static/icons/diamond.svg?raw";
 import Konva from "konva";
+import { layoutWithLines, prepareWithSegments } from "@chenglou/pretext";
 import Square from "lucide-static/icons/square.svg?raw";
 import { fnCreateShape2dElement, fnGetShape2dDraftBounds, fnGetShape2dElementTypeFromTool, fnIsShape2dElementType, fnIsShape2dToolId, type TShape2dToolId } from "../../core/fn.shape2d";
 import { fxFilterSelection } from "../../core/fx.filter-selection";
@@ -19,6 +20,7 @@ import type { ThemeService } from "@vibecanvas/service-theme";
 import { CanvasMode } from "../../new-services/selection/CONSTANTS";
 import type { IHooks } from "../../runtime";
 import { txDeleteSelection } from "../select/tx.delete-selection";
+import { txEnterEditMode } from "../text/tx.enter-edit-mode";
 import { fxGetAttachedTextNode, fxOpenAttachedTextEditMode, fxPersistAttachedTextNode, fxSyncAttachedTextNodeToShape } from "./fx.attached-text";
 import { fxCreateShape2dNode } from "./fx.create-node";
 import { fxToShape2dElement } from "./fx.to-element";
@@ -55,8 +57,8 @@ function safeStopDrag(node: Konva.Node) {
 
 function isShape2dTextHostNode(render: SceneService, node: Konva.Node | null | undefined): node is Konva.Shape {
   return Boolean(node)
-    && node instanceof render.Shape
-    && fxGetShape2dNodeType({ render, node }) !== null;
+    && node instanceof Konva.Shape
+    && fxGetShape2dNodeType({ Rect: Konva.Rect, Line: Konva.Line, Ellipse: Konva.Ellipse, node }) !== null;
 }
 
 function getFocusedShape2dTextHost(render: SceneService, editor: EditorService, selection: SelectionService) {
@@ -78,7 +80,7 @@ export function createShape2dPlugin(): IPlugin<{
   crdt: CrdtService;
   editor: EditorService;
   history: HistoryService;
-  render: SceneService;
+  scene: SceneService;
   renderOrder: RenderOrderService;
   selection: SelectionService;
   theme: ThemeService;
@@ -97,12 +99,43 @@ export function createShape2dPlugin(): IPlugin<{
       const createId = createCreateId(render);
       const now = () => Date.now();
 
+      const createAttachedTextPortal = () => ({
+        Konva,
+        crdt,
+        document: render.container.ownerDocument,
+        editor,
+        history,
+        scene: render,
+        renderOrder,
+        selection,
+        theme,
+        createId,
+        now,
+        pretext: { layoutWithLines, prepareWithSegments },
+        enterEditMode: (args: { freeTextName: string; node: Konva.Text; isNew: boolean }) => {
+          return txEnterEditMode({
+            Konva,
+            crdt,
+            document: render.container.ownerDocument,
+            editor,
+            history,
+            scene: render,
+            selection,
+            theme,
+            pretext: { layoutWithLines, prepareWithSegments },
+          }, args);
+        },
+      });
+
       let previewNode: Konva.Shape | null = null;
       let previewOrigin: { x: number; y: number } | null = null;
       let previewToolId: TShape2dToolId | null = null;
 
       const toElement = (node: Konva.Node) => {
         return fxToShape2dElement({
+          Rect: Konva.Rect,
+          Line: Konva.Line,
+          Ellipse: Konva.Ellipse,
           editor,
           render,
           now,
@@ -113,6 +146,9 @@ export function createShape2dPlugin(): IPlugin<{
 
       const createNode = (element: TElement) => {
         return fxCreateShape2dNode({
+          Rect: Konva.Rect,
+          Line: Konva.Line,
+          Ellipse: Konva.Ellipse,
           render,
           theme,
           setNodeZIndex,
@@ -122,50 +158,20 @@ export function createShape2dPlugin(): IPlugin<{
       };
 
       const syncShapeAttachedText = (shapeNode: Konva.Shape) => {
-        const textNode = fxGetAttachedTextNode({
-          crdt,
-          document: render.container.ownerDocument,
-          editor,
-          history,
-          render,
-          renderOrder,
-          selection,
-          theme,
-          createId,
-          now,
-        }, shapeNode);
+        const attachedTextPortal = createAttachedTextPortal();
+        const textNode = fxGetAttachedTextNode(attachedTextPortal, { shapeNode });
         if (!textNode) {
           return null;
         }
 
-        fxSyncAttachedTextNodeToShape({
-          crdt,
-          document: render.container.ownerDocument,
-          editor,
-          history,
-          render,
-          renderOrder,
-          selection,
-          theme,
-          createId,
-          now,
-        }, shapeNode, textNode);
-        return fxPersistAttachedTextNode({
-          crdt,
-          document: render.container.ownerDocument,
-          editor,
-          history,
-          render,
-          renderOrder,
-          selection,
-          theme,
-          createId,
-          now,
-        }, textNode);
+        fxSyncAttachedTextNodeToShape(attachedTextPortal, { shapeNode, textNode });
+        return fxPersistAttachedTextNode(attachedTextPortal, { textNode });
       };
 
       const setupNode = (node: Konva.Shape) => {
         txSetupShape2dNode({
+          Group: Konva.Group,
+          Shape: Konva.Shape,
           crdt,
           editor,
           history,
@@ -189,18 +195,8 @@ export function createShape2dPlugin(): IPlugin<{
                   return { nodes: [], elements: [] };
                 }
 
-                const sourceTextNode = fxGetAttachedTextNode({
-                  crdt,
-                  document: render.container.ownerDocument,
-                  editor,
-                  history,
-                  render,
-                  renderOrder,
-                  selection,
-                  theme,
-                  createId,
-                  now,
-                }, sourceShape);
+                const attachedTextPortal = createAttachedTextPortal();
+                const sourceTextNode = fxGetAttachedTextNode(attachedTextPortal, { shapeNode: sourceShape });
                 if (!sourceTextNode) {
                   return { nodes: [], elements: [] };
                 }
@@ -227,23 +223,12 @@ export function createShape2dPlugin(): IPlugin<{
                     originalText: sourceTextElement.data.text,
                   },
                 });
-                if (!(clonedTextNode instanceof render.Text)) {
+                if (!(clonedTextNode instanceof Konva.Text)) {
                   return { nodes: [], elements: [] };
                 }
 
                 render.staticForegroundLayer.add(clonedTextNode);
-                fxSyncAttachedTextNodeToShape({
-                  crdt,
-                  document: render.container.ownerDocument,
-                  editor,
-                  history,
-                  render,
-                  renderOrder,
-                  selection,
-                  theme,
-                  createId,
-                  now,
-                }, clonedNode, clonedTextNode);
+                fxSyncAttachedTextNodeToShape(attachedTextPortal, { shapeNode: clonedNode, textNode: clonedTextNode });
                 renderOrder.assignOrderOnInsert({
                   parent: render.staticForegroundLayer,
                   nodes: [clonedNode, clonedTextNode],
@@ -264,7 +249,7 @@ export function createShape2dPlugin(): IPlugin<{
             }, {
               editor,
               selection: nodes.filter((candidate): candidate is Konva.Group | Konva.Shape => {
-                return candidate instanceof render.Group || candidate instanceof render.Shape;
+                return candidate instanceof Konva.Group || candidate instanceof Konva.Shape;
               }),
             });
           },
@@ -350,18 +335,7 @@ export function createShape2dPlugin(): IPlugin<{
           return null;
         }
 
-        const textNode = fxGetAttachedTextNode({
-          crdt,
-          document: render.container.ownerDocument,
-          editor,
-          history,
-          render,
-          renderOrder,
-          selection,
-          theme,
-          createId,
-          now,
-        }, node);
+        const textNode = fxGetAttachedTextNode(createAttachedTextPortal(), { shapeNode: node });
         if (!textNode || textNode.getParent() !== node.getParent()) {
           return [node];
         }
@@ -428,7 +402,7 @@ export function createShape2dPlugin(): IPlugin<{
       });
 
       editor.registerSetupExistingShape("shape2d", (node) => {
-        if (!fxGetShape2dNodeType({ render, node })) {
+        if (!fxGetShape2dNodeType({ Rect: Konva.Rect, Line: Konva.Line, Ellipse: Konva.Ellipse, node })) {
           return false;
         }
 
@@ -442,13 +416,16 @@ export function createShape2dPlugin(): IPlugin<{
         }
 
         const node = render.staticForegroundLayer.findOne((candidate: Konva.Node) => {
-          return candidate instanceof render.Shape && candidate.id() === element.id;
+          return candidate instanceof Konva.Shape && candidate.id() === element.id;
         });
-        if (!(node instanceof render.Shape)) {
+        if (!(node instanceof Konva.Shape)) {
           return false;
         }
 
         const didUpdate = txUpdateShape2dNodeFromElement({
+          Rect: Konva.Rect,
+          Line: Konva.Line,
+          Ellipse: Konva.Ellipse,
           render,
           theme,
           setNodeZIndex,
@@ -561,6 +538,9 @@ export function createShape2dPlugin(): IPlugin<{
         });
 
         txUpdateShape2dNodeFromElement({
+          Rect: Konva.Rect,
+          Line: Konva.Line,
+          Ellipse: Konva.Ellipse,
           render,
           theme,
           setNodeZIndex,
@@ -590,18 +570,7 @@ export function createShape2dPlugin(): IPlugin<{
           return false;
         }
 
-        return fxOpenAttachedTextEditMode({
-          crdt,
-          document: render.container.ownerDocument,
-          editor,
-          history,
-          render,
-          renderOrder,
-          selection,
-          theme,
-          createId,
-          now,
-        }, event.currentTarget);
+        return fxOpenAttachedTextEditMode(createAttachedTextPortal(), { shapeNode: event.currentTarget });
       });
 
       ctx.hooks.pointerCancel.tap(() => {
@@ -652,25 +621,14 @@ export function createShape2dPlugin(): IPlugin<{
 
         event.preventDefault();
         event.stopPropagation();
-        fxOpenAttachedTextEditMode({
-          crdt,
-          document: render.container.ownerDocument,
-          editor,
-          history,
-          render,
-          renderOrder,
-          selection,
-          theme,
-          createId,
-          now,
-        }, shapeNode);
+        fxOpenAttachedTextEditMode(createAttachedTextPortal(), { shapeNode });
       });
 
       theme.hooks.change.tap(() => {
         render.staticForegroundLayer.find((candidate: Konva.Node) => {
-          return candidate instanceof render.Shape && fxGetShape2dNodeType({ render, node: candidate }) !== null;
+          return candidate instanceof Konva.Shape && fxGetShape2dNodeType({ Rect: Konva.Rect, Line: Konva.Line, Ellipse: Konva.Ellipse, node: candidate }) !== null;
         }).forEach((candidate) => {
-          if (!(candidate instanceof render.Shape)) {
+          if (!(candidate instanceof Konva.Shape)) {
             return;
           }
 
@@ -680,6 +638,9 @@ export function createShape2dPlugin(): IPlugin<{
           }
 
           txUpdateShape2dNodeFromElement({
+            Rect: Konva.Rect,
+            Line: Konva.Line,
+            Ellipse: Konva.Ellipse,
             render,
             theme,
             setNodeZIndex,

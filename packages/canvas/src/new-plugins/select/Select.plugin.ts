@@ -1,5 +1,6 @@
 import type { IPlugin } from "@vibecanvas/runtime";
 import type { ThemeService } from "@vibecanvas/service-theme";
+import Konva from "konva";
 import type { Node } from "konva/lib/Node";
 import type { CrdtService } from "../../new-services/crdt/CrdtService";
 import type { EditorService } from "../../new-services/editor/EditorService";
@@ -46,21 +47,21 @@ function isEditableTarget(target: EventTarget | null) {
 }
 
 function txHandleStagePointerDown(args: {
-  render: SceneService;
+  scene: SceneService;
   selection: SelectionService;
-  selectionRectangle: InstanceType<SceneService["Rect"]>;
+  selectionRectangle: Konva.Rect;
   event: { target: Node };
 }) {
   if (args.selection.isSelectionHandlingSuppressed()) {
     return;
   }
 
-  const pointer = getSelectionLayerPointerPosition(args.render);
+  const pointer = getSelectionLayerPointerPosition(args.scene);
   if (!pointer) {
     return;
   }
 
-  if (args.event.target !== args.render.stage) {
+  if (args.event.target !== args.scene.stage) {
     return;
   }
 
@@ -80,7 +81,7 @@ export function createSelectPlugin(): IPlugin<{
   crdt: CrdtService;
   editor: EditorService;
   history: HistoryService;
-  render: SceneService;
+  scene: SceneService;
   renderOrder: RenderOrderService;
   selection: SelectionService;
   theme: ThemeService;
@@ -95,7 +96,7 @@ export function createSelectPlugin(): IPlugin<{
       const renderOrder = ctx.services.require("renderOrder");
       const selection = ctx.services.require("selection");
       const theme = ctx.services.require("theme");
-      const selectionRectangle = new render.Rect({
+      const selectionRectangle = new Konva.Rect({
         visible: false,
         strokeWidth: 1,
         dash: [6, 4],
@@ -152,7 +153,7 @@ export function createSelectPlugin(): IPlugin<{
         }
 
         txHandleStagePointerDown({
-          render,
+          scene: render,
           selection,
           selectionRectangle,
           event,
@@ -170,6 +171,9 @@ export function createSelectPlugin(): IPlugin<{
 
         txHandleStagePointerMove(
           {
+            Group: Konva.Group,
+            Shape: Konva.Shape,
+            Util: Konva.Util,
             render,
             selection,
             selectionRectangle,

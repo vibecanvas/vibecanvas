@@ -1,4 +1,5 @@
 import type { IPlugin } from "@vibecanvas/runtime";
+import Konva from "konva";
 import type { SceneService } from "../../new-services/scene/SceneService";
 import type { IHooks, TElementPointerEvent, TMouseEvent, TPointerEvent, TWheelEvent } from "../../runtime";
 
@@ -6,14 +7,14 @@ function isInsideHostedWidget(target: EventTarget | null) {
   return target instanceof HTMLElement && target.closest('[data-hosted-widget-root="true"]') !== null;
 }
 
-function isTransformerNode(render: SceneService, target: unknown) {
-  if (!(target instanceof render.Node)) {
+function isTransformerNode(target: unknown) {
+  if (!(target instanceof Konva.Node)) {
     return false;
   }
 
-  let current: unknown = target;
-  while (current instanceof render.Node) {
-    if (current instanceof render.Transformer) {
+  let current: Konva.Node | null = target;
+  while (current) {
+    if (current instanceof Konva.Transformer) {
       return true;
     }
 
@@ -23,13 +24,13 @@ function isTransformerNode(render: SceneService, target: unknown) {
   return false;
 }
 
-function isInteractionOverlayNode(render: SceneService, target: unknown) {
-  if (!(target instanceof render.Node)) {
+function isInteractionOverlayNode(target: unknown) {
+  if (!(target instanceof Konva.Node)) {
     return false;
   }
 
-  let current: unknown = target;
-  while (current instanceof render.Node) {
+  let current: Konva.Node | null = target;
+  while (current) {
     if (current.getAttr("vcInteractionOverlay") === true) {
       return true;
     }
@@ -40,13 +41,13 @@ function isInteractionOverlayNode(render: SceneService, target: unknown) {
   return false;
 }
 
-function getElementPointerEvent(render: SceneService, event: TPointerEvent) {
+function getElementPointerEvent(event: TPointerEvent) {
   const target = event.target;
-  if (!(target instanceof render.Group || target instanceof render.Shape)) {
+  if (!(target instanceof Konva.Group || target instanceof Konva.Shape)) {
     return null;
   }
 
-  if (isTransformerNode(render, target) || isInteractionOverlayNode(render, target)) {
+  if (isTransformerNode(target) || isInteractionOverlayNode(target)) {
     return null;
   }
 
@@ -58,14 +59,14 @@ function getElementPointerEvent(render: SceneService, event: TPointerEvent) {
  * Keeps raw input wiring out of feature plugins.
  */
 export function createEventListenerPlugin(): IPlugin<{
-  render: SceneService;
+  scene: SceneService;
 }, IHooks> {
   return {
     name: "event-listener",
     apply(ctx) {
       ctx.hooks.init.tap(() => {
-        const render = ctx.services.require("scene");
-        const stage = render.stage;
+        const scene = ctx.services.require("scene");
+        const stage = scene.stage;
         const container = stage.container();
 
         const onPointerDown = (event: TPointerEvent) => {
@@ -97,7 +98,7 @@ export function createEventListenerPlugin(): IPlugin<{
         };
 
         const onElementPointerClick = (event: TPointerEvent) => {
-          const elementEvent = getElementPointerEvent(render, event);
+          const elementEvent = getElementPointerEvent(event);
           if (!elementEvent) {
             return;
           }
@@ -106,7 +107,7 @@ export function createEventListenerPlugin(): IPlugin<{
         };
 
         const onElementPointerDown = (event: TPointerEvent) => {
-          const elementEvent = getElementPointerEvent(render, event);
+          const elementEvent = getElementPointerEvent(event);
           if (!elementEvent) {
             return;
           }
@@ -118,7 +119,7 @@ export function createEventListenerPlugin(): IPlugin<{
         };
 
         const onElementPointerDoubleClick = (event: TPointerEvent) => {
-          const elementEvent = getElementPointerEvent(render, event);
+          const elementEvent = getElementPointerEvent(event);
           if (!elementEvent) {
             return;
           }

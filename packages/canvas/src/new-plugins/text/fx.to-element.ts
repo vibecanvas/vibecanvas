@@ -3,14 +3,12 @@ import { fnGetNodeZIndex } from "../../core/fn.get-node-z-index";
 import { fnGetNearestFontSizePreset } from "../../core/fn.text-style";
 import { fnGetWorldPosition } from "../../core/fn.world-position";
 import { fxGetCanvasParentGroupId } from "../../core/fx.canvas-node-semantics";
-import type { SceneService } from "../../new-services/scene/SceneService";
 import type Konva from "konva";
 
 const ELEMENT_STYLE_ATTR = "vcElementStyle";
 
 export type TPortalToElement = {
   editor: { toGroup(node: Konva.Node): unknown };
-  render: SceneService;
 };
 
 export type TArgsToElement = {
@@ -72,7 +70,7 @@ export function fxToElement(portal: TPortalToElement, args: TArgsToElement) {
     updatedAt: args.updatedAt,
     locked: false,
     parentGroupId,
-    zIndex: fnGetNodeZIndex({}, { node: args.node }),
+    zIndex: fnGetNodeZIndex({ node: args.node }),
     style,
     data,
   } satisfies TElement;

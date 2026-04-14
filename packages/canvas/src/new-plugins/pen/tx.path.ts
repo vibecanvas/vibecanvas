@@ -1,6 +1,7 @@
 import type { TElement } from "@vibecanvas/service-automerge/types/canvas-doc.types";
 import type { StrokeOptions } from "perfect-freehand";
 import type { ThemeService, TThemeDefinition } from "@vibecanvas/service-theme";
+import type Konva from "konva";
 import type { SceneService } from "../../new-services/scene/SceneService";
 import { fxGetStrokePathFromPenData } from "./fn.math";
 import { fxGetPenAbsolutePosition } from "./fx.path";
@@ -19,6 +20,7 @@ type TGetStroke = (
 ) => number[][];
 
 export type TPortalTxCreatePenPathFromElement = {
+  Path: typeof Konva.Path;
   render: SceneService;
   theme: ThemeService;
   getStroke: TGetStroke;
@@ -33,7 +35,7 @@ function getPenFillFromStyle(portal: TPortalTxCreatePenPathFromElement, element:
   return portal.resolveThemeColor(portal.theme.getTheme(), rawFill, DEFAULT_FILL) ?? DEFAULT_FILL;
 }
 
-function syncPenMetadata(node: InstanceType<SceneService["Path"]>, element: TElement) {
+function syncPenMetadata(node: Konva.Path, element: TElement) {
   node.setAttr(ELEMENT_DATA_ATTR, structuredClone(element.data));
   node.setAttr(ELEMENT_STYLE_ATTR, structuredClone(element.style));
   node.setAttr(PEN_STROKE_WIDTH_ATTR, fxGetPenStrokeWidthFromStyle({ style: element.style }));
@@ -45,7 +47,7 @@ export function txCreatePenPathFromElement(portal: TPortalTxCreatePenPathFromEle
     throw new Error("Unsupported element type for txCreatePenPathFromElement");
   }
 
-  const node = new portal.render.Path({
+  const node = new portal.Path({
     id: args.element.id,
     x: args.element.x,
     y: args.element.y,
@@ -69,7 +71,7 @@ export function txCreatePenPathFromElement(portal: TPortalTxCreatePenPathFromEle
 
 export type TPortalTxUpdatePenPathFromElement = TPortalTxCreatePenPathFromElement;
 export type TArgsTxUpdatePenPathFromElement = {
-  node: InstanceType<SceneService["Path"]>;
+  node: Konva.Path;
   element: TElement;
 };
 

@@ -70,7 +70,7 @@ export function fxPenPathToElement(portal: TPortalFxPenPathToElement, args: TArg
     locked: false,
     parentGroupId,
     updatedAt: portal.now(),
-    zIndex: fnGetNodeZIndex({}, { node: args.node }),
+    zIndex: fnGetNodeZIndex({ node: args.node }),
     data: {
       ...baseData,
       points: fxScalePenDataPoints({ points: baseData.points, scaleX, scaleY }),

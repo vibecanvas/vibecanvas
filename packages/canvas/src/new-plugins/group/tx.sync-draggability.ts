@@ -19,17 +19,17 @@ export function txSyncDraggability(
   args: TArgsSyncDraggability,
 ) {
   const allSceneNodes = portal.render.staticForegroundLayer.find((node: Konva.Node) => {
-    return fxIsSceneNode({ render: portal.render, node });
+    return fxIsSceneNode({ Group: portal.Konva.Group, Shape: portal.Konva.Shape, render: portal.render, node });
   });
 
   allSceneNodes.forEach((node) => {
-    if (node.getParent() instanceof portal.render.Group) {
+    if (node.getParent() instanceof portal.Konva.Group) {
       node.draggable(false);
     }
   });
 
   portal.render.staticForegroundLayer.getChildren().forEach((node) => {
-    if (node instanceof portal.render.Group || node instanceof portal.render.Shape) {
+    if (node instanceof portal.Konva.Group || node instanceof portal.Konva.Shape) {
       node.draggable(true);
     }
   });

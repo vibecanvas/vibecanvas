@@ -14,7 +14,7 @@ const ZOOM_STEP = 1.03;
  */
 export function createCameraControlPlugin(): IPlugin<{
   camera: CameraService;
-  render: SceneService;
+  scene: SceneService;
 }, IHooks> {
   let handLayer: HTMLDivElement | null = null;
   let isHandDragging = false;

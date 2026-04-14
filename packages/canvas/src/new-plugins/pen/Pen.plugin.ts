@@ -69,7 +69,7 @@ export function createPenPlugin(): IPlugin<{
   crdt: CrdtService;
   editor: EditorService;
   history: HistoryService;
-  render: SceneService;
+  scene: SceneService;
   renderOrder: RenderOrderService;
   selection: SelectionService;
   theme: ThemeService;
@@ -105,11 +105,14 @@ export function createPenPlugin(): IPlugin<{
           selection,
           hooks: ctx.hooks,
           now,
-          Path: render.Path,
+          Group: Konva.Group,
+          Shape: Konva.Shape,
+          Path: Konva.Path,
           getWorldPosition: (sourceNode) => fxGetWorldPositionFromNode({}, { node: sourceNode }),
           createThrottledPatch: (callback) => throttle(callback, 100),
           createPenCloneDrag: (sourceNode) => {
             return txCreatePenCloneDrag({
+              Path: Konva.Path,
               crdt,
               render,
               renderOrder,
@@ -125,6 +128,7 @@ export function createPenPlugin(): IPlugin<{
           },
           createPenPreviewClone: (sourceNode) => {
             return txCreatePenPreviewClone({
+              Path: Konva.Path,
               crdt,
               render,
               renderOrder,
@@ -140,6 +144,7 @@ export function createPenPlugin(): IPlugin<{
           },
           finalizePenPreviewClone: (previewNode) => {
             return txFinalizePenPreviewClone({
+              Path: Konva.Path,
               crdt,
               render,
               renderOrder,
@@ -155,7 +160,7 @@ export function createPenPlugin(): IPlugin<{
           },
           filterSelection: (nodes) => {
             return fxFilterSelection({ Konva }, { editor, selection: nodes.filter((node): node is Konva.Group | Konva.Shape => {
-              return node instanceof render.Group || node instanceof render.Shape;
+              return node instanceof Konva.Group || node instanceof Konva.Shape;
             }) });
           },
           safeStopDrag: (sourceNode) => txSafeStopPenDrag({}, { node: sourceNode }),
@@ -219,7 +224,7 @@ export function createPenPlugin(): IPlugin<{
           return previewPath;
         }
 
-        previewPath = new render.Path({
+        previewPath = new Konva.Path({
           data: "",
           fill: DEFAULT_FILL,
           opacity: DEFAULT_OPACITY,
@@ -241,6 +246,7 @@ export function createPenPlugin(): IPlugin<{
 
         const node = ensurePreviewPath();
         txUpdatePenPathFromElement({
+          Path: Konva.Path,
           render,
           theme,
           getStroke,
@@ -283,7 +289,7 @@ export function createPenPlugin(): IPlugin<{
       });
 
       editor.registerToElement("pen", (node) => {
-        if (!(node instanceof render.Path)) {
+        if (!(node instanceof Konva.Path)) {
           return null;
         }
 
@@ -300,6 +306,7 @@ export function createPenPlugin(): IPlugin<{
         }
 
         return setupNode(txCreatePenPathFromElement({
+          Path: Konva.Path,
           render,
           theme,
           getStroke,
@@ -308,7 +315,7 @@ export function createPenPlugin(): IPlugin<{
       });
 
       editor.registerSetupExistingShape("pen", (node) => {
-        if (!(node instanceof render.Path)) {
+        if (!(node instanceof Konva.Path)) {
           return false;
         }
 
@@ -326,13 +333,14 @@ export function createPenPlugin(): IPlugin<{
         }
 
         const node = render.staticForegroundLayer.findOne((candidate: Konva.Node) => {
-          return candidate instanceof render.Path && candidate.id() === element.id;
+          return candidate instanceof Konva.Path && candidate.id() === element.id;
         });
-        if (!(node instanceof render.Path)) {
+        if (!(node instanceof Konva.Path)) {
           return false;
         }
 
         return txUpdatePenPathFromElement({
+          Path: Konva.Path,
           render,
           theme,
           getStroke,
@@ -413,6 +421,7 @@ export function createPenPlugin(): IPlugin<{
         }
 
         const node = setupNode(txCreatePenPathFromElement({
+          Path: Konva.Path,
           render,
           theme,
           getStroke,
@@ -464,14 +473,15 @@ export function createPenPlugin(): IPlugin<{
 
       theme.hooks.change.tap(() => {
         render.staticForegroundLayer.find((candidate: Konva.Node) => {
-          return candidate instanceof render.Path && fxIsPenPath({}, { node: candidate });
+          return candidate instanceof Konva.Path && fxIsPenPath({}, { node: candidate });
         }).forEach((candidate) => {
-          if (!(candidate instanceof render.Path)) {
+          if (!(candidate instanceof Konva.Path)) {
             return;
           }
 
           const element = toElement(candidate);
           txUpdatePenPathFromElement({
+            Path: Konva.Path,
             render,
             theme,
             getStroke,

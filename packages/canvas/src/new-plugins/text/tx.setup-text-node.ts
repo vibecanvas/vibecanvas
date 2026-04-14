@@ -11,6 +11,7 @@ import type { IHooks } from "../../runtime";
 import type Konva from "konva";
 
 export type TPortalSetupTextNode = {
+  Konva: typeof Konva;
   crdt: CrdtService;
   crypto: typeof crypto;
   history: HistoryService;
@@ -76,7 +77,7 @@ export function txSetupTextNode(portal: TPortalSetupTextNode, args: TArgsSetupTe
       isCloneDrag = true;
       stopDragSafely(args.node);
 
-      const previewClone = new portal.render.Text(args.node.getAttrs());
+      const previewClone = new portal.Konva.Text(args.node.getAttrs());
       previewClone.id(portal.crypto.randomUUID());
       previewClone.name(args.freeTextName);
       previewClone.draggable(true);
@@ -90,7 +91,7 @@ export function txSetupTextNode(portal: TPortalSetupTextNode, args: TArgsSetupTe
         const cloned = portal.setupNode(previewClone);
         const now = Date.now();
         const clonedElement = fxToElement(
-          { editor: portal.editor, render: portal.render },
+          { editor: portal.editor },
           { node: cloned, createdAt: now, updatedAt: now },
         );
         portal.crdt.patch({ elements: [clonedElement], groups: [] });
@@ -105,7 +106,7 @@ export function txSetupTextNode(portal: TPortalSetupTextNode, args: TArgsSetupTe
     }
 
     const now = Date.now();
-    beforeDragElement = fxToElement({ editor: portal.editor, render: portal.render }, { node: args.node, createdAt: now, updatedAt: now });
+    beforeDragElement = fxToElement({ editor: portal.editor }, { node: args.node, createdAt: now, updatedAt: now });
   });
 
   args.node.on("dragend", () => {
@@ -115,7 +116,7 @@ export function txSetupTextNode(portal: TPortalSetupTextNode, args: TArgsSetupTe
       return;
     }
     const now = Date.now();
-    const afterDragElement = fxToElement({ editor: portal.editor, render: portal.render }, { node: args.node, createdAt: beforeDragElement?.createdAt ?? now, updatedAt: now });
+    const afterDragElement = fxToElement({ editor: portal.editor }, { node: args.node, createdAt: beforeDragElement?.createdAt ?? now, updatedAt: now });
     portal.crdt.patch({ elements: [afterDragElement], groups: [] });
 
     if (!beforeDragElement) {
@@ -135,12 +136,12 @@ export function txSetupTextNode(portal: TPortalSetupTextNode, args: TArgsSetupTe
     portal.history.record({
       label: "drag-text",
       undo: () => {
-        txUpdateTextNodeFromElement({ render: portal.render, theme: portal.theme }, { element: undoElement, freeTextName: args.freeTextName });
+        txUpdateTextNodeFromElement({ Konva: portal.Konva, scene: portal.render, theme: portal.theme }, { element: undoElement, freeTextName: args.freeTextName });
         portal.render.staticForegroundLayer.batchDraw();
         portal.crdt.patch({ elements: [undoElement], groups: [] });
       },
       redo: () => {
-        txUpdateTextNodeFromElement({ render: portal.render, theme: portal.theme }, { element: redoElement, freeTextName: args.freeTextName });
+        txUpdateTextNodeFromElement({ Konva: portal.Konva, scene: portal.render, theme: portal.theme }, { element: redoElement, freeTextName: args.freeTextName });
         portal.render.staticForegroundLayer.batchDraw();
         portal.crdt.patch({ elements: [redoElement], groups: [] });
       },

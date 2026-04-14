@@ -26,7 +26,7 @@ function createCreateId(render: SceneService) {
 export function createHostedComponentPlugin(): IPlugin<{
   camera: CameraService;
   crdt: CrdtService;
-  render: SceneService;
+  scene: SceneService;
   renderOrder: RenderOrderService;
   editor: EditorService;
   selection: SelectionService;

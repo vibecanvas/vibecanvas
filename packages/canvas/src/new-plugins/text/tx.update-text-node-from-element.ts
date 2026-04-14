@@ -6,7 +6,8 @@ import type Konva from "konva";
 import type { SceneService } from "../../new-services/scene/SceneService";
 
 export type TPortalUpdateTextNodeFromElement = {
-  render: SceneService;
+  Konva: typeof Konva;
+  scene: SceneService;
   theme: ThemeService;
 };
 
@@ -23,10 +24,10 @@ export function txUpdateTextNodeFromElement(portal: TPortalUpdateTextNodeFromEle
     return false;
   }
 
-  const node = portal.render.staticForegroundLayer.findOne((candidate: Konva.Node) => {
-    return candidate instanceof portal.render.Text && candidate.id() === args.element.id;
+  const node = portal.scene.staticForegroundLayer.findOne((candidate: Konva.Node) => {
+    return candidate instanceof portal.Konva.Text && candidate.id() === args.element.id;
   });
-  if (!(node instanceof portal.render.Text)) {
+  if (!(node instanceof portal.Konva.Text)) {
     return false;
   }
 

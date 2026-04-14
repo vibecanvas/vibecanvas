@@ -1,4 +1,5 @@
 import type { TElement } from "@vibecanvas/service-automerge/types/canvas-doc.types";
+import type Konva from "konva";
 import type { TThemeDefinition } from "@vibecanvas/service-theme";
 import type { CrdtService } from "../../new-services/crdt/CrdtService";
 import type { EditorService } from "../../new-services/editor/EditorService";
@@ -11,6 +12,7 @@ import type { TShape1dNode } from "./CONSTANTS";
 import { txCreateShapeFromElement } from "./tx.render";
 
 export type TPortalTxRecordShape1dHistory = {
+  Shape: typeof Konva.Shape;
   crdt: CrdtService;
   editor: EditorService;
   history: HistoryService;
@@ -49,7 +51,7 @@ export function txRecordCreateHistory(portal: TPortalTxRecordShape1dHistory, arg
   portal.history.record({
     label: args.label,
     undo() {
-      const currentNode = fxFindShape1dNodeById({ render: portal.render } satisfies TPortalFxFindShape1dNodeById, { id: snapshot.id });
+      const currentNode = fxFindShape1dNodeById({ Shape: portal.Shape, render: portal.render } satisfies TPortalFxFindShape1dNodeById, { id: snapshot.id });
       currentNode?.destroy();
       portal.crdt.deleteById({ elementIds: [snapshot.id] });
 
@@ -62,7 +64,7 @@ export function txRecordCreateHistory(portal: TPortalTxRecordShape1dHistory, arg
       portal.render.staticForegroundLayer.batchDraw();
     },
     redo() {
-      let currentNode = fxFindShape1dNodeById({ render: portal.render }, { id: snapshot.id });
+      let currentNode = fxFindShape1dNodeById({ Shape: portal.Shape, render: portal.render }, { id: snapshot.id });
       if (!currentNode) {
         currentNode = portal.setupNode(txCreateShapeFromElement({
           createShapeNode: portal.createShapeNode,

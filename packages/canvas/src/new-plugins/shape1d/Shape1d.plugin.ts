@@ -61,7 +61,7 @@ export function createShape1dPlugin(): IPlugin<{
   crdt: CrdtService;
   editor: EditorService;
   history: HistoryService;
-  render: SceneService;
+  scene: SceneService;
   renderOrder: RenderOrderService;
   selection: SelectionService;
   theme: ThemeService;
@@ -100,9 +100,9 @@ export function createShape1dPlugin(): IPlugin<{
         }) as TShape1dNode;
       };
       const toElement = (node: TShape1dNode) => fxToTElement({ editor, now }, { node });
-      const findNode = (id: string): TShape1dNode | null => fxFindShape1dNodeById({ render }, { id });
+      const findNode = (id: string): TShape1dNode | null => fxFindShape1dNodeById({ Shape: Konva.Shape, render }, { id });
       const getData = (node: TShape1dNode) => fxGetElementData({}, { node });
-      const isNode = (node: Konva.Node | null | undefined): node is TShape1dNode => fxIsShape1dNode({ Shape: render.Shape }, { node });
+      const isNode = (node: Konva.Node | null | undefined): node is TShape1dNode => fxIsShape1dNode({ Shape: Konva.Shape }, { node });
       const isTool = (tool: string): tool is "line" | "arrow" => fxIsSupportedTool({}, { tool });
       const isType = (type: string): boolean => fxIsSupportedElementType({}, { type });
       const toWorld = (node: TShape1dNode, point: TPoint | { x: number; y: number }) => fxLocalPointToWorld({}, { node, point });
@@ -112,6 +112,7 @@ export function createShape1dPlugin(): IPlugin<{
       const updateShape = (node: TShape1dNode, element: import("@vibecanvas/service-automerge/types/canvas-doc.types").TElement) => txUpdateShapeFromElement({ theme, resolveThemeColor, setNodeZIndex }, { node, element });
 
       const historyPortal: TPortalTxRecordShape1dHistory = {
+        Shape: Konva.Shape,
         crdt,
         editor,
         history,
@@ -282,7 +283,7 @@ export function createShape1dPlugin(): IPlugin<{
 
         data.points.forEach((point, pointIndex) => {
           const worldPoint = toWorld(node, point);
-          const handle = new render.Circle({
+          const handle = new Konva.Circle({
             x: worldPoint.x,
             y: worldPoint.y,
             radius: EDIT_HANDLE_RADIUS,
@@ -352,7 +353,7 @@ export function createShape1dPlugin(): IPlugin<{
         for (let index = 0; index < data.points.length - 1; index += 1) {
           const insertPoint = insertionPoint(data, index);
           const worldPoint = toWorld(node, insertPoint);
-          const handle = new render.Circle({
+          const handle = new Konva.Circle({
             x: worldPoint.x,
             y: worldPoint.y,
             radius: INSERT_HANDLE_RADIUS,
@@ -433,7 +434,7 @@ export function createShape1dPlugin(): IPlugin<{
             });
             renderEditHandles(editableNode);
           });
-          handle.on("pointerclick", (event) => {
+          handle.on("pointerclick", (event: Konva.KonvaEventObject<PointerEvent>) => {
             if (activeHandleDrag) {
               return;
             }
@@ -594,7 +595,7 @@ export function createShape1dPlugin(): IPlugin<{
       });
 
       editor.registerToElement("shape1d", (node) => {
-        if (!(node instanceof render.Shape)) {
+        if (!(node instanceof Konva.Shape)) {
           return null;
         }
 
@@ -614,7 +615,7 @@ export function createShape1dPlugin(): IPlugin<{
       });
 
       editor.registerSetupExistingShape("shape1d", (node) => {
-        if (!(node instanceof render.Shape)) {
+        if (!(node instanceof Konva.Shape)) {
           return false;
         }
 

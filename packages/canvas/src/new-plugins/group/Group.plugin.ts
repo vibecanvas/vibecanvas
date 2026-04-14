@@ -22,6 +22,7 @@ import { fxToGroupPatch } from "./fn.to-group-patch";
 import { txGroupSelection } from "./tx.group-selection";
 import { txSetupGroupNode } from "./tx.setup-group-node";
 import { txSyncDraggability } from "./tx.sync-draggability";
+import { fxCreateGroupBoundary } from "./fx.create-group-boundary";
 import { txSyncGroupBoundaries, type TGroupBoundary } from "./tx.sync-group-boundaries";
 import { txUngroupSelection } from "./tx.ungroup-selection";
 import { txDeleteSelection } from "../select/tx.delete-selection";
@@ -29,11 +30,11 @@ import { txDeleteSelection } from "../select/tx.delete-selection";
 const CANVAS_NODE_KIND_ATTR = "vcCanvasNodeKind";
 const CANVAS_GROUP_NODE_KIND = "group";
 
-const getNodeZIndex = (node: Konva.Group | Konva.Shape) => fnGetNodeZIndex({}, { node });
+const getNodeZIndex = (node: Konva.Group | Konva.Shape) => fnGetNodeZIndex({ node });
 const setNodeZIndex = (node: Konva.Group | Konva.Shape, zIndex: string) => txSetNodeZIndex({}, { node, zIndex });
 
 function createGroupNode(render: SceneService, group: TGroup) {
-  const node = new render.Group({
+  const node = new Konva.Group({
     id: group.id,
     draggable: true,
   });
@@ -46,7 +47,7 @@ function createGroupNode(render: SceneService, group: TGroup) {
 
 function sortChildrenByPersistedOrder(render: SceneService, parent: Konva.Layer | Konva.Group) {
   const children = parent.getChildren().filter((node) => {
-    return fxIsSceneNode({ render, node });
+    return fxIsSceneNode({ Group: Konva.Group, Shape: Konva.Shape, render, node });
   });
 
   children
@@ -74,7 +75,7 @@ export function createGroupPlugin(): IPlugin<{
   crdt: CrdtService;
   editor: EditorService;
   history: HistoryService;
-  render: SceneService;
+  scene: SceneService;
   renderOrder: RenderOrderService;
   selection: SelectionService;
   theme: ThemeService;
@@ -94,7 +95,14 @@ export function createGroupPlugin(): IPlugin<{
       const boundaries = new Map<string, TGroupBoundary>();
 
       const refreshBoundaries = () => {
-        txSyncGroupBoundaries({ editor, render, selection, theme, boundaries }, {});
+        txSyncGroupBoundaries({
+          editor,
+          render,
+          selection,
+          theme,
+          boundaries,
+          createGroupBoundary: (group) => fxCreateGroupBoundary({ Rect: Konva.Rect, render, theme }, { group }),
+        }, {});
       };
 
       const syncDraggability = () => {
@@ -109,6 +117,7 @@ export function createGroupPlugin(): IPlugin<{
           render,
           selection,
           hooks: ctx.hooks,
+          Shape: Konva.Shape,
           refreshBoundaries,
           startCloneDrag: (groupNode) => {
             txCreateGroupCloneDrag({
@@ -133,6 +142,9 @@ export function createGroupPlugin(): IPlugin<{
 
       const runGroupSelection = () => {
         txGroupSelection({
+          Group: Konva.Group,
+          Shape: Konva.Shape,
+          Layer: Konva.Layer,
           crdt,
           editor,
           history,
@@ -149,6 +161,9 @@ export function createGroupPlugin(): IPlugin<{
 
       const runUngroupSelection = () => {
         txUngroupSelection({
+          Group: Konva.Group,
+          Shape: Konva.Shape,
+          Layer: Konva.Layer,
           crdt,
           editor,
           history,
@@ -230,13 +245,12 @@ export function createGroupPlugin(): IPlugin<{
       });
 
       editor.registerToGroup("group", (node) => {
-        if (!(node instanceof render.Group) || node.getAttr(CANVAS_NODE_KIND_ATTR) !== CANVAS_GROUP_NODE_KIND) {
+        if (!(node instanceof Konva.Group) || node.getAttr(CANVAS_NODE_KIND_ATTR) !== CANVAS_GROUP_NODE_KIND) {
           return null;
         }
 
         return fxToGroupPatch({
           editor,
-          render,
           group: node,
           getNodeZIndex,
           fallbackCreatedAt: Date.now(),

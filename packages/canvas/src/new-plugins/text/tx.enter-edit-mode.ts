@@ -16,11 +16,12 @@ import type { SelectionService } from "../../new-services/selection/SelectionSer
 import type Konva from "konva";
 
 export type TPortalEnterEditMode = {
+  Konva: typeof Konva;
   crdt: CrdtService;
   document: Document;
   editor: EditorService;
   history: HistoryService;
-  render: SceneService;
+  scene: SceneService;
   selection: SelectionService;
   theme: ThemeService;
   pretext: {
@@ -36,12 +37,12 @@ export type TArgsEnterEditMode = {
 };
 
 function findAttachedHostNode(portal: TPortalEnterEditMode, containerId: string) {
-  const node = portal.render.staticForegroundLayer.findOne((candidate: Konva.Node) => {
+  const node = portal.scene.staticForegroundLayer.findOne((candidate: Konva.Node) => {
     return candidate.id() === containerId
-      && (candidate instanceof portal.render.Rect || candidate instanceof portal.render.Ellipse || candidate instanceof portal.render.Line);
+      && (candidate instanceof portal.Konva.Rect || candidate instanceof portal.Konva.Ellipse || candidate instanceof portal.Konva.Line);
   });
 
-  if (!(node instanceof portal.render.Rect) && !(node instanceof portal.render.Ellipse) && !(node instanceof portal.render.Line)) {
+  if (!(node instanceof portal.Konva.Rect) && !(node instanceof portal.Konva.Ellipse) && !(node instanceof portal.Konva.Line)) {
     return null;
   }
 
@@ -98,11 +99,11 @@ function fxGrowAttachedHostElement(args: {
 }
 
 function findCurrentTextNode(portal: TPortalEnterEditMode, id: string) {
-  const node = portal.render.staticForegroundLayer.findOne((candidate: Konva.Node) => {
-    return candidate instanceof portal.render.Text && candidate.id() === id;
+  const node = portal.scene.staticForegroundLayer.findOne((candidate: Konva.Node) => {
+    return candidate instanceof portal.Konva.Text && candidate.id() === id;
   });
 
-  return node instanceof portal.render.Text ? node : null;
+  return node instanceof portal.Konva.Text ? node : null;
 }
 
 function restoreTextSelectionLater(portal: TPortalEnterEditMode, args: { nodeId: string }) {
@@ -124,7 +125,7 @@ function suppressNextSelectionHandling(portal: TPortalEnterEditMode, args: { rea
 
 export function txEnterEditMode(portal: TPortalEnterEditMode, args: TArgsEnterEditMode) {
   const now = Date.now();
-  const originalElement = fxToElement({ editor: portal.editor, render: portal.render }, { node: args.node, createdAt: now, updatedAt: now });
+  const originalElement = fxToElement({ editor: portal.editor }, { node: args.node, createdAt: now, updatedAt: now });
   const originalText = args.node.text();
   const originalData = originalElement.data as TTextData;
   const isAttachedText = originalData.containerId !== null;
@@ -137,7 +138,7 @@ export function txEnterEditMode(portal: TPortalEnterEditMode, args: TArgsEnterEd
 
   portal.editor.setEditingTextId(args.node.id());
   args.node.visible(false);
-  portal.render.stage.batchDraw();
+  portal.scene.stage.batchDraw();
 
   const textarea = portal.document.createElement("textarea");
   const initialAbsoluteScale = args.node.getAbsoluteScale();
@@ -169,7 +170,7 @@ export function txEnterEditMode(portal: TPortalEnterEditMode, args: TArgsEnterEd
     }
 
     const hostBounds = attachedHostNode
-      ? fxGetShapeTextHostBounds({ render: portal.render, node: attachedHostNode })
+      ? fxGetShapeTextHostBounds({ render: portal.scene, node: attachedHostNode })
       : null;
     if (hostBounds) {
       args.node.position({ x: hostBounds.x, y: hostBounds.y });
@@ -203,7 +204,7 @@ export function txEnterEditMode(portal: TPortalEnterEditMode, args: TArgsEnterEd
   const autoGrow = () => {
     if (isAttachedText) {
       syncAttachedEditingLayout();
-      portal.render.staticForegroundLayer.batchDraw();
+      portal.scene.staticForegroundLayer.batchDraw();
       return;
     }
 
@@ -269,7 +270,7 @@ export function txEnterEditMode(portal: TPortalEnterEditMode, args: TArgsEnterEd
         portal.editor.updateShapeFromTElement(originalHostElement);
       }
       args.node.destroy();
-      portal.render.staticForegroundLayer.batchDraw();
+      portal.scene.staticForegroundLayer.batchDraw();
       portal.crdt.deleteById({ elementIds: [args.node.id()] });
       if (attachedHostNode) {
         portal.selection.setSelection([attachedHostNode]);
@@ -285,7 +286,7 @@ export function txEnterEditMode(portal: TPortalEnterEditMode, args: TArgsEnterEd
         portal.editor.updateShapeFromTElement(originalHostElement);
       }
       args.node.destroy();
-      portal.render.staticForegroundLayer.batchDraw();
+      portal.scene.staticForegroundLayer.batchDraw();
       portal.crdt.deleteById({ elementIds: [args.node.id()] });
       portal.selection.clear();
       return;
@@ -311,7 +312,7 @@ export function txEnterEditMode(portal: TPortalEnterEditMode, args: TArgsEnterEd
       }
 
       const nextBounds = fxGetShapeTextHostBounds({
-        render: portal.render,
+        render: portal.scene,
         node: attachedHostNode ?? args.node,
       });
       if (nextBounds) {
@@ -339,10 +340,10 @@ export function txEnterEditMode(portal: TPortalEnterEditMode, args: TArgsEnterEd
     }
 
     args.node.visible(true);
-    portal.render.staticForegroundLayer.batchDraw();
+    portal.scene.staticForegroundLayer.batchDraw();
 
     const nextNow = Date.now();
-    const nextElement = fxToElement({ editor: portal.editor, render: portal.render }, { node: args.node, createdAt: originalElement.createdAt, updatedAt: nextNow });
+    const nextElement = fxToElement({ editor: portal.editor }, { node: args.node, createdAt: originalElement.createdAt, updatedAt: nextNow });
     const patchElements = [nextHostElement, nextElement].filter((element): element is TElement => element !== null);
     portal.crdt.patch({ elements: patchElements, groups: [] });
 
@@ -367,16 +368,16 @@ export function txEnterEditMode(portal: TPortalEnterEditMode, args: TArgsEnterEd
         if (undoHostElement) {
           portal.editor.updateShapeFromTElement(undoHostElement);
         }
-        txUpdateTextNodeFromElement({ render: portal.render, theme: portal.theme }, { element: undoElement, freeTextName: args.freeTextName });
-        portal.render.staticForegroundLayer.batchDraw();
+        txUpdateTextNodeFromElement({ Konva: portal.Konva, scene: portal.scene, theme: portal.theme }, { element: undoElement, freeTextName: args.freeTextName });
+        portal.scene.staticForegroundLayer.batchDraw();
         portal.crdt.patch({ elements: [undoHostElement, undoElement].filter((element): element is TElement => element !== null), groups: [] });
       },
       redo: () => {
         if (redoHostElement) {
           portal.editor.updateShapeFromTElement(redoHostElement);
         }
-        txUpdateTextNodeFromElement({ render: portal.render, theme: portal.theme }, { element: redoElement, freeTextName: args.freeTextName });
-        portal.render.staticForegroundLayer.batchDraw();
+        txUpdateTextNodeFromElement({ Konva: portal.Konva, scene: portal.scene, theme: portal.theme }, { element: redoElement, freeTextName: args.freeTextName });
+        portal.scene.staticForegroundLayer.batchDraw();
         portal.crdt.patch({ elements: [redoHostElement, redoElement].filter((element): element is TElement => element !== null), groups: [] });
       },
     });
@@ -392,13 +393,13 @@ export function txEnterEditMode(portal: TPortalEnterEditMode, args: TArgsEnterEd
 
     if (args.isNew) {
       args.node.destroy();
-      portal.render.staticForegroundLayer.batchDraw();
+      portal.scene.staticForegroundLayer.batchDraw();
       portal.selection.clear();
       return;
     }
 
     args.node.visible(true);
-    portal.render.staticForegroundLayer.batchDraw();
+    portal.scene.staticForegroundLayer.batchDraw();
   };
 
   const stopKeyPropagation = (event: KeyboardEvent) => {
@@ -433,7 +434,7 @@ export function txEnterEditMode(portal: TPortalEnterEditMode, args: TArgsEnterEd
   textarea.addEventListener("keydown", onKeyDown);
   textarea.addEventListener("keyup", stopKeyPropagation);
 
-  portal.render.stage.container().appendChild(textarea);
+  portal.scene.stage.container().appendChild(textarea);
   autoGrow();
   textarea.focus();
   textarea.select();

@@ -1,10 +1,14 @@
+import type Konva from "konva";
 import type { SceneService } from "../../new-services/scene/SceneService";
 import type { SelectionService } from "../../new-services/selection/SelectionService";
 
 export type TPortalHandleStagePointerMove = {
+  Group: typeof Konva.Group;
+  Shape: typeof Konva.Shape;
+  Util: typeof Konva.Util;
   render: SceneService;
   selection: SelectionService;
-  selectionRectangle: InstanceType<SceneService["Rect"]>;
+  selectionRectangle: Konva.Rect;
   hasSameSelectionOrder: (
     currentSelection: Array<{ id(): string }>,
     nextSelection: Array<{ id(): string }>,
@@ -44,7 +48,7 @@ export function txHandleStagePointerMove(
   });
   const nextSelection = topNodes
     .filter((node) => {
-      if (!(node instanceof portal.render.Group || node instanceof portal.render.Shape)) {
+      if (!(node instanceof portal.Group || node instanceof portal.Shape)) {
         return false;
       }
 
@@ -56,7 +60,7 @@ export function txHandleStagePointerMove(
         return false;
       }
 
-      return portal.render.Util.haveIntersection(node.getClientRect(), portal.selectionRectangle.getClientRect());
+      return portal.Util.haveIntersection(node.getClientRect(), portal.selectionRectangle.getClientRect());
     })
     .sort((left, right) => left.id().localeCompare(right.id()));
 

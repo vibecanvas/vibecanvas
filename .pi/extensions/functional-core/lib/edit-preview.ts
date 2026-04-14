@@ -116,20 +116,19 @@ function applyEditsToNormalizedContent(absolutePath: string, input: TEditInput, 
     }
   }
 
-  const initialMatches = normalizedEdits.map((edit) => fuzzyFindText(normalizedContent, edit.oldText));
-  const baseContent = initialMatches.some((match) => match.usedFuzzyMatch)
-    ? normalizeForFuzzyMatch(normalizedContent)
-    : normalizedContent;
-
-  const matchedEdits: Array<{
-    editIndex: number;
-    matchIndex: number;
-    matchLength: number;
-    newText: string;
-  }> = [];
+  let nextContent = normalizedContent;
 
   for (let index = 0; index < normalizedEdits.length; index += 1) {
     const edit = normalizedEdits[index]!;
+    const initialMatch = fuzzyFindText(nextContent, edit.oldText);
+
+    if (!initialMatch.found) {
+      return `ERROR: Could not find edits[${index}] in ${pathLabel}. The oldText must match exactly including all whitespace and newlines.`;
+    }
+
+    const baseContent = initialMatch.usedFuzzyMatch
+      ? normalizeForFuzzyMatch(nextContent)
+      : nextContent;
     const matchResult = fuzzyFindText(baseContent, edit.oldText);
 
     if (!matchResult.found) {
@@ -141,31 +140,12 @@ function applyEditsToNormalizedContent(absolutePath: string, input: TEditInput, 
       return `ERROR: Found ${occurrences} occurrences of edits[${index}] in ${pathLabel}. Each oldText must be unique. Please provide more context to make it unique.`;
     }
 
-    matchedEdits.push({
-      editIndex: index,
-      matchIndex: matchResult.index,
-      matchLength: matchResult.matchLength,
-      newText: edit.newText,
-    });
+    nextContent = baseContent.slice(0, matchResult.index)
+      + edit.newText
+      + baseContent.slice(matchResult.index + matchResult.matchLength);
   }
 
-  matchedEdits.sort((left, right) => left.matchIndex - right.matchIndex);
-
-  for (let index = 1; index < matchedEdits.length; index += 1) {
-    const previous = matchedEdits[index - 1]!;
-    const current = matchedEdits[index]!;
-    if (previous.matchIndex + previous.matchLength > current.matchIndex) {
-      return `ERROR: edits[${previous.editIndex}] and edits[${current.editIndex}] overlap in ${pathLabel}. Merge them into one edit or target disjoint regions.`;
-    }
-  }
-
-  let nextContent = baseContent;
-  for (let index = matchedEdits.length - 1; index >= 0; index -= 1) {
-    const edit = matchedEdits[index]!;
-    nextContent = nextContent.slice(0, edit.matchIndex) + edit.newText + nextContent.slice(edit.matchIndex + edit.matchLength);
-  }
-
-  if (nextContent === baseContent) {
+  if (nextContent === normalizedContent) {
     return `ERROR: No changes made to ${pathLabel}. The replacements produced identical content.`;
   }
 

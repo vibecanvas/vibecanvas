@@ -1,5 +1,5 @@
 import type { IPlugin } from "@vibecanvas/runtime";
-import type Konva from "konva";
+import Konva from "konva";
 import { fxIsCanvasGroupNode, fxIsCanvasNode } from "../../core/fx.canvas-node-semantics";
 import { createComponent, createMemo, createSignal } from "solid-js";
 import { render as renderSolid } from "solid-js/web";
@@ -10,11 +10,11 @@ import type { SceneService } from "../../new-services/scene/SceneService";
 import type { SelectionService } from "../../new-services/selection/SelectionService";
 import type { IHooks } from "../../runtime";
 
-function getSelectionPath(render: SceneService, editor: EditorService, node: TContextMenuNode): TContextMenuNode[] {
+function getSelectionPath(scene: SceneService, editor: EditorService, node: TContextMenuNode): TContextMenuNode[] {
   const path: TContextMenuNode[] = [];
   let current: Konva.Node | null = node;
 
-  while (current && current !== render.staticForegroundLayer) {
+  while (current && current !== scene.staticForegroundLayer) {
     if (fxIsCanvasNode({}, { editor, node: current })) {
       path.push(current as TContextMenuNode);
     }
@@ -25,7 +25,9 @@ function getSelectionPath(render: SceneService, editor: EditorService, node: TCo
   return path.reverse();
 }
 
-function filterSelection(render: SceneService, editor: EditorService, selection: Konva.Node[]): TContextMenuNode[] {
+function filterSelection(scene: SceneService, editor: EditorService, selection: Konva.Node[]): TContextMenuNode[] {
+  void scene;
+
   let subSelection = selection.find((node) => fxIsCanvasGroupNode({}, { editor, node: node.getParent() }));
   if (!subSelection) {
     return selection.filter((node): node is TContextMenuNode => {
@@ -52,8 +54,8 @@ function filterSelection(render: SceneService, editor: EditorService, selection:
   return subSelection.getStage() !== null ? [subSelection as TContextMenuNode] : [];
 }
 
-function findTargetNode(render: SceneService, editor: EditorService, pointer: { x: number; y: number }): TContextMenuNode | null {
-  const directHit = render.stage.getIntersection(pointer);
+function findTargetNode(scene: SceneService, editor: EditorService, pointer: { x: number; y: number }): TContextMenuNode | null {
+  const directHit = scene.stage.getIntersection(pointer);
   let current: Konva.Node | null = directHit;
   while (current) {
     if (fxIsCanvasNode({}, { editor, node: current })) {
@@ -63,13 +65,13 @@ function findTargetNode(render: SceneService, editor: EditorService, pointer: { 
     current = current.getParent();
   }
 
-  const candidates = render.staticForegroundLayer.find((node: Konva.Node) => {
+  const candidates = scene.staticForegroundLayer.find((node: Konva.Node) => {
     return fxIsCanvasNode({}, { editor, node }) && node.isListening();
   }) as TContextMenuNode[];
 
   const fallbackTarget = [...candidates].reverse().find((node) => {
     const box = node.getClientRect();
-    return render.Util.haveIntersection(box, {
+    return Konva.Util.haveIntersection(box, {
       x: pointer.x,
       y: pointer.y,
       width: 1,
@@ -80,15 +82,15 @@ function findTargetNode(render: SceneService, editor: EditorService, pointer: { 
   return fallbackTarget ?? null;
 }
 
-function resolveSelection(render: SceneService, editor: EditorService, selection: SelectionService, target: TContextMenuNode): TContextMenuNode[] {
-  const activeSelection = filterSelection(render, editor, selection.selection);
+function resolveSelection(scene: SceneService, editor: EditorService, selection: SelectionService, target: TContextMenuNode): TContextMenuNode[] {
+  const activeSelection = filterSelection(scene, editor, selection.selection);
   if (activeSelection.includes(target)) {
     return selection.selection.filter((node): node is TContextMenuNode => {
       return fxIsCanvasNode({}, { editor, node });
     });
   }
 
-  const path = getSelectionPath(render, editor, target);
+  const path = getSelectionPath(scene, editor, target);
   const nextDepth = Math.min(Math.max(selection.selection.length, 1), path.length);
   return path.slice(0, nextDepth);
 }
@@ -102,12 +104,12 @@ function getMenuScope(targetNode: TContextMenuNode | null, selection: TContextMe
 }
 
 function mountContextMenu(args: {
-  render: SceneService;
+  scene: SceneService;
   contextMenu: ContextMenuService;
 }) {
-  const mountElement = document.createElement("div");
+  const mountElement = args.scene.container.ownerDocument.createElement("div");
   mountElement.className = "absolute inset-0 pointer-events-none";
-  args.render.stage.container().appendChild(mountElement);
+  args.scene.stage.container().appendChild(mountElement);
 
   const [version, setVersion] = createSignal(0);
   const mounted = createMemo(() => {
@@ -171,7 +173,7 @@ function mountContextMenu(args: {
 export function createContextMenuPlugin(): IPlugin<{
   contextMenu: ContextMenuService;
   editor: EditorService;
-  render: SceneService;
+  scene: SceneService;
   selection: SelectionService;
 }, IHooks> {
   let menuMount: ReturnType<typeof mountContextMenu> | null = null;
@@ -181,11 +183,11 @@ export function createContextMenuPlugin(): IPlugin<{
     apply(ctx) {
       const contextMenu = ctx.services.require("contextMenu");
       const editor = ctx.services.require("editor");
-      const render = ctx.services.require("scene");
+      const scene = ctx.services.require("scene");
       const selection = ctx.services.require("selection");
 
       ctx.hooks.init.tap(() => {
-        menuMount = mountContextMenu({ render, contextMenu });
+        menuMount = mountContextMenu({ scene, contextMenu });
 
         const onContextMenu = (event: MouseEvent) => {
           const target = event.target as Node | null;
@@ -196,15 +198,15 @@ export function createContextMenuPlugin(): IPlugin<{
           event.preventDefault();
           event.stopPropagation();
 
-          render.stage.setPointersPositions(event);
-          const pointer = render.stage.getPointerPosition();
-          const targetNode = pointer ? findTargetNode(render, editor, pointer) : null;
+          scene.stage.setPointersPositions(event);
+          const pointer = scene.stage.getPointerPosition();
+          const targetNode = pointer ? findTargetNode(scene, editor, pointer) : null;
           const nextSelection = targetNode
-            ? resolveSelection(render, editor, selection, targetNode)
+            ? resolveSelection(scene, editor, selection, targetNode)
             : selection.selection.filter((node): node is TContextMenuNode => {
               return fxIsCanvasNode({}, { editor, node });
             });
-          const activeSelection = filterSelection(render, editor, nextSelection);
+          const activeSelection = filterSelection(scene, editor, nextSelection);
           const scope = getMenuScope(targetNode, nextSelection);
 
           if (targetNode) {
@@ -234,12 +236,12 @@ export function createContextMenuPlugin(): IPlugin<{
           contextMenu.close();
         };
 
-        render.stage.container().addEventListener("contextmenu", onContextMenu);
-        render.stage.container().addEventListener("mousedown", onMouseDown);
+        scene.stage.container().addEventListener("contextmenu", onContextMenu);
+        scene.stage.container().addEventListener("mousedown", onMouseDown);
 
         ctx.hooks.destroy.tap(() => {
-          render.stage.container().removeEventListener("contextmenu", onContextMenu);
-          render.stage.container().removeEventListener("mousedown", onMouseDown);
+          scene.stage.container().removeEventListener("contextmenu", onContextMenu);
+          scene.stage.container().removeEventListener("mousedown", onMouseDown);
           contextMenu.close();
           menuMount?.dispose();
           menuMount = null;

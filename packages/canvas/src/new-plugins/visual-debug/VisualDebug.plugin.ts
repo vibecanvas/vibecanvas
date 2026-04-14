@@ -1,5 +1,6 @@
 import type { IPlugin } from "@vibecanvas/runtime";
 import type { ThemeService } from "@vibecanvas/service-theme";
+import Konva from "konva";
 import type { CameraService } from "../../new-services/camera/CameraService";
 import type { EditorService } from "../../new-services/editor/EditorService";
 import type { SceneService } from "../../new-services/scene/SceneService";
@@ -56,7 +57,7 @@ function formatSelectionInfo(editor: EditorService, selection: SelectionService)
 export function createVisualDebugPlugin(): IPlugin<{
   camera: CameraService;
   editor: EditorService;
-  render: SceneService;
+  scene: SceneService;
   selection: SelectionService;
   theme: ThemeService;
 }, IHooks> {
@@ -64,12 +65,12 @@ export function createVisualDebugPlugin(): IPlugin<{
     name: "visual-debug",
     apply(ctx) {
       ctx.hooks.init.tap(() => {
-        const render = ctx.services.require("scene");
+        const scene = ctx.services.require("scene");
         const camera = ctx.services.require("camera");
         const editor = ctx.services.require("editor");
         const selection = ctx.services.require("selection");
         const theme = ctx.services.require("theme");
-        const text = new render.Text({
+        const text = new Konva.Text({
           x: 12,
           text: "",
           fontSize: 12,
@@ -86,11 +87,11 @@ export function createVisualDebugPlugin(): IPlugin<{
 
           text.text(lines.join("\n"));
           text.fill(theme.getTheme().colors.canvasDebugText);
-          text.y(Math.max(12, render.stage.height() - text.height() - 12));
-          render.staticBackgroundLayer.batchDraw();
+          text.y(Math.max(12, scene.stage.height() - text.height() - 12));
+          scene.staticBackgroundLayer.batchDraw();
         };
 
-        render.staticBackgroundLayer.add(text);
+        scene.staticBackgroundLayer.add(text);
         syncText();
 
         camera.hooks.change.tap(() => {
@@ -108,7 +109,7 @@ export function createVisualDebugPlugin(): IPlugin<{
         theme.hooks.change.tap(() => {
           syncText();
         });
-        render.hooks.resize.tap(() => {
+        scene.hooks.resize.tap(() => {
           syncText();
         });
       });

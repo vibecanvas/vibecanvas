@@ -3,7 +3,7 @@ import { layoutWithLines, prepareWithSegments } from "@chenglou/pretext";
 import { resolveThemeColor, type ThemeService } from "@vibecanvas/service-theme";
 import Type from "lucide-static/icons/type.svg?raw";
 import type { TElement, TTextData } from "@vibecanvas/service-automerge/types/canvas-doc.types";
-import type Konva from "konva";
+import Konva from "konva";
 import type { ContextMenuService } from "../../new-services/context-menu/ContextMenuService";
 import type { CrdtService } from "../../new-services/crdt/CrdtService";
 import type { EditorService } from "../../new-services/editor/EditorService";
@@ -38,11 +38,12 @@ function applyTextThemeState(node: Konva.Text, element: Pick<TElement, "style">)
   node.setAttr(TEXT_USES_THEME_COLOR_ATTR, usesThemeTextColor(element));
 }
 
-function createTextNode(render: SceneService, theme: ThemeService, element: TElement) {
+function createTextNode(scene: SceneService, theme: ThemeService, element: TElement) {
+  void scene;
   const data = element.data as TTextData;
 
   const isAttachedText = data.containerId !== null;
-  const node = new render.Text({
+  const node = new Konva.Text({
     id: element.id,
     x: element.x,
     y: element.y,
@@ -81,7 +82,7 @@ export function createTextPlugin(): IPlugin<{
   crdt: CrdtService;
   editor: EditorService;
   history: HistoryService;
-  render: SceneService;
+  scene: SceneService;
   renderOrder: RenderOrderService;
   selection: SelectionService;
   theme: ThemeService;
@@ -93,16 +94,17 @@ export function createTextPlugin(): IPlugin<{
       const crdt = ctx.services.require("crdt");
       const editor = ctx.services.require("editor");
       const history = ctx.services.require("history");
-      const render = ctx.services.require("scene");
+      const scene = ctx.services.require("scene");
       const renderOrder = ctx.services.require("renderOrder");
       const selection = ctx.services.require("selection");
       const theme = ctx.services.require("theme");
-      const document = render.container.ownerDocument;
+      const document = scene.container.ownerDocument;
+
       const syncThemeTextNodes = () => {
-        render.staticForegroundLayer.find((candidate: Konva.Node) => {
-          return candidate instanceof render.Text;
+        scene.staticForegroundLayer.find((candidate: Konva.Node) => {
+          return candidate instanceof Konva.Text;
         }).forEach((candidate) => {
-          if (!(candidate instanceof render.Text)) {
+          if (!(candidate instanceof Konva.Text)) {
             return;
           }
 
@@ -112,25 +114,27 @@ export function createTextPlugin(): IPlugin<{
           }
 
           txUpdateTextNodeFromElement({
-            render,
+            Konva,
+            scene,
             theme,
           }, {
             element,
             freeTextName: FREE_TEXT_NAME,
           });
         });
-        render.staticForegroundLayer.batchDraw();
+        scene.staticForegroundLayer.batchDraw();
       };
 
       const setupNode = (node: Konva.Text) => {
         txSetupTextNode(
           {
+            Konva,
             crdt,
             crypto,
             history,
             editor,
             hooks: ctx.hooks,
-            render,
+            render: scene,
             selection,
             setupNode,
             theme,
@@ -151,7 +155,7 @@ export function createTextPlugin(): IPlugin<{
           priority: 300,
           onSelect: () => {
             selection.setSelection(activeSelection);
-            txDeleteSelection({ crdt, editor, history, render, renderOrder, selection }, {});
+            txDeleteSelection({ crdt, editor, history, render: scene, renderOrder, selection }, {});
           },
         }];
       });
@@ -166,12 +170,12 @@ export function createTextPlugin(): IPlugin<{
       });
 
       editor.registerToElement("text", (node) => {
-        if (!(node instanceof render.Text)) {
+        if (!(node instanceof Konva.Text)) {
           return null;
         }
 
         const now = Date.now();
-        return fxToElement({ editor, render }, { node, createdAt: now, updatedAt: now });
+        return fxToElement({ editor }, { node, createdAt: now, updatedAt: now });
       });
 
       editor.registerCreateShapeFromTElement("text", (element) => {
@@ -179,11 +183,11 @@ export function createTextPlugin(): IPlugin<{
           return null;
         }
 
-        return setupNode(createTextNode(render, theme, element));
+        return setupNode(createTextNode(scene, theme, element));
       });
 
       editor.registerSetupExistingShape("text", (node) => {
-        if (!(node instanceof render.Text)) {
+        if (!(node instanceof Konva.Text)) {
           return false;
         }
 
@@ -193,7 +197,8 @@ export function createTextPlugin(): IPlugin<{
 
       editor.registerUpdateShapeFromTElement("text", (element) => {
         return txUpdateTextNodeFromElement({
-          render,
+          Konva,
+          scene,
           theme,
         }, {
           element,
@@ -214,7 +219,7 @@ export function createTextPlugin(): IPlugin<{
           return;
         }
 
-        const pointer = render.staticForegroundLayer.getRelativePointerPosition();
+        const pointer = scene.staticForegroundLayer.getRelativePointerPosition();
         if (!pointer) {
           return;
         }
@@ -227,27 +232,27 @@ export function createTextPlugin(): IPlugin<{
           createdAt: now,
           updatedAt: now,
         });
-        const node = setupNode(createTextNode(render, theme, element));
+        const node = setupNode(createTextNode(scene, theme, element));
 
-        render.staticForegroundLayer.add(node);
+        scene.staticForegroundLayer.add(node);
         renderOrder.assignOrderOnInsert({
-          parent: render.staticForegroundLayer,
+          parent: scene.staticForegroundLayer,
           nodes: [node],
           position: "front",
         });
-        render.staticForegroundLayer.batchDraw();
+        scene.staticForegroundLayer.batchDraw();
         selection.setSelection([node]);
         selection.setFocusedNode(node);
         editor.setActiveTool("select");
 
         txEnterEditMode(
-          { crdt, document, editor, history, render, selection, theme, pretext: { layoutWithLines, prepareWithSegments } },
+          { Konva, crdt, document, editor, history, scene, selection, theme, pretext: { layoutWithLines, prepareWithSegments } },
           { freeTextName: FREE_TEXT_NAME, node, isNew: true },
         );
       });
 
       ctx.hooks.elementPointerDoubleClick.tap((event) => {
-        if (!(event.currentTarget instanceof render.Text)) {
+        if (!(event.currentTarget instanceof Konva.Text)) {
           return false;
         }
 
@@ -256,7 +261,7 @@ export function createTextPlugin(): IPlugin<{
         }
 
         txEnterEditMode(
-          { crdt, document, editor, history, render, selection, theme, pretext: { layoutWithLines, prepareWithSegments } },
+          { Konva, crdt, document, editor, history, scene, selection, theme, pretext: { layoutWithLines, prepareWithSegments } },
           { freeTextName: FREE_TEXT_NAME, node: event.currentTarget, isNew: false },
         );
         return true;

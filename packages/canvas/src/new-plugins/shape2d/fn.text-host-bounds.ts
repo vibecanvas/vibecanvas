@@ -1,5 +1,4 @@
 import type Konva from "konva";
-import type { SceneService } from "../../new-services/scene/SceneService";
 
 export type TShapeTextHostBounds = {
   x: number;
@@ -7,6 +6,13 @@ export type TShapeTextHostBounds = {
   width: number;
   height: number;
   rotation: number;
+};
+
+export type TArgsGetShapeTextHostBounds = {
+  Rect: typeof Konva.Rect;
+  Ellipse: typeof Konva.Ellipse;
+  Line: typeof Konva.Line;
+  node: Konva.Shape;
 };
 
 function getDiamondSize(node: Konva.Line) {
@@ -20,14 +26,11 @@ function getDiamondSize(node: Konva.Line) {
   };
 }
 
-export function fxGetShapeTextHostBounds(args: {
-  render: SceneService;
-  node: Konva.Shape;
-}) {
+export function fxGetShapeTextHostBounds(args: TArgsGetShapeTextHostBounds) {
   const scaleX = Math.abs(args.node.scaleX());
   const scaleY = Math.abs(args.node.scaleY());
 
-  if (args.node instanceof args.render.Rect) {
+  if (args.node instanceof args.Rect) {
     return {
       x: args.node.x(),
       y: args.node.y(),
@@ -37,7 +40,7 @@ export function fxGetShapeTextHostBounds(args: {
     } satisfies TShapeTextHostBounds;
   }
 
-  if (args.node instanceof args.render.Ellipse) {
+  if (args.node instanceof args.Ellipse) {
     const width = args.node.radiusX() * 2 * scaleX;
     const height = args.node.radiusY() * 2 * scaleY;
     return {
@@ -49,7 +52,7 @@ export function fxGetShapeTextHostBounds(args: {
     } satisfies TShapeTextHostBounds;
   }
 
-  if (args.node instanceof args.render.Line && args.node.getAttr("vcShape2dType") === "diamond") {
+  if (args.node instanceof args.Line && args.node.getAttr("vcShape2dType") === "diamond") {
     const size = getDiamondSize(args.node);
     return {
       x: args.node.x(),

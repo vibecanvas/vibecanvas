@@ -51,11 +51,11 @@ function collectSerializableNodes(
   nodes: Konva.Node[],
 ): Array<Group | Shape<ShapeConfig>> {
   return nodes.flatMap((node) => {
-    if (node instanceof render.Group) {
+    if (node instanceof Konva.Group) {
       return editor.toElement(node) ? [node] : collectSerializableNodes(editor, render, node.getChildren());
     }
 
-    if (node instanceof render.Shape) {
+    if (node instanceof Konva.Shape) {
       return [node];
     }
 
@@ -78,7 +78,7 @@ function applyElements(editor: EditorService, elements: TElement[]) {
 
 function normalizeSelectedGroupTransforms(render: SceneService, nodes: Konva.Node[]) {
   nodes.forEach((node) => {
-    if (!(node instanceof render.Group)) {
+    if (!(node instanceof Konva.Group)) {
       return;
     }
 
@@ -97,12 +97,13 @@ function refreshSelectedGroups(editor: EditorService, selection: SelectionServic
 }
 
 function hasPenOnlySelection(args: {
-  render: SceneService;
+  Konva: typeof Konva;
+  scene: SceneService;
   editor: EditorService;
   selection: Array<Group | Shape<ShapeConfig>>;
 }) {
   return args.selection.length > 0 && args.selection.every((node) => {
-    if (!(node instanceof args.render.Path)) {
+    if (!(node instanceof args.Konva.Path)) {
       return false;
     }
 
@@ -112,20 +113,21 @@ function hasPenOnlySelection(args: {
 }
 
 function isProxyDragCandidate(args: {
-  render: SceneService;
+  Konva: typeof Konva;
+  scene: SceneService;
   editor: EditorService;
   node: Group | Shape<ShapeConfig>;
 }) {
-  if (!(args.node instanceof args.render.Shape)) {
+  if (!(args.node instanceof args.Konva.Shape)) {
     return false;
   }
 
-  if (fxIsShape1dNode({ Shape: args.render.Shape }, { node: args.node })) {
+  if (fxIsShape1dNode({ Shape: args.Konva.Shape }, { node: args.node })) {
     return true;
   }
 
   const pathNode = args.node as unknown as Konva.Node;
-  if (!(pathNode instanceof args.render.Path)) {
+  if (!(pathNode instanceof args.Konva.Path)) {
     return false;
   }
 
@@ -134,7 +136,7 @@ function isProxyDragCandidate(args: {
 }
 
 function getProxyDragTarget(args: {
-  render: SceneService;
+  scene: SceneService;
   editor: EditorService;
   selection: SelectionService;
 }) {
@@ -161,7 +163,8 @@ function getProxyDragTarget(args: {
   }
 
   return isProxyDragCandidate({
-    render: args.render,
+    Konva,
+    scene: args.scene,
     editor: args.editor,
     node: rawNode,
   })
@@ -201,7 +204,8 @@ function syncTransformerTheme(theme: ThemeService, transformer: Konva.Transforme
 }
 
 function syncTransformer(args: {
-  render: SceneService;
+  Konva: typeof Konva;
+  scene: SceneService;
   editor: EditorService;
   selection: SelectionService;
   transformer: Konva.Transformer;
@@ -209,17 +213,18 @@ function syncTransformer(args: {
   if (args.editor.editingTextId !== null || args.editor.editingShape1dId !== null) {
     args.transformer.setNodes([]);
     args.transformer.update();
-    args.render.dynamicLayer.batchDraw();
+    args.scene.dynamicLayer.batchDraw();
     return;
   }
 
   const filteredSelection = fxFilterSelection({ Konva }, { editor: args.editor, selection: args.selection.selection });
   const isSingleGroupSelection = filteredSelection.length === 1 && fxIsCanvasGroupNode({}, { editor: args.editor, node: filteredSelection[0] });
   const isMultiSelection = filteredSelection.length > 1;
-  const hasTextOnly = filteredSelection.length > 0 && filteredSelection.every((node) => node instanceof args.render.Text);
-  const hasShape1dOnly = filteredSelection.length > 0 && filteredSelection.every((node) => fxIsShape1dNode({ Shape: args.render.Shape }, { node }));
+  const hasTextOnly = filteredSelection.length > 0 && filteredSelection.every((node) => node instanceof args.Konva.Text);
+  const hasShape1dOnly = filteredSelection.length > 0 && filteredSelection.every((node) => fxIsShape1dNode({ Shape: args.Konva.Shape }, { node }));
   const hasPenOnly = hasPenOnlySelection({
-    render: args.render,
+    Konva: args.Konva,
+    scene: args.scene,
     editor: args.editor,
     selection: filteredSelection,
   });
@@ -231,7 +236,7 @@ function syncTransformer(args: {
   args.transformer.enabledAnchors(useCornerAnchors ? [...GROUP_ANCHORS] : [...DEFAULT_ANCHORS]);
   args.transformer.setNodes(filteredSelection);
   args.transformer.update();
-  args.render.dynamicLayer.batchDraw();
+  args.scene.dynamicLayer.batchDraw();
 }
 
 /**
@@ -243,7 +248,7 @@ export function createTransformPlugin(): IPlugin<{
   crdt: CrdtService;
   editor: EditorService;
   history: HistoryService;
-  render: SceneService;
+  scene: SceneService;
   selection: SelectionService;
   theme: ThemeService;
 }, IHooks> {
@@ -268,7 +273,8 @@ export function createTransformPlugin(): IPlugin<{
         }
 
         syncTransformer({
-          render,
+          Konva,
+          scene: render,
           editor,
           selection,
           transformer,
@@ -323,7 +329,7 @@ export function createTransformPlugin(): IPlugin<{
       };
 
       ctx.hooks.init.tap(() => {
-        dragProxy = new render.Rect({
+        dragProxy = new Konva.Rect({
           x: 0,
           y: 0,
           width: 0,
@@ -445,7 +451,7 @@ export function createTransformPlugin(): IPlugin<{
           });
         });
 
-        transformer = new render.Transformer();
+        transformer = new Konva.Transformer();
         syncTransformerTheme(theme, transformer);
         render.dynamicLayer.add(transformer);
         editor.setTransformer(transformer);

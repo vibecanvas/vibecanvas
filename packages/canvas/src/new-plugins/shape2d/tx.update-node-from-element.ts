@@ -8,6 +8,9 @@ import type { ThemeService } from "@vibecanvas/service-theme";
 const ELEMENT_STYLE_ATTR = "vcElementStyle";
 
 export type TPortalUpdateShape2dNodeFromElement = {
+  Rect: typeof Konva.Rect;
+  Line: typeof Konva.Line;
+  Ellipse: typeof Konva.Ellipse;
   render: SceneService;
   theme: ThemeService;
   setNodeZIndex: (node: Konva.Shape, zIndex: string) => void;
@@ -60,7 +63,7 @@ export function txUpdateShape2dNodeFromElement(
   const style = args.element.style;
   const node = args.node;
 
-  if (args.element.data.type === "rect" && node instanceof portal.render.Rect) {
+  if (args.element.data.type === "rect" && node instanceof portal.Rect) {
     const absolutePosition = fnGetAbsolutePositionFromWorldPosition({
       worldPosition: { x: args.element.x, y: args.element.y },
       parentTransform: node.getLayer()?.getAbsoluteTransform() ?? null,
@@ -83,7 +86,7 @@ export function txUpdateShape2dNodeFromElement(
     return true;
   }
 
-  if (args.element.data.type === "diamond" && node instanceof portal.render.Line) {
+  if (args.element.data.type === "diamond" && node instanceof portal.Line) {
     const absolutePosition = fnGetAbsolutePositionFromWorldPosition({
       worldPosition: { x: args.element.x, y: args.element.y },
       parentTransform: node.getLayer()?.getAbsoluteTransform() ?? null,
@@ -109,7 +112,7 @@ export function txUpdateShape2dNodeFromElement(
     return true;
   }
 
-  if (args.element.data.type === "ellipse" && node instanceof portal.render.Ellipse) {
+  if (args.element.data.type === "ellipse" && node instanceof portal.Ellipse) {
     const absolutePosition = fnGetAbsolutePositionFromWorldPosition({
       worldPosition: {
         x: args.element.x + args.element.data.rx,

@@ -10,6 +10,8 @@ import type { IHooks, TElementPointerEvent } from "../../runtime";
 import { fxGetCanvasAncestorGroups, fxGetCanvasNodeKind, fxIsCanvasGroupNode } from "../../core/fx.canvas-node-semantics";
 
 export type TPortalSetupShape2dNode = {
+  Group: typeof Konva.Group;
+  Shape: typeof Konva.Shape;
   crdt: CrdtService;
   editor: EditorService;
   history: HistoryService;
@@ -30,12 +32,12 @@ export type TArgsSetupShape2dNode = {
   node: Konva.Shape;
 };
 
-function findSceneNodeById(render: SceneService, id: string) {
-  const node = render.staticForegroundLayer.findOne((candidate: Konva.Node) => {
-    return (candidate instanceof render.Group || candidate instanceof render.Shape) && candidate.id() === id;
+function findSceneNodeById(portal: TPortalSetupShape2dNode, id: string) {
+  const node = portal.render.staticForegroundLayer.findOne((candidate: Konva.Node) => {
+    return (candidate instanceof portal.Group || candidate instanceof portal.Shape) && candidate.id() === id;
   });
 
-  if (!(node instanceof render.Group) && !(node instanceof render.Shape)) {
+  if (!(node instanceof portal.Group) && !(node instanceof portal.Shape)) {
     return null;
   }
 
@@ -50,7 +52,7 @@ function applyElement(portal: TPortalSetupShape2dNode, element: TElement) {
 
   fxGetCanvasAncestorGroups({}, {
     editor: portal.editor,
-    node: findSceneNodeById(portal.render, element.id),
+    node: findSceneNodeById(portal, element.id),
   }).forEach((group) => {
     group.fire("transform");
   });
@@ -66,7 +68,7 @@ function serializeNodeElements(portal: TPortalSetupShape2dNode, node: Konva.Node
   if (kind === "group" && fxIsCanvasGroupNode({}, { editor: portal.editor, node })) {
     return fxSerializeSubtreeElements({
       editor: portal.editor,
-      render: portal.render,
+      Shape: portal.Shape,
       group: node as Konva.Group,
     }).map((element) => structuredClone(element));
   }
