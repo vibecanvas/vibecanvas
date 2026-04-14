@@ -1,22 +1,22 @@
 import type { DocHandle } from "@automerge/automerge-repo";
-import { createRuntime, createServiceRegistry } from "@vibecanvas/runtime";
+import { createRuntime, createServiceRegistry, IServiceRegistry } from "@vibecanvas/runtime";
 import type { TCanvasDoc } from "@vibecanvas/service-automerge/types/canvas-doc.types";
 import type Konva from "konva";
 import type { Group } from "konva/lib/Group";
 import type { KonvaEventObject } from "konva/lib/Node";
 import type { Shape, ShapeConfig } from "konva/lib/Shape";
 import { AsyncParallelHook, SyncExitHook, SyncHook } from "@vibecanvas/tapable";
-import { createCameraControlPlugin, createContextMenuPlugin, createEventListenerPlugin, createGridPlugin, createGroupPlugin, createHistoryControlPlugin, createImagePlugin, createPenPlugin, createRecorderPlugin, createRenderOrderPlugin, createSceneHydratorPlugin, createSelectPlugin, createSelectionStyleMenuPlugin, createShape1dPlugin, createShape2dPlugin, createTextPlugin, createToolbarPlugin, createTransformPlugin, createVisualDebugPlugin } from "./new-plugins";
-import { createHostedComponentPlugin } from "./new-plugins/hosted-component/HostedComponent.plugin";
-import { CameraService } from "./new-services/camera/CameraService";
-import { ContextMenuService } from "./new-services/context-menu/ContextMenuService";
-import { CrdtService } from "./new-services/crdt/CrdtService";
-import { EditorService } from "./new-services/editor/EditorService";
-import { HistoryService } from "./new-services/history/HistoryService";
-import { LoggingService } from "./new-services/logging/LoggingService";
-import { RenderOrderService } from "./new-services/render-order/RenderOrderService";
-import { RenderService } from "./new-services/render/RenderService";
-import { SelectionService } from "./new-services/selection/SelectionService";
+import {
+  createCameraControlPlugin, createContextMenuPlugin, createEventListenerPlugin, createGridPlugin,
+  createGroupPlugin, createHistoryControlPlugin, createImagePlugin, createPenPlugin,
+  createRecorderPlugin, createRenderOrderPlugin, createSceneHydratorPlugin, createSelectPlugin,
+  createSelectionStyleMenuPlugin, createShape1dPlugin, createShape2dPlugin, createTextPlugin,
+  createToolbarPlugin, createTransformPlugin, createVisualDebugPlugin, createHostedComponentPlugin
+} from "./new-plugins";
+import {
+  CameraService, ContextMenuService, CrdtService, EditorService, HistoryService,
+  LoggingService, RenderOrderService, RenderService, SelectionService, WidgetService
+} from "./new-services";
 import { ThemeService } from "@vibecanvas/service-theme";
 
 interface IRuntimeConfig {
@@ -24,7 +24,7 @@ interface IRuntimeConfig {
   docHandle: DocHandle<TCanvasDoc>;
   onToggleSidebar: () => void;
   env: Pick<ImportMetaEnv, "DEV">;
-  themeService?: ThemeService;
+  themeService: ThemeService;
   image?: {
     uploadImage: import("./services/canvas/interface").TUploadImage;
     cloneImage: import("./services/canvas/interface").TCloneImage;
@@ -94,6 +94,7 @@ declare module "@vibecanvas/runtime" {
     renderOrder: RenderOrderService;
     selection: SelectionService;
     theme: ThemeService;
+    widget: WidgetService;
   }
 }
 
@@ -117,6 +118,47 @@ function createHooks(): IHooks {
     elementPointerDown: new SyncExitHook(),
     elementPointerDoubleClick: new SyncExitHook(),
   };
+}
+
+function createServices(config: {
+  container: HTMLDivElement;
+  docHandle: DocHandle<TCanvasDoc>;
+  themeService: ThemeService;
+}): IServiceRegistry {
+  const services = createServiceRegistry();
+  const render = new RenderService({
+    container: config.container,
+    docHandle: config.docHandle,
+  });
+  const camera = new CameraService({ render });
+  const contextMenu = new ContextMenuService();
+  const editor = new EditorService();
+  const history = new HistoryService();
+  const selection = new SelectionService();
+  const widget = new WidgetService(editor);
+  const crdt = new CrdtService({ docHandle: config.docHandle });
+  const logging = new LoggingService();
+  const renderOrder = new RenderOrderService({
+    crdt: services.require("crdt"),
+    history,
+    render,
+    editor,
+  });
+
+  services.provide("camera", camera);
+  services.provide("contextMenu", contextMenu);
+  services.provide("crdt", crdt);
+  services.provide("editor", editor);
+  services.provide("history", history);
+  services.provide("logging", logging);
+  services.provide("render", render);
+  services.provide("renderOrder", renderOrder);
+  services.provide("selection", selection);
+  services.provide("theme", config.themeService);
+  services.provide("widget", widget);
+
+
+  return services;
 }
 
 export function buildRuntime(config: IRuntimeConfig) {
@@ -146,36 +188,11 @@ export function buildRuntime(config: IRuntimeConfig) {
     plugins.splice(5, 0, createRecorderPlugin());
   }
 
-  const services = createServiceRegistry();
-  const render = new RenderService({
-    container: config.container,
-    docHandle: config.docHandle,
-  });
-
-  services.provide("camera", new CameraService({ render }));
-  services.provide("contextMenu", new ContextMenuService());
-  services.provide("crdt", new CrdtService({ docHandle: config.docHandle }));
-  const editor = new EditorService();
-  services.provide("editor", editor);
-  const history = new HistoryService();
-
-  services.provide("history", history);
-  services.provide("logging", new LoggingService());
-  services.provide("render", render);
-  services.provide("renderOrder", new RenderOrderService({
-    crdt: services.require("crdt"),
-    history,
-    render,
-    editor,
-  }));
-  services.provide("selection", new SelectionService());
-  services.provide("theme", config.themeService ?? new ThemeService());
-
   return createRuntime<IHooks, IRuntimeConfig>({
     config,
     hooks: createHooks(),
     plugins,
-    services,
+    services: createServices(config),
     boot: async ({ services, hooks }) => {
       services.require("render").start();
       services.require("crdt").start();

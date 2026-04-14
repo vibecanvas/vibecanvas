@@ -169,6 +169,7 @@ Use the leaf files for execution history and local context.
 - [x]: [S30](s/S30.md) - canvas: remove remaining Tailwind-style classes from component TSX
 - [~]: [S31](s/S31.md) - frontend: remove remaining Tailwind-pattern source from app UI
 - [ ]: [S31] - how to deal with /Users/omarezzat/Workspace/vibecanvas/vibecanvas/packages/canvas/src/core/pretext.ts
+- [ ]: [S32] - show stylemenu already in create mode when tool like rect,pen is pressed. ux -> user knows where to draw
 
 ## E xplorations
 - [ ]: [E1](e/E1.md) - Tauri Research
@@ -184,6 +185,7 @@ Use the leaf files for execution history and local context.
 - [x]: [E15](e/E15.md) - canvas UI extensions: sideloadable community widgets and ArrowJS exploration
 - [x]: [E16] - filewatch performance. -> on big folders are slow
 - [ ]: [E17](e/E17.md) - automerge authority: optimistic local writes with server validation/reject path
+- [ ]: [E18] - replace iframe with bun.webview??
 
 ## D irections
 - [x]: [D1] - AI can edit the canvas directly

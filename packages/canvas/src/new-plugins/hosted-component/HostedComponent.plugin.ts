@@ -34,24 +34,29 @@ export function createHostedComponentPlugin(): IPlugin<{
     name: HOSTED_COMPONENT_TOOL_ID,
     apply(ctx) {
       const render = ctx.services.require("render");
+      const camera = ctx.services.require("camera");
+      const crdt = ctx.services.require("crdt");
+      const editor = ctx.services.require("editor");
+      const renderOrder = ctx.services.require("renderOrder");
+      const selection = ctx.services.require("selection");
 
-      txSetupHostedComponent({
-        camera: ctx.services.require("camera"),
-        crdt: ctx.services.require("crdt"),
-        editor: ctx.services.require("editor"),
-        hooks: ctx.hooks,
-        icon,
-        now: () => Date.now(),
-        createId: createCreateId(render),
-        render,
-        arrow: {
-          html,
-          render: renderArrowView,
-          sandbox: createArrowSandbox,
-        },
-        renderOrder: ctx.services.require("renderOrder"),
-        selection: ctx.services.require("selection"),
-      }, {});
+      // txSetupHostedComponent({
+      //   camera: ctx.services.require("camera"),
+      //   crdt: ctx.services.require("crdt"),
+      //   editor: ctx.services.require("editor"),
+      //   hooks: ctx.hooks,
+      //   icon,
+      //   now: () => Date.now(),
+      //   createId: createCreateId(render),
+      //   render,
+      //   arrow: {
+      //     html,
+      //     render: renderArrowView,
+      //     sandbox: createArrowSandbox,
+      //   },
+      //   renderOrder: ctx.services.require("renderOrder"),
+      //   selection: ctx.services.require("selection"),
+      // }, {});
     },
   };
 }

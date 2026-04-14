@@ -7,3 +7,4 @@ export * from "./logging/LoggingService";
 export * from "./render/RenderService";
 export * from "./render-order/RenderOrderService";
 export * from "./selection/SelectionService";
+export * from "./widget/WidgetService";

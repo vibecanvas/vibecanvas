@@ -29,7 +29,7 @@ type CanvasPageProps = {
     showError(title: string, description?: string): void
     showInfo(title: string, description?: string): void
   }
-  themeService?: ThemeService;
+  themeService: ThemeService;
 };
 
 
