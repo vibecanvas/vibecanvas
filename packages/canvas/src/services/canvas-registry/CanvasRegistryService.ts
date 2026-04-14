@@ -62,6 +62,23 @@ export type TCanvasRegistryElementDefinition = {
    * Use this to apply persisted element state back onto an existing runtime node.
    */
   updateElement?: (element: TElement) => boolean | void;
+  /**
+   * Called on every transform event.
+   * Publishes the transform event to the CRDT if `crdt` is true.
+   */
+  onTransform?: (args: {
+    node: Konva.Node;
+    element: TElement;
+    selection: Array<Konva.Group | Konva.Shape>;
+  }) => { cancel: boolean, crdt: boolean }
+  /**
+   * Called after the transform event has been handled.
+   */
+  afterTransform?: (args: {
+    node: Konva.Node;
+    element: TElement;
+    selection: Array<Konva.Group | Konva.Shape>;
+  }) => { cancel: boolean, crdt: boolean };
 };
 
 export type TCanvasRegistryGroupDefinition = {
