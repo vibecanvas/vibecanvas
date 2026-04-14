@@ -1,10 +1,29 @@
-import { createComponent, type Accessor } from "solid-js";
-import { render } from "solid-js/web";
-import { CanvasRecorder } from "../../components/CanvasRecorder";
+import type { Accessor } from "solid-js";
 import type { RenderService } from "../../new-services/render/RenderService";
 
-export function mountRecorderPanel(args: {
+export type TPortalTxMountRecorderPanel = {
+  document: Document;
   renderService: RenderService;
+  renderUi: (...args: any[]) => () => void;
+  createComponentUi: (...args: any[]) => unknown;
+  CanvasRecorder: (props: {
+    open: Accessor<boolean>;
+    onOpenChange: (open: boolean) => void;
+    recording: Accessor<boolean>;
+    stepCount: Accessor<number>;
+    opCount: Accessor<number>;
+    reducedEvents: Accessor<boolean>;
+    onReducedEventsChange: (value: boolean) => void;
+    canExport: Accessor<boolean>;
+    onStart: () => void;
+    onStop: () => void;
+    onClear: () => void;
+    onCopy: () => void;
+    onExport: () => void;
+  }) => unknown;
+};
+
+export type TArgsTxMountRecorderPanel = {
   open: Accessor<boolean>;
   setOpen: (open: boolean) => void;
   recording: Accessor<boolean>;
@@ -20,14 +39,16 @@ export function mountRecorderPanel(args: {
     copy: () => void;
     export: () => void;
   };
-}) {
-  const mountElement = document.createElement("div");
-  mountElement.className = "absolute inset-0 pointer-events-none";
-  args.renderService.stage.container().appendChild(mountElement);
+};
 
-  const disposeRender = render(
+export function txMountRecorderPanel(portal: TPortalTxMountRecorderPanel, args: TArgsTxMountRecorderPanel) {
+  const mountElement = portal.document.createElement("div");
+  mountElement.className = "absolute inset-0 pointer-events-none";
+  portal.renderService.stage.container().appendChild(mountElement);
+
+  const disposeRender = portal.renderUi(
     () =>
-      createComponent(CanvasRecorder, {
+      portal.createComponentUi(portal.CanvasRecorder, {
         open: args.open,
         onOpenChange: args.setOpen,
         recording: args.recording,

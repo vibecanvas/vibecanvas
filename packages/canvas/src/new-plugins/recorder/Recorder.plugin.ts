@@ -1,24 +1,26 @@
 import type { IPlugin } from "@vibecanvas/runtime";
-import { createSignal, type Accessor, type Setter } from "solid-js";
+import { createComponent, createSignal, type Accessor, type Setter } from "solid-js";
 import type Konva from "konva";
 import type { CrdtService } from "../../new-services/crdt/CrdtService";
 import type { RenderService } from "../../new-services/render/RenderService";
 import type { IHooks, TMouseEvent, TPointerEvent } from "../../runtime";
+import { render as renderSolid } from "solid-js/web";
+import { CanvasRecorder } from "../../components/CanvasRecorder";
 import {
-  canExportRecording,
-  createDeleteCrdtOp,
-  createDragStep,
-  createEmptyRecording,
-  createKeyStep,
-  createPatchCrdtOp,
-  createPointerMoveStep,
-  createPointerStep,
-  createStartedRecording,
-  createWheelStep,
-} from "./Recorder.helpers";
-import { saveJsonFile } from "./Recorder.file";
-import { mountRecorderPanel } from "./Recorder.mount";
-import { REDUCED_EVENTS, type TCrdtOp, type TRecording, type TStep } from "./Recorder.types";
+  fxCanExportRecording,
+  fxCreateDeleteCrdtOp,
+  fxCreateDragStep,
+  fxCreateEmptyRecording,
+  fxCreateKeyStep,
+  fxCreatePatchCrdtOp,
+  fxCreatePointerMoveStep,
+  fxCreatePointerStep,
+  fxCreateStartedRecording,
+  fxCreateWheelStep,
+} from "./fn.recording";
+import { txSaveJsonFile } from "./tx.file";
+import { txMountRecorderPanel } from "./tx.mount";
+import { REDUCED_EVENTS, type TCrdtOp, type TRecording, type TStep } from "./CONSTANTS";
 
 type TRecorderState = {
   recording: boolean;
@@ -40,7 +42,7 @@ type TRecorderState = {
   setReducedEventsSignal: Setter<boolean>;
   canExport: Accessor<boolean>;
   setCanExport: Setter<boolean>;
-  panelMount: ReturnType<typeof mountRecorderPanel> | null;
+  panelMount: ReturnType<typeof txMountRecorderPanel> | null;
 };
 
 function createRecorderState(): TRecorderState {
@@ -55,7 +57,7 @@ function createRecorderState(): TRecorderState {
     recording: false,
     reducedEvents: REDUCED_EVENTS,
     pointerPressed: false,
-    recordingData: createEmptyRecording({ reducedEvents: REDUCED_EVENTS }),
+    recordingData: fxCreateEmptyRecording({ reducedEvents: REDUCED_EVENTS }),
     restoreCrdtPatch: null,
     restoreCrdtDelete: null,
     restoreNodeFire: null,
@@ -80,7 +82,7 @@ function txSyncUi(state: TRecorderState) {
   state.setStepCount(state.recordingData.steps.length);
   state.setOpCount(state.recordingData.crdtOps.length);
   state.setReducedEventsSignal(state.reducedEvents);
-  state.setCanExport(canExportRecording({ recording: state.recordingData }));
+  state.setCanExport(fxCanExportRecording({ recording: state.recordingData }));
 }
 
 function txPushStep(state: TRecorderState, step: TStep) {
@@ -94,7 +96,7 @@ function txPushCrdtOp(state: TRecorderState, op: TCrdtOp) {
 }
 
 function txStartRecording(state: TRecorderState, crdt: CrdtService) {
-  state.recordingData = createStartedRecording({
+  state.recordingData = fxCreateStartedRecording({
     crdt,
     reducedEvents: state.reducedEvents,
     now: Date.now(),
@@ -110,7 +112,7 @@ function txStopRecording(state: TRecorderState) {
 
 function txClearRecording(state: TRecorderState) {
   state.recording = false;
-  state.recordingData = createEmptyRecording({ reducedEvents: state.reducedEvents });
+  state.recordingData = fxCreateEmptyRecording({ reducedEvents: state.reducedEvents });
   txSyncUi(state);
 }
 
@@ -157,10 +159,12 @@ async function txExportRecording(state: TRecorderState) {
     }>;
   };
 
-  await saveJsonFile(
+  await txSaveJsonFile(
     {
       document,
       url: URL,
+      createBlob: (parts, options) => new Blob(parts, options),
+      isAbortError: (error) => error instanceof DOMException && error.name === "AbortError",
       showSaveFilePicker: runtimeWindow.showSaveFilePicker?.bind(runtimeWindow),
     },
     {
@@ -177,7 +181,7 @@ function txRecordPointerEvent(state: TRecorderState, render: RenderService, even
 
   txPushStep(
     state,
-    createPointerStep({ render, eventName, event }),
+    fxCreatePointerStep({ render, eventName, event }),
   );
 }
 
@@ -186,7 +190,7 @@ function txRecordKeyEvent(state: TRecorderState, eventName: "keydown" | "keyup",
     return;
   }
 
-  txPushStep(state, createKeyStep({ eventName, event }));
+  txPushStep(state, fxCreateKeyStep({ eventName, event }));
 }
 
 function txRecordDragEvent(state: TRecorderState, render: RenderService, eventName: "dragstart" | "dragmove" | "dragend", event: TMouseEvent) {
@@ -196,7 +200,7 @@ function txRecordDragEvent(state: TRecorderState, render: RenderService, eventNa
 
   txPushStep(
     state,
-    createDragStep({ render, eventName, event }),
+    fxCreateDragStep({ render, eventName, event }),
   );
 }
 
@@ -250,7 +254,7 @@ function setupHookCapture(args: { state: TRecorderState; render: RenderService; 
       return;
     }
 
-    txPushStep(args.state, createPointerMoveStep({ render: args.render, event }));
+    txPushStep(args.state, fxCreatePointerMoveStep({ render: args.render, event }));
   });
 
   args.hooks.pointerWheel.tap((event) => {
@@ -258,7 +262,7 @@ function setupHookCapture(args: { state: TRecorderState; render: RenderService; 
       return;
     }
 
-    txPushStep(args.state, createWheelStep({ render: args.render, event }));
+    txPushStep(args.state, fxCreateWheelStep({ render: args.render, event }));
   });
 
   args.hooks.keydown.tap((event) => {
@@ -280,7 +284,7 @@ function setupCrdtCapture(args: { state: TRecorderState; crdt: CrdtService }) {
     if (args.state.recording) {
       txPushCrdtOp(
         args.state,
-        createPatchCrdtOp({
+        fxCreatePatchCrdtOp({
           patch: payload as { elements: Array<Record<string, unknown>>; groups: Array<Record<string, unknown>> },
         }),
       );
@@ -291,7 +295,7 @@ function setupCrdtCapture(args: { state: TRecorderState; crdt: CrdtService }) {
 
   args.crdt.deleteById = ((payload) => {
     if (args.state.recording) {
-      txPushCrdtOp(args.state, createDeleteCrdtOp({ deleteById: payload }));
+      txPushCrdtOp(args.state, fxCreateDeleteCrdtOp({ deleteById: payload }));
     }
 
     originalDeleteById(payload);
@@ -323,8 +327,13 @@ export function createRecorderPlugin(): IPlugin<{
       const render = ctx.services.require("render");
 
       ctx.hooks.init.tap(() => {
-        state.panelMount = mountRecorderPanel({
+        state.panelMount = txMountRecorderPanel({
+          document,
           renderService: render,
+          renderUi: renderSolid,
+          createComponentUi: createComponent,
+          CanvasRecorder,
+        }, {
           open: state.open,
           setOpen: state.setOpen,
           recording: state.recordingSignal,
