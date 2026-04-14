@@ -100,7 +100,7 @@ function mountToolbar(args: {
 }) {
   const mountElement = document.createElement("div");
   mountElement.className = "absolute inset-0 pointer-events-none";
-  args.render.stage.container().appendChild(mountElement);
+  args.scene.stage.container().appendChild(mountElement);
 
   const [version, setVersion] = createSignal(0);
   const tools = createMemo(() => {
@@ -152,7 +152,7 @@ export function createToolbarPlugin(): IPlugin<{
     name: "toolbar",
     apply(ctx) {
       const editor = ctx.services.require("editor");
-      const render = ctx.services.require("scene");
+      const scene = ctx.services.require("scene");
       const selection = ctx.services.require("selection");
 
       editor.registerTool({
@@ -176,18 +176,18 @@ export function createToolbarPlugin(): IPlugin<{
 
       ctx.hooks.init.tap(() => {
         toolbarMount = mountToolbar({
-          render,
+          scene,
           editor,
           onToolSelect: (toolId) => {
             txSelectTool(editor, toolId);
           },
         });
-        txSyncCursor(render, selection);
+        txSyncCursor(scene, selection);
       });
 
       editor.hooks.activeToolChange.tap((toolId) => {
         selection.mode = getModeFromTool(editor.getTool(toolId));
-        txSyncCursor(render, selection);
+        txSyncCursor(scene, selection);
         ctx.hooks.toolSelect.call(toolId);
       });
 
