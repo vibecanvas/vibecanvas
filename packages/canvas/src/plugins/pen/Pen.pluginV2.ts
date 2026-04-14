@@ -4,7 +4,7 @@ import Konva from "konva";
 import Pencil from "lucide-static/icons/pencil.svg?raw";
 import { resolveThemeColor, type ThemeService } from "@vibecanvas/service-theme";
 import { getStroke } from "perfect-freehand";
-import type { IHooks } from "../../runtime";
+import type { IHooks, TElementPointerEvent } from "../../runtime";
 import type { CanvasRegistryService } from "../../services";
 import type { SceneService } from "../../services/scene/SceneService";
 import { fxPenPathToElement } from "./fx.path";
@@ -14,6 +14,7 @@ import { fxCreatePenNode } from "./fx.create-node";
 import { txUpdatePenPathFromElement } from "./tx.path";
 
 const DRAFT_POINTS_ATTR = "vcDraftStrokePoints";
+const PEN_NODE_SETUP_ATTR = "vcPenNodeSetup";
 
 function fxCreatePenElementFromDraft(args: {
   id: string;
@@ -139,6 +140,37 @@ function txUpdatePenDraft(args: {
   });
 }
 
+function txSetupPenNode(args: {
+  hooks: IHooks;
+  node: Konva.Node;
+}) {
+  if (!(args.node instanceof Konva.Path)) {
+    return false;
+  }
+
+  if (args.node.getAttr(PEN_NODE_SETUP_ATTR) === true) {
+    args.node.off("pointerdown pointerdblclick");
+  }
+
+  args.node.setAttr(PEN_NODE_SETUP_ATTR, true);
+
+  args.node.on("pointerdown", (event) => {
+    const didHandle = args.hooks.elementPointerDown.call(event as TElementPointerEvent);
+    if (didHandle) {
+      event.cancelBubble = true;
+    }
+  });
+
+  args.node.on("pointerdblclick", (event) => {
+    const didHandle = args.hooks.elementPointerDoubleClick.call(event as TElementPointerEvent);
+    if (didHandle) {
+      event.cancelBubble = true;
+    }
+  });
+
+  return true;
+}
+
 /**
  * Owns pen draw-create flow, pen node hydration, drag, and clone wiring.
  * Keeps pen tool state in EditorService and scene behavior in SelectionService.
@@ -164,6 +196,7 @@ export function createPenPlugin(): IPlugin<{
         matchesNode: (node) => node instanceof Konva.Path,
         toElement: (node) => fxToPenElement(canvasRegistry, now, node),
         createNode: (element) => fxCreatePenRuntimeNode(theme, element),
+        attachListeners: (node) => txSetupPenNode({ hooks: ctx.hooks, node }),
       });
 
       ctx.hooks.init.tap(() => {
