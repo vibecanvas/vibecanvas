@@ -4,13 +4,13 @@ import { fxCreateHostedComponentElement } from "./fn.create-hosted-component-ele
 import type { CrdtService } from "../../../new-services/crdt/CrdtService";
 import type { EditorService } from "../../../new-services/editor/EditorService";
 import type { RenderOrderService } from "../../../new-services/render-order/RenderOrderService";
-import type { RenderService } from "../../../new-services/render/RenderService";
+import type { SceneService } from "../../../new-services/scene/SceneService";
 import type { SelectionService } from "../../../new-services/selection/SelectionService";
 
 export type TPortalCreateHostedComponentOnPointerUp = {
   crdt: CrdtService;
   editor: EditorService;
-  render: RenderService;
+  render: SceneService;
   renderOrder: RenderOrderService;
   selection: SelectionService;
   createId: () => string;

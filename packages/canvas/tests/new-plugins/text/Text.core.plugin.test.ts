@@ -64,7 +64,7 @@ describe("new Text plugin core", () => {
   test("createShapeFromTElement hydrates a Konva.Text and editor.toElement serializes it back", async () => {
     const harness = await createNewCanvasHarness();
     const editor = harness.runtime.services.require("editor");
-    const render = harness.runtime.services.require("render");
+    const render = harness.runtime.services.require("scene");
 
     const element = createTextElement({
       id: "text-hydrate-1",
@@ -256,7 +256,7 @@ describe("new Text plugin core", () => {
 
   test("updateTextNodeFromElement restores baked dimensions and resets scale", async () => {
     const harness = await createNewCanvasHarness();
-    const render = harness.runtime.services.require("render");
+    const render = harness.runtime.services.require("scene");
     const theme = harness.runtime.services.require("theme");
 
     const node = addHydratedTextNode(harness, createTextElement({ id: "restore-test" }));

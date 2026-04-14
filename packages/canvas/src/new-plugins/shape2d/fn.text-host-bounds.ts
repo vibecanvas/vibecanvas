@@ -1,5 +1,5 @@
 import type Konva from "konva";
-import type { RenderService } from "../../new-services/render/RenderService";
+import type { SceneService } from "../../new-services/scene/SceneService";
 
 export type TShapeTextHostBounds = {
   x: number;
@@ -21,7 +21,7 @@ function getDiamondSize(node: Konva.Line) {
 }
 
 export function fxGetShapeTextHostBounds(args: {
-  render: RenderService;
+  render: SceneService;
   node: Konva.Shape;
 }) {
   const scaleX = Math.abs(args.node.scaleX());

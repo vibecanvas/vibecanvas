@@ -6,14 +6,14 @@ import Diamond from "lucide-static/icons/diamond.svg?raw";
 import type Konva from "konva";
 import Square from "lucide-static/icons/square.svg?raw";
 import { fxCreateShape2dElement, fxGetShape2dDraftBounds, fxGetShape2dElementTypeFromTool, fxIsShape2dElementType, fxIsShape2dToolId, type TShape2dToolId } from "../../core/fn.shape2d";
-import { fxFilterSelection } from "../../core/fn.filter-selection";
+import { fxFilterSelection } from "../../core/fx.filter-selection";
 import { setNodeZIndex } from "../../core/render-order";
 import type { ContextMenuService } from "../../new-services/context-menu/ContextMenuService";
 import type { CrdtService } from "../../new-services/crdt/CrdtService";
 import type { EditorService } from "../../new-services/editor/EditorService";
 import type { HistoryService } from "../../new-services/history/HistoryService";
 import type { RenderOrderService } from "../../new-services/render-order/RenderOrderService";
-import type { RenderService } from "../../new-services/render/RenderService";
+import type { SceneService } from "../../new-services/scene/SceneService";
 import type { SelectionService } from "../../new-services/selection/SelectionService";
 import type { ThemeService } from "@vibecanvas/service-theme";
 import { CanvasMode } from "../../new-services/selection/CONSTANTS";
@@ -27,7 +27,7 @@ import { txCreateShape2dCloneDrag } from "./tx.create-clone-drag";
 import { txSetupShape2dNode } from "./tx.setup-node";
 import { txUpdateShape2dNodeFromElement } from "./tx.update-node-from-element";
 
-function createCreateId(render: RenderService) {
+function createCreateId(render: SceneService) {
   let fallbackId = 0;
 
   return () => {
@@ -51,13 +51,13 @@ function safeStopDrag(node: Konva.Node) {
   }
 }
 
-function isShape2dTextHostNode(render: RenderService, node: Konva.Node | null | undefined): node is Konva.Shape {
+function isShape2dTextHostNode(render: SceneService, node: Konva.Node | null | undefined): node is Konva.Shape {
   return Boolean(node)
     && node instanceof render.Shape
     && fxGetShape2dNodeType({ render, node }) !== null;
 }
 
-function getFocusedShape2dTextHost(render: RenderService, editor: EditorService, selection: SelectionService) {
+function getFocusedShape2dTextHost(render: SceneService, editor: EditorService, selection: SelectionService) {
   const filtered = fxFilterSelection({ render, editor, selection: selection.selection });
   if (filtered.length !== 1) {
     return null;
@@ -76,7 +76,7 @@ export function createShape2dPlugin(): IPlugin<{
   crdt: CrdtService;
   editor: EditorService;
   history: HistoryService;
-  render: RenderService;
+  render: SceneService;
   renderOrder: RenderOrderService;
   selection: SelectionService;
   theme: ThemeService;
@@ -88,7 +88,7 @@ export function createShape2dPlugin(): IPlugin<{
       const crdt = ctx.services.require("crdt");
       const editor = ctx.services.require("editor");
       const history = ctx.services.require("history");
-      const render = ctx.services.require("render");
+      const render = ctx.services.require("scene");
       const renderOrder = ctx.services.require("renderOrder");
       const selection = ctx.services.require("selection");
       const theme = ctx.services.require("theme");

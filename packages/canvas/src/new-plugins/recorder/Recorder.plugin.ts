@@ -2,7 +2,7 @@ import type { IPlugin } from "@vibecanvas/runtime";
 import { createComponent, createSignal, type Accessor, type Setter } from "solid-js";
 import type Konva from "konva";
 import type { CrdtService } from "../../new-services/crdt/CrdtService";
-import type { RenderService } from "../../new-services/render/RenderService";
+import type { SceneService } from "../../new-services/scene/SceneService";
 import type { IHooks, TMouseEvent, TPointerEvent } from "../../runtime";
 import { render as renderSolid } from "solid-js/web";
 import { CanvasRecorder } from "../../components/CanvasRecorder";
@@ -174,7 +174,7 @@ async function txExportRecording(state: TRecorderState) {
   );
 }
 
-function txRecordPointerEvent(state: TRecorderState, render: RenderService, eventName: "pointerdown" | "pointerup" | "pointerout" | "pointerover" | "pointercancel", event: TPointerEvent) {
+function txRecordPointerEvent(state: TRecorderState, render: SceneService, eventName: "pointerdown" | "pointerup" | "pointerout" | "pointerover" | "pointercancel", event: TPointerEvent) {
   if (!state.recording) {
     return;
   }
@@ -193,7 +193,7 @@ function txRecordKeyEvent(state: TRecorderState, eventName: "keydown" | "keyup",
   txPushStep(state, fxCreateKeyStep({ eventName, event }));
 }
 
-function txRecordDragEvent(state: TRecorderState, render: RenderService, eventName: "dragstart" | "dragmove" | "dragend", event: TMouseEvent) {
+function txRecordDragEvent(state: TRecorderState, render: SceneService, eventName: "dragstart" | "dragmove" | "dragend", event: TMouseEvent) {
   if (!state.recording) {
     return;
   }
@@ -204,7 +204,7 @@ function txRecordDragEvent(state: TRecorderState, render: RenderService, eventNa
   );
 }
 
-function setupHookCapture(args: { state: TRecorderState; render: RenderService; hooks: IHooks }) {
+function setupHookCapture(args: { state: TRecorderState; render: SceneService; hooks: IHooks }) {
   const originalFire = args.render.Node.prototype.fire;
   args.render.Node.prototype.fire = (function (this: Konva.Node, eventType: string, evt?: object, bubble?: boolean) {
     if (eventType === "dragstart" || eventType === "dragmove" || eventType === "dragend") {
@@ -316,7 +316,7 @@ function setupCrdtCapture(args: { state: TRecorderState; crdt: CrdtService }) {
  */
 export function createRecorderPlugin(): IPlugin<{
   crdt: CrdtService;
-  render: RenderService;
+  render: SceneService;
 }, IHooks> {
   const state = createRecorderState();
 
@@ -324,12 +324,12 @@ export function createRecorderPlugin(): IPlugin<{
     name: "recorder",
     apply(ctx) {
       const crdt = ctx.services.require("crdt");
-      const render = ctx.services.require("render");
+      const render = ctx.services.require("scene");
 
       ctx.hooks.init.tap(() => {
         state.panelMount = txMountRecorderPanel({
           document,
-          renderService: render,
+          SceneService: render,
           renderUi: renderSolid,
           createComponentUi: createComponent,
           CanvasRecorder,

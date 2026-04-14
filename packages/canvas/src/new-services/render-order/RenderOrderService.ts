@@ -5,7 +5,7 @@ import { createOrderedZIndex, getNodeZIndex, setNodeZIndex } from "../../core/re
 import type { TRenderOrderSnapshot } from "../../runtime";
 import type { CrdtService } from "../crdt/CrdtService";
 import type { HistoryService } from "../history/HistoryService";
-import type { RenderService } from "../render/RenderService";
+import type { SceneService } from "../scene/SceneService";
 import type { EditorService } from "../editor/EditorService";
 
 export type TOrderedNode = Konva.Group | Konva.Shape;
@@ -16,7 +16,7 @@ export type TRenderOrderBundleResolver = (node: TOrderedNode) => TOrderedNode[] 
 export type TRenderOrderServiceArgs = {
   crdt: CrdtService;
   history: HistoryService;
-  render: RenderService;
+  scene: SceneService;
   editor: EditorService;
   syncDomOrder?: () => void;
 };
@@ -83,7 +83,7 @@ export class RenderOrderService implements IService<Record<string, never>> {
 
   readonly crdt: CrdtService;
   readonly history: HistoryService;
-  readonly render: RenderService;
+  readonly scene: SceneService;
   readonly editor: EditorService;
   readonly syncDomOrder?: () => void;
   #bundleResolvers = new Map<string, TRenderOrderBundleResolver>();
@@ -91,7 +91,7 @@ export class RenderOrderService implements IService<Record<string, never>> {
   constructor(args: TRenderOrderServiceArgs) {
     this.crdt = args.crdt;
     this.history = args.history;
-    this.render = args.render;
+    this.scene = args.scene;
     this.editor = args.editor;
     this.syncDomOrder = args.syncDomOrder;
   }
@@ -393,10 +393,10 @@ export class RenderOrderService implements IService<Record<string, never>> {
 
   private findParentBySnapshot(snapshot: TRenderOrderSnapshot) {
     if (snapshot.parentId === "__layer__") {
-      return this.render.staticForegroundLayer;
+      return this.scene.staticForegroundLayer;
     }
 
-    const parent = this.render.staticForegroundLayer.findOne(`#${snapshot.parentId}`);
+    const parent = this.scene.staticForegroundLayer.findOne(`#${snapshot.parentId}`);
     return isParentContainer(parent) ? parent : null;
   }
 }

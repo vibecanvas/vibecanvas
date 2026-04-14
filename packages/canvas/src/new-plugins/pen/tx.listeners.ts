@@ -3,7 +3,7 @@ import type Konva from "konva";
 import type { CrdtService } from "../../new-services/crdt/CrdtService";
 import type { EditorService } from "../../new-services/editor/EditorService";
 import type { HistoryService } from "../../new-services/history/HistoryService";
-import type { RenderService } from "../../new-services/render/RenderService";
+import type { SceneService } from "../../new-services/scene/SceneService";
 import type { SelectionService } from "../../new-services/selection/SelectionService";
 import type { IHooks, TElementPointerEvent } from "../../runtime";
 import { fxGetCanvasAncestorGroups, fxGetCanvasNodeKind, fxGetCanvasParentGroupId, fxIsCanvasGroupNode } from "../../core/fn.canvas-node-semantics";
@@ -32,7 +32,7 @@ export type TPortalTxSetupPenShapeListeners = {
   crdt: CrdtService;
   editor: EditorService;
   history: HistoryService;
-  render: RenderService;
+  render: SceneService;
   selection: SelectionService;
   hooks: IHooks;
   now: () => number;

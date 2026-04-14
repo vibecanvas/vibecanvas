@@ -3,14 +3,14 @@ import type Konva from "konva";
 import type { CrdtService } from "../../new-services/crdt/CrdtService";
 import type { EditorService } from "../../new-services/editor/EditorService";
 import type { RenderOrderService } from "../../new-services/render-order/RenderOrderService";
-import type { RenderService } from "../../new-services/render/RenderService";
+import type { SceneService } from "../../new-services/scene/SceneService";
 import type { SelectionService } from "../../new-services/selection/SelectionService";
 import { fxGetCanvasNodeKind, fxIsCanvasGroupNode } from "../../core/fn.canvas-node-semantics";
 
 export type TPortalCreateGroupCloneDrag = {
   crdt: CrdtService;
   editor: EditorService;
-  render: RenderService;
+  render: SceneService;
   renderOrder: RenderOrderService;
   selection: SelectionService;
   setupGroupNode: (group: Konva.Group) => Konva.Group;

@@ -15,7 +15,7 @@ import {
 } from "./new-plugins";
 import {
   CameraService, ContextMenuService, CrdtService, EditorService, HistoryService,
-  LoggingService, RenderOrderService, RenderService, SelectionService, WidgetService
+  LoggingService, RenderOrderService, SceneService, SelectionService, WidgetService
 } from "./new-services";
 import { ThemeService } from "@vibecanvas/service-theme";
 
@@ -90,7 +90,7 @@ declare module "@vibecanvas/runtime" {
     editor: EditorService;
     history: HistoryService;
     logging: LoggingService;
-    render: RenderService;
+    scene: SceneService;
     renderOrder: RenderOrderService;
     selection: SelectionService;
     theme: ThemeService;
@@ -126,11 +126,11 @@ function createServices(config: {
   themeService: ThemeService;
 }): IServiceRegistry {
   const services = createServiceRegistry();
-  const render = new RenderService({
+  const scene = new SceneService({
     container: config.container,
     docHandle: config.docHandle,
   });
-  const camera = new CameraService({ render });
+  const camera = new CameraService({ scene });
   const contextMenu = new ContextMenuService();
   const editor = new EditorService();
   const history = new HistoryService();
@@ -141,7 +141,7 @@ function createServices(config: {
   const renderOrder = new RenderOrderService({
     crdt,
     history,
-    render,
+    scene,
     editor,
   });
 
@@ -151,7 +151,7 @@ function createServices(config: {
   services.provide("editor", editor);
   services.provide("history", history);
   services.provide("logging", logging);
-  services.provide("render", render);
+  services.provide("scene", scene);
   services.provide("renderOrder", renderOrder);
   services.provide("selection", selection);
   services.provide("theme", config.themeService);
@@ -194,7 +194,7 @@ export function buildRuntime(config: IRuntimeConfig) {
     plugins,
     services: createServices(config),
     boot: async ({ services, hooks }) => {
-      services.require("render").start();
+      services.require("scene").start();
       services.require("crdt").start();
       services.require("camera").start();
       hooks.init.call();
@@ -204,7 +204,7 @@ export function buildRuntime(config: IRuntimeConfig) {
       hooks.destroy.call();
       services.require("camera").stop();
       services.require("crdt").stop();
-      services.require("render").stop();
+      services.require("scene").stop();
     },
   })
 }

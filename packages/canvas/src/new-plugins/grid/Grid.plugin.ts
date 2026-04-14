@@ -3,14 +3,14 @@ import type { ThemeService } from "@vibecanvas/service-theme";
 import Grid2x2 from "lucide-static/icons/grid-2x2.svg?raw";
 import type { CameraService } from "../../new-services/camera/CameraService";
 import type { EditorService } from "../../new-services/editor/EditorService";
-import type { RenderService } from "../../new-services/render/RenderService";
+import type { SceneService } from "../../new-services/scene/SceneService";
 import type { IHooks } from "../../runtime";
 import { txDrawGrid } from "./tx.draw";
 
 export function createGridPlugin(): IPlugin<{
   camera: CameraService;
   editor: EditorService;
-  render: RenderService;
+  render: SceneService;
   theme: ThemeService;
 }, IHooks> {
   let visible = true;
@@ -38,7 +38,7 @@ export function createGridPlugin(): IPlugin<{
       syncGridTool();
 
       ctx.hooks.init.tap(() => {
-        const render = ctx.services.require("render");
+        const render = ctx.services.require("scene");
         const camera = ctx.services.require("camera");
         const theme = ctx.services.require("theme");
         const gridShape = new render.Shape({

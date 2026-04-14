@@ -4,7 +4,7 @@ import type { TImageUploadFormat, TUploadImage } from "../../services/canvas/int
 import type { CrdtService } from "../../new-services/crdt/CrdtService";
 import type { HistoryService } from "../../new-services/history/HistoryService";
 import type { RenderOrderService } from "../../new-services/render-order/RenderOrderService";
-import type { RenderService } from "../../new-services/render/RenderService";
+import type { SceneService } from "../../new-services/scene/SceneService";
 import type { SelectionService } from "../../new-services/selection/SelectionService";
 import { fxCreateImageElement } from "./fn.create-image-element";
 import { fxFitImageToViewport } from "./fn.fit-image-to-viewport";
@@ -12,7 +12,7 @@ import { fxFitImageToViewport } from "./fn.fit-image-to-viewport";
 export type TPortalInsertImage = {
   crdt: CrdtService;
   history: HistoryService;
-  render: RenderService;
+  render: SceneService;
   renderOrder: RenderOrderService;
   selection: SelectionService;
   uploadImage?: TUploadImage;

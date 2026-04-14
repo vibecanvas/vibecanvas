@@ -1,13 +1,13 @@
 import { fxGetSelectionPath } from "./fn.get-selection-path";
 import type { EditorService } from "../../new-services/editor/EditorService";
-import type { RenderService } from "../../new-services/render/RenderService";
+import type { SceneService } from "../../new-services/scene/SceneService";
 import { fxIsCanvasGroupNode } from "../../core/fn.canvas-node-semantics";
 import type { SelectionService } from "../../new-services/selection/SelectionService";
 import type { TElementPointerEvent } from "../../runtime";
 
 export type TPortalHandleElementPointerDown = {
   editor: EditorService;
-  render: RenderService;
+  render: SceneService;
   selection: SelectionService;
   hasSameSelectionOrder: (
     currentSelection: Array<{ id(): string }>,

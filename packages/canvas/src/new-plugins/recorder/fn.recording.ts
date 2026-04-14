@@ -1,6 +1,6 @@
 import type { TMouseEvent, TPointerEvent, TWheelEvent } from "../../runtime";
 import type { CrdtService } from "../../new-services/crdt/CrdtService";
-import type { RenderService } from "../../new-services/render/RenderService";
+import type { SceneService } from "../../new-services/scene/SceneService";
 import type { TCrdtOp, TModifiers, TRecording, TStep } from "./CONSTANTS";
 
 export function fxCloneValue<T>(args: { value: T }): T {
@@ -19,7 +19,7 @@ export function fxGetModifiers(args: {
 }
 
 export function fxGetPointerPosition(args: {
-  render: RenderService;
+  render: SceneService;
 }) {
   const pointer = args.render.stage.getPointerPosition();
 
@@ -65,7 +65,7 @@ export function fxCanExportRecording(args: { recording: TRecording }): boolean {
 }
 
 export function fxCreatePointerStep(args: {
-  render: RenderService;
+  render: SceneService;
   eventName: "pointerdown" | "pointerup" | "pointerout" | "pointerover" | "pointercancel";
   event: TPointerEvent;
 }): TStep {
@@ -81,7 +81,7 @@ export function fxCreatePointerStep(args: {
   };
 }
 
-export function fxCreatePointerMoveStep(args: { render: RenderService; event: TMouseEvent }): TStep {
+export function fxCreatePointerMoveStep(args: { render: SceneService; event: TMouseEvent }): TStep {
   const { x, y } = fxGetPointerPosition({ render: args.render });
 
   return {
@@ -93,7 +93,7 @@ export function fxCreatePointerMoveStep(args: { render: RenderService; event: TM
   };
 }
 
-export function fxCreateWheelStep(args: { render: RenderService; event: TWheelEvent }): TStep {
+export function fxCreateWheelStep(args: { render: SceneService; event: TWheelEvent }): TStep {
   const { x, y } = fxGetPointerPosition({ render: args.render });
 
   return {
@@ -117,7 +117,7 @@ export function fxCreateKeyStep(args: { eventName: "keydown" | "keyup"; event: K
 }
 
 export function fxCreateDragStep(args: {
-  render: RenderService;
+  render: SceneService;
   eventName: "dragstart" | "dragmove" | "dragend";
   event: TMouseEvent;
 }): TStep {

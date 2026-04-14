@@ -1,9 +1,9 @@
 import type { ThemeService } from "@vibecanvas/service-theme";
 import type Konva from "konva";
-import type { RenderService } from "../../new-services/render/RenderService";
+import type { SceneService } from "../../new-services/scene/SceneService";
 
 export type TPortalCreateGroupBoundary = {
-  render: RenderService;
+  render: SceneService;
   theme: ThemeService;
 };
 

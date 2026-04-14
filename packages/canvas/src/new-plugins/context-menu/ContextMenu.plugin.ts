@@ -6,11 +6,11 @@ import { render as renderSolid } from "solid-js/web";
 import { CanvasContextMenu } from "../../components/CanvasContextMenu";
 import type { ContextMenuService, TContextMenuNode, TContextMenuScope } from "../../new-services/context-menu/ContextMenuService";
 import type { EditorService } from "../../new-services/editor/EditorService";
-import type { RenderService } from "../../new-services/render/RenderService";
+import type { SceneService } from "../../new-services/scene/SceneService";
 import type { SelectionService } from "../../new-services/selection/SelectionService";
 import type { IHooks } from "../../runtime";
 
-function getSelectionPath(render: RenderService, editor: EditorService, node: TContextMenuNode): TContextMenuNode[] {
+function getSelectionPath(render: SceneService, editor: EditorService, node: TContextMenuNode): TContextMenuNode[] {
   const path: TContextMenuNode[] = [];
   let current: Konva.Node | null = node;
 
@@ -25,7 +25,7 @@ function getSelectionPath(render: RenderService, editor: EditorService, node: TC
   return path.reverse();
 }
 
-function filterSelection(render: RenderService, editor: EditorService, selection: Konva.Node[]): TContextMenuNode[] {
+function filterSelection(render: SceneService, editor: EditorService, selection: Konva.Node[]): TContextMenuNode[] {
   let subSelection = selection.find((node) => fxIsCanvasGroupNode({ editor, node: node.getParent() }));
   if (!subSelection) {
     return selection.filter((node): node is TContextMenuNode => {
@@ -52,7 +52,7 @@ function filterSelection(render: RenderService, editor: EditorService, selection
   return subSelection.getStage() !== null ? [subSelection as TContextMenuNode] : [];
 }
 
-function findTargetNode(render: RenderService, editor: EditorService, pointer: { x: number; y: number }): TContextMenuNode | null {
+function findTargetNode(render: SceneService, editor: EditorService, pointer: { x: number; y: number }): TContextMenuNode | null {
   const directHit = render.stage.getIntersection(pointer);
   let current: Konva.Node | null = directHit;
   while (current) {
@@ -80,7 +80,7 @@ function findTargetNode(render: RenderService, editor: EditorService, pointer: {
   return fallbackTarget ?? null;
 }
 
-function resolveSelection(render: RenderService, editor: EditorService, selection: SelectionService, target: TContextMenuNode): TContextMenuNode[] {
+function resolveSelection(render: SceneService, editor: EditorService, selection: SelectionService, target: TContextMenuNode): TContextMenuNode[] {
   const activeSelection = filterSelection(render, editor, selection.selection);
   if (activeSelection.includes(target)) {
     return selection.selection.filter((node): node is TContextMenuNode => {
@@ -102,7 +102,7 @@ function getMenuScope(targetNode: TContextMenuNode | null, selection: TContextMe
 }
 
 function mountContextMenu(args: {
-  render: RenderService;
+  render: SceneService;
   contextMenu: ContextMenuService;
 }) {
   const mountElement = document.createElement("div");
@@ -171,7 +171,7 @@ function mountContextMenu(args: {
 export function createContextMenuPlugin(): IPlugin<{
   contextMenu: ContextMenuService;
   editor: EditorService;
-  render: RenderService;
+  render: SceneService;
   selection: SelectionService;
 }, IHooks> {
   let menuMount: ReturnType<typeof mountContextMenu> | null = null;
@@ -181,7 +181,7 @@ export function createContextMenuPlugin(): IPlugin<{
     apply(ctx) {
       const contextMenu = ctx.services.require("contextMenu");
       const editor = ctx.services.require("editor");
-      const render = ctx.services.require("render");
+      const render = ctx.services.require("scene");
       const selection = ctx.services.require("selection");
 
       ctx.hooks.init.tap(() => {

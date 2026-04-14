@@ -1,10 +1,10 @@
-import type { RenderService } from "../../new-services/render/RenderService";
+import type { SceneService } from "../../new-services/scene/SceneService";
 import type { SelectionService } from "../../new-services/selection/SelectionService";
 
 export type TPortalHandleStagePointerMove = {
-  render: RenderService;
+  render: SceneService;
   selection: SelectionService;
-  selectionRectangle: InstanceType<RenderService["Rect"]>;
+  selectionRectangle: InstanceType<SceneService["Rect"]>;
   hasSameSelectionOrder: (
     currentSelection: Array<{ id(): string }>,
     nextSelection: Array<{ id(): string }>,

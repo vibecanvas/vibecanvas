@@ -9,13 +9,13 @@ import type { CrdtService } from "../../new-services/crdt/CrdtService";
 import type { EditorService } from "../../new-services/editor/EditorService";
 import type { HistoryService } from "../../new-services/history/HistoryService";
 import type { RenderOrderService } from "../../new-services/render-order/RenderOrderService";
-import type { RenderService } from "../../new-services/render/RenderService";
+import type { SceneService } from "../../new-services/scene/SceneService";
 import type { SelectionService } from "../../new-services/selection/SelectionService";
 import { resolveThemeColor, type ThemeService } from "@vibecanvas/service-theme";
 import { CanvasMode } from "../../new-services/selection/CONSTANTS";
 import { throttle } from "@solid-primitives/scheduled";
 import type { IHooks } from "../../runtime";
-import { fxFilterSelection } from "../../core/fn.filter-selection";
+import { fxFilterSelection } from "../../core/fx.filter-selection";
 import { txDeleteSelection } from "../select/tx.delete-selection";
 import { setNodeZIndex } from "../../core/render-order";
 import { fxCreateDraftElement, fxCreateFallbackPreviewElement } from "./fn.draft";
@@ -35,7 +35,7 @@ import {
   type TShape1dNode,
 } from "./CONSTANTS";
 
-function createCreateId(render: RenderService) {
+function createCreateId(render: SceneService) {
   let fallbackId = 0;
 
   return () => {
@@ -59,7 +59,7 @@ export function createShape1dPlugin(): IPlugin<{
   crdt: CrdtService;
   editor: EditorService;
   history: HistoryService;
-  render: RenderService;
+  render: SceneService;
   renderOrder: RenderOrderService;
   selection: SelectionService;
   theme: ThemeService;
@@ -81,7 +81,7 @@ export function createShape1dPlugin(): IPlugin<{
       const crdt = ctx.services.require("crdt");
       const editor = ctx.services.require("editor");
       const history = ctx.services.require("history");
-      const render = ctx.services.require("render");
+      const render = ctx.services.require("scene");
       const renderOrder = ctx.services.require("renderOrder");
       const selection = ctx.services.require("selection");
       const theme = ctx.services.require("theme");

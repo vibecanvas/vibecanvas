@@ -2,7 +2,7 @@ import type { IPlugin } from "@vibecanvas/runtime";
 import type { ThemeService } from "@vibecanvas/service-theme";
 import type { CameraService } from "../../new-services/camera/CameraService";
 import type { EditorService } from "../../new-services/editor/EditorService";
-import type { RenderService } from "../../new-services/render/RenderService";
+import type { SceneService } from "../../new-services/scene/SceneService";
 import type { SelectionService } from "../../new-services/selection/SelectionService";
 import type { IHooks } from "../../runtime";
 
@@ -56,7 +56,7 @@ function formatSelectionInfo(editor: EditorService, selection: SelectionService)
 export function createVisualDebugPlugin(): IPlugin<{
   camera: CameraService;
   editor: EditorService;
-  render: RenderService;
+  render: SceneService;
   selection: SelectionService;
   theme: ThemeService;
 }, IHooks> {
@@ -64,7 +64,7 @@ export function createVisualDebugPlugin(): IPlugin<{
     name: "visual-debug",
     apply(ctx) {
       ctx.hooks.init.tap(() => {
-        const render = ctx.services.require("render");
+        const render = ctx.services.require("scene");
         const camera = ctx.services.require("camera");
         const editor = ctx.services.require("editor");
         const selection = ctx.services.require("selection");

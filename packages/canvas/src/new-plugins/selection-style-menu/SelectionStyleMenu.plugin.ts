@@ -17,7 +17,7 @@ import { txApplySelectionStyleChange } from "../../core/tx.apply-selection-style
 import type { CrdtService } from "../../new-services/crdt/CrdtService";
 import type { EditorService } from "../../new-services/editor/EditorService";
 import type { HistoryService } from "../../new-services/history/HistoryService";
-import type { RenderService } from "../../new-services/render/RenderService";
+import type { SceneService } from "../../new-services/scene/SceneService";
 import type { SelectionService } from "../../new-services/selection/SelectionService";
 import { fxFindShape1dNodeById } from "../shape1d/fx.node";
 import type { IHooks } from "../../runtime";
@@ -26,7 +26,7 @@ function mountSelectionStyleMenu(args: {
   crdt: CrdtService;
   editor: EditorService;
   history: HistoryService;
-  render: RenderService;
+  render: SceneService;
   selection: SelectionService;
   theme: ThemeService;
 }) {
@@ -193,7 +193,7 @@ export function createSelectionStyleMenuPlugin(): IPlugin<{
   crdt: CrdtService;
   editor: EditorService;
   history: HistoryService;
-  render: RenderService;
+  render: SceneService;
   selection: SelectionService;
   theme: ThemeService;
 }, IHooks> {
@@ -205,7 +205,7 @@ export function createSelectionStyleMenuPlugin(): IPlugin<{
       const crdt = ctx.services.require("crdt");
       const editor = ctx.services.require("editor");
       const history = ctx.services.require("history");
-      const render = ctx.services.require("render");
+      const render = ctx.services.require("scene");
       const selection = ctx.services.require("selection");
       const theme = ctx.services.require("theme");
 

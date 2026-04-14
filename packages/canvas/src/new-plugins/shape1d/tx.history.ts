@@ -4,7 +4,7 @@ import type { CrdtService } from "../../new-services/crdt/CrdtService";
 import type { EditorService } from "../../new-services/editor/EditorService";
 import type { HistoryService } from "../../new-services/history/HistoryService";
 import type { RenderOrderService } from "../../new-services/render-order/RenderOrderService";
-import type { RenderService } from "../../new-services/render/RenderService";
+import type { SceneService } from "../../new-services/scene/SceneService";
 import type { SelectionService } from "../../new-services/selection/SelectionService";
 import { fxFindShape1dNodeById, type TPortalFxFindShape1dNodeById } from "./fx.node";
 import type { TShape1dNode } from "./CONSTANTS";
@@ -14,7 +14,7 @@ export type TPortalTxRecordShape1dHistory = {
   crdt: CrdtService;
   editor: EditorService;
   history: HistoryService;
-  render: RenderService;
+  render: SceneService;
   renderOrder: RenderOrderService;
   selection: SelectionService;
   theme: { getTheme(): string | TThemeDefinition };

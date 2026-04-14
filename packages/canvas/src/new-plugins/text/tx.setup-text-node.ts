@@ -5,7 +5,7 @@ import type { TElement } from "@vibecanvas/service-automerge/types/canvas-doc.ty
 import type { CrdtService } from "../../new-services/crdt/CrdtService";
 import type { HistoryService } from "../../new-services/history/HistoryService";
 import type { EditorService } from "../../new-services/editor/EditorService";
-import type { RenderService } from "../../new-services/render/RenderService";
+import type { SceneService } from "../../new-services/scene/SceneService";
 import type { SelectionService } from "../../new-services/selection/SelectionService";
 import type { IHooks } from "../../runtime";
 import type Konva from "konva";
@@ -16,7 +16,7 @@ export type TPortalSetupTextNode = {
   history: HistoryService;
   editor: EditorService;
   hooks: IHooks;
-  render: RenderService;
+  render: SceneService;
   selection: SelectionService;
   setupNode: (node: Konva.Text) => Konva.Text;
   theme: ThemeService;

@@ -1,12 +1,12 @@
 import { fxGetSelectionPath } from "./fn.get-selection-path";
 import type { EditorService } from "../../new-services/editor/EditorService";
-import type { RenderService } from "../../new-services/render/RenderService";
+import type { SceneService } from "../../new-services/scene/SceneService";
 import type { SelectionService } from "../../new-services/selection/SelectionService";
 import type { TElementPointerEvent } from "../../runtime";
 
 export type TPortalHandleElementPointerDoubleClick = {
   editor: EditorService;
-  render: RenderService;
+  render: SceneService;
   selection: SelectionService;
   hasSameSelectionOrder: (
     currentSelection: Array<{ id(): string }>,

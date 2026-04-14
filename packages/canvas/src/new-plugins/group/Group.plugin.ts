@@ -10,7 +10,7 @@ import type { CrdtService } from "../../new-services/crdt/CrdtService";
 import type { EditorService } from "../../new-services/editor/EditorService";
 import type { HistoryService } from "../../new-services/history/HistoryService";
 import type { RenderOrderService } from "../../new-services/render-order/RenderOrderService";
-import type { RenderService } from "../../new-services/render/RenderService";
+import type { SceneService } from "../../new-services/scene/SceneService";
 import type { SelectionService } from "../../new-services/selection/SelectionService";
 import { CanvasMode } from "../../new-services/selection/CONSTANTS";
 import type { IHooks } from "../../runtime";
@@ -28,7 +28,7 @@ import { txDeleteSelection } from "../select/tx.delete-selection";
 const CANVAS_NODE_KIND_ATTR = "vcCanvasNodeKind";
 const CANVAS_GROUP_NODE_KIND = "group";
 
-function createGroupNode(render: RenderService, group: TGroup) {
+function createGroupNode(render: SceneService, group: TGroup) {
   const node = new render.Group({
     id: group.id,
     draggable: true,
@@ -40,7 +40,7 @@ function createGroupNode(render: RenderService, group: TGroup) {
   return node;
 }
 
-function sortChildrenByPersistedOrder(render: RenderService, parent: Konva.Layer | Konva.Group) {
+function sortChildrenByPersistedOrder(render: SceneService, parent: Konva.Layer | Konva.Group) {
   const children = parent.getChildren().filter((node) => {
     return fxIsSceneNode({ render, node });
   });
@@ -70,7 +70,7 @@ export function createGroupPlugin(): IPlugin<{
   crdt: CrdtService;
   editor: EditorService;
   history: HistoryService;
-  render: RenderService;
+  render: SceneService;
   renderOrder: RenderOrderService;
   selection: SelectionService;
   theme: ThemeService;
@@ -83,7 +83,7 @@ export function createGroupPlugin(): IPlugin<{
       const crdt = ctx.services.require("crdt");
       const editor = ctx.services.require("editor");
       const history = ctx.services.require("history");
-      const render = ctx.services.require("render");
+      const render = ctx.services.require("scene");
       const renderOrder = ctx.services.require("renderOrder");
       const selection = ctx.services.require("selection");
       const theme = ctx.services.require("theme");

@@ -5,14 +5,14 @@ import { fxCreateShape2dElement } from "../../core/fn.shape2d";
 import { fxGetWorldPosition } from "../../core/fn.world-position";
 import { fxGetCanvasParentGroupId } from "../../core/fn.canvas-node-semantics";
 import type { EditorService } from "../../new-services/editor/EditorService";
-import type { RenderService } from "../../new-services/render/RenderService";
+import type { SceneService } from "../../new-services/scene/SceneService";
 import { fxGetShape2dNodeType } from "./fn.node";
 
 const ELEMENT_STYLE_ATTR = "vcElementStyle";
 
 export type TPortalToShape2dElement = {
   editor: EditorService;
-  render: RenderService;
+  render: SceneService;
   now: () => number;
 };
 

@@ -5,7 +5,7 @@ import { createComponent, createMemo, createSignal } from "solid-js";
 import { render } from "solid-js/web";
 import { RuntimeToolbar } from "../../components/FloatingCanvasToolbar/RuntimeToolbar";
 import type { EditorService, TEditorTool } from "../../new-services/editor/EditorService";
-import type { RenderService } from "../../new-services/render/RenderService";
+import type { SceneService } from "../../new-services/scene/SceneService";
 import type { SelectionService } from "../../new-services/selection/SelectionService";
 import type { IHooks } from "../../runtime";
 import { CanvasMode } from "../../new-services/selection/CONSTANTS";
@@ -37,7 +37,7 @@ function fnNormalizeShortcut(shortcut: string) {
   return shortcut.trim().toLowerCase();
 }
 
-function txSyncCursor(render: RenderService, selection: SelectionService) {
+function txSyncCursor(render: SceneService, selection: SelectionService) {
   switch (selection.mode) {
     case CanvasMode.HAND:
       render.stage.container().style.cursor = "grab";
@@ -94,7 +94,7 @@ function fnGetShortcutToolId(editor: EditorService, event: KeyboardEvent) {
 }
 
 function mountToolbar(args: {
-  render: RenderService;
+  render: SceneService;
   editor: EditorService;
   onToolSelect: (toolId: string) => void;
 }) {
@@ -142,7 +142,7 @@ function mountToolbar(args: {
  */
 export function createToolbarPlugin(): IPlugin<{
   editor: EditorService;
-  render: RenderService;
+  render: SceneService;
   selection: SelectionService;
 }, IHooks> {
   let toolbarMount: ReturnType<typeof mountToolbar> | null = null;
@@ -152,7 +152,7 @@ export function createToolbarPlugin(): IPlugin<{
     name: "toolbar",
     apply(ctx) {
       const editor = ctx.services.require("editor");
-      const render = ctx.services.require("render");
+      const render = ctx.services.require("scene");
       const selection = ctx.services.require("selection");
 
       editor.registerTool({

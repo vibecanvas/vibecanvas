@@ -1,9 +1,9 @@
 import type { IService, IStartableService, IStoppableService } from "@vibecanvas/runtime";
 import { SyncHook } from "@vibecanvas/tapable";
-import type { RenderService } from "../render/RenderService";
+import type { SceneService } from ".."
 
 export type TCameraServiceArgs = {
-  render: RenderService;
+  scene: SceneService;
 };
 
 /**
@@ -24,7 +24,7 @@ interface TCameraServiceHooks {
 export class CameraService implements IService<TCameraServiceHooks>, IStartableService, IStoppableService {
   readonly name = "camera";
 
-  readonly render: RenderService;
+  readonly scene: SceneService;
   readonly hooks: TCameraServiceHooks = {
     change: new SyncHook(),
   };
@@ -35,7 +35,7 @@ export class CameraService implements IService<TCameraServiceHooks>, IStartableS
   zoom = 1;
 
   constructor(args: TCameraServiceArgs) {
-    this.render = args.render;
+    this.scene = args.scene;
   }
 
   start(): void | Promise<void> {
@@ -87,16 +87,16 @@ export class CameraService implements IService<TCameraServiceHooks>, IStartableS
   }
 
   #updatePosition(position: { x: number; y: number }) {
-    this.render.dynamicLayer.position(position);
-    this.render.staticForegroundLayer.position(position);
-    this.render.dynamicLayer.batchDraw();
-    this.render.staticForegroundLayer.batchDraw();
+    this.scene.dynamicLayer.position(position);
+    this.scene.staticForegroundLayer.position(position);
+    this.scene.dynamicLayer.batchDraw();
+    this.scene.staticForegroundLayer.batchDraw();
   }
 
   #updateZoom(zoom: number) {
-    this.render.dynamicLayer.scale({ x: zoom, y: zoom });
-    this.render.staticForegroundLayer.scale({ x: zoom, y: zoom });
-    this.render.dynamicLayer.batchDraw();
-    this.render.staticForegroundLayer.batchDraw();
+    this.scene.dynamicLayer.scale({ x: zoom, y: zoom });
+    this.scene.staticForegroundLayer.scale({ x: zoom, y: zoom });
+    this.scene.dynamicLayer.batchDraw();
+    this.scene.staticForegroundLayer.batchDraw();
   }
 }

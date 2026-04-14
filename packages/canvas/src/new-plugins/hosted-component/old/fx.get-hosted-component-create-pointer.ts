@@ -1,7 +1,7 @@
-import type { RenderService } from "../../../new-services/render/RenderService";
+import type { SceneService } from "../../../new-services/scene/SceneService";
 
 export type TPortalGetHostedComponentCreatePointer = {
-  render: RenderService;
+  render: SceneService;
 };
 
 export type TArgsGetHostedComponentCreatePointer = {};

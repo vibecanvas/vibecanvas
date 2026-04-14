@@ -1,9 +1,9 @@
 import type { Accessor } from "solid-js";
-import type { RenderService } from "../../new-services/render/RenderService";
+import type { SceneService } from "../../new-services/scene/SceneService";
 
 export type TPortalTxMountRecorderPanel = {
   document: Document;
-  renderService: RenderService;
+  SceneService: SceneService;
   renderUi: (...args: any[]) => () => void;
   createComponentUi: (...args: any[]) => unknown;
   CanvasRecorder: (props: {
@@ -44,7 +44,7 @@ export type TArgsTxMountRecorderPanel = {
 export function txMountRecorderPanel(portal: TPortalTxMountRecorderPanel, args: TArgsTxMountRecorderPanel) {
   const mountElement = portal.document.createElement("div");
   mountElement.className = "absolute inset-0 pointer-events-none";
-  portal.renderService.stage.container().appendChild(mountElement);
+  portal.SceneService.stage.container().appendChild(mountElement);
 
   const disposeRender = portal.renderUi(
     () =>

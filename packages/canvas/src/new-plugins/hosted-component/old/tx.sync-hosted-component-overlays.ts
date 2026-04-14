@@ -1,9 +1,9 @@
 import { fxComputeHostedComponentOverlayFrame } from "./fn.compute-hosted-component-overlay-frame";
-import type { RenderService } from "../../new-services/render/RenderService";
+import type { SceneService } from "../../new-services/scene/SceneService";
 import type Konva from "konva";
 
 export type TPortalSyncHostedComponentOverlays = {
-  render: RenderService;
+  render: SceneService;
 };
 
 export type TArgsSyncHostedComponentOverlays = {
@@ -19,7 +19,7 @@ export type TArgsSyncHostedComponentOverlays = {
   onMountOverlay?: (overlay: HTMLDivElement) => void;
 };
 
-function getHostedComponentNodes(render: RenderService, kind: string, groupKindAttr: string) {
+function getHostedComponentNodes(render: SceneService, kind: string, groupKindAttr: string) {
   return render.staticForegroundLayer.find((candidate: Konva.Node) => {
     return candidate instanceof render.Group && candidate.getAttr(groupKindAttr) === kind;
   }).filter((candidate): candidate is Konva.Group => candidate instanceof render.Group);

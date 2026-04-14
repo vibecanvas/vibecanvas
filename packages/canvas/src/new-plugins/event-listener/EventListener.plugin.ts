@@ -1,12 +1,12 @@
 import type { IPlugin } from "@vibecanvas/runtime";
-import type { RenderService } from "../../new-services/render/RenderService";
+import type { SceneService } from "../../new-services/scene/SceneService";
 import type { IHooks, TElementPointerEvent, TMouseEvent, TPointerEvent, TWheelEvent } from "../../runtime";
 
 function isInsideHostedWidget(target: EventTarget | null) {
   return target instanceof HTMLElement && target.closest('[data-hosted-widget-root="true"]') !== null;
 }
 
-function isTransformerNode(render: RenderService, target: unknown) {
+function isTransformerNode(render: SceneService, target: unknown) {
   if (!(target instanceof render.Node)) {
     return false;
   }
@@ -23,7 +23,7 @@ function isTransformerNode(render: RenderService, target: unknown) {
   return false;
 }
 
-function isInteractionOverlayNode(render: RenderService, target: unknown) {
+function isInteractionOverlayNode(render: SceneService, target: unknown) {
   if (!(target instanceof render.Node)) {
     return false;
   }
@@ -40,7 +40,7 @@ function isInteractionOverlayNode(render: RenderService, target: unknown) {
   return false;
 }
 
-function getElementPointerEvent(render: RenderService, event: TPointerEvent) {
+function getElementPointerEvent(render: SceneService, event: TPointerEvent) {
   const target = event.target;
   if (!(target instanceof render.Group || target instanceof render.Shape)) {
     return null;
@@ -58,13 +58,13 @@ function getElementPointerEvent(render: RenderService, event: TPointerEvent) {
  * Keeps raw input wiring out of feature plugins.
  */
 export function createEventListenerPlugin(): IPlugin<{
-  render: RenderService;
+  render: SceneService;
 }, IHooks> {
   return {
     name: "event-listener",
     apply(ctx) {
       ctx.hooks.init.tap(() => {
-        const render = ctx.services.require("render");
+        const render = ctx.services.require("scene");
         const stage = render.stage;
         const container = stage.container();
 

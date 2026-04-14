@@ -1,7 +1,7 @@
 import Konva from "konva";
 import { describe, expect, test } from "vitest";
 import { HistoryService } from "../../src/new-services/history/HistoryService";
-import { RenderService } from "../../src/new-services/render/RenderService";
+import { SceneService } from "../../src/new-services/scene/SceneService";
 import { RenderOrderService } from "../../src/new-services/render-order/RenderOrderService";
 import { CrdtService } from "../../src/new-services/crdt/CrdtService";
 import { EditorService } from "../../src/new-services/editor/EditorService";
@@ -13,7 +13,7 @@ function setup() {
   ensureResizeObserver();
   const container = createTestContainer({ width: 800, height: 600 }) as HTMLDivElement;
   const docHandle = createMockDocHandle();
-  const render = new RenderService({ container, docHandle });
+  const render = new SceneService({ container, docHandle });
   render.start();
   const crdt = new CrdtService({ docHandle });
   const history = new HistoryService();

@@ -10,11 +10,11 @@ import type { CrdtService } from "../../new-services/crdt/CrdtService";
 import type { EditorService } from "../../new-services/editor/EditorService";
 import type { HistoryService } from "../../new-services/history/HistoryService";
 import type { RenderOrderService } from "../../new-services/render-order/RenderOrderService";
-import type { RenderService } from "../../new-services/render/RenderService";
+import type { SceneService } from "../../new-services/scene/SceneService";
 import type { SelectionService } from "../../new-services/selection/SelectionService";
 import type { IHooks } from "../../runtime";
 import { fxGetCanvasParentGroupId } from "../../core/fn.canvas-node-semantics";
-import { fxFilterSelection } from "../../core/fn.filter-selection";
+import { fxFilterSelection } from "../../core/fx.filter-selection";
 import { fxGetNodeZIndex } from "../../core/fn.get-node-z-index";
 import { fxGetWorldPosition } from "../../core/fn.world-position";
 import { setNodeZIndex } from "../../core/render-order";
@@ -66,20 +66,20 @@ function getFirstSupportedImageFile(files: Iterable<File> | ArrayLike<File> | nu
   });
 }
 
-function screenToWorld(render: RenderService, point: { x: number; y: number }) {
+function screenToWorld(render: SceneService, point: { x: number; y: number }) {
   const transform = render.staticForegroundLayer.getAbsoluteTransform().copy();
   transform.invert();
   return transform.point(point);
 }
 
-function getViewportCenter(render: RenderService) {
+function getViewportCenter(render: SceneService) {
   return screenToWorld(render, {
     x: render.stage.width() / 2,
     y: render.stage.height() / 2,
   });
 }
 
-function getViewportWorldSize(render: RenderService) {
+function getViewportWorldSize(render: SceneService) {
   const worldTopLeft = screenToWorld(render, { x: 0, y: 0 });
   const worldBottomRight = screenToWorld(render, {
     x: render.stage.width(),
@@ -134,7 +134,7 @@ function loadImageIntoNode(node: Konva.Image, source: string | null) {
   image.src = source;
 }
 
-function createImageNode(render: RenderService, element: TElement) {
+function createImageNode(render: SceneService, element: TElement) {
   const data = element.data as TImageData;
   const node = new render.Image({
     id: element.id,
@@ -154,7 +154,7 @@ function createImageNode(render: RenderService, element: TElement) {
   return node;
 }
 
-function updateImageNodeFromElement(render: RenderService, node: Konva.Image, element: TElement) {
+function updateImageNodeFromElement(render: SceneService, node: Konva.Image, element: TElement) {
   return txUpdateImageNodeFromElement({
     setNodeZIndex,
     syncNodeMetadata,
@@ -169,7 +169,7 @@ function updateImageNodeFromElement(render: RenderService, node: Konva.Image, el
   });
 }
 
-function toElement(render: RenderService, editor: EditorService, node: Konva.Image): TElement {
+function toElement(render: SceneService, editor: EditorService, node: Konva.Image): TElement {
   const worldPosition = fxGetWorldPosition({
     absolutePosition: node.absolutePosition(),
     parentTransform: node.getLayer()?.getAbsoluteTransform() ?? null,
@@ -207,7 +207,7 @@ function toElement(render: RenderService, editor: EditorService, node: Konva.Ima
   });
 }
 
-function createPreviewClone(render: RenderService, node: Konva.Image) {
+function createPreviewClone(render: SceneService, node: Konva.Image) {
   const clone = new render.Image({
     ...node.getAttrs(),
     id: crypto.randomUUID(),
@@ -233,7 +233,7 @@ function safeStopDrag(node: Konva.Node) {
   }
 }
 
-function filterSelection(render: RenderService, editor: EditorService, selection: Konva.Node[]) {
+function filterSelection(render: SceneService, editor: EditorService, selection: Konva.Node[]) {
   return fxFilterSelection({
     render,
     editor,
@@ -252,7 +252,7 @@ export function createImagePlugin(): IPlugin<{
   crdt: CrdtService;
   editor: EditorService;
   history: HistoryService;
-  render: RenderService;
+  render: SceneService;
   renderOrder: RenderOrderService;
   selection: SelectionService;
 }, IHooks> {
@@ -265,7 +265,7 @@ export function createImagePlugin(): IPlugin<{
       const crdt = ctx.services.require("crdt");
       const editor = ctx.services.require("editor");
       const history = ctx.services.require("history");
-      const render = ctx.services.require("render");
+      const render = ctx.services.require("scene");
       const renderOrder = ctx.services.require("renderOrder");
       const selection = ctx.services.require("selection");
 

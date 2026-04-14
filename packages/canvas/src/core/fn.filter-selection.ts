@@ -1,11 +1,12 @@
 import type { Group } from "konva/lib/Group";
 import type { Shape, ShapeConfig } from "konva/lib/Shape";
 import type { EditorService } from "../new-services/editor/EditorService";
-import type { RenderService } from "../new-services/render/RenderService";
 import { fxIsCanvasGroupNode } from "./fn.canvas-node-semantics";
+import type Konva from "konva";
+
 
 export type TArgsFilterSelection = {
-  render: RenderService;
+  Group: typeof Konva.Group;
   editor?: EditorService;
   selection: Array<Group | Shape<ShapeConfig>>;
 };
@@ -13,7 +14,7 @@ export type TArgsFilterSelection = {
 export function fxFilterSelection(args: TArgsFilterSelection) {
   let subSelection = args.selection.find((node) => {
     if (!args.editor) {
-      return node.getParent() instanceof args.render.Group;
+      return node.getParent() instanceof args.Group
     }
 
     return fxIsCanvasGroupNode({ editor: args.editor, node: node.getParent() });

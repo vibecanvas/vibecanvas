@@ -2,14 +2,14 @@ import type Konva from "konva";
 import type { TElement } from "@vibecanvas/service-automerge/types/canvas-doc.types";
 import type { CrdtService } from "../../new-services/crdt/CrdtService";
 import type { HistoryService } from "../../new-services/history/HistoryService";
-import type { RenderService } from "../../new-services/render/RenderService";
+import type { SceneService } from "../../new-services/scene/SceneService";
 import type { RenderOrderService } from "../../new-services/render-order/RenderOrderService";
 import type { SelectionService } from "../../new-services/selection/SelectionService";
 
 export type TPortalCreateShape2dCloneDrag = {
   crdt: CrdtService;
   history: HistoryService;
-  render: RenderService;
+  render: SceneService;
   renderOrder: RenderOrderService;
   selection: SelectionService;
   createId: () => string;

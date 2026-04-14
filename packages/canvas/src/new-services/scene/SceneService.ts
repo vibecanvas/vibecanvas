@@ -4,38 +4,23 @@ import type { TCanvasDoc } from "@vibecanvas/service-automerge/types/canvas-doc.
 import { SyncHook } from "@vibecanvas/tapable";
 import Konva from "konva";
 
-export type TRenderServiceArgs = {
+export type TSceneServiceArgs = {
   container: HTMLDivElement;
   docHandle: DocHandle<TCanvasDoc>;
 };
 
-export interface TRenderServiceHooks {
+export interface TSceneServiceHooks {
   resize: SyncHook<[number, number]>;
 }
 
-export class RenderService implements IService<TRenderServiceHooks>, IStartableService, IStoppableService {
-  readonly name = "render";
+export class SceneService implements IService<TSceneServiceHooks>, IStartableService, IStoppableService {
+  readonly name = "scene";
 
   readonly container: HTMLDivElement;
   readonly docHandle: DocHandle<TCanvasDoc>;
-  readonly hooks: TRenderServiceHooks = {
+  readonly hooks: TSceneServiceHooks = {
     resize: new SyncHook(),
   };
-
-  readonly Node = Konva.Node;
-  readonly Shape = Konva.Shape;
-  readonly Text = Konva.Text;
-  readonly Rect = Konva.Rect;
-  readonly Circle = Konva.Circle;
-  readonly Line = Konva.Line;
-  readonly Ellipse = Konva.Ellipse;
-  readonly Path = Konva.Path;
-  readonly Group = Konva.Group;
-  readonly Transformer = Konva.Transformer;
-  readonly Image = Konva.Image;
-  readonly Layer = Konva.Layer;
-  readonly Stage = Konva.Stage;
-  readonly Util = Konva.Util;
 
   stage!: Konva.Stage;
   staticBackgroundLayer!: Konva.Layer;
@@ -45,7 +30,7 @@ export class RenderService implements IService<TRenderServiceHooks>, IStartableS
 
   started = false;
 
-  constructor(args: TRenderServiceArgs) {
+  constructor(args: TSceneServiceArgs) {
     this.container = args.container;
     this.docHandle = args.docHandle;
   }

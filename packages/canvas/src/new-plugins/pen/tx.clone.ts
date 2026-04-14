@@ -2,7 +2,7 @@ import type { TElement } from "@vibecanvas/service-automerge/types/canvas-doc.ty
 import type Konva from "konva";
 import type { CrdtService } from "../../new-services/crdt/CrdtService";
 import type { RenderOrderService } from "../../new-services/render-order/RenderOrderService";
-import type { RenderService } from "../../new-services/render/RenderService";
+import type { SceneService } from "../../new-services/scene/SceneService";
 import type { SelectionService } from "../../new-services/selection/SelectionService";
 import type { ThemeService, TThemeDefinition } from "@vibecanvas/service-theme";
 import type { StrokeOptions } from "perfect-freehand";
@@ -15,7 +15,7 @@ type TGetStroke = (
 
 export type TPortalTxCreatePenPreviewClone = {
   crdt: CrdtService;
-  render: RenderService;
+  render: SceneService;
   renderOrder: RenderOrderService;
   selection: SelectionService;
   theme: ThemeService;

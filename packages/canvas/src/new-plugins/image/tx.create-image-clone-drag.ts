@@ -3,7 +3,7 @@ import type Konva from "konva";
 import type { CrdtService } from "../../new-services/crdt/CrdtService";
 import type { HistoryService } from "../../new-services/history/HistoryService";
 import type { RenderOrderService } from "../../new-services/render-order/RenderOrderService";
-import type { RenderService } from "../../new-services/render/RenderService";
+import type { SceneService } from "../../new-services/scene/SceneService";
 import type { SelectionService } from "../../new-services/selection/SelectionService";
 import { txCloneBackendFileForElement } from "./tx.clone-backend-file-for-element";
 import type { TPortalCloneBackendFileForElement } from "./tx.clone-backend-file-for-element";
@@ -12,7 +12,7 @@ export type TPortalCreateImageCloneDrag = {
   cloneBackendFileForElementPortal: TPortalCloneBackendFileForElement;
   crdt: CrdtService;
   history: HistoryService;
-  render: RenderService;
+  render: SceneService;
   renderOrder: RenderOrderService;
   selection: SelectionService;
   createPreviewClone: (node: Konva.Image) => Konva.Image;

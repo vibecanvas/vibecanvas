@@ -46,7 +46,7 @@ export async function createNewCanvasHarness(args?: {
   await runtime.boot();
   await flushCanvasEffects();
 
-  const render = runtime.services.require("render");
+  const render = runtime.services.require("scene");
 
   return {
     runtime,

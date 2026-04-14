@@ -147,7 +147,7 @@ describe("new Select plugin", () => {
 
     const harness = await createNewCanvasHarness({ docHandle });
     const selection = harness.runtime.services.require("selection");
-    const render = harness.runtime.services.require("render");
+    const render = harness.runtime.services.require("scene");
 
     const nodeA = harness.staticForegroundLayer.findOne<Konva.Image>("#image-a")!;
 

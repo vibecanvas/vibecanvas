@@ -3,14 +3,14 @@ import { fxGetNodeZIndex } from "../../core/fn.get-node-z-index";
 import { fxGetNearestFontSizePreset } from "../../core/fn.text-style";
 import { fxGetWorldPosition } from "../../core/fn.world-position";
 import { fxGetCanvasParentGroupId } from "../../core/fn.canvas-node-semantics";
-import type { RenderService } from "../../new-services/render/RenderService";
+import type { SceneService } from "../../new-services/scene/SceneService";
 import type Konva from "konva";
 
 const ELEMENT_STYLE_ATTR = "vcElementStyle";
 
 export type TPortalToElement = {
   editor: { toGroup(node: Konva.Node): unknown };
-  render: RenderService;
+  render: SceneService;
 };
 
 export type TArgsToElement = {

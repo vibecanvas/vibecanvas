@@ -8,11 +8,11 @@ import { throttle } from "@solid-primitives/scheduled";
 import type { CrdtService } from "../../new-services/crdt/CrdtService";
 import type { EditorService } from "../../new-services/editor/EditorService";
 import type { HistoryService } from "../../new-services/history/HistoryService";
-import type { RenderService } from "../../new-services/render/RenderService";
+import type { SceneService } from "../../new-services/scene/SceneService";
 import type { SelectionService } from "../../new-services/selection/SelectionService";
 import type { IHooks } from "../../runtime";
 import { fxIsCanvasGroupNode } from "../../core/fn.canvas-node-semantics";
-import { fxFilterSelection } from "../../core/fn.filter-selection";
+import { fxFilterSelection } from "../../core/fx.filter-selection";
 import { fxIsShape1dNode } from "../shape1d/fx.node";
 
 const GROUP_ANCHORS = [
@@ -47,7 +47,7 @@ type TTransformDragProxyState = {
 
 function collectSerializableNodes(
   editor: EditorService,
-  render: RenderService,
+  render: SceneService,
   nodes: Konva.Node[],
 ): Array<Group | Shape<ShapeConfig>> {
   return nodes.flatMap((node) => {
@@ -63,7 +63,7 @@ function collectSerializableNodes(
   });
 }
 
-function serializeSelection(editor: EditorService, render: RenderService, nodes: Konva.Node[]) {
+function serializeSelection(editor: EditorService, render: SceneService, nodes: Konva.Node[]) {
   const serializableNodes = collectSerializableNodes(editor, render, nodes);
   return serializableNodes
     .map((node) => editor.toElement(node))
@@ -76,7 +76,7 @@ function applyElements(editor: EditorService, elements: TElement[]) {
   });
 }
 
-function normalizeSelectedGroupTransforms(render: RenderService, nodes: Konva.Node[]) {
+function normalizeSelectedGroupTransforms(render: SceneService, nodes: Konva.Node[]) {
   nodes.forEach((node) => {
     if (!(node instanceof render.Group)) {
       return;
@@ -97,7 +97,7 @@ function refreshSelectedGroups(editor: EditorService, selection: SelectionServic
 }
 
 function hasPenOnlySelection(args: {
-  render: RenderService;
+  render: SceneService;
   editor: EditorService;
   selection: Array<Group | Shape<ShapeConfig>>;
 }) {
@@ -112,7 +112,7 @@ function hasPenOnlySelection(args: {
 }
 
 function isProxyDragCandidate(args: {
-  render: RenderService;
+  render: SceneService;
   editor: EditorService;
   node: Group | Shape<ShapeConfig>;
 }) {
@@ -134,7 +134,7 @@ function isProxyDragCandidate(args: {
 }
 
 function getProxyDragTarget(args: {
-  render: RenderService;
+  render: SceneService;
   editor: EditorService;
   selection: SelectionService;
 }) {
@@ -172,7 +172,7 @@ function getProxyDragLabel(element: TElement) {
   return element.data.type === "pen" ? "drag-pen" : "drag-shape1d";
 }
 
-function getProxyBounds(render: RenderService, node: Shape<ShapeConfig>) {
+function getProxyBounds(render: SceneService, node: Shape<ShapeConfig>) {
   const localRect = node.getClientRect({ relativeTo: node });
   const nodeTransform = node.getAbsoluteTransform();
   const layerInverseTransform = render.staticForegroundLayer.getAbsoluteTransform().copy();
@@ -200,7 +200,7 @@ function syncTransformerTheme(theme: ThemeService, transformer: Konva.Transforme
 }
 
 function syncTransformer(args: {
-  render: RenderService;
+  render: SceneService;
   editor: EditorService;
   selection: SelectionService;
   transformer: Konva.Transformer;
@@ -242,7 +242,7 @@ export function createTransformPlugin(): IPlugin<{
   crdt: CrdtService;
   editor: EditorService;
   history: HistoryService;
-  render: RenderService;
+  render: SceneService;
   selection: SelectionService;
   theme: ThemeService;
 }, IHooks> {
@@ -257,7 +257,7 @@ export function createTransformPlugin(): IPlugin<{
       const crdt = ctx.services.require("crdt");
       const editor = ctx.services.require("editor");
       const history = ctx.services.require("history");
-      const render = ctx.services.require("render");
+      const render = ctx.services.require("scene");
       const selection = ctx.services.require("selection");
       const theme = ctx.services.require("theme");
 

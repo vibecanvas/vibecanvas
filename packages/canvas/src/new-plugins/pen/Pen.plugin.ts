@@ -7,14 +7,14 @@ import type { CrdtService } from "../../new-services/crdt/CrdtService";
 import type { EditorService } from "../../new-services/editor/EditorService";
 import type { HistoryService } from "../../new-services/history/HistoryService";
 import type { RenderOrderService } from "../../new-services/render-order/RenderOrderService";
-import type { RenderService } from "../../new-services/render/RenderService";
+import type { SceneService } from "../../new-services/scene/SceneService";
 import type { SelectionService } from "../../new-services/selection/SelectionService";
 import { resolveThemeColor, type ThemeService } from "@vibecanvas/service-theme";
 import { getStroke } from "perfect-freehand";
 import { throttle } from "@solid-primitives/scheduled";
 import { CanvasMode } from "../../new-services/selection/CONSTANTS";
 import type { IHooks } from "../../runtime";
-import { fxFilterSelection } from "../../core/fn.filter-selection";
+import { fxFilterSelection } from "../../core/fx.filter-selection";
 import { getWorldPosition } from "../../core/node-space";
 import { txDeleteSelection } from "../select/tx.delete-selection";
 import { DEFAULT_FILL, DEFAULT_OPACITY, DEFAULT_STROKE_WIDTH } from "./CONSTANTS";
@@ -24,7 +24,7 @@ import { fxCreatePenDataFromStrokePoints, type TStrokePoint } from "./fn.math";
 import { txSetupPenShapeListeners, txSafeStopPenDrag } from "./tx.listeners";
 import { txCreatePenPathFromElement, txUpdatePenPathFromElement } from "./tx.path";
 
-function getPointerPoint(render: RenderService, event?: MouseEvent | TouchEvent | PointerEvent): TStrokePoint | null {
+function getPointerPoint(render: SceneService, event?: MouseEvent | TouchEvent | PointerEvent): TStrokePoint | null {
   const pointer = render.dynamicLayer.getRelativePointerPosition();
   if (!pointer) {
     return null;
@@ -46,7 +46,7 @@ function getPointerPoint(render: RenderService, event?: MouseEvent | TouchEvent 
   };
 }
 
-function createCreateId(render: RenderService) {
+function createCreateId(render: SceneService) {
   let fallbackId = 0;
 
   return () => {
@@ -69,7 +69,7 @@ export function createPenPlugin(): IPlugin<{
   crdt: CrdtService;
   editor: EditorService;
   history: HistoryService;
-  render: RenderService;
+  render: SceneService;
   renderOrder: RenderOrderService;
   selection: SelectionService;
   theme: ThemeService;
@@ -81,7 +81,7 @@ export function createPenPlugin(): IPlugin<{
       const crdt = ctx.services.require("crdt");
       const editor = ctx.services.require("editor");
       const history = ctx.services.require("history");
-      const render = ctx.services.require("render");
+      const render = ctx.services.require("scene");
       const renderOrder = ctx.services.require("renderOrder");
       const selection = ctx.services.require("selection");
       const theme = ctx.services.require("theme");

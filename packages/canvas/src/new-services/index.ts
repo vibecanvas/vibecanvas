@@ -4,7 +4,7 @@ export * from "./crdt/CrdtService";
 export * from "./editor/EditorService";
 export * from "./history/HistoryService";
 export * from "./logging/LoggingService";
-export * from "./render/RenderService";
+export * from "./scene/SceneService";
 export * from "./render-order/RenderOrderService";
 export * from "./selection/SelectionService";
 export * from "./widget/WidgetService";

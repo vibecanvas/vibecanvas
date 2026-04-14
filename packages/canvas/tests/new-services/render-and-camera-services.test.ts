@@ -1,6 +1,6 @@
 import { describe, expect, test, vi } from "vitest";
 import { CameraService } from "../../src/new-services/camera/CameraService";
-import { RenderService } from "../../src/new-services/render/RenderService";
+import { SceneService } from "../../src/new-services/scene/SceneService";
 import { createMockDocHandle, createTestContainer, ensureResizeObserver } from "../test-setup";
 
 function setContainerSize(container: HTMLDivElement, args: { width: number; height: number }) {
@@ -8,11 +8,11 @@ function setContainerSize(container: HTMLDivElement, args: { width: number; heig
   Object.defineProperty(container, "clientHeight", { configurable: true, value: args.height });
 }
 
-describe("RenderService and CameraService", () => {
-  test("RenderService starts, creates stage+layers, resizes, and stops", () => {
+describe("SceneService and CameraService", () => {
+  test("SceneService starts, creates stage+layers, resizes, and stops", () => {
     ensureResizeObserver();
     const container = createTestContainer({ width: 800, height: 600 }) as HTMLDivElement;
-    const render = new RenderService({
+    const render = new SceneService({
       container,
       docHandle: createMockDocHandle(),
     });
@@ -40,7 +40,7 @@ describe("RenderService and CameraService", () => {
   test("CameraService pans, zooms, clamps, and emits change", () => {
     ensureResizeObserver();
     const container = createTestContainer({ width: 800, height: 600 }) as HTMLDivElement;
-    const render = new RenderService({
+    const render = new SceneService({
       container,
       docHandle: createMockDocHandle(),
     });

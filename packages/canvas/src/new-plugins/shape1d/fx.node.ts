@@ -1,7 +1,7 @@
 import type { TElement, TElementStyle } from "@vibecanvas/service-automerge/types/canvas-doc.types";
 import type Konva from "konva";
 import type { TThemeDefinition } from "@vibecanvas/service-theme";
-import type { RenderService } from "../../new-services/render/RenderService";
+import type { SceneService } from "../../new-services/scene/SceneService";
 import { fxGetWorldPosition } from "../../core/fn.world-position";
 import { fxGetCanvasParentGroupId } from "../../core/fn.canvas-node-semantics";
 import {
@@ -45,7 +45,7 @@ export function fxHasRenderableRuntime(portal: TPortalFxHasRenderableRuntime, ar
     && typeof args.node.sceneFunc?.() === "function";
 }
 
-export type TPortalFxFindShape1dNodeById = { render: RenderService };
+export type TPortalFxFindShape1dNodeById = { render: SceneService };
 export type TArgsFxFindShape1dNodeById = { id: string };
 export function fxFindShape1dNodeById(portal: TPortalFxFindShape1dNodeById, args: TArgsFxFindShape1dNodeById): TShape1dNode | null {
   const candidate = portal.render.staticForegroundLayer.findOne((node: Konva.Node) => {

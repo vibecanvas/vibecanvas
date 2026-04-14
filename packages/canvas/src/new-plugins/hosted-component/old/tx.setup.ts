@@ -10,7 +10,7 @@ import { txSyncHostedComponentOverlays } from "./tx.sync-hosted-component-overla
 import type { CrdtService } from "../../../new-services/crdt/CrdtService";
 import type { EditorService, TEditorToolIcon } from "../../../new-services/editor/EditorService";
 import type { RenderOrderService } from "../../../new-services/render-order/RenderOrderService";
-import type { RenderService } from "../../../new-services/render/RenderService";
+import type { SceneService } from "../../../new-services/scene/SceneService";
 import type { SelectionService } from "../../../new-services/selection/SelectionService";
 import type { IHooks } from "../../../runtime";
 
@@ -67,7 +67,7 @@ export type TPortalSetupHostedComponent = {
   icon: TEditorToolIcon;
   now: () => number;
   createId: () => string;
-  render: RenderService;
+  render: SceneService;
   arrow: {
     html: typeof import("@arrow-js/core").html;
     render: typeof import("@arrow-js/framework").render;
@@ -92,7 +92,7 @@ function getHostedBackgroundColor(element: THostedComponentElement) {
     : (element.style.backgroundColor ?? DEFAULT_BACKGROUND);
 }
 
-function findHostedComponentGroup(render: RenderService, node: Konva.Node) {
+function findHostedComponentGroup(render: SceneService, node: Konva.Node) {
   if (node instanceof render.Group && node.getAttr(GROUP_KIND_ATTR) === TOOL_ID) {
     return node;
   }
@@ -109,7 +109,7 @@ function findChild<TNode extends Konva.Node>(group: Konva.Group, predicate: (nod
   return group.getChildren().find(predicate) as TNode | undefined;
 }
 
-function createHostedComponentNode(render: RenderService, element: TElement) {
+function createHostedComponentNode(render: SceneService, element: TElement) {
   if (!isHostedComponentElement(element)) {
     return null;
   }
@@ -252,7 +252,7 @@ function createHostedComponentNode(render: RenderService, element: TElement) {
   return group;
 }
 
-function updateHostedComponentNode(render: RenderService, element: TElement) {
+function updateHostedComponentNode(render: SceneService, element: TElement) {
   if (!isHostedComponentElement(element)) {
     return false;
   }

@@ -1,12 +1,12 @@
 import type Konva from "konva";
 import type { Node } from "konva/lib/Node";
 import type { Shape, ShapeConfig } from "konva/lib/Shape";
-import type { RenderService } from "../../new-services/render/RenderService";
+import type { SceneService } from "../../new-services/scene/SceneService";
 
 export type TSceneNode = Konva.Group | Shape<ShapeConfig>;
 
 export type TArgsIsSceneNode = {
-  render: RenderService;
+  render: SceneService;
   node: Node | null | undefined;
 };
 
@@ -15,7 +15,7 @@ export function fxIsSceneNode(args: TArgsIsSceneNode): args is TArgsIsSceneNode 
 }
 
 export type TArgsIsSceneParent = {
-  render: RenderService;
+  render: SceneService;
   node: Node | null | undefined;
 };
 
@@ -24,7 +24,7 @@ export function fxIsSceneParent(args: TArgsIsSceneParent): args is TArgsIsSceneP
 }
 
 export type TArgsFindSceneNodeById = {
-  render: RenderService;
+  render: SceneService;
   id: string;
 };
 
@@ -38,7 +38,7 @@ export function fxFindSceneNodeById(args: TArgsFindSceneNodeById) {
 
 export type TArgsGetGroupChildren = {
   group: Konva.Group;
-  render: RenderService;
+  render: SceneService;
 };
 
 export function fxGetGroupChildren(args: TArgsGetGroupChildren) {
@@ -48,7 +48,7 @@ export function fxGetGroupChildren(args: TArgsGetGroupChildren) {
 }
 
 export type TArgsGetSelectionGroupParent = {
-  render: RenderService;
+  render: SceneService;
   selection: TSceneNode[];
 };
 

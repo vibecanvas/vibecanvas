@@ -5,7 +5,7 @@ import { fxIsCanvasGroupNode } from "../../core/fn.canvas-node-semantics";
 import { ATTACHED_TEXT_NAME } from "../shape2d/fx.attached-text";
 import type { CrdtService } from "../../new-services/crdt/CrdtService";
 import type { EditorService } from "../../new-services/editor/EditorService";
-import type { RenderService } from "../../new-services/render/RenderService";
+import type { SceneService } from "../../new-services/scene/SceneService";
 import type { SelectionService } from "../../new-services/selection/SelectionService";
 import type { IHooks } from "../../runtime";
 
@@ -35,7 +35,7 @@ function captureSceneState(selection: SelectionService, editor: EditorService): 
   };
 }
 
-function findSceneNodeById(render: RenderService, id: string | null): TSceneNode | null {
+function findSceneNodeById(render: SceneService, id: string | null): TSceneNode | null {
   if (!id) {
     return null;
   }
@@ -51,7 +51,7 @@ function findSceneNodeById(render: RenderService, id: string | null): TSceneNode
   return node;
 }
 
-function restoreSceneState(render: RenderService, selection: SelectionService, editor: EditorService, snapshot: TSceneStateSnapshot) {
+function restoreSceneState(render: SceneService, selection: SelectionService, editor: EditorService, snapshot: TSceneStateSnapshot) {
   const nextSelection = snapshot.selectionIds
     .map((id) => findSceneNodeById(render, id))
     .filter((node): node is TSceneNode => node !== null);
@@ -65,7 +65,7 @@ function restoreSceneState(render: RenderService, selection: SelectionService, e
 function loadGroupsTopDown(args: {
   groups: TGroup[];
   editor: EditorService;
-  render: RenderService;
+  render: SceneService;
 }) {
   const groupsById = new Map(args.groups.map((group) => [group.id, group]));
   const remainingGroupIds = new Set(args.groups.map((group) => group.id));
@@ -108,7 +108,7 @@ function loadGroupsTopDown(args: {
 function loadElementsTopDown(args: {
   elements: TElement[];
   editor: EditorService;
-  render: RenderService;
+  render: SceneService;
 }) {
   const groupsById = new Map(
     args.render.staticForegroundLayer.find((candidate: Konva.Node) => {
@@ -141,7 +141,7 @@ function loadElementsTopDown(args: {
   return invalidElementIds;
 }
 
-function sortSceneTopDown(render: RenderService, editor: EditorService, parent: Konva.Layer | Konva.Group) {
+function sortSceneTopDown(render: SceneService, editor: EditorService, parent: Konva.Layer | Konva.Group) {
   parent.getChildren()
     .filter((candidate): candidate is TSceneNode => candidate instanceof render.Group || candidate instanceof render.Shape)
     .slice()
@@ -159,13 +159,13 @@ function sortSceneTopDown(render: RenderService, editor: EditorService, parent: 
     });
 }
 
-function isAttachedTextNode(render: RenderService, node: Konva.Node): node is Konva.Text {
+function isAttachedTextNode(render: SceneService, node: Konva.Node): node is Konva.Text {
   return node instanceof render.Text
     && node.name() === ATTACHED_TEXT_NAME
     && typeof node.getAttr("vcContainerId") === "string";
 }
 
-function keepAttachedTextAboveHosts(render: RenderService, editor: EditorService, parent: Konva.Layer | Konva.Group) {
+function keepAttachedTextAboveHosts(render: SceneService, editor: EditorService, parent: Konva.Layer | Konva.Group) {
   const orderedChildren = parent.getChildren()
     .filter((candidate): candidate is TSceneNode => candidate instanceof render.Group || candidate instanceof render.Shape);
   const attachedTextByHostId = new Map<string, Konva.Text[]>();
@@ -210,7 +210,7 @@ function keepAttachedTextAboveHosts(render: RenderService, editor: EditorService
   });
 }
 
-function loadCanvas(crdt: CrdtService, editor: EditorService, render: RenderService) {
+function loadCanvas(crdt: CrdtService, editor: EditorService, render: SceneService) {
   const doc = crdt.doc();
   const groups = Object.values(doc.groups).sort(compareByPersistedOrder);
   const elements = Object.values(doc.elements).sort(compareByPersistedOrder);
@@ -231,7 +231,7 @@ function loadCanvas(crdt: CrdtService, editor: EditorService, render: RenderServ
 export function createSceneHydratorPlugin(): IPlugin<{
   crdt: CrdtService;
   editor: EditorService;
-  render: RenderService;
+  render: SceneService;
   selection: SelectionService;
 }, IHooks> {
   return {
@@ -239,7 +239,7 @@ export function createSceneHydratorPlugin(): IPlugin<{
     apply(ctx) {
       const crdt = ctx.services.require("crdt");
       const editor = ctx.services.require("editor");
-      const render = ctx.services.require("render");
+      const render = ctx.services.require("scene");
       const selection = ctx.services.require("selection");
 
       let destroyed = false;

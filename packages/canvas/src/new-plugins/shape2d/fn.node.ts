@@ -1,11 +1,11 @@
 import type Konva from "konva";
-import type { RenderService } from "../../new-services/render/RenderService";
+import type { SceneService } from "../../new-services/scene/SceneService";
 import type { TShape2dElementType } from "../../core/fn.shape2d";
 
 export type TShape2dNode = Konva.Rect | Konva.Line | Konva.Ellipse;
 
 export function fxGetShape2dNodeType(args: {
-  render: RenderService;
+  render: SceneService;
   node: Konva.Node;
 }): TShape2dElementType | null {
   const type = args.node.getAttr("vcShape2dType");

@@ -2,11 +2,11 @@ import type { TElement } from "@vibecanvas/service-automerge/types/canvas-doc.ty
 import type Konva from "konva";
 import { fxHostedComponentSnapshotToElement } from "./fn.hosted-component-snapshot-to-element";
 import { fxGetCanvasParentGroupId } from "../../../core/fn.canvas-node-semantics";
-import type { RenderService } from "../../../new-services/render/RenderService";
+import type { SceneService } from "../../../new-services/scene/SceneService";
 
 export type TPortalToHostedComponentElement = {
   editor: { toGroup(node: Konva.Node): unknown };
-  render: RenderService;
+  render: SceneService;
 };
 
 export type TArgsToHostedComponentElement = {
@@ -23,7 +23,7 @@ export type TArgsToHostedComponentElement = {
   now: () => number;
 };
 
-function findHostedComponentGroup(render: RenderService, node: Konva.Node, groupKindAttr: string, kind: string) {
+function findHostedComponentGroup(render: SceneService, node: Konva.Node, groupKindAttr: string, kind: string) {
   if (node instanceof render.Group && node.getAttr(groupKindAttr) === kind) {
     return node;
   }

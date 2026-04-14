@@ -1,13 +1,13 @@
 import type Konva from "konva";
 import type { TElement } from "@vibecanvas/service-automerge/types/canvas-doc.types";
 import { fxGetDiamondPoints } from "../../core/fn.shape2d";
-import type { RenderService } from "../../new-services/render/RenderService";
+import type { SceneService } from "../../new-services/scene/SceneService";
 import type { ThemeService } from "@vibecanvas/service-theme";
 
 const ELEMENT_STYLE_ATTR = "vcElementStyle";
 
 export type TPortalCreateShape2dNode = {
-  render: RenderService;
+  render: SceneService;
   theme: ThemeService;
   setNodeZIndex: (node: Konva.Shape, zIndex: string) => void;
 };

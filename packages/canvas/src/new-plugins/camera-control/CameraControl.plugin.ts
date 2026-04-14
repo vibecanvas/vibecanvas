@@ -1,6 +1,6 @@
 import type { IPlugin } from "@vibecanvas/runtime";
 import type { CameraService } from "../../new-services/camera/CameraService";
-import type { RenderService } from "../../new-services/render/RenderService";
+import type { SceneService } from "../../new-services/scene/SceneService";
 import type { IHooks } from "../../runtime";
 import { fxGetHandLayerStyle } from "./fn.get-hand-layer-style";
 import { fxGetPointerDelta } from "./fn.get-pointer-delta";
@@ -14,7 +14,7 @@ const ZOOM_STEP = 1.03;
  */
 export function createCameraControlPlugin(): IPlugin<{
   camera: CameraService;
-  render: RenderService;
+  render: SceneService;
 }, IHooks> {
   let handLayer: HTMLDivElement | null = null;
   let isHandDragging = false;
@@ -69,7 +69,7 @@ export function createCameraControlPlugin(): IPlugin<{
     name: "camera-control",
     apply(ctx) {
       const camera = ctx.services.require("camera");
-      const render = ctx.services.require("render");
+      const render = ctx.services.require("scene");
 
       ctx.hooks.init.tap(() => {
         handLayer = document.createElement("div");

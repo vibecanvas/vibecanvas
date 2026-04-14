@@ -2,14 +2,14 @@ import type { TElement, TImageData } from "@vibecanvas/service-automerge/types/c
 import type Konva from "konva";
 import type { TCloneImage } from "../../services/canvas/interface";
 import type { CrdtService } from "../../new-services/crdt/CrdtService";
-import type { RenderService } from "../../new-services/render/RenderService";
+import type { SceneService } from "../../new-services/scene/SceneService";
 import { txUpdateImageNodeFromElement } from "./tx.update-image-node-from-element";
 import type { TPortalUpdateImageNodeFromElement } from "./tx.update-image-node-from-element";
 
 export type TPortalCloneBackendFileForElement = {
   cloneImage?: TCloneImage;
   crdt: CrdtService;
-  render: RenderService;
+  render: SceneService;
   notification?: {
     showError(title: string, description?: string): void;
   };

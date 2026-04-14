@@ -3,10 +3,10 @@ import { fxGetNearestFontSizePreset } from "../../core/fn.text-style";
 import { fxGetAbsolutePositionFromWorldPosition } from "../../core/fn.world-position";
 import type { TElement, TTextData } from "@vibecanvas/service-automerge/types/canvas-doc.types";
 import type Konva from "konva";
-import type { RenderService } from "../../new-services/render/RenderService";
+import type { SceneService } from "../../new-services/scene/SceneService";
 
 export type TPortalUpdateTextNodeFromElement = {
-  render: RenderService;
+  render: SceneService;
   theme: ThemeService;
 };
 

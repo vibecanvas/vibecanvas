@@ -2,11 +2,11 @@ import type { TElement } from "@vibecanvas/service-automerge/types/canvas-doc.ty
 import type Konva from "konva";
 import type { Node } from "konva/lib/Node";
 import type { EditorService } from "../../new-services/editor/EditorService";
-import type { RenderService } from "../../new-services/render/RenderService";
+import type { SceneService } from "../../new-services/scene/SceneService";
 
 export type TArgsSerializeSubtreeElements = {
   editor: EditorService;
-  render: RenderService;
+  render: SceneService;
   group: Konva.Group;
 };
 

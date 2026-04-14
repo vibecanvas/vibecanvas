@@ -1,7 +1,7 @@
 import type { TElement } from "@vibecanvas/service-automerge/types/canvas-doc.types";
 import type { StrokeOptions } from "perfect-freehand";
 import type { ThemeService, TThemeDefinition } from "@vibecanvas/service-theme";
-import type { RenderService } from "../../new-services/render/RenderService";
+import type { SceneService } from "../../new-services/scene/SceneService";
 import { fxGetStrokePathFromPenData } from "./fn.math";
 import { fxGetPenAbsolutePosition } from "./fx.path";
 import { fxGetPenStrokeWidthFromStyle } from "./fn.style";
@@ -19,7 +19,7 @@ type TGetStroke = (
 ) => number[][];
 
 export type TPortalTxCreatePenPathFromElement = {
-  render: RenderService;
+  render: SceneService;
   theme: ThemeService;
   getStroke: TGetStroke;
   resolveThemeColor: (theme: string | TThemeDefinition, value: string | undefined, fallback?: string | undefined) => string | undefined;
@@ -33,7 +33,7 @@ function getPenFillFromStyle(portal: TPortalTxCreatePenPathFromElement, element:
   return portal.resolveThemeColor(portal.theme.getTheme(), rawFill, DEFAULT_FILL) ?? DEFAULT_FILL;
 }
 
-function syncPenMetadata(node: InstanceType<RenderService["Path"]>, element: TElement) {
+function syncPenMetadata(node: InstanceType<SceneService["Path"]>, element: TElement) {
   node.setAttr(ELEMENT_DATA_ATTR, structuredClone(element.data));
   node.setAttr(ELEMENT_STYLE_ATTR, structuredClone(element.style));
   node.setAttr(PEN_STROKE_WIDTH_ATTR, fxGetPenStrokeWidthFromStyle({ style: element.style }));
@@ -69,7 +69,7 @@ export function txCreatePenPathFromElement(portal: TPortalTxCreatePenPathFromEle
 
 export type TPortalTxUpdatePenPathFromElement = TPortalTxCreatePenPathFromElement;
 export type TArgsTxUpdatePenPathFromElement = {
-  node: InstanceType<RenderService["Path"]>;
+  node: InstanceType<SceneService["Path"]>;
   element: TElement;
 };
 

@@ -1,7 +1,7 @@
 import type { ThemeService } from "@vibecanvas/service-theme";
 import type Konva from "konva";
 import type { EditorService } from "../../new-services/editor/EditorService";
-import type { RenderService } from "../../new-services/render/RenderService";
+import type { SceneService } from "../../new-services/scene/SceneService";
 import type { SelectionService } from "../../new-services/selection/SelectionService";
 import { fxIsCanvasGroupNode } from "../../core/fn.canvas-node-semantics";
 import { fxCreateGroupBoundary } from "./fx.create-group-boundary";
@@ -10,7 +10,7 @@ export type TGroupBoundary = ReturnType<typeof fxCreateGroupBoundary>;
 
 export type TPortalSyncGroupBoundaries = {
   editor: EditorService;
-  render: RenderService;
+  render: SceneService;
   selection: SelectionService;
   theme: ThemeService;
   boundaries: Map<string, TGroupBoundary>;

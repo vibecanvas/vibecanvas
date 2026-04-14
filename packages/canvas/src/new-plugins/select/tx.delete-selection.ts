@@ -6,7 +6,7 @@ import type { CrdtService } from "../../new-services/crdt/CrdtService";
 import type { EditorService } from "../../new-services/editor/EditorService";
 import type { HistoryService } from "../../new-services/history/HistoryService";
 import type { RenderOrderService } from "../../new-services/render-order/RenderOrderService";
-import type { RenderService } from "../../new-services/render/RenderService";
+import type { SceneService } from "../../new-services/scene/SceneService";
 import type { SelectionService } from "../../new-services/selection/SelectionService";
 import { fxGetCanvasNodeKind, fxIsCanvasGroupNode } from "../../core/fn.canvas-node-semantics";
 
@@ -14,7 +14,7 @@ export type TPortalDeleteSelection = {
   crdt: CrdtService;
   editor: EditorService;
   history: HistoryService;
-  render: RenderService;
+  render: SceneService;
   renderOrder: RenderOrderService;
   selection: SelectionService;
 };
@@ -39,11 +39,11 @@ type TCollectedDeleteData = {
   destroyNodes: TSceneNode[];
 };
 
-function isSceneNode(render: RenderService, node: Node | null | undefined): node is TSceneNode {
+function isSceneNode(render: SceneService, node: Node | null | undefined): node is TSceneNode {
   return Boolean(node) && (node instanceof render.Group || node instanceof render.Shape);
 }
 
-function isSceneParent(render: RenderService, node: Node | null | undefined): node is Group | InstanceType<RenderService["Layer"]> {
+function isSceneParent(render: SceneService, node: Node | null | undefined): node is Group | InstanceType<SceneService["Layer"]> {
   return Boolean(node) && (node instanceof render.Group || node instanceof render.Layer);
 }
 
@@ -73,7 +73,7 @@ function collapseSelectionToDeleteRoots(selection: TSceneNode[]) {
   });
 }
 
-function findSceneNodeById(render: RenderService, id: string | null) {
+function findSceneNodeById(render: SceneService, id: string | null) {
   if (!id) {
     return null;
   }
@@ -85,7 +85,7 @@ function findSceneNodeById(render: RenderService, id: string | null) {
   return isSceneNode(render, node) ? node : null;
 }
 
-function sortSceneTopDown(portal: TPortalDeleteSelection, parent: Group | InstanceType<RenderService["Layer"]>) {
+function sortSceneTopDown(portal: TPortalDeleteSelection, parent: Group | InstanceType<SceneService["Layer"]>) {
   portal.renderOrder.sortChildren(parent);
 
   parent.getChildren().forEach((child) => {
