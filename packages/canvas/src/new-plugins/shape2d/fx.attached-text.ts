@@ -1,4 +1,5 @@
 import { txEnterEditMode } from "../text/tx.enter-edit-mode";
+import { layoutWithLines, prepareWithSegments } from "@chenglou/pretext";
 import type { TElement, TTextData } from "@vibecanvas/service-automerge/types/canvas-doc.types";
 import type Konva from "konva";
 import type { ThemeService } from "@vibecanvas/service-theme";
@@ -9,7 +10,7 @@ import type { HistoryService } from "../../new-services/history/HistoryService";
 import type { RenderOrderService } from "../../new-services/render-order/RenderOrderService";
 import type { SceneService } from "../../new-services/scene/SceneService";
 import type { SelectionService } from "../../new-services/selection/SelectionService";
-import { fxGetCanvasParentGroupId, fxIsCanvasGroupNode } from "../../core/fn.canvas-node-semantics";
+import { fxGetCanvasParentGroupId, fxIsCanvasGroupNode } from "../../core/fx.canvas-node-semantics";
 
 export const ATTACHED_TEXT_NAME = "attached-text";
 
@@ -53,7 +54,7 @@ function createAttachedTextElement(portal: TPortalAttachedText, shapeNode: Konva
     rotation: bounds.rotation,
     bindings: [],
     locked: false,
-    parentGroupId: fxGetCanvasParentGroupId({ editor: portal.editor, node: shapeNode }),
+    parentGroupId: fxGetCanvasParentGroupId({}, { editor: portal.editor, node: shapeNode }),
     zIndex: "",
     createdAt: now,
     updatedAt: now,
@@ -115,7 +116,7 @@ export function fxCreateAttachedTextNode(portal: TPortalAttachedText, shapeNode:
 
   fxSyncAttachedTextNodeToShape(portal, shapeNode, node);
   const parentNode = shapeNode.getParent();
-  const parent = parentNode instanceof portal.render.Layer || fxIsCanvasGroupNode({ editor: portal.editor, node: parentNode })
+  const parent = parentNode instanceof portal.render.Layer || fxIsCanvasGroupNode({}, { editor: portal.editor, node: parentNode })
     ? parentNode
     : portal.render.staticForegroundLayer;
   const parentContainer = parent as Konva.Layer | Konva.Group;
@@ -172,6 +173,7 @@ export function fxOpenAttachedTextEditMode(portal: TPortalAttachedText, shapeNod
     render: portal.render,
     selection: portal.selection,
     theme: portal.theme,
+    pretext: { layoutWithLines, prepareWithSegments },
   }, {
     freeTextName: ATTACHED_TEXT_NAME,
     node: textNode,

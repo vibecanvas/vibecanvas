@@ -2,7 +2,7 @@ import { throttle } from "@solid-primitives/scheduled";
 import type { IPlugin } from "@vibecanvas/runtime";
 import type { TElement, TImageData } from "@vibecanvas/service-automerge/types/canvas-doc.types";
 import ImageIcon from "lucide-static/icons/image.svg?raw";
-import type Konva from "konva";
+import Konva from "konva";
 import type { TCloneImage, TDeleteImage, TUploadImage } from "../../services/canvas/interface";
 import { getImageDimensions, getImageSource, getSupportedImageFormat, parseDataUrl } from "../../utils/image";
 import type { ContextMenuService } from "../../new-services/context-menu/ContextMenuService";
@@ -13,11 +13,11 @@ import type { RenderOrderService } from "../../new-services/render-order/RenderO
 import type { SceneService } from "../../new-services/scene/SceneService";
 import type { SelectionService } from "../../new-services/selection/SelectionService";
 import type { IHooks } from "../../runtime";
-import { fxGetCanvasParentGroupId } from "../../core/fn.canvas-node-semantics";
+import { fxGetCanvasParentGroupId } from "../../core/fx.canvas-node-semantics";
 import { fxFilterSelection } from "../../core/fx.filter-selection";
-import { fxGetNodeZIndex } from "../../core/fn.get-node-z-index";
-import { fxGetWorldPosition } from "../../core/fn.world-position";
-import { setNodeZIndex } from "../../core/render-order";
+import { fnGetNodeZIndex } from "../../core/fn.get-node-z-index";
+import { fnGetWorldPosition } from "../../core/fn.world-position";
+import { txSetNodeZIndex } from "../../core/tx.set-node-z-index";
 import { fxToImageElement } from "./fn.to-image-element";
 import { txCloneBackendFileForElement } from "./tx.clone-backend-file-for-element";
 import { txInsertImage } from "./tx.insert-image";
@@ -30,6 +30,8 @@ const IMAGE_BASE64_ATTR = "vcImageBase64";
 const IMAGE_CROP_ATTR = "vcImageCrop";
 const IMAGE_SOURCE_ATTR = "vcImageSource";
 const ELEMENT_CREATED_AT_ATTR = "vcElementCreatedAt";
+
+const setNodeZIndex = (node: Konva.Group | Konva.Shape, zIndex: string) => txSetNodeZIndex({}, { node, zIndex });
 
 function getImageCapabilities(config: {
   image?: {
@@ -170,7 +172,7 @@ function updateImageNodeFromElement(render: SceneService, node: Konva.Image, ele
 }
 
 function toElement(render: SceneService, editor: EditorService, node: Konva.Image): TElement {
-  const worldPosition = fxGetWorldPosition({
+  const worldPosition = fnGetWorldPosition({
     absolutePosition: node.absolutePosition(),
     parentTransform: node.getLayer()?.getAbsoluteTransform() ?? null,
   });
@@ -178,7 +180,7 @@ function toElement(render: SceneService, editor: EditorService, node: Konva.Imag
   const layer = node.getLayer();
   const layerScaleX = layer?.scaleX() ?? 1;
   const layerScaleY = layer?.scaleY() ?? 1;
-  const parentGroupId = fxGetCanvasParentGroupId({ editor, node });
+  const parentGroupId = fxGetCanvasParentGroupId({}, { editor, node });
 
   const crop = structuredClone(node.getAttr(IMAGE_CROP_ATTR) ?? {
     x: 0,
@@ -197,7 +199,7 @@ function toElement(render: SceneService, editor: EditorService, node: Konva.Imag
     createdAt: Number(node.getAttr(ELEMENT_CREATED_AT_ATTR) ?? Date.now()),
     updatedAt: Date.now(),
     parentGroupId,
-    zIndex: fxGetNodeZIndex(node),
+    zIndex: fnGetNodeZIndex({}, { node }),
     opacity: node.opacity(),
     url: (node.getAttr(IMAGE_URL_ATTR) as string | null) ?? null,
     base64: (node.getAttr(IMAGE_BASE64_ATTR) as string | null) ?? null,
@@ -235,7 +237,8 @@ function safeStopDrag(node: Konva.Node) {
 
 function filterSelection(render: SceneService, editor: EditorService, selection: Konva.Node[]) {
   return fxFilterSelection({
-    render,
+    Konva,
+  }, {
     editor,
     selection: selection.filter((node): node is Konva.Group | Konva.Shape => {
       return node instanceof render.Group || node instanceof render.Shape;

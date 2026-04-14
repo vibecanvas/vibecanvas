@@ -3,11 +3,11 @@ import type { IPlugin } from "@vibecanvas/runtime";
 import type { TElement } from "@vibecanvas/service-automerge/types/canvas-doc.types";
 import Circle from "lucide-static/icons/circle.svg?raw";
 import Diamond from "lucide-static/icons/diamond.svg?raw";
-import type Konva from "konva";
+import Konva from "konva";
 import Square from "lucide-static/icons/square.svg?raw";
-import { fxCreateShape2dElement, fxGetShape2dDraftBounds, fxGetShape2dElementTypeFromTool, fxIsShape2dElementType, fxIsShape2dToolId, type TShape2dToolId } from "../../core/fn.shape2d";
+import { fnCreateShape2dElement, fnGetShape2dDraftBounds, fnGetShape2dElementTypeFromTool, fnIsShape2dElementType, fnIsShape2dToolId, type TShape2dToolId } from "../../core/fn.shape2d";
 import { fxFilterSelection } from "../../core/fx.filter-selection";
-import { setNodeZIndex } from "../../core/render-order";
+import { txSetNodeZIndex } from "../../core/tx.set-node-z-index";
 import type { ContextMenuService } from "../../new-services/context-menu/ContextMenuService";
 import type { CrdtService } from "../../new-services/crdt/CrdtService";
 import type { EditorService } from "../../new-services/editor/EditorService";
@@ -26,6 +26,8 @@ import { fxGetShape2dNodeType } from "./fn.node";
 import { txCreateShape2dCloneDrag } from "./tx.create-clone-drag";
 import { txSetupShape2dNode } from "./tx.setup-node";
 import { txUpdateShape2dNodeFromElement } from "./tx.update-node-from-element";
+
+const setNodeZIndex = (node: Konva.Group | Konva.Shape, zIndex: string) => txSetNodeZIndex({}, { node, zIndex });
 
 function createCreateId(render: SceneService) {
   let fallbackId = 0;
@@ -58,7 +60,7 @@ function isShape2dTextHostNode(render: SceneService, node: Konva.Node | null | u
 }
 
 function getFocusedShape2dTextHost(render: SceneService, editor: EditorService, selection: SelectionService) {
-  const filtered = fxFilterSelection({ render, editor, selection: selection.selection });
+  const filtered = fxFilterSelection({ Konva }, { editor, selection: selection.selection });
   if (filtered.length !== 1) {
     return null;
   }
@@ -258,7 +260,8 @@ export function createShape2dPlugin(): IPlugin<{
           },
           filterSelection: (nodes) => {
             return fxFilterSelection({
-              render,
+              Konva,
+            }, {
               editor,
               selection: nodes.filter((candidate): candidate is Konva.Group | Konva.Shape => {
                 return candidate instanceof render.Group || candidate instanceof render.Shape;
@@ -367,7 +370,7 @@ export function createShape2dPlugin(): IPlugin<{
       });
 
       contextMenu.registerProvider("shape2d", ({ targetElement, activeSelection }) => {
-        if (!targetElement || !fxIsShape2dElementType(targetElement.data.type)) {
+        if (!targetElement || !fnIsShape2dElementType(targetElement.data.type)) {
           return [];
         }
 
@@ -412,7 +415,7 @@ export function createShape2dPlugin(): IPlugin<{
       });
 
       editor.registerCreateShapeFromTElement("shape2d", (element) => {
-        if (!fxIsShape2dElementType(element.data.type)) {
+        if (!fnIsShape2dElementType(element.data.type)) {
           return null;
         }
 
@@ -434,7 +437,7 @@ export function createShape2dPlugin(): IPlugin<{
       });
 
       editor.registerUpdateShapeFromTElement("shape2d", (element) => {
-        if (!fxIsShape2dElementType(element.data.type)) {
+        if (!fnIsShape2dElementType(element.data.type)) {
           return false;
         }
 
@@ -469,7 +472,7 @@ export function createShape2dPlugin(): IPlugin<{
           destroyPreview();
         }
 
-        if (fxIsShape2dToolId(toolId)) {
+        if (fnIsShape2dToolId(toolId)) {
           selection.clear();
         }
       });
@@ -479,7 +482,7 @@ export function createShape2dPlugin(): IPlugin<{
           return;
         }
 
-        if (!fxIsShape2dToolId(editor.activeToolId)) {
+        if (!fnIsShape2dToolId(editor.activeToolId)) {
           return;
         }
 
@@ -493,9 +496,9 @@ export function createShape2dPlugin(): IPlugin<{
         }
 
         const timestamp = now();
-        const element = fxCreateShape2dElement({
+        const element = fnCreateShape2dElement({
           id: createId(),
-          type: fxGetShape2dElementTypeFromTool(editor.activeToolId),
+          type: fnGetShape2dElementTypeFromTool(editor.activeToolId),
           x: pointer.x,
           y: pointer.y,
           rotation: 0,
@@ -536,15 +539,15 @@ export function createShape2dPlugin(): IPlugin<{
         }
 
         const currentElement = toElement(previewNode);
-        const bounds = fxGetShape2dDraftBounds({
+        const bounds = fnGetShape2dDraftBounds({
           origin: previewOrigin,
           point: pointer,
           preserveRatio: event.evt.shiftKey,
         });
         const timestamp = now();
-        const nextElement = fxCreateShape2dElement({
+        const nextElement = fnCreateShape2dElement({
           id: previewNode.id(),
-          type: fxGetShape2dElementTypeFromTool(previewToolId),
+          type: fnGetShape2dElementTypeFromTool(previewToolId),
           x: bounds.x,
           y: bounds.y,
           rotation: 0,
@@ -672,7 +675,7 @@ export function createShape2dPlugin(): IPlugin<{
           }
 
           const element = editor.toElement(candidate);
-          if (!element || !fxIsShape2dElementType(element.data.type)) {
+          if (!element || !fnIsShape2dElementType(element.data.type)) {
             return;
           }
 

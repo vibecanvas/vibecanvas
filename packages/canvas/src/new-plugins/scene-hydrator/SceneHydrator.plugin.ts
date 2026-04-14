@@ -1,7 +1,7 @@
 import type { IPlugin } from "@vibecanvas/runtime";
 import type { TElement, TGroup } from "@vibecanvas/service-automerge/types/canvas-doc.types";
 import type Konva from "konva";
-import { fxIsCanvasGroupNode } from "../../core/fn.canvas-node-semantics";
+import { fxIsCanvasGroupNode } from "../../core/fx.canvas-node-semantics";
 import { ATTACHED_TEXT_NAME } from "../shape2d/fx.attached-text";
 import type { CrdtService } from "../../new-services/crdt/CrdtService";
 import type { EditorService } from "../../new-services/editor/EditorService";
@@ -112,7 +112,7 @@ function loadElementsTopDown(args: {
 }) {
   const groupsById = new Map(
     args.render.staticForegroundLayer.find((candidate: Konva.Node) => {
-      return fxIsCanvasGroupNode({ editor: args.editor, node: candidate });
+      return fxIsCanvasGroupNode({}, { editor: args.editor, node: candidate });
     }).map((candidate) => [candidate.id(), candidate as Konva.Group]),
   );
   const invalidElementIds: string[] = [];
@@ -153,7 +153,7 @@ function sortSceneTopDown(render: SceneService, editor: EditorService, parent: K
     })
     .forEach((child, index) => {
       child.zIndex(index);
-      if (fxIsCanvasGroupNode({ editor, node: child })) {
+      if (fxIsCanvasGroupNode({}, { editor, node: child })) {
         sortSceneTopDown(render, editor, child as Konva.Group);
       }
     });
@@ -172,7 +172,7 @@ function keepAttachedTextAboveHosts(render: SceneService, editor: EditorService,
   const detached: TSceneNode[] = [];
 
   orderedChildren.forEach((child) => {
-    if (fxIsCanvasGroupNode({ editor, node: child })) {
+    if (fxIsCanvasGroupNode({}, { editor, node: child })) {
       keepAttachedTextAboveHosts(render, editor, child as Konva.Group);
       detached.push(child);
       return;
@@ -192,7 +192,7 @@ function keepAttachedTextAboveHosts(render: SceneService, editor: EditorService,
   const nextChildren: TSceneNode[] = [];
   detached.forEach((child) => {
     nextChildren.push(child);
-    if (fxIsCanvasGroupNode({ editor, node: child })) {
+    if (fxIsCanvasGroupNode({}, { editor, node: child })) {
       return;
     }
 

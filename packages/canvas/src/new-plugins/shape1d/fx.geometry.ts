@@ -1,5 +1,5 @@
 import type Konva from "konva";
-import { fxGetAbsolutePositionFromWorldPosition } from "../../core/fn.world-position";
+import { fnGetAbsolutePositionFromWorldPosition } from "../../core/fn.world-position";
 import {
   CURVE_TENSION,
   type THandleDragSnapshot,
@@ -93,7 +93,7 @@ export function fxApplyAnchorDrag(portal: TPortalFxApplyAnchorDrag, args: TArgsF
 
   const nextData = structuredClone(data);
   if (args.drag.pointIndex === 0) {
-    args.node.absolutePosition(fxGetAbsolutePositionFromWorldPosition({
+    args.node.absolutePosition(fnGetAbsolutePositionFromWorldPosition({
       worldPosition: args.worldPoint,
       parentTransform: args.node.getLayer()?.getAbsoluteTransform() ?? null,
     }));

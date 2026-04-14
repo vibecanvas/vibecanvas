@@ -1,7 +1,7 @@
 import type Konva from "konva";
 import type { TElement } from "@vibecanvas/service-automerge/types/canvas-doc.types";
-import { fxGetDiamondPoints } from "../../core/fn.shape2d";
-import { fxGetAbsolutePositionFromWorldPosition } from "../../core/fn.world-position";
+import { fnGetDiamondPoints } from "../../core/fn.shape2d";
+import { fnGetAbsolutePositionFromWorldPosition } from "../../core/fn.world-position";
 import type { SceneService } from "../../new-services/scene/SceneService";
 import type { ThemeService } from "@vibecanvas/service-theme";
 
@@ -61,7 +61,7 @@ export function txUpdateShape2dNodeFromElement(
   const node = args.node;
 
   if (args.element.data.type === "rect" && node instanceof portal.render.Rect) {
-    const absolutePosition = fxGetAbsolutePositionFromWorldPosition({
+    const absolutePosition = fnGetAbsolutePositionFromWorldPosition({
       worldPosition: { x: args.element.x, y: args.element.y },
       parentTransform: node.getLayer()?.getAbsoluteTransform() ?? null,
     });
@@ -84,14 +84,14 @@ export function txUpdateShape2dNodeFromElement(
   }
 
   if (args.element.data.type === "diamond" && node instanceof portal.render.Line) {
-    const absolutePosition = fxGetAbsolutePositionFromWorldPosition({
+    const absolutePosition = fnGetAbsolutePositionFromWorldPosition({
       worldPosition: { x: args.element.x, y: args.element.y },
       parentTransform: node.getLayer()?.getAbsoluteTransform() ?? null,
     });
 
     node.absolutePosition(absolutePosition);
     node.rotation(args.element.rotation);
-    node.points(fxGetDiamondPoints({
+    node.points(fnGetDiamondPoints({
       width: args.element.data.w,
       height: args.element.data.h,
     }));
@@ -110,7 +110,7 @@ export function txUpdateShape2dNodeFromElement(
   }
 
   if (args.element.data.type === "ellipse" && node instanceof portal.render.Ellipse) {
-    const absolutePosition = fxGetAbsolutePositionFromWorldPosition({
+    const absolutePosition = fnGetAbsolutePositionFromWorldPosition({
       worldPosition: {
         x: args.element.x + args.element.data.rx,
         y: args.element.y + args.element.data.ry,

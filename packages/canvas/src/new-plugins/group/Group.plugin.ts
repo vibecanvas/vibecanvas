@@ -2,8 +2,9 @@ import { throttle } from "@solid-primitives/scheduled";
 import type { IPlugin } from "@vibecanvas/runtime";
 import type { ThemeService } from "@vibecanvas/service-theme";
 import type { TGroup } from "@vibecanvas/service-automerge/types/canvas-doc.types";
-import type Konva from "konva";
-import { getNodeZIndex, setNodeZIndex } from "../../core/render-order";
+import Konva from "konva";
+import { fnGetNodeZIndex } from "../../core/fn.get-node-z-index";
+import { txSetNodeZIndex } from "../../core/tx.set-node-z-index";
 import type { CameraService } from "../../new-services/camera/CameraService";
 import type { ContextMenuService } from "../../new-services/context-menu/ContextMenuService";
 import type { CrdtService } from "../../new-services/crdt/CrdtService";
@@ -14,7 +15,7 @@ import type { SceneService } from "../../new-services/scene/SceneService";
 import type { SelectionService } from "../../new-services/selection/SelectionService";
 import { CanvasMode } from "../../new-services/selection/CONSTANTS";
 import type { IHooks } from "../../runtime";
-import { fxIsCanvasGroupNode } from "../../core/fn.canvas-node-semantics";
+import { fxIsCanvasGroupNode } from "../../core/fx.canvas-node-semantics";
 import { txCreateGroupCloneDrag } from "./tx.create-group-clone-drag";
 import { fxIsSceneNode } from "./fn.scene-node";
 import { fxToGroupPatch } from "./fn.to-group-patch";
@@ -27,6 +28,9 @@ import { txDeleteSelection } from "../select/tx.delete-selection";
 
 const CANVAS_NODE_KIND_ATTR = "vcCanvasNodeKind";
 const CANVAS_GROUP_NODE_KIND = "group";
+
+const getNodeZIndex = (node: Konva.Group | Konva.Shape) => fnGetNodeZIndex({}, { node });
+const setNodeZIndex = (node: Konva.Group | Konva.Shape, zIndex: string) => txSetNodeZIndex({}, { node, zIndex });
 
 function createGroupNode(render: SceneService, group: TGroup) {
   const node = new render.Group({
@@ -94,7 +98,7 @@ export function createGroupPlugin(): IPlugin<{
       };
 
       const syncDraggability = () => {
-        txSyncDraggability({ editor, render, selection }, {});
+        txSyncDraggability({ Konva, editor, render, selection }, {});
       };
 
       const setupNode = (group: Konva.Group) => {
@@ -178,7 +182,7 @@ export function createGroupPlugin(): IPlugin<{
 
       contextMenu.registerProvider("group", ({ scope, activeSelection }) => {
         const selectedGroups = [...activeSelection].reverse().filter((node): node is Konva.Group => {
-          return fxIsCanvasGroupNode({ editor, node });
+          return fxIsCanvasGroupNode({}, { editor, node });
         });
 
         const actions = [] as Array<{

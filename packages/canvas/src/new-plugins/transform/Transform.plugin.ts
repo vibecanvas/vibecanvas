@@ -1,6 +1,6 @@
 import type { IPlugin } from "@vibecanvas/runtime";
 import type { ThemeService } from "@vibecanvas/service-theme";
-import type Konva from "konva";
+import Konva from "konva";
 import type { Group } from "konva/lib/Group";
 import type { Shape, ShapeConfig } from "konva/lib/Shape";
 import type { TElement } from "@vibecanvas/service-automerge/types/canvas-doc.types";
@@ -11,7 +11,7 @@ import type { HistoryService } from "../../new-services/history/HistoryService";
 import type { SceneService } from "../../new-services/scene/SceneService";
 import type { SelectionService } from "../../new-services/selection/SelectionService";
 import type { IHooks } from "../../runtime";
-import { fxIsCanvasGroupNode } from "../../core/fn.canvas-node-semantics";
+import { fxIsCanvasGroupNode } from "../../core/fx.canvas-node-semantics";
 import { fxFilterSelection } from "../../core/fx.filter-selection";
 import { fxIsShape1dNode } from "../shape1d/fx.node";
 
@@ -90,7 +90,7 @@ function normalizeSelectedGroupTransforms(render: SceneService, nodes: Konva.Nod
 
 function refreshSelectedGroups(editor: EditorService, selection: SelectionService) {
   selection.selection.forEach((node) => {
-    if (fxIsCanvasGroupNode({ editor, node })) {
+    if (fxIsCanvasGroupNode({}, { editor, node })) {
       node.fire("transform");
     }
   });
@@ -144,7 +144,8 @@ function getProxyDragTarget(args: {
 
   const rawSelection = args.selection.selection;
   const filteredSelection = fxFilterSelection({
-    render: args.render,
+    Konva,
+  }, {
     editor: args.editor,
     selection: rawSelection,
   });
@@ -212,8 +213,8 @@ function syncTransformer(args: {
     return;
   }
 
-  const filteredSelection = fxFilterSelection({ render: args.render, editor: args.editor, selection: args.selection.selection });
-  const isSingleGroupSelection = filteredSelection.length === 1 && fxIsCanvasGroupNode({ editor: args.editor, node: filteredSelection[0] });
+  const filteredSelection = fxFilterSelection({ Konva }, { editor: args.editor, selection: args.selection.selection });
+  const isSingleGroupSelection = filteredSelection.length === 1 && fxIsCanvasGroupNode({}, { editor: args.editor, node: filteredSelection[0] });
   const isMultiSelection = filteredSelection.length > 1;
   const hasTextOnly = filteredSelection.length > 0 && filteredSelection.every((node) => node instanceof args.render.Text);
   const hasShape1dOnly = filteredSelection.length > 0 && filteredSelection.every((node) => fxIsShape1dNode({ Shape: args.render.Shape }, { node }));

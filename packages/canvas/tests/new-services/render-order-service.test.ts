@@ -7,7 +7,7 @@ import { CrdtService } from "../../src/new-services/crdt/CrdtService";
 import { EditorService } from "../../src/new-services/editor/EditorService";
 import type { TElement } from "@vibecanvas/service-automerge/types/canvas-doc.types";
 import { createMockDocHandle, createTestContainer, ensureResizeObserver } from "../test-setup";
-import { createOrderedZIndex } from "../../src/core/render-order";
+import { fxCreateOrderedZIndex } from "../../src/core/fn.create-ordered-z-index";
 
 function setup() {
   ensureResizeObserver();
@@ -23,7 +23,7 @@ function setup() {
       ? ({ id: node.id() } as TElement)
       : null;
   });
-  const service = new RenderOrderService({ crdt, history, render, editor });
+  const service = new RenderOrderService({ crdt, history, scene: render, editor });
   return { container, docHandle, render, crdt, history, editor, service };
 }
 
@@ -39,13 +39,13 @@ describe("RenderOrderService", () => {
 
     service.assignOrderOnInsert({ parent: render.staticForegroundLayer, nodes: [a, b, c], position: "back" });
     expect(render.staticForegroundLayer.getChildren().map((node) => node.id())).toEqual(["a", "b", "c"]);
-    expect(docHandle.doc().elements.a.zIndex).toBe(createOrderedZIndex(0));
+    expect(docHandle.doc().elements.a.zIndex).toBe(fxCreateOrderedZIndex(0));
 
     const d = new Konva.Rect({ id: "d" });
     render.staticForegroundLayer.add(d);
     service.assignOrderOnInsert({ parent: render.staticForegroundLayer, nodes: [d], position: "front" });
     expect(render.staticForegroundLayer.getChildren().map((node) => node.id())).toEqual(["a", "b", "c", "d"]);
-    expect(docHandle.doc().elements.d.zIndex).toBe(createOrderedZIndex(3));
+    expect(docHandle.doc().elements.d.zIndex).toBe(fxCreateOrderedZIndex(3));
 
     render.stop();
     container.remove();
@@ -88,10 +88,10 @@ describe("RenderOrderService", () => {
 
     service.assignOrderOnInsert({ parent: render.staticForegroundLayer, nodes: [host], position: "back" });
 
-    expect(docHandle.doc().elements.host.zIndex).toBe(createOrderedZIndex(0));
+    expect(docHandle.doc().elements.host.zIndex).toBe(fxCreateOrderedZIndex(0));
     expect(docHandle.doc().groups.host).toBeUndefined();
     expect(service.snapshotParentOrder(render.staticForegroundLayer).items).toEqual([
-      { id: "host", zIndex: createOrderedZIndex(0), kind: "element" },
+      { id: "host", zIndex: fxCreateOrderedZIndex(0), kind: "element" },
     ]);
 
     render.stop();

@@ -1,5 +1,5 @@
 import type { IPlugin } from "@vibecanvas/runtime";
-import type Konva from "konva";
+import Konva from "konva";
 import { createComponent, createMemo, createSignal } from "solid-js";
 import { render as renderSolid } from "solid-js/web";
 import { SelectionStyleMenu } from "../../components/SelectionStyleMenu";
@@ -8,9 +8,9 @@ import type { TCapStyle, TFontFamily, TLineType } from "../../components/Selecti
 import { fxResolveFocusedSelectionStyleElements } from "../../core/fx.resolve-selection-style-elements";
 import { fxResolveSelectionStyleTextElements } from "../../core/fx.resolve-selection-style-text-elements";
 import {
-  fxGetSelectionStyleMenuSections,
-  fxGetSelectionStyleMenuValues,
-  fxGetSelectionStyleStrokeWidthOptions,
+  fnGetSelectionStyleMenuSections,
+  fnGetSelectionStyleMenuValues,
+  fnGetSelectionStyleStrokeWidthOptions,
   type TSelectionStyleProperty,
 } from "../../core/fn.selection-style-menu";
 import { txApplySelectionStyleChange } from "../../core/tx.apply-selection-style-change";
@@ -70,8 +70,9 @@ function mountSelectionStyleMenu(args: {
     });
     const elements = createMemo(() => {
       return fxResolveFocusedSelectionStyleElements({
+        Konva,
         editor: args.editor,
-        render: args.render,
+        scene: args.render,
       }, {
         focusedId: focusedId(),
       });
@@ -92,7 +93,7 @@ function mountSelectionStyleMenu(args: {
       });
     });
     const sections = createMemo(() => {
-      return fxGetSelectionStyleMenuSections({
+      return fnGetSelectionStyleMenuSections({
         elements: elements(),
         textElements: textElements(),
       });
@@ -121,13 +122,13 @@ function mountSelectionStyleMenu(args: {
       return nextVisible;
     });
     const values = createMemo(() => {
-      return fxGetSelectionStyleMenuValues({
+      return fnGetSelectionStyleMenuValues({
         elements: elements(),
         textElements: textElements(),
       });
     });
     const strokeWidthOptions = createMemo(() => {
-      return fxGetSelectionStyleStrokeWidthOptions(elements());
+      return fnGetSelectionStyleStrokeWidthOptions(elements());
     });
     const colorPalette = createMemo(() => {
       version();
@@ -136,10 +137,11 @@ function mountSelectionStyleMenu(args: {
 
     const applyStyle = (property: TSelectionStyleProperty, value: string | number) => {
       txApplySelectionStyleChange({
+        Konva,
         crdt: args.crdt,
         editor: args.editor,
         history: args.history,
-        render: args.render,
+        scene: args.render,
         selection: args.selection,
         fxFindAttachedTextNodeByContainerId: (containerId) => {
           const node = args.render.staticForegroundLayer.findOne((candidate: Konva.Node) => {
@@ -156,6 +158,7 @@ function mountSelectionStyleMenu(args: {
           const editingNode = fxFindShape1dNodeById({ render: args.render }, { id: args.editor.editingShape1dId });
           editingNode?.getLayer()?.batchDraw();
         },
+        now: () => Date.now(),
       }, { property, value });
       syncVersion();
     };

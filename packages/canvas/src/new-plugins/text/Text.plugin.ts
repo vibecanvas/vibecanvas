@@ -1,4 +1,5 @@
 import type { IPlugin } from "@vibecanvas/runtime";
+import { layoutWithLines, prepareWithSegments } from "@chenglou/pretext";
 import { resolveThemeColor, type ThemeService } from "@vibecanvas/service-theme";
 import Type from "lucide-static/icons/type.svg?raw";
 import type { TElement, TTextData } from "@vibecanvas/service-automerge/types/canvas-doc.types";
@@ -11,7 +12,7 @@ import type { RenderOrderService } from "../../new-services/render-order/RenderO
 import type { SceneService } from "../../new-services/scene/SceneService";
 import type { SelectionService } from "../../new-services/selection/SelectionService";
 import { CanvasMode } from "../../new-services/selection/CONSTANTS";
-import { fxGetNearestFontSizePreset } from "../../core/fn.text-style";
+import { fnGetNearestFontSizePreset } from "../../core/fn.text-style";
 import type { IHooks } from "../../runtime";
 import { fxCreateTextElement } from "./fn.create-text-element";
 import { fxToElement } from "./fx.to-element";
@@ -66,7 +67,7 @@ function createTextNode(render: SceneService, theme: ThemeService, element: TEle
   node.setAttr("vcContainerId", data.containerId ?? null);
   node.setAttr("vcOriginalText", data.originalText);
   node.setAttr("vcTextAutoResize", data.autoResize);
-  node.setAttr("vcFontSizePreset", data.fontSizePreset ?? fxGetNearestFontSizePreset(data.fontSize));
+  node.setAttr("vcFontSizePreset", data.fontSizePreset ?? fnGetNearestFontSizePreset(data.fontSize));
   node.name(isAttachedText ? ATTACHED_TEXT_NAME : FREE_TEXT_NAME);
   return node;
 }
@@ -240,7 +241,7 @@ export function createTextPlugin(): IPlugin<{
         editor.setActiveTool("select");
 
         txEnterEditMode(
-          { crdt, document, editor, history, render, selection, theme },
+          { crdt, document, editor, history, render, selection, theme, pretext: { layoutWithLines, prepareWithSegments } },
           { freeTextName: FREE_TEXT_NAME, node, isNew: true },
         );
       });
@@ -255,7 +256,7 @@ export function createTextPlugin(): IPlugin<{
         }
 
         txEnterEditMode(
-          { crdt, document, editor, history, render, selection, theme },
+          { crdt, document, editor, history, render, selection, theme, pretext: { layoutWithLines, prepareWithSegments } },
           { freeTextName: FREE_TEXT_NAME, node: event.currentTarget, isNew: false },
         );
         return true;

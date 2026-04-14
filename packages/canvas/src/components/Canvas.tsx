@@ -3,7 +3,7 @@ import type { ThemeService } from "@vibecanvas/service-theme";
 import { TCanvasDoc } from "@vibecanvas/service-automerge/types/canvas-doc.types";
 import type * as schema from "@vibecanvas/service-db/schema";
 import { createEffect, createResource, Match, onCleanup, Switch } from "solid-js";
-import { findDocument } from "../services/automerge";
+import { findDocument } from "../automerge";
 import type { TCloneImage, TDeleteImage, TFileCapability, TFiletreeCapability, TTerminalCapability, TUploadImage } from "../services/canvas/interface";
 import type { IRuntime } from "@vibecanvas/runtime";
 import { buildRuntime } from "../runtime";

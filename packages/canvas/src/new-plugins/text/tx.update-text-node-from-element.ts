@@ -1,6 +1,6 @@
 import type { ThemeService } from "@vibecanvas/service-theme";
-import { fxGetNearestFontSizePreset } from "../../core/fn.text-style";
-import { fxGetAbsolutePositionFromWorldPosition } from "../../core/fn.world-position";
+import { fnGetNearestFontSizePreset } from "../../core/fn.text-style";
+import { fnGetAbsolutePositionFromWorldPosition } from "../../core/fn.world-position";
 import type { TElement, TTextData } from "@vibecanvas/service-automerge/types/canvas-doc.types";
 import type Konva from "konva";
 import type { SceneService } from "../../new-services/scene/SceneService";
@@ -31,7 +31,7 @@ export function txUpdateTextNodeFromElement(portal: TPortalUpdateTextNodeFromEle
   }
 
   const data = args.element.data as TTextData;
-  const absolutePosition = fxGetAbsolutePositionFromWorldPosition({
+  const absolutePosition = fnGetAbsolutePositionFromWorldPosition({
     worldPosition: { x: args.element.x, y: args.element.y },
     parentTransform: node.getLayer()?.getAbsoluteTransform() ?? null,
   });
@@ -53,7 +53,7 @@ export function txUpdateTextNodeFromElement(portal: TPortalUpdateTextNodeFromEle
   node.setAttr("vcContainerId", data.containerId ?? null);
   node.setAttr("vcOriginalText", data.originalText);
   node.setAttr("vcTextAutoResize", data.autoResize);
-  node.setAttr("vcFontSizePreset", data.fontSizePreset ?? fxGetNearestFontSizePreset(data.fontSize));
+  node.setAttr("vcFontSizePreset", data.fontSizePreset ?? fnGetNearestFontSizePreset(data.fontSize));
   node.scale({ x: 1, y: 1 });
   node.wrap(data.containerId === null ? "none" : "word");
   node.listening(data.containerId === null);

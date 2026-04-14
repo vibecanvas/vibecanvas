@@ -5,7 +5,7 @@ import type { EditorService } from "../../new-services/editor/EditorService";
 import type { HistoryService } from "../../new-services/history/HistoryService";
 import type { SceneService } from "../../new-services/scene/SceneService";
 import type { SelectionService } from "../../new-services/selection/SelectionService";
-import { fxGetCanvasNodeKind, fxIsCanvasGroupNode } from "../../core/fn.canvas-node-semantics";
+import { fxGetCanvasNodeKind, fxIsCanvasGroupNode } from "../../core/fx.canvas-node-semantics";
 import { fxGetSelectionBounds } from "./fn.get-selection-bounds";
 import { fxFindSceneNodeById, fxGetGroupChildren, fxGetSelectionGroupParent, fxIsSceneParent, fxIsSceneNode, type TSceneNode } from "./fn.scene-node";
 import { fxToGroupPatch } from "./fn.to-group-patch";
@@ -48,7 +48,7 @@ export function txGroupSelection(
   const zIndex = portal.getNodeZIndex(selection[selection.length - 1] ?? selection[0]);
   const groupNode = portal.setupNode(portal.createGroupNode({
     id: groupId,
-    parentGroupId: fxIsCanvasGroupNode({ editor: portal.editor, node: parent }) ? parent.id() : null,
+    parentGroupId: fxIsCanvasGroupNode({}, { editor: portal.editor, node: parent }) ? parent.id() : null,
     zIndex,
     locked: false,
     createdAt,
@@ -73,7 +73,7 @@ export function txGroupSelection(
     groupNode.add(node);
     node.setAbsolutePosition(absolutePosition);
 
-    const kind = fxGetCanvasNodeKind({ editor: portal.editor, node });
+    const kind = fxGetCanvasNodeKind({}, { editor: portal.editor, node });
     if (kind === "group") {
       const groupPatch = portal.editor.toGroup(node);
       if (groupPatch) {
@@ -102,7 +102,7 @@ export function txGroupSelection(
     label: "group",
     undo() {
       const currentGroupNode = fxFindSceneNodeById({ render: portal.render, id: groupId });
-      if (!fxIsCanvasGroupNode({ editor: portal.editor, node: currentGroupNode })) {
+      if (!fxIsCanvasGroupNode({}, { editor: portal.editor, node: currentGroupNode })) {
         return;
       }
 
@@ -124,7 +124,7 @@ export function txGroupSelection(
         currentParent.add(child);
         child.setAbsolutePosition(absolutePosition);
 
-        const kind = fxGetCanvasNodeKind({ editor: portal.editor, node: child });
+        const kind = fxGetCanvasNodeKind({}, { editor: portal.editor, node: child });
         if (kind === "group") {
           const patch = portal.editor.toGroup(child);
           if (patch) {
@@ -164,7 +164,7 @@ export function txGroupSelection(
 
       const recreated = portal.setupNode(portal.createGroupNode({
         id: groupId,
-        parentGroupId: fxIsCanvasGroupNode({ editor: portal.editor, node: redoParent }) ? redoParent.id() : null,
+        parentGroupId: fxIsCanvasGroupNode({}, { editor: portal.editor, node: redoParent }) ? redoParent.id() : null,
         zIndex,
         locked: false,
         createdAt,
@@ -189,7 +189,7 @@ export function txGroupSelection(
         recreated.add(node);
         node.setAbsolutePosition(absolutePosition);
 
-        const kind = fxGetCanvasNodeKind({ editor: portal.editor, node });
+        const kind = fxGetCanvasNodeKind({}, { editor: portal.editor, node });
         if (kind === "group") {
           const patch = portal.editor.toGroup(node);
           if (patch) {

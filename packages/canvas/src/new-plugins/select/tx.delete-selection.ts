@@ -8,7 +8,7 @@ import type { HistoryService } from "../../new-services/history/HistoryService";
 import type { RenderOrderService } from "../../new-services/render-order/RenderOrderService";
 import type { SceneService } from "../../new-services/scene/SceneService";
 import type { SelectionService } from "../../new-services/selection/SelectionService";
-import { fxGetCanvasNodeKind, fxIsCanvasGroupNode } from "../../core/fn.canvas-node-semantics";
+import { fxGetCanvasNodeKind, fxIsCanvasGroupNode } from "../../core/fx.canvas-node-semantics";
 
 export type TPortalDeleteSelection = {
   crdt: CrdtService;
@@ -89,7 +89,7 @@ function sortSceneTopDown(portal: TPortalDeleteSelection, parent: Group | Instan
   portal.renderOrder.sortChildren(parent);
 
   parent.getChildren().forEach((child) => {
-    if (!fxIsCanvasGroupNode({ editor: portal.editor, node: child })) {
+    if (!fxIsCanvasGroupNode({}, { editor: portal.editor, node: child })) {
       return;
     }
 
@@ -114,9 +114,9 @@ function collectDeleteSnapshot(portal: TPortalDeleteSelection, roots: TSceneNode
     visitedNodeIds.add(node.id());
     visitedNodes.push(node);
 
-    const kind = fxGetCanvasNodeKind({ editor: portal.editor, node });
+    const kind = fxGetCanvasNodeKind({}, { editor: portal.editor, node });
     if (kind === "group") {
-      if (!fxIsCanvasGroupNode({ editor: portal.editor, node })) {
+      if (!fxIsCanvasGroupNode({}, { editor: portal.editor, node })) {
         didFail = true;
         return;
       }
@@ -181,7 +181,7 @@ function collectDeleteSnapshot(portal: TPortalDeleteSelection, roots: TSceneNode
           return false;
         }
 
-        if (!fxIsCanvasGroupNode({ editor: portal.editor, node: candidate })) {
+        if (!fxIsCanvasGroupNode({}, { editor: portal.editor, node: candidate })) {
           return false;
         }
 
@@ -212,7 +212,7 @@ function restoreDeleteSnapshot(portal: TPortalDeleteSelection, snapshot: TDelete
       if (
         group.parentGroupId !== null
         && !createdGroups.has(group.parentGroupId)
-        && !fxIsCanvasGroupNode({ editor: portal.editor, node: parentNode })
+        && !fxIsCanvasGroupNode({}, { editor: portal.editor, node: parentNode })
       ) {
         continue;
       }

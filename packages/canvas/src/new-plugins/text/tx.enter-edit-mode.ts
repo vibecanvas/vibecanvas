@@ -2,10 +2,11 @@ import { fxComputeTextHeight } from "./fn.compute-text-height";
 import { fxComputeTextWidth } from "./fx.compute-text-width";
 import { fxToElement } from "./fx.to-element";
 import { txUpdateTextNodeFromElement } from "./tx.update-text-node-from-element";
-import { measureTextLayout } from "../../core/pretext";
-import { fxIsShape2dElementType } from "../../core/fn.shape2d";
+import { fxMeasureTextLayout } from "../../core/fx.pretext";
+import { fnIsShape2dElementType } from "../../core/fn.shape2d";
 import type { TElement, TTextData } from "@vibecanvas/service-automerge/types/canvas-doc.types";
 import { fxGetShapeTextHostBounds } from "../shape2d/fn.text-host-bounds";
+import type { layoutWithLines, prepareWithSegments } from "@chenglou/pretext";
 import type { ThemeService } from "@vibecanvas/service-theme";
 import type { CrdtService } from "../../new-services/crdt/CrdtService";
 import type { EditorService } from "../../new-services/editor/EditorService";
@@ -22,6 +23,10 @@ export type TPortalEnterEditMode = {
   render: SceneService;
   selection: SelectionService;
   theme: ThemeService;
+  pretext: {
+    layoutWithLines: typeof layoutWithLines;
+    prepareWithSegments: typeof prepareWithSegments;
+  };
 };
 
 export type TArgsEnterEditMode = {
@@ -144,7 +149,7 @@ export function txEnterEditMode(portal: TPortalEnterEditMode, args: TArgsEnterEd
       return;
     }
 
-    const measured = measureTextLayout({
+    const measured = fxMeasureTextLayout(portal.pretext, {
       text: textarea.value,
       fontSize: args.node.fontSize(),
       fontFamily: args.node.fontFamily(),
@@ -152,7 +157,7 @@ export function txEnterEditMode(portal: TPortalEnterEditMode, args: TArgsEnterEd
       lineHeight: args.node.lineHeight(),
       width: args.node.width(),
     });
-    const nextHostElement = originalHostElement && fxIsShape2dElementType(originalHostElement.data.type)
+    const nextHostElement = originalHostElement && fnIsShape2dElementType(originalHostElement.data.type)
       ? fxGrowAttachedHostElement({
           hostElement: structuredClone(originalHostElement),
           minHeight: Math.max(initialHostHeight, measured.height),
@@ -294,7 +299,7 @@ export function txEnterEditMode(portal: TPortalEnterEditMode, args: TArgsEnterEd
     let nextHostElement: TElement | null = null;
 
     if (isAttachedText) {
-      if (originalHostElement && fxIsShape2dElementType(originalHostElement.data.type)) {
+      if (originalHostElement && fnIsShape2dElementType(originalHostElement.data.type)) {
         nextHostElement = fxGrowAttachedHostElement({
           hostElement: structuredClone(originalHostElement),
           minHeight: worldHeight,
@@ -314,7 +319,7 @@ export function txEnterEditMode(portal: TPortalEnterEditMode, args: TArgsEnterEd
         args.node.height(Math.max(4, nextBounds.height));
       }
     } else {
-      const measured = measureTextLayout({
+      const measured = fxMeasureTextLayout(portal.pretext, {
         text: textToSet,
         fontSize: args.node.fontSize(),
         fontFamily: args.node.fontFamily(),

@@ -1,6 +1,6 @@
 import type Konva from "konva";
 import type { TElement } from "@vibecanvas/service-automerge/types/canvas-doc.types";
-import { fxGetDiamondPoints } from "../../core/fn.shape2d";
+import { fnGetDiamondPoints } from "../../core/fn.shape2d";
 import type { SceneService } from "../../new-services/scene/SceneService";
 import type { ThemeService } from "@vibecanvas/service-theme";
 
@@ -51,7 +51,7 @@ export function fxCreateShape2dNode(portal: TPortalCreateShape2dNode, args: TArg
       y: args.element.y,
       rotation: args.element.rotation,
       closed: true,
-      points: fxGetDiamondPoints({
+      points: fnGetDiamondPoints({
         width: args.element.data.w,
         height: args.element.data.h,
       }),

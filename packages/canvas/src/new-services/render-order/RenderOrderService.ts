@@ -1,7 +1,9 @@
 import type { IService } from "@vibecanvas/runtime";
 import type { TElement, TGroup } from "@vibecanvas/service-automerge/types/canvas-doc.types";
 import Konva from "konva";
-import { createOrderedZIndex, getNodeZIndex, setNodeZIndex } from "../../core/render-order";
+import { fnCreateOrderedZIndex } from "../../core/fn.create-ordered-z-index";
+import { fnGetNodeZIndex } from "../../core/fn.get-node-z-index";
+import { txSetNodeZIndex } from "../../core/tx.set-node-z-index";
 import type { TRenderOrderSnapshot } from "../../runtime";
 import type { CrdtService } from "../crdt/CrdtService";
 import type { HistoryService } from "../history/HistoryService";
@@ -109,11 +111,11 @@ export class RenderOrderService implements IService<Record<string, never>> {
   }
 
   getNodeZIndex(node: TOrderedNode) {
-    return getNodeZIndex(node);
+    return fnGetNodeZIndex({}, { node });
   }
 
   setNodeZIndex(node: TOrderedNode, zIndex: string) {
-    setNodeZIndex(node, zIndex);
+    txSetNodeZIndex({}, { node, zIndex });
   }
 
   getOrderBundle(node: TOrderedNode) {
@@ -135,7 +137,7 @@ export class RenderOrderService implements IService<Record<string, never>> {
   getOrderedSiblings(parent: TParentContainer) {
     const children = getImmediateOrderedChildren(parent);
     return [...children].sort((left, right) => {
-      const zCompare = getNodeZIndex(left).localeCompare(getNodeZIndex(right));
+      const zCompare = fnGetNodeZIndex({}, { node: left }).localeCompare(fnGetNodeZIndex({}, { node: right }));
       if (zCompare !== 0) {
         return zCompare;
       }
@@ -190,7 +192,7 @@ export class RenderOrderService implements IService<Record<string, never>> {
       parentId: parent.id() || "__layer__",
       items: getImmediateOrderedChildren(parent).map((node) => ({
         id: node.id(),
-        zIndex: getNodeZIndex(node),
+        zIndex: fnGetNodeZIndex({}, { node }),
         kind: this.editor.toGroup(node) ? "group" : "element",
       })),
     };
@@ -208,7 +210,7 @@ export class RenderOrderService implements IService<Record<string, never>> {
         return;
       }
 
-      setNodeZIndex(node, item.zIndex);
+      txSetNodeZIndex({}, { node, zIndex: item.zIndex });
     });
 
     this.sortChildren(parent);
@@ -326,7 +328,7 @@ export class RenderOrderService implements IService<Record<string, never>> {
         return;
       }
 
-      setNodeZIndex(node, item.zIndex);
+      txSetNodeZIndex({}, { node, zIndex: item.zIndex });
     });
 
     const orderedChildren = [...snapshot.items]
@@ -343,7 +345,7 @@ export class RenderOrderService implements IService<Record<string, never>> {
         return;
       }
 
-      setNodeZIndex(node, createOrderedZIndex(persistedIndex));
+      txSetNodeZIndex({}, { node, zIndex: fnCreateOrderedZIndex(persistedIndex) });
       persistedIndex += 1;
     });
 
@@ -360,7 +362,7 @@ export class RenderOrderService implements IService<Record<string, never>> {
         return;
       }
 
-      const zIndex = createOrderedZIndex(persistedIndex);
+      const zIndex = fnCreateOrderedZIndex(persistedIndex);
       persistedIndex += 1;
 
       if (this.editor.toGroup(node)) {

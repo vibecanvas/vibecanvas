@@ -1,7 +1,7 @@
 import type { TElement } from "@vibecanvas/service-automerge/types/canvas-doc.types";
 import type Konva from "konva";
 import type { TThemeDefinition } from "@vibecanvas/service-theme";
-import { fxGetAbsolutePositionFromWorldPosition } from "../../core/fn.world-position";
+import { fnGetAbsolutePositionFromWorldPosition } from "../../core/fn.world-position";
 import { DEFAULT_OPACITY, ELEMENT_CREATED_AT_ATTR, MIN_HIT_STROKE_WIDTH, type TShape1dNode } from "./CONSTANTS";
 import { fxGetStrokeColorFromStyle, fxGetStrokeWidthFromStyle, fxIsSupportedElementType, fxToTElement } from "./fx.node";
 import { txCreateShapeFromElement } from "./tx.render";
@@ -19,7 +19,7 @@ export function txUpdateShapeFromElement(portal: TPortalTxUpdateShapeFromElement
 
   const strokeWidth = fxGetStrokeWidthFromStyle({}, { style: args.element.style });
   const color = fxGetStrokeColorFromStyle({ theme: portal.theme, resolveThemeColor: portal.resolveThemeColor }, { style: args.element.style });
-  args.node.absolutePosition(fxGetAbsolutePositionFromWorldPosition({
+  args.node.absolutePosition(fnGetAbsolutePositionFromWorldPosition({
     worldPosition: { x: args.element.x, y: args.element.y },
     parentTransform: args.node.getLayer()?.getAbsoluteTransform() ?? null,
   }));

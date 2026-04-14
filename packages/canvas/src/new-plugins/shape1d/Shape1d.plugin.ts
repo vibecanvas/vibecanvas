@@ -17,7 +17,7 @@ import { throttle } from "@solid-primitives/scheduled";
 import type { IHooks } from "../../runtime";
 import { fxFilterSelection } from "../../core/fx.filter-selection";
 import { txDeleteSelection } from "../select/tx.delete-selection";
-import { setNodeZIndex } from "../../core/render-order";
+import { txSetNodeZIndex } from "../../core/tx.set-node-z-index";
 import { fxCreateDraftElement, fxCreateFallbackPreviewElement } from "./fn.draft";
 import { txCreatePreviewClone, txUpdateShapeFromElement } from "./tx.element";
 import { fxApplyAnchorDrag, fxGetInsertionPoint, fxLocalPointToWorld } from "./fx.geometry";
@@ -34,6 +34,8 @@ import {
   type TPoint,
   type TShape1dNode,
 } from "./CONSTANTS";
+
+const setNodeZIndex = (node: Konva.Group | Konva.Shape, zIndex: string) => txSetNodeZIndex({}, { node, zIndex });
 
 function createCreateId(render: SceneService) {
   let fallbackId = 0;
@@ -125,6 +127,7 @@ export function createShape1dPlugin(): IPlugin<{
 
       const runtimePortal = {
         ...historyPortal,
+        Konva,
         hooks: ctx.hooks,
         createId,
         now,
@@ -492,8 +495,7 @@ export function createShape1dPlugin(): IPlugin<{
         }
 
         const node = findNode(editingId);
-        const filteredSelection = fxFilterSelection({
-          render,
+        const filteredSelection = fxFilterSelection({ Konva }, {
           selection: selection.selection,
         });
         if (!node || filteredSelection.length !== 1 || filteredSelection[0] !== node) {
@@ -703,8 +705,7 @@ export function createShape1dPlugin(): IPlugin<{
         if (event.key === "Enter"
           && selection.mode === CanvasMode.SELECT
           && editor.editingShape1dId === null) {
-          const filteredSelection = fxFilterSelection({
-            render,
+          const filteredSelection = fxFilterSelection({ Konva }, {
             selection: selection.selection,
           });
           const target = filteredSelection.length === 1 && isNode(filteredSelection[0])
@@ -731,8 +732,7 @@ export function createShape1dPlugin(): IPlugin<{
       });
 
       ctx.hooks.elementPointerDoubleClick.tap((event) => {
-        const filteredSelection = fxFilterSelection({
-          render,
+        const filteredSelection = fxFilterSelection({ Konva }, {
           selection: selection.selection,
         });
         if (!isNode(event.currentTarget) || filteredSelection.length !== 1 || filteredSelection[0] !== event.currentTarget) {

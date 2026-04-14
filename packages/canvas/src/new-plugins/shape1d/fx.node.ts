@@ -2,8 +2,8 @@ import type { TElement, TElementStyle } from "@vibecanvas/service-automerge/type
 import type Konva from "konva";
 import type { TThemeDefinition } from "@vibecanvas/service-theme";
 import type { SceneService } from "../../new-services/scene/SceneService";
-import { fxGetWorldPosition } from "../../core/fn.world-position";
-import { fxGetCanvasParentGroupId } from "../../core/fn.canvas-node-semantics";
+import { fnGetWorldPosition } from "../../core/fn.world-position";
+import { fxGetCanvasParentGroupId } from "../../core/fx.canvas-node-semantics";
 import {
   DEFAULT_STROKE,
   DEFAULT_STROKE_WIDTH,
@@ -92,7 +92,7 @@ export function fxGetColorStyleKey(portal: TPortalFxGetColorStyleKey, args: TArg
 export type TPortalFxToPositionPatch = { editor: { toGroup(node: Konva.Node): unknown }; now: () => number };
 export type TArgsFxToPositionPatch = { node: TShape1dNode };
 export function fxToPositionPatch(portal: TPortalFxToPositionPatch, args: TArgsFxToPositionPatch) {
-  const worldPosition = fxGetWorldPosition({
+  const worldPosition = fnGetWorldPosition({
     absolutePosition: args.node.absolutePosition(),
     parentTransform: args.node.getLayer()?.getAbsoluteTransform() ?? null,
   });
@@ -100,7 +100,7 @@ export function fxToPositionPatch(portal: TPortalFxToPositionPatch, args: TArgsF
     id: args.node.id(),
     x: worldPosition.x,
     y: worldPosition.y,
-    parentGroupId: fxGetCanvasParentGroupId({ editor: portal.editor, node: args.node }),
+    parentGroupId: fxGetCanvasParentGroupId({}, { editor: portal.editor, node: args.node }),
     updatedAt: portal.now(),
   } satisfies Pick<TElement, "id" | "x" | "y" | "parentGroupId" | "updatedAt">;
 }
@@ -118,7 +118,7 @@ export function fxToTElement(portal: TPortalFxToTElement, args: TArgsFxToTElemen
   const layer = args.node.getLayer();
   const scaleX = absoluteScale.x / (layer?.scaleX() ?? 1);
   const scaleY = absoluteScale.y / (layer?.scaleY() ?? 1);
-  const { x, y } = fxGetWorldPosition({
+  const { x, y } = fnGetWorldPosition({
     absolutePosition: args.node.absolutePosition(),
     parentTransform: args.node.getLayer()?.getAbsoluteTransform() ?? null,
   });
@@ -142,7 +142,7 @@ export function fxToTElement(portal: TPortalFxToTElement, args: TArgsFxToTElemen
     bindings: [],
     createdAt: Number(args.node.getAttr(ELEMENT_CREATED_AT_ATTR) ?? now),
     locked: false,
-    parentGroupId: fxGetCanvasParentGroupId({ editor: portal.editor, node: args.node }),
+    parentGroupId: fxGetCanvasParentGroupId({}, { editor: portal.editor, node: args.node }),
     updatedAt: now,
     zIndex: typeof args.node.getAttr("vcZIndex") === "string" ? args.node.getAttr("vcZIndex") : "",
     data: {

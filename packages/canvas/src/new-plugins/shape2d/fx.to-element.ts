@@ -1,9 +1,9 @@
 import type Konva from "konva";
 import type { TElement, TElementStyle } from "@vibecanvas/service-automerge/types/canvas-doc.types";
-import { fxGetNodeZIndex } from "../../core/fn.get-node-z-index";
-import { fxCreateShape2dElement } from "../../core/fn.shape2d";
-import { fxGetWorldPosition } from "../../core/fn.world-position";
-import { fxGetCanvasParentGroupId } from "../../core/fn.canvas-node-semantics";
+import { fnGetNodeZIndex } from "../../core/fn.get-node-z-index";
+import { fnCreateShape2dElement } from "../../core/fn.shape2d";
+import { fnGetWorldPosition } from "../../core/fn.world-position";
+import { fxGetCanvasParentGroupId } from "../../core/fx.canvas-node-semantics";
 import type { EditorService } from "../../new-services/editor/EditorService";
 import type { SceneService } from "../../new-services/scene/SceneService";
 import { fxGetShape2dNodeType } from "./fn.node";
@@ -63,7 +63,7 @@ export function fxToShape2dElement(portal: TPortalToShape2dElement, args: TArgsT
   }
 
   const node = args.node as Konva.Shape;
-  const worldPosition = fxGetWorldPosition({
+  const worldPosition = fnGetWorldPosition({
     absolutePosition: node.absolutePosition(),
     parentTransform: node.getLayer()?.getAbsoluteTransform() ?? null,
   });
@@ -97,7 +97,7 @@ export function fxToShape2dElement(portal: TPortalToShape2dElement, args: TArgsT
     return null;
   }
 
-  return fxCreateShape2dElement({
+  return fnCreateShape2dElement({
     id: node.id(),
     type,
     x,
@@ -107,8 +107,8 @@ export function fxToShape2dElement(portal: TPortalToShape2dElement, args: TArgsT
     height,
     createdAt,
     updatedAt,
-    parentGroupId: fxGetCanvasParentGroupId({ editor: portal.editor, node }),
-    zIndex: fxGetNodeZIndex(node),
+    parentGroupId: fxGetCanvasParentGroupId({}, { editor: portal.editor, node }),
+    zIndex: fnGetNodeZIndex({}, { node }),
     style: getNodeStyle(node),
   }) satisfies TElement;
 }

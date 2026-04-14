@@ -6,6 +6,7 @@ import { fxFilterSelection } from "../../core/fx.filter-selection";
 import { fxIsSceneNode } from "./fn.scene-node";
 
 export type TPortalSyncDraggability = {
+  Konva: typeof Konva;
   editor: EditorService;
   render: SceneService;
   selection: SelectionService;
@@ -34,7 +35,8 @@ export function txSyncDraggability(
   });
 
   const activeNodes = fxFilterSelection({
-    render: portal.render,
+    Konva: portal.Konva,
+  }, {
     editor: portal.editor,
     selection: portal.selection.selection,
   });

@@ -1,11 +1,11 @@
 import { For } from "solid-js";
-import { fxGetFontSizePresetOptions, type TFontSizePreset } from "../../core/fn.text-style";
+import { fnGetFontSizePresetOptions, type TFontSizePreset } from "../../core/fn.text-style";
 
 export function FontSizePicker(props: {
   value: TFontSizePreset | undefined;
   onChange: (preset: TFontSizePreset) => void;
 }) {
-  const options = fxGetFontSizePresetOptions();
+  const options = fnGetFontSizePresetOptions();
 
   return (
     <div

@@ -1,8 +1,8 @@
 import type { TElement, TElementStyle, TPenData } from "@vibecanvas/service-automerge/types/canvas-doc.types";
 import type Konva from "konva";
-import { fxGetAbsolutePositionFromWorldPosition, fxGetWorldPosition } from "../../core/fn.world-position";
-import { fxGetCanvasParentGroupId } from "../../core/fn.canvas-node-semantics";
-import { fxGetNodeZIndex } from "../../core/fn.get-node-z-index";
+import { fnGetAbsolutePositionFromWorldPosition, fnGetWorldPosition } from "../../core/fn.world-position";
+import { fxGetCanvasParentGroupId } from "../../core/fx.canvas-node-semantics";
+import { fnGetNodeZIndex } from "../../core/fn.get-node-z-index";
 import { fxCreatePenStyleFromNode } from "./fn.style";
 import { fxScalePenDataPoints } from "./fn.math";
 
@@ -54,11 +54,11 @@ export function fxPenPathToElement(portal: TPortalFxPenPathToElement, args: TArg
   const layerScaleY = layer?.scaleY() ?? 1;
   const scaleX = absoluteScale.x / layerScaleX;
   const scaleY = absoluteScale.y / layerScaleY;
-  const worldPosition = fxGetWorldPosition({
+  const worldPosition = fnGetWorldPosition({
     absolutePosition: args.node.absolutePosition(),
     parentTransform: args.node.getLayer()?.getAbsoluteTransform() ?? null,
   });
-  const parentGroupId = fxGetCanvasParentGroupId({ editor: portal.editor, node: args.node });
+  const parentGroupId = fxGetCanvasParentGroupId({}, { editor: portal.editor, node: args.node });
 
   return {
     id: args.node.id(),
@@ -70,7 +70,7 @@ export function fxPenPathToElement(portal: TPortalFxPenPathToElement, args: TArg
     locked: false,
     parentGroupId,
     updatedAt: portal.now(),
-    zIndex: fxGetNodeZIndex(args.node),
+    zIndex: fnGetNodeZIndex({}, { node: args.node }),
     data: {
       ...baseData,
       points: fxScalePenDataPoints({ points: baseData.points, scaleX, scaleY }),
@@ -95,7 +95,7 @@ export type TArgsFxGetPenAbsolutePosition = {
 
 export function fxGetPenAbsolutePosition(portal: TPortalFxGetPenAbsolutePosition, args: TArgsFxGetPenAbsolutePosition) {
   void portal;
-  return fxGetAbsolutePositionFromWorldPosition({
+  return fnGetAbsolutePositionFromWorldPosition({
     worldPosition: { x: args.element.x, y: args.element.y },
     parentTransform: args.node.getLayer()?.getAbsoluteTransform() ?? null,
   });

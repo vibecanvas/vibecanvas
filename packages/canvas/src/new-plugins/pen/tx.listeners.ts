@@ -6,7 +6,7 @@ import type { HistoryService } from "../../new-services/history/HistoryService";
 import type { SceneService } from "../../new-services/scene/SceneService";
 import type { SelectionService } from "../../new-services/selection/SelectionService";
 import type { IHooks, TElementPointerEvent } from "../../runtime";
-import { fxGetCanvasAncestorGroups, fxGetCanvasNodeKind, fxGetCanvasParentGroupId, fxIsCanvasGroupNode } from "../../core/fn.canvas-node-semantics";
+import { fxGetCanvasAncestorGroups, fxGetCanvasNodeKind, fxGetCanvasParentGroupId, fxIsCanvasGroupNode } from "../../core/fx.canvas-node-semantics";
 import { fxIsPenNode } from "./fx.path";
 import { fxSerializeSubtreeElements } from "../group/fn.serialize-subtree-elements";
 
@@ -57,7 +57,7 @@ function penNodeToPositionPatch(portal: TPortalTxSetupPenShapeListeners, node: K
     id: node.id(),
     x: worldPosition.x,
     y: worldPosition.y,
-    parentGroupId: fxGetCanvasParentGroupId({ editor: portal.editor, node }),
+    parentGroupId: fxGetCanvasParentGroupId({}, { editor: portal.editor, node }),
     updatedAt: portal.now(),
   } satisfies Pick<TElement, "id" | "x" | "y" | "parentGroupId" | "updatedAt">;
 }
@@ -80,7 +80,7 @@ function applyElement(portal: TPortalTxSetupPenShapeListeners, element: TElement
     return;
   }
 
-  fxGetCanvasAncestorGroups({
+  fxGetCanvasAncestorGroups({}, {
     editor: portal.editor,
     node: findSceneNodeById(portal, element.id),
   }).forEach((group) => {
@@ -89,13 +89,13 @@ function applyElement(portal: TPortalTxSetupPenShapeListeners, element: TElement
 }
 
 function serializeNodeElements(portal: TPortalTxSetupPenShapeListeners, node: Konva.Node) {
-  const kind = fxGetCanvasNodeKind({ editor: portal.editor, node });
+  const kind = fxGetCanvasNodeKind({}, { editor: portal.editor, node });
   if (kind === "element") {
     const element = portal.editor.toElement(node);
     return element ? [structuredClone(element)] : [];
   }
 
-  if (kind === "group" && fxIsCanvasGroupNode({ editor: portal.editor, node })) {
+  if (kind === "group" && fxIsCanvasGroupNode({}, { editor: portal.editor, node })) {
     return fxSerializeSubtreeElements({
       editor: portal.editor,
       render: portal.render,

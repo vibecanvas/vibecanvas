@@ -1,8 +1,8 @@
 import type { TElement, TElementStyle, TTextData } from "@vibecanvas/service-automerge/types/canvas-doc.types";
-import { fxGetNodeZIndex } from "../../core/fn.get-node-z-index";
-import { fxGetNearestFontSizePreset } from "../../core/fn.text-style";
-import { fxGetWorldPosition } from "../../core/fn.world-position";
-import { fxGetCanvasParentGroupId } from "../../core/fn.canvas-node-semantics";
+import { fnGetNodeZIndex } from "../../core/fn.get-node-z-index";
+import { fnGetNearestFontSizePreset } from "../../core/fn.text-style";
+import { fnGetWorldPosition } from "../../core/fn.world-position";
+import { fxGetCanvasParentGroupId } from "../../core/fx.canvas-node-semantics";
 import type { SceneService } from "../../new-services/scene/SceneService";
 import type Konva from "konva";
 
@@ -20,7 +20,7 @@ export type TArgsToElement = {
 };
 
 export function fxToElement(portal: TPortalToElement, args: TArgsToElement) {
-  const worldPosition = fxGetWorldPosition({
+  const worldPosition = fnGetWorldPosition({
     absolutePosition: args.node.absolutePosition(),
     parentTransform: args.node.getLayer()?.getAbsoluteTransform() ?? null,
   });
@@ -28,7 +28,7 @@ export function fxToElement(portal: TPortalToElement, args: TArgsToElement) {
   const layer = args.node.getLayer();
   const layerScaleX = layer?.scaleX() ?? 1;
   const layerScaleY = layer?.scaleY() ?? 1;
-  const parentGroupId = fxGetCanvasParentGroupId({ editor: portal.editor, node: args.node });
+  const parentGroupId = fxGetCanvasParentGroupId({}, { editor: portal.editor, node: args.node });
 
   const baseStyle = structuredClone((args.node.getAttr(ELEMENT_STYLE_ATTR) as TElementStyle | undefined) ?? {});
   const style: TElementStyle = {
@@ -52,7 +52,7 @@ export function fxToElement(portal: TPortalToElement, args: TArgsToElement) {
     text: args.node.text(),
     originalText: (args.node.getAttr("vcOriginalText") as string | undefined) ?? args.node.text(),
     fontSize,
-    fontSizePreset: (args.node.getAttr("vcFontSizePreset") as TTextData["fontSizePreset"] | undefined) ?? fxGetNearestFontSizePreset(fontSize),
+    fontSizePreset: (args.node.getAttr("vcFontSizePreset") as TTextData["fontSizePreset"] | undefined) ?? fnGetNearestFontSizePreset(fontSize),
     fontFamily: args.node.fontFamily(),
     textAlign: args.node.align() as TTextData["textAlign"],
     verticalAlign: args.node.verticalAlign() as TTextData["verticalAlign"],
@@ -72,7 +72,7 @@ export function fxToElement(portal: TPortalToElement, args: TArgsToElement) {
     updatedAt: args.updatedAt,
     locked: false,
     parentGroupId,
-    zIndex: fxGetNodeZIndex(args.node),
+    zIndex: fnGetNodeZIndex({}, { node: args.node }),
     style,
     data,
   } satisfies TElement;

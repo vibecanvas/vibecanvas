@@ -172,6 +172,7 @@ Use the leaf files for execution history and local context.
 - [ ]: [S32] - show stylemenu already in create mode when tool like rect,pen is pressed. ux -> user knows where to draw
 - [ ]: [S33] - canvas architecture: rename SceneService -> SceneService and split EditorService so editor keeps only edit/transform state while scene registries/mapping move to SceneService
 - [ ]: [S34] - test canvas/core if all fn fx file function are correct
+- [ ]: [S35](s/S35.md) - canvas/core: align fn fx tx file boundaries, injected portals, and callers
 
 ## E xplorations
 - [ ]: [E1](e/E1.md) - Tauri Research

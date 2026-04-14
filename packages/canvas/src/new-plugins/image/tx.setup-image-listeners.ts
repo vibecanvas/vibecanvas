@@ -6,7 +6,7 @@ import type { HistoryService } from "../../new-services/history/HistoryService";
 import type { SceneService } from "../../new-services/scene/SceneService";
 import type { SelectionService } from "../../new-services/selection/SelectionService";
 import type { IHooks, TElementPointerEvent } from "../../runtime";
-import { fxGetCanvasAncestorGroups } from "../../core/fn.canvas-node-semantics";
+import { fxGetCanvasAncestorGroups } from "../../core/fx.canvas-node-semantics";
 import { txCreateImageCloneDrag } from "./tx.create-image-clone-drag";
 import type { TPortalCreateImageCloneDrag } from "./tx.create-image-clone-drag";
 import { txUpdateImageNodeFromElement } from "./tx.update-image-node-from-element";
@@ -46,7 +46,7 @@ export function txSetupImageListeners(
       element,
     });
 
-    fxGetCanvasAncestorGroups({
+    fxGetCanvasAncestorGroups({}, {
       editor: portal.editor,
       node: args.node,
     }).forEach((group) => {

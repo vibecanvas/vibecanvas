@@ -1,5 +1,5 @@
 import type { TElement, TImageData } from "@vibecanvas/service-automerge/types/canvas-doc.types";
-import { fxGetAbsolutePositionFromWorldPosition } from "../../core/fn.world-position";
+import { fnGetAbsolutePositionFromWorldPosition } from "../../core/fn.world-position";
 import type Konva from "konva";
 
 export type TPortalUpdateImageNodeFromElement = {
@@ -20,7 +20,7 @@ export function txUpdateImageNodeFromElement(
   args: TArgsUpdateImageNodeFromElement,
 ) {
   const data = args.element.data as TImageData;
-  args.node.absolutePosition(fxGetAbsolutePositionFromWorldPosition({
+  args.node.absolutePosition(fnGetAbsolutePositionFromWorldPosition({
     worldPosition: { x: args.element.x, y: args.element.y },
     parentTransform: args.node.getLayer()?.getAbsoluteTransform() ?? null,
   }));

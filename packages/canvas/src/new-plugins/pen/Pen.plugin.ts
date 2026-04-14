@@ -1,6 +1,6 @@
 import type { IPlugin } from "@vibecanvas/runtime";
 import type { TElement } from "@vibecanvas/service-automerge/types/canvas-doc.types";
-import type Konva from "konva";
+import Konva from "konva";
 import Pencil from "lucide-static/icons/pencil.svg?raw";
 import type { ContextMenuService } from "../../new-services/context-menu/ContextMenuService";
 import type { CrdtService } from "../../new-services/crdt/CrdtService";
@@ -15,7 +15,7 @@ import { throttle } from "@solid-primitives/scheduled";
 import { CanvasMode } from "../../new-services/selection/CONSTANTS";
 import type { IHooks } from "../../runtime";
 import { fxFilterSelection } from "../../core/fx.filter-selection";
-import { getWorldPosition } from "../../core/node-space";
+import { fxGetWorldPositionFromNode } from "../../core/fx.node-space";
 import { txDeleteSelection } from "../select/tx.delete-selection";
 import { DEFAULT_FILL, DEFAULT_OPACITY, DEFAULT_STROKE_WIDTH } from "./CONSTANTS";
 import { txCreatePenCloneDrag, txCreatePenPreviewClone, txFinalizePenPreviewClone } from "./tx.clone";
@@ -106,7 +106,7 @@ export function createPenPlugin(): IPlugin<{
           hooks: ctx.hooks,
           now,
           Path: render.Path,
-          getWorldPosition: (sourceNode) => getWorldPosition(sourceNode),
+          getWorldPosition: (sourceNode) => fxGetWorldPositionFromNode({}, { node: sourceNode }),
           createThrottledPatch: (callback) => throttle(callback, 100),
           createPenCloneDrag: (sourceNode) => {
             return txCreatePenCloneDrag({
@@ -154,7 +154,7 @@ export function createPenPlugin(): IPlugin<{
             }, { previewClone: previewNode });
           },
           filterSelection: (nodes) => {
-            return fxFilterSelection({ render, editor, selection: nodes.filter((node): node is Konva.Group | Konva.Shape => {
+            return fxFilterSelection({ Konva }, { editor, selection: nodes.filter((node): node is Konva.Group | Konva.Shape => {
               return node instanceof render.Group || node instanceof render.Shape;
             }) });
           },

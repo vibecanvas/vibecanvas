@@ -7,7 +7,7 @@ import type { HistoryService } from "../../new-services/history/HistoryService";
 import type { SceneService } from "../../new-services/scene/SceneService";
 import type { SelectionService } from "../../new-services/selection/SelectionService";
 import type { IHooks, TElementPointerEvent } from "../../runtime";
-import { fxGetCanvasAncestorGroups, fxGetCanvasNodeKind, fxIsCanvasGroupNode } from "../../core/fn.canvas-node-semantics";
+import { fxGetCanvasAncestorGroups, fxGetCanvasNodeKind, fxIsCanvasGroupNode } from "../../core/fx.canvas-node-semantics";
 
 export type TPortalSetupShape2dNode = {
   crdt: CrdtService;
@@ -48,7 +48,7 @@ function applyElement(portal: TPortalSetupShape2dNode, element: TElement) {
     return;
   }
 
-  fxGetCanvasAncestorGroups({
+  fxGetCanvasAncestorGroups({}, {
     editor: portal.editor,
     node: findSceneNodeById(portal.render, element.id),
   }).forEach((group) => {
@@ -57,13 +57,13 @@ function applyElement(portal: TPortalSetupShape2dNode, element: TElement) {
 }
 
 function serializeNodeElements(portal: TPortalSetupShape2dNode, node: Konva.Node) {
-  const kind = fxGetCanvasNodeKind({ editor: portal.editor, node });
+  const kind = fxGetCanvasNodeKind({}, { editor: portal.editor, node });
   if (kind === "element") {
     const element = portal.editor.toElement(node);
     return element ? [structuredClone(element)] : [];
   }
 
-  if (kind === "group" && fxIsCanvasGroupNode({ editor: portal.editor, node })) {
+  if (kind === "group" && fxIsCanvasGroupNode({}, { editor: portal.editor, node })) {
     return fxSerializeSubtreeElements({
       editor: portal.editor,
       render: portal.render,

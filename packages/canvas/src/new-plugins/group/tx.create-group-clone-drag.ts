@@ -5,7 +5,7 @@ import type { EditorService } from "../../new-services/editor/EditorService";
 import type { RenderOrderService } from "../../new-services/render-order/RenderOrderService";
 import type { SceneService } from "../../new-services/scene/SceneService";
 import type { SelectionService } from "../../new-services/selection/SelectionService";
-import { fxGetCanvasNodeKind, fxIsCanvasGroupNode } from "../../core/fn.canvas-node-semantics";
+import { fxGetCanvasNodeKind, fxIsCanvasGroupNode } from "../../core/fx.canvas-node-semantics";
 
 export type TPortalCreateGroupCloneDrag = {
   crdt: CrdtService;
@@ -32,12 +32,12 @@ function refreshCloneSubtree(
   clone.setAttr("vcGroupNodeSetup", false);
 
   clone.getChildren().forEach((node) => {
-    if (fxIsCanvasGroupNode({ editor: portal.editor, node })) {
+    if (fxIsCanvasGroupNode({}, { editor: portal.editor, node })) {
       refreshCloneSubtree(portal, node as Konva.Group);
       return;
     }
 
-    const kind = fxGetCanvasNodeKind({ editor: portal.editor, node });
+    const kind = fxGetCanvasNodeKind({}, { editor: portal.editor, node });
     if (kind === "element") {
       node.id(portal.createId());
     }
@@ -79,8 +79,8 @@ function registerSubtree(
     }
 
     if (
-      fxIsCanvasGroupNode({ editor: portal.editor, node: sourceChild })
-      && fxIsCanvasGroupNode({ editor: portal.editor, node: cloneChild })
+      fxIsCanvasGroupNode({}, { editor: portal.editor, node: sourceChild })
+      && fxIsCanvasGroupNode({}, { editor: portal.editor, node: cloneChild })
     ) {
       registerSubtree(portal, {
         sourceGroup: sourceChild as Konva.Group,
@@ -91,7 +91,7 @@ function registerSubtree(
       return;
     }
 
-    if (fxGetCanvasNodeKind({ editor: portal.editor, node: cloneChild }) !== "element") {
+    if (fxGetCanvasNodeKind({}, { editor: portal.editor, node: cloneChild }) !== "element") {
       return;
     }
 
