@@ -8,7 +8,7 @@ import type { RenderOrderService } from "../../new-services/render-order/RenderO
 import type { RenderService } from "../../new-services/render/RenderService";
 import type { SelectionService } from "../../new-services/selection/SelectionService";
 import type { IHooks } from "../../runtime";
-import { CanvasMode } from "../../new-services/selection/enum";
+import { CanvasMode } from "../../new-services/selection/CONSTANTS";
 import { txDeleteSelection } from "./tx.delete-selection";
 import { txHandleElementPointerDoubleClick } from "./tx.handle-element-pointer-double-click";
 import { txHandleElementPointerDown } from "./tx.handle-element-pointer-down";

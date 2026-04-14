@@ -12,7 +12,7 @@ import type { SelectionService } from "../../new-services/selection/SelectionSer
 import { resolveThemeColor, type ThemeService } from "@vibecanvas/service-theme";
 import { getStroke } from "perfect-freehand";
 import { throttle } from "@solid-primitives/scheduled";
-import { CanvasMode } from "../../new-services/selection/enum";
+import { CanvasMode } from "../../new-services/selection/CONSTANTS";
 import type { IHooks } from "../../runtime";
 import { fxFilterSelection } from "../../core/fn.filter-selection";
 import { getWorldPosition } from "../../core/node-space";

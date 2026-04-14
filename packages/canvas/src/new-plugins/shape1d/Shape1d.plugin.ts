@@ -1,6 +1,7 @@
 import type { IPlugin } from "@vibecanvas/runtime";
+import type { TElement } from "@vibecanvas/service-automerge/types/canvas-doc.types";
 import ArrowRight from "lucide-static/icons/arrow-right.svg?raw";
-import type Konva from "konva";
+import Konva from "konva";
 import Minus from "lucide-static/icons/minus.svg?raw";
 import type { CameraService } from "../../new-services/camera/CameraService";
 import type { ContextMenuService } from "../../new-services/context-menu/ContextMenuService";
@@ -10,17 +11,20 @@ import type { HistoryService } from "../../new-services/history/HistoryService";
 import type { RenderOrderService } from "../../new-services/render-order/RenderOrderService";
 import type { RenderService } from "../../new-services/render/RenderService";
 import type { SelectionService } from "../../new-services/selection/SelectionService";
-import type { ThemeService } from "@vibecanvas/service-theme";
-import { CanvasMode } from "../../new-services/selection/enum";
+import { resolveThemeColor, type ThemeService } from "@vibecanvas/service-theme";
+import { CanvasMode } from "../../new-services/selection/CONSTANTS";
+import { throttle } from "@solid-primitives/scheduled";
 import type { IHooks } from "../../runtime";
 import { fxFilterSelection } from "../../core/fn.filter-selection";
 import { txDeleteSelection } from "../select/tx.delete-selection";
-import { createDraftElement, createFallbackPreviewElement } from "./Shape1d.draft";
-import { createPreviewClone, safeStopDrag, toTElement, updateShapeFromElement } from "./Shape1d.element";
-import { applyAnchorDrag, getInsertionPoint, localPointToWorld } from "./Shape1d.geometry";
-import { recordCreateHistory, recordElementHistory, type TPortalRecordShape1dHistory } from "./Shape1d.history";
-import { attachShapeRuntime, createShapeFromElement } from "./Shape1d.render";
-import { createCloneDrag, finalizePreviewClone, setupShapeListeners } from "./Shape1d.runtime";
+import { setNodeZIndex } from "../../core/render-order";
+import { fxCreateDraftElement, fxCreateFallbackPreviewElement } from "./fn.draft";
+import { txCreatePreviewClone, txUpdateShapeFromElement } from "./tx.element";
+import { fxApplyAnchorDrag, fxGetInsertionPoint, fxLocalPointToWorld } from "./fx.geometry";
+import { txRecordCreateHistory, txRecordElementHistory, type TPortalTxRecordShape1dHistory } from "./tx.history";
+import { txAttachShapeRuntime, txCreateShapeFromElement } from "./tx.render";
+import { txCreateCloneDrag, txFinalizePreviewClone, txSafeStopDrag, txSetupShapeListeners } from "./tx.runtime";
+import { fxFindShape1dNodeById, fxGetElementData, fxHasRenderableRuntime, fxIsShape1dNode, fxIsSupportedElementType, fxIsSupportedTool, fxToTElement } from "./fx.node";
 import {
   EDIT_HANDLE_FILL,
   EDIT_HANDLE_RADIUS,
@@ -29,13 +33,7 @@ import {
   type THandleDragSnapshot,
   type TPoint,
   type TShape1dNode,
-  findShape1dNodeById,
-  getElementData,
-  hasRenderableRuntime,
-  isShape1dNode,
-  isSupportedElementType,
-  isSupportedTool,
-} from "./Shape1d.shared";
+} from "./CONSTANTS";
 
 function createCreateId(render: RenderService) {
   let fallbackId = 0;
@@ -91,7 +89,27 @@ export function createShape1dPlugin(): IPlugin<{
       const createId = createCreateId(render);
       const now = () => Date.now();
 
-      const historyPortal: TPortalRecordShape1dHistory = {
+      const createShapeNode = (config?: Record<string, unknown>) => {
+        return new Konva.Shape({
+          perfectDrawEnabled: false,
+          lineCap: "round",
+          lineJoin: "round",
+          ...config,
+        }) as TShape1dNode;
+      };
+      const toElement = (node: TShape1dNode) => fxToTElement({ editor, now }, { node });
+      const findNode = (id: string): TShape1dNode | null => fxFindShape1dNodeById({ render }, { id });
+      const getData = (node: TShape1dNode) => fxGetElementData({}, { node });
+      const isNode = (node: Konva.Node | null | undefined): node is TShape1dNode => fxIsShape1dNode({ Shape: render.Shape }, { node });
+      const isTool = (tool: string): tool is "line" | "arrow" => fxIsSupportedTool({}, { tool });
+      const isType = (type: string): boolean => fxIsSupportedElementType({}, { type });
+      const toWorld = (node: TShape1dNode, point: TPoint | { x: number; y: number }) => fxLocalPointToWorld({}, { node, point });
+      const insertionPoint = (data: Parameters<typeof fxGetInsertionPoint>[1]["data"], segmentIndex: number) => fxGetInsertionPoint({}, { data, segmentIndex });
+      const applyAnchorDrag = (node: TShape1dNode, drag: THandleDragSnapshot, worldPoint: { x: number; y: number }) => fxApplyAnchorDrag({}, { node, drag, worldPoint });
+      const createShape = (element: import("@vibecanvas/service-automerge/types/canvas-doc.types").TElement) => txCreateShapeFromElement({ createShapeNode, setNodeZIndex, theme, resolveThemeColor }, { element });
+      const updateShape = (node: TShape1dNode, element: import("@vibecanvas/service-automerge/types/canvas-doc.types").TElement) => txUpdateShapeFromElement({ theme, resolveThemeColor, setNodeZIndex }, { node, element });
+
+      const historyPortal: TPortalTxRecordShape1dHistory = {
         crdt,
         editor,
         history,
@@ -99,19 +117,22 @@ export function createShape1dPlugin(): IPlugin<{
         renderOrder,
         selection,
         theme,
+        resolveThemeColor,
+        createShapeNode,
+        setNodeZIndex,
         setupNode,
       };
 
       const runtimePortal = {
         ...historyPortal,
         hooks: ctx.hooks,
-        theme,
         createId,
         now,
+        createThrottledPatch: (callback: (patch: Pick<TElement, "id" | "x" | "y" | "parentGroupId" | "updatedAt">) => void) => throttle(callback, 100),
       };
 
       function currentTool() {
-        return isSupportedTool(editor.activeToolId) ? editor.activeToolId : null;
+        return isTool(editor.activeToolId) ? editor.activeToolId : null;
       }
 
       function createDraftFromState() {
@@ -120,7 +141,7 @@ export function createShape1dPlugin(): IPlugin<{
           return null;
         }
 
-        return createDraftElement({
+        return fxCreateDraftElement({
           activeTool: tool,
           draftElementId,
           draftStartPoint,
@@ -136,7 +157,7 @@ export function createShape1dPlugin(): IPlugin<{
           return null;
         }
 
-        return createFallbackPreviewElement({
+        return fxCreateFallbackPreviewElement({
           activeTool: tool,
           draftElementId,
           createId,
@@ -172,7 +193,7 @@ export function createShape1dPlugin(): IPlugin<{
           return null;
         }
 
-        previewShape = createShapeFromElement(theme, previewElement);
+        previewShape = createShape(previewElement);
         previewShape.listening(false);
         previewShape.visible(false);
         previewShape.draggable(false);
@@ -193,7 +214,7 @@ export function createShape1dPlugin(): IPlugin<{
           return;
         }
 
-        updateShapeFromElement(theme, nextPreviewShape, element);
+        updateShape(nextPreviewShape, element);
         nextPreviewShape.listening(false);
         nextPreviewShape.visible(true);
         nextPreviewShape.draggable(false);
@@ -213,7 +234,7 @@ export function createShape1dPlugin(): IPlugin<{
       }
 
       function refreshEditHandlePositions(node: TShape1dNode) {
-        const data = getElementData(node);
+        const data = getData(node);
         if (!data) {
           return;
         }
@@ -221,11 +242,11 @@ export function createShape1dPlugin(): IPlugin<{
         anchorHandles.forEach((handle, pointIndex) => {
           const point = data.points[pointIndex];
           if (point) {
-            handle.position(localPointToWorld(node, point));
+            handle.position(toWorld(node, point));
           }
         });
         insertHandles.forEach((handle, segmentIndex) => {
-          handle.position(localPointToWorld(node, getInsertionPoint(data, segmentIndex)));
+          handle.position(toWorld(node, insertionPoint(data, segmentIndex)));
         });
         render.dynamicLayer.batchDraw();
       }
@@ -233,7 +254,7 @@ export function createShape1dPlugin(): IPlugin<{
       function exitEditMode(args?: { preserveSelection?: boolean }) {
         const editingId = editor.editingShape1dId;
         if (editingId !== null) {
-          const node = findShape1dNodeById(render, editingId);
+          const node = findNode(editingId);
           if (node) {
             const previousDraggable = node.getAttr("vcShape1dPrevDraggable");
             node.draggable(typeof previousDraggable === "boolean" ? previousDraggable : true);
@@ -251,13 +272,13 @@ export function createShape1dPlugin(): IPlugin<{
 
       function renderEditHandles(node: TShape1dNode) {
         clearEditHandles();
-        const data = getElementData(node);
+        const data = getData(node);
         if (!data || data.points.length === 0) {
           return;
         }
 
         data.points.forEach((point, pointIndex) => {
-          const worldPoint = localPointToWorld(node, point);
+          const worldPoint = toWorld(node, point);
           const handle = new render.Circle({
             x: worldPoint.x,
             y: worldPoint.y,
@@ -272,7 +293,7 @@ export function createShape1dPlugin(): IPlugin<{
           handle.setAttr("vcShape1dHandleKind", "anchor");
           handle.setAttr("vcShape1dPointIndex", pointIndex);
           handle.on("dragstart", () => {
-            const editableNode = findShape1dNodeById(render, node.id());
+            const editableNode = findNode(node.id());
             if (!editableNode) {
               return;
             }
@@ -280,8 +301,8 @@ export function createShape1dPlugin(): IPlugin<{
             activeHandleDrag = {
               nodeId: editableNode.id(),
               pointIndex,
-              beforeElement: toTElement(editor, editableNode),
-              beforePoints: structuredClone(getElementData(editableNode)?.points ?? []),
+              beforeElement: toElement(editableNode),
+              beforePoints: structuredClone(getData(editableNode)?.points ?? []),
               beforeAbsoluteTransform: editableNode.getAbsoluteTransform().copy(),
             };
           });
@@ -291,7 +312,7 @@ export function createShape1dPlugin(): IPlugin<{
               return;
             }
 
-            const editableNode = findShape1dNodeById(render, drag.nodeId);
+            const editableNode = findNode(drag.nodeId);
             const pointer = render.dynamicLayer.getRelativePointerPosition();
             if (!editableNode || !pointer) {
               return;
@@ -307,14 +328,14 @@ export function createShape1dPlugin(): IPlugin<{
               return;
             }
 
-            const editableNode = findShape1dNodeById(render, drag.nodeId);
+            const editableNode = findNode(drag.nodeId);
             if (!editableNode) {
               return;
             }
 
-            const afterElement = toTElement(editor, editableNode);
+            const afterElement = toElement(editableNode);
             crdt.patch({ elements: [afterElement], groups: [] });
-            recordElementHistory(historyPortal, {
+            txRecordElementHistory(historyPortal, {
               beforeElement: drag.beforeElement,
               afterElement,
               label: "edit-shape1d-point",
@@ -326,8 +347,8 @@ export function createShape1dPlugin(): IPlugin<{
         });
 
         for (let index = 0; index < data.points.length - 1; index += 1) {
-          const insertPoint = getInsertionPoint(data, index);
-          const worldPoint = localPointToWorld(node, insertPoint);
+          const insertPoint = insertionPoint(data, index);
+          const worldPoint = toWorld(node, insertPoint);
           const handle = new render.Circle({
             x: worldPoint.x,
             y: worldPoint.y,
@@ -343,18 +364,18 @@ export function createShape1dPlugin(): IPlugin<{
           handle.setAttr("vcShape1dHandleKind", "insert");
           handle.setAttr("vcShape1dSegmentIndex", index);
           handle.on("dragstart", () => {
-            const editableNode = findShape1dNodeById(render, node.id());
+            const editableNode = findNode(node.id());
             if (!editableNode) {
               return;
             }
 
-            const beforeElement = toTElement(editor, editableNode);
-            const currentData = getElementData(editableNode);
+            const beforeElement = toElement(editableNode);
+            const currentData = getData(editableNode);
             if (!currentData) {
               return;
             }
 
-            const createdPoint = getInsertionPoint(currentData, index);
+            const createdPoint = insertionPoint(currentData, index);
             const nextData = structuredClone(currentData);
             nextData.points.splice(index + 1, 0, createdPoint);
             editableNode.setAttr("vcElementData", nextData);
@@ -375,16 +396,16 @@ export function createShape1dPlugin(): IPlugin<{
               return;
             }
 
-            const editableNode = findShape1dNodeById(render, drag.nodeId);
+            const editableNode = findNode(drag.nodeId);
             const pointer = render.dynamicLayer.getRelativePointerPosition();
             if (!editableNode || !pointer) {
               return;
             }
 
             applyAnchorDrag(editableNode, drag, { x: pointer.x, y: pointer.y });
-            const updatedPoint = getElementData(editableNode)?.points[drag.pointIndex];
+            const updatedPoint = getData(editableNode)?.points[drag.pointIndex];
             if (updatedPoint) {
-              handle.position(localPointToWorld(editableNode, updatedPoint));
+              handle.position(toWorld(editableNode, updatedPoint));
             }
             render.dynamicLayer.batchDraw();
           });
@@ -395,14 +416,14 @@ export function createShape1dPlugin(): IPlugin<{
               return;
             }
 
-            const editableNode = findShape1dNodeById(render, drag.nodeId);
+            const editableNode = findNode(drag.nodeId);
             if (!editableNode) {
               return;
             }
 
-            const afterElement = toTElement(editor, editableNode);
+            const afterElement = toElement(editableNode);
             crdt.patch({ elements: [afterElement], groups: [] });
-            recordElementHistory(historyPortal, {
+            txRecordElementHistory(historyPortal, {
               beforeElement: drag.beforeElement,
               afterElement,
               label: "insert-shape1d-point",
@@ -415,20 +436,20 @@ export function createShape1dPlugin(): IPlugin<{
             }
 
             event.cancelBubble = true;
-            const editableNode = findShape1dNodeById(render, node.id());
-            const currentData = editableNode ? getElementData(editableNode) : null;
+            const editableNode = findNode(node.id());
+            const currentData = editableNode ? getData(editableNode) : null;
             if (!editableNode || !currentData) {
               return;
             }
 
-            const beforeElement = toTElement(editor, editableNode);
+            const beforeElement = toElement(editableNode);
             const nextData = structuredClone(currentData);
             nextData.points.splice(index + 1, 0, insertPoint);
             editableNode.setAttr("vcElementData", nextData);
             editableNode.getLayer()?.batchDraw();
-            const afterElement = toTElement(editor, editableNode);
+            const afterElement = toElement(editableNode);
             crdt.patch({ elements: [afterElement], groups: [] });
-            recordElementHistory(historyPortal, {
+            txRecordElementHistory(historyPortal, {
               beforeElement,
               afterElement,
               label: "insert-shape1d-point",
@@ -470,7 +491,7 @@ export function createShape1dPlugin(): IPlugin<{
           return;
         }
 
-        const node = findShape1dNodeById(render, editingId);
+        const node = findNode(editingId);
         const filteredSelection = fxFilterSelection({
           render,
           selection: selection.selection,
@@ -494,8 +515,8 @@ export function createShape1dPlugin(): IPlugin<{
       }
 
       function setupNode(node: TShape1dNode) {
-        attachShapeRuntime(node);
-        setupShapeListeners(runtimePortal, node);
+        txAttachShapeRuntime({}, { node });
+        txSetupShapeListeners(runtimePortal, { node });
         node.setDraggable(true);
         node.listening(true);
         node.visible(true);
@@ -520,16 +541,16 @@ export function createShape1dPlugin(): IPlugin<{
           return;
         }
 
-        const node = setupNode(createShapeFromElement(theme, element));
+        const node = setupNode(createShape(element));
         render.staticForegroundLayer.add(node);
         renderOrder.assignOrderOnInsert({
           parent: render.staticForegroundLayer,
           nodes: [node],
           position: "front",
         });
-        const createdElement = toTElement(editor, node);
+        const createdElement = toElement(node);
         crdt.patch({ elements: [createdElement], groups: [] });
-        recordCreateHistory(historyPortal, {
+        txRecordCreateHistory(historyPortal, {
           element: createdElement,
           node,
           label: "create-shape1d",
@@ -538,7 +559,7 @@ export function createShape1dPlugin(): IPlugin<{
       }
 
       contextMenu.registerProvider("shape1d", ({ targetElement, activeSelection }) => {
-        if (!targetElement || !isSupportedElementType(targetElement.data.type)) {
+        if (!targetElement || !isType(targetElement.data.type)) {
           return [];
         }
 
@@ -575,19 +596,19 @@ export function createShape1dPlugin(): IPlugin<{
           return null;
         }
 
-        if (!isShape1dNode(node)) {
+        if (!isNode(node)) {
           return null;
         }
 
-        return toTElement(editor, node);
+        return toElement(node);
       });
 
       editor.registerCreateShapeFromTElement("shape1d", (element) => {
-        if (!element.data || !isSupportedElementType(element.data.type)) {
+        if (!element.data || !isType(element.data.type)) {
           return null;
         }
 
-        return setupNode(createShapeFromElement(theme, element));
+        return setupNode(createShape(element));
       });
 
       editor.registerSetupExistingShape("shape1d", (node) => {
@@ -595,26 +616,26 @@ export function createShape1dPlugin(): IPlugin<{
           return false;
         }
 
-        if (!isShape1dNode(node)) {
+        if (!isNode(node)) {
           return false;
         }
 
-        attachShapeRuntime(node);
+        txAttachShapeRuntime({}, { node });
         setupNode(node);
         return true;
       });
 
       editor.registerUpdateShapeFromTElement("shape1d", (element) => {
-        if (!element.data || !isSupportedElementType(element.data.type)) {
+        if (!element.data || !isType(element.data.type)) {
           return false;
         }
 
-        const node = findShape1dNodeById(render, element.id);
+        const node = findNode(element.id);
         if (!node) {
           return false;
         }
 
-        updateShapeFromElement(theme, node, element);
+        updateShape(node, element);
         return true;
       });
 
@@ -686,7 +707,7 @@ export function createShape1dPlugin(): IPlugin<{
             render,
             selection: selection.selection,
           });
-          const target = filteredSelection.length === 1 && isShape1dNode(filteredSelection[0])
+          const target = filteredSelection.length === 1 && isNode(filteredSelection[0])
             && selection.focusedId === filteredSelection[0].id()
               ? filteredSelection[0]
               : null;
@@ -714,7 +735,7 @@ export function createShape1dPlugin(): IPlugin<{
           render,
           selection: selection.selection,
         });
-        if (!isShape1dNode(event.currentTarget) || filteredSelection.length !== 1 || filteredSelection[0] !== event.currentTarget) {
+        if (!isNode(event.currentTarget) || filteredSelection.length !== 1 || filteredSelection[0] !== event.currentTarget) {
           return false;
         }
 
@@ -729,7 +750,7 @@ export function createShape1dPlugin(): IPlugin<{
       });
 
       ctx.hooks.toolSelect.tap((toolId) => {
-        if (isSupportedTool(toolId)) {
+        if (isTool(toolId)) {
           return;
         }
 
@@ -756,14 +777,14 @@ export function createShape1dPlugin(): IPlugin<{
       });
       theme.hooks.change.tap(() => {
         render.staticForegroundLayer.find((candidate: Konva.Node) => {
-          return isShape1dNode(candidate);
+          return isNode(candidate);
         }).forEach((candidate) => {
-          if (!isShape1dNode(candidate)) {
+          if (!isNode(candidate)) {
             return;
           }
 
-          const element = toTElement(editor, candidate);
-          updateShapeFromElement(theme, candidate, element);
+          const element = toElement(candidate);
+          updateShape(candidate, element);
         });
         render.staticForegroundLayer.batchDraw();
         refreshEditMode();
@@ -788,18 +809,18 @@ export function createShape1dPlugin(): IPlugin<{
 }
 
 export const Shape1dPlugin = {
-  isSupportedTool,
-  isSupportedElementType,
-  findShape1dNodeById,
-  getElementData,
-  isShape1dNode,
-  hasRenderableRuntime,
-  createShapeFromElement,
-  updateShapeFromElement,
-  toTElement,
-  createPreviewClone,
-  createCloneDrag,
-  finalizePreviewClone,
-  setupShapeListeners,
-  safeStopDrag,
+  fxIsSupportedTool,
+  fxIsSupportedElementType,
+  fxFindShape1dNodeById,
+  fxGetElementData,
+  fxIsShape1dNode,
+  fxHasRenderableRuntime,
+  txCreateShapeFromElement,
+  txUpdateShapeFromElement,
+  fxToTElement,
+  txCreatePreviewClone,
+  txCreateCloneDrag,
+  txFinalizePreviewClone,
+  txSetupShapeListeners,
+  txSafeStopDrag,
 };

@@ -8,7 +8,7 @@ import type { EditorService, TEditorTool } from "../../new-services/editor/Edito
 import type { RenderService } from "../../new-services/render/RenderService";
 import type { SelectionService } from "../../new-services/selection/SelectionService";
 import type { IHooks } from "../../runtime";
-import { CanvasMode } from "../../new-services/selection/enum";
+import { CanvasMode } from "../../new-services/selection/CONSTANTS";
 
 function getModeFromTool(tool: TEditorTool | undefined) {
   if (!tool) {

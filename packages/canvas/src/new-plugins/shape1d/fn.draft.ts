@@ -6,18 +6,18 @@ import {
   type TPoint,
   type TShape1dData,
   type TShape1dTool,
-} from "./Shape1d.shared";
+} from "./CONSTANTS";
 
-export function createFallbackPreviewElement(payload: {
+export function fxCreateFallbackPreviewElement(args: {
   activeTool: TShape1dTool;
   draftElementId: string | null;
   createId: () => string;
   now: () => number;
 }) {
-  const timestamp = payload.now();
+  const timestamp = args.now();
 
   return {
-    id: payload.draftElementId ?? payload.createId(),
+    id: args.draftElementId ?? args.createId(),
     x: 0,
     y: 0,
     rotation: 0,
@@ -28,12 +28,12 @@ export function createFallbackPreviewElement(payload: {
     updatedAt: timestamp,
     zIndex: "",
     data: {
-      type: payload.activeTool === "arrow" ? "arrow" : "line",
+      type: args.activeTool === "arrow" ? "arrow" : "line",
       lineType: "straight",
       points: [[0, 0], [0, 0]],
       startBinding: null,
       endBinding: null,
-      ...(payload.activeTool === "arrow" ? { startCap: "none", endCap: "arrow" } : {}),
+      ...(args.activeTool === "arrow" ? { startCap: "none", endCap: "arrow" } : {}),
     } as TShape1dData,
     style: {
       strokeColor: DEFAULT_STROKE,
@@ -43,7 +43,7 @@ export function createFallbackPreviewElement(payload: {
   } satisfies TElement;
 }
 
-export function createDraftElement(payload: {
+export function fxCreateDraftElement(args: {
   activeTool: TShape1dTool;
   draftElementId: string | null;
   draftStartPoint: TPoint | null;
@@ -51,21 +51,21 @@ export function createDraftElement(payload: {
   createId: () => string;
   now: () => number;
 }) {
-  if (!payload.draftStartPoint || !payload.draftCurrentPoint) {
+  if (!args.draftStartPoint || !args.draftCurrentPoint) {
     return null;
   }
 
-  const [startX, startY] = payload.draftStartPoint;
-  const [endX, endY] = payload.draftCurrentPoint;
+  const [startX, startY] = args.draftStartPoint;
+  const [endX, endY] = args.draftCurrentPoint;
   const dx = endX - startX;
   const dy = endY - startY;
   if (Math.abs(dx) < 0.5 && Math.abs(dy) < 0.5) {
     return null;
   }
 
-  const timestamp = payload.now();
+  const timestamp = args.now();
   return {
-    id: payload.draftElementId ?? payload.createId(),
+    id: args.draftElementId ?? args.createId(),
     x: startX,
     y: startY,
     rotation: 0,
@@ -75,7 +75,7 @@ export function createDraftElement(payload: {
     parentGroupId: null,
     updatedAt: timestamp,
     zIndex: "",
-    data: payload.activeTool === "arrow"
+    data: args.activeTool === "arrow"
       ? {
           type: "arrow",
           lineType: "straight",

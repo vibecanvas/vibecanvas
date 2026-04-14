@@ -16,7 +16,7 @@ import type { RenderOrderService } from "../../new-services/render-order/RenderO
 import type { RenderService } from "../../new-services/render/RenderService";
 import type { SelectionService } from "../../new-services/selection/SelectionService";
 import type { ThemeService } from "@vibecanvas/service-theme";
-import { CanvasMode } from "../../new-services/selection/enum";
+import { CanvasMode } from "../../new-services/selection/CONSTANTS";
 import type { IHooks } from "../../runtime";
 import { txDeleteSelection } from "../select/tx.delete-selection";
 import { fxGetAttachedTextNode, fxOpenAttachedTextEditMode, fxPersistAttachedTextNode, fxSyncAttachedTextNodeToShape } from "./fx.attached-text";

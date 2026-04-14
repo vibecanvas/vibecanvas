@@ -1,9 +1,14 @@
 import Konva from "konva";
 import type { TArrowData, TElement, TLineData } from "@vibecanvas/service-automerge/types/canvas-doc.types";
 import { describe, expect, test } from "vitest";
-import { isShape1dNode } from "../../../src/new-plugins/shape1d/Shape1d.shared";
+import { fxIsShape1dNode } from "../../../src/new-plugins/shape1d/fx.node";
+import type { TShape1dNode } from "../../../src/new-plugins/shape1d/CONSTANTS";
 import { THEME_ID_DARK } from "@vibecanvas/service-theme";
 import { createMockDocHandle, createNewCanvasHarness, flushCanvasEffects } from "../../new-test-setup";
+
+function isShape1dNode(node: Konva.Node | null | undefined): node is TShape1dNode {
+  return fxIsShape1dNode({ Shape: Konva.Shape }, { node });
+}
 
 function createHookPointerEvent(type: string) {
   return {

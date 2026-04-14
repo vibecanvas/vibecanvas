@@ -19,7 +19,7 @@ import type { EditorService } from "../../new-services/editor/EditorService";
 import type { HistoryService } from "../../new-services/history/HistoryService";
 import type { RenderService } from "../../new-services/render/RenderService";
 import type { SelectionService } from "../../new-services/selection/SelectionService";
-import { findShape1dNodeById } from "../shape1d/Shape1d.shared";
+import { fxFindShape1dNodeById } from "../shape1d/fx.node";
 import type { IHooks } from "../../runtime";
 
 function mountSelectionStyleMenu(args: {
@@ -153,7 +153,7 @@ function mountSelectionStyleMenu(args: {
             return;
           }
 
-          const editingNode = findShape1dNodeById(args.render, args.editor.editingShape1dId);
+          const editingNode = fxFindShape1dNodeById({ render: args.render }, { id: args.editor.editingShape1dId });
           editingNode?.getLayer()?.batchDraw();
         },
       }, { property, value });

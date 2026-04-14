@@ -1,19 +1,8 @@
 import type { TArrowData, TElement, TElementStyle } from "@vibecanvas/service-automerge/types/canvas-doc.types";
-import Konva from "konva";
-import { setNodeZIndex } from "../../core/render-order";
-import {
-  DEFAULT_OPACITY,
-  EDIT_HANDLE_STROKE,
-  ELEMENT_CREATED_AT_ATTR,
-  MIN_HIT_STROKE_WIDTH,
-  type TPoint,
-  type TShape1dData,
-  type TShape1dNode,
-  getStrokeColorFromStyle,
-  getStrokeWidthFromStyle,
-  isSupportedElementType,
-} from "./Shape1d.shared";
-import type { ThemeService } from "@vibecanvas/service-theme";
+import type Konva from "konva";
+import type { TThemeDefinition } from "@vibecanvas/service-theme";
+import { DEFAULT_OPACITY, ELEMENT_CREATED_AT_ATTR, MIN_HIT_STROKE_WIDTH, type TPoint, type TShape1dData, type TShape1dNode } from "./CONSTANTS";
+import { fxGetStrokeColorFromStyle, fxGetStrokeWidthFromStyle, fxIsSupportedElementType } from "./fx.node";
 
 function getBoundsPadding(data: TShape1dData, strokeWidth: number) {
   const base = Math.max(strokeWidth * 1.5, 8);
@@ -48,12 +37,7 @@ function traceLinePath(context: Konva.Context, data: TShape1dData) {
   }
 }
 
-function traceCapPath(
-  context: Konva.Context,
-  data: TArrowData,
-  edge: "start" | "end",
-  strokeWidth: number,
-) {
+function traceCapPath(context: Konva.Context, data: TArrowData, edge: "start" | "end", strokeWidth: number) {
   const capType = edge === "start" ? data.startCap : data.endCap;
   if (capType === "none") {
     return;
@@ -124,79 +108,65 @@ function drawScene(context: Konva.Context, node: TShape1dNode) {
 
 function getSelfRect(node: TShape1dNode) {
   const data = node.getAttr("vcElementData") as TShape1dData | undefined;
-  const strokeWidth = getStrokeWidthFromStyle(
-    ((node.getAttr("vcElementStyle") as TElementStyle | undefined) ?? {}),
-  );
+  const strokeWidth = fxGetStrokeWidthFromStyle({}, { style: ((node.getAttr("vcElementStyle") as TElementStyle | undefined) ?? {}) });
   if (!data || data.points.length === 0) {
-    return {
-      x: -strokeWidth,
-      y: -strokeWidth,
-      width: strokeWidth * 2,
-      height: strokeWidth * 2,
-    };
+    return { x: -strokeWidth, y: -strokeWidth, width: strokeWidth * 2, height: strokeWidth * 2 };
   }
 
   const xs = data.points.map((point) => point[0]);
   const ys = data.points.map((point) => point[1]);
   const pad = getBoundsPadding(data, strokeWidth);
-  const minX = Math.min(...xs) - pad;
-  const minY = Math.min(...ys) - pad;
-  const maxX = Math.max(...xs) + pad;
-  const maxY = Math.max(...ys) + pad;
-
   return {
-    x: minX,
-    y: minY,
-    width: Math.max(1, maxX - minX),
-    height: Math.max(1, maxY - minY),
+    x: Math.min(...xs) - pad,
+    y: Math.min(...ys) - pad,
+    width: Math.max(1, Math.max(...xs) + pad - (Math.min(...xs) - pad)),
+    height: Math.max(1, Math.max(...ys) + pad - (Math.min(...ys) - pad)),
   };
 }
 
-export function attachShapeRuntime(node: TShape1dNode) {
-  node.sceneFunc((context, shape) => {
+export type TPortalTxAttachShapeRuntime = {};
+export type TArgsTxAttachShapeRuntime = { node: TShape1dNode };
+export function txAttachShapeRuntime(portal: TPortalTxAttachShapeRuntime, args: TArgsTxAttachShapeRuntime) {
+  void portal;
+  args.node.sceneFunc((context, shape) => {
     drawScene(context, shape as TShape1dNode);
   });
-  node.getSelfRect = () => getSelfRect(node);
-  return node;
+  args.node.getSelfRect = () => getSelfRect(args.node);
+  return args.node;
 }
 
-function createNode(config?: Konva.ShapeConfig) {
-  const node = new Konva.Shape({
-    perfectDrawEnabled: false,
-    lineCap: "round",
-    lineJoin: "round",
-    ...config,
-  }) as TShape1dNode;
-
-  return attachShapeRuntime(node);
-}
-
-export function createShapeFromElement(theme: ThemeService, element: TElement) {
-  if (!isSupportedElementType(element.data.type)) {
+export type TPortalTxCreateShapeFromElement = {
+  createShapeNode: (config?: Record<string, unknown>) => TShape1dNode;
+  setNodeZIndex: (node: TShape1dNode, zIndex: string) => void;
+  theme: { getTheme(): string | TThemeDefinition };
+  resolveThemeColor: (theme: string | TThemeDefinition, value: string | undefined, fallback?: string | undefined) => string | undefined;
+};
+export type TArgsTxCreateShapeFromElement = { element: TElement };
+export function txCreateShapeFromElement(portal: TPortalTxCreateShapeFromElement, args: TArgsTxCreateShapeFromElement) {
+  if (!fxIsSupportedElementType({}, { type: args.element.data.type })) {
     throw new Error("Unsupported element type for Shape1dPlugin");
   }
 
-  const strokeWidth = getStrokeWidthFromStyle(element.style);
-  const color = getStrokeColorFromStyle(theme, element.style);
-  const node = createNode({
-    id: element.id,
-    x: element.x,
-    y: element.y,
-    rotation: element.rotation,
+  const strokeWidth = fxGetStrokeWidthFromStyle({}, { style: args.element.style });
+  const color = fxGetStrokeColorFromStyle({ theme: portal.theme, resolveThemeColor: portal.resolveThemeColor }, { style: args.element.style });
+  const node = portal.createShapeNode({
+    id: args.element.id,
+    x: args.element.x,
+    y: args.element.y,
+    rotation: args.element.rotation,
     stroke: color,
     fill: color,
     strokeWidth,
     hitStrokeWidth: Math.max(MIN_HIT_STROKE_WIDTH, strokeWidth + 8),
-    opacity: element.style.opacity ?? DEFAULT_OPACITY,
+    opacity: args.element.style.opacity ?? DEFAULT_OPACITY,
     draggable: false,
     listening: true,
   });
 
-  node.setAttr(ELEMENT_CREATED_AT_ATTR, element.createdAt);
-  node.setAttr("vcElementData", structuredClone(element.data));
-  node.setAttr("vcElementStyle", structuredClone(element.style));
-  setNodeZIndex(node, element.zIndex);
+  txAttachShapeRuntime({}, { node });
+  node.setAttr(ELEMENT_CREATED_AT_ATTR, args.element.createdAt);
+  node.setAttr("vcElementData", structuredClone(args.element.data));
+  node.setAttr("vcElementStyle", structuredClone(args.element.style));
+  portal.setNodeZIndex(node, args.element.zIndex);
   return node;
 }
-
-export const SHAPE1D_HANDLE_STROKE = EDIT_HANDLE_STROKE;

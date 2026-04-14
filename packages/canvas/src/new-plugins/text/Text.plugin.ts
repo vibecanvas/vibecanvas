@@ -10,7 +10,7 @@ import type { HistoryService } from "../../new-services/history/HistoryService";
 import type { RenderOrderService } from "../../new-services/render-order/RenderOrderService";
 import type { RenderService } from "../../new-services/render/RenderService";
 import type { SelectionService } from "../../new-services/selection/SelectionService";
-import { CanvasMode } from "../../new-services/selection/enum";
+import { CanvasMode } from "../../new-services/selection/CONSTANTS";
 import { fxGetNearestFontSizePreset } from "../../core/fn.text-style";
 import type { IHooks } from "../../runtime";
 import { fxCreateTextElement } from "./fn.create-text-element";

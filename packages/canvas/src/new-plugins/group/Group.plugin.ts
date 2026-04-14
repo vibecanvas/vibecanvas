@@ -12,7 +12,7 @@ import type { HistoryService } from "../../new-services/history/HistoryService";
 import type { RenderOrderService } from "../../new-services/render-order/RenderOrderService";
 import type { RenderService } from "../../new-services/render/RenderService";
 import type { SelectionService } from "../../new-services/selection/SelectionService";
-import { CanvasMode } from "../../new-services/selection/enum";
+import { CanvasMode } from "../../new-services/selection/CONSTANTS";
 import type { IHooks } from "../../runtime";
 import { fxIsCanvasGroupNode } from "../../core/fn.canvas-node-semantics";
 import { txCreateGroupCloneDrag } from "./tx.create-group-clone-drag";
