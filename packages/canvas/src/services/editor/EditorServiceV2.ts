@@ -188,6 +188,31 @@ export class EditorServiceV2 implements IService<TEditorServiceHooks> {
           now: Date.now(),
         });
       });
+
+      portal.hooks.pointerUp.tap(() => {
+        if (this.activeToolId !== tool.id) {
+          return;
+        }
+
+        if (!this.previewNode) {
+          return;
+        }
+
+        // commit should happen here before clearing preview state
+        this.setPreviewNode(null);
+      });
+
+      this.hooks.activeToolChange.tap((activeToolId) => {
+        if (activeToolId === tool.id) {
+          return;
+        }
+
+        if (!this.previewNode) {
+          return;
+        }
+
+        this.setPreviewNode(null);
+      });
     }
 
     this.hooks.toolsChange.call();
@@ -288,14 +313,15 @@ export class EditorServiceV2 implements IService<TEditorServiceHooks> {
       return;
     }
 
-    if (node !== null) {
-      this.sceneService.dynamicLayer.add(node);
-    } else {
+    if (node === null) {
+      this.previewNode?.destroy();
       this.previewOrigin = null;
+      this.previewNode = null;
+      return;
     }
 
+    this.sceneService.dynamicLayer.add(node);
     this.previewNode = node;
-
   }
 
   /**
