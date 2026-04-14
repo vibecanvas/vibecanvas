@@ -19,6 +19,22 @@ import {
 } from "./new-services";
 import { ThemeService } from "@vibecanvas/service-theme";
 
+
+export type TImageUploadFormat = "image/jpeg" | "image/png" | "image/gif" | "image/webp";
+export type TUploadImage = (args: {
+  base64: string;
+  format: TImageUploadFormat;
+}) => Promise<{ url: string }>;
+
+export type TCloneImage = (args: {
+  url: string;
+}) => Promise<{ url: string }>;
+
+export type TDeleteImage = (args: {
+  url: string;
+}) => Promise<{ ok: true }>;
+
+
 interface IRuntimeConfig {
   container: HTMLDivElement;
   docHandle: DocHandle<TCanvasDoc>;
@@ -26,9 +42,9 @@ interface IRuntimeConfig {
   env: Pick<ImportMetaEnv, "DEV">;
   themeService: ThemeService;
   image?: {
-    uploadImage: import("./services/canvas/interface").TUploadImage;
-    cloneImage: import("./services/canvas/interface").TCloneImage;
-    deleteImage: import("./services/canvas/interface").TDeleteImage;
+    uploadImage: TUploadImage;
+    cloneImage: TCloneImage;
+    deleteImage: TDeleteImage;
   };
   notification?: {
     showSuccess(title: string, description?: string): void;
