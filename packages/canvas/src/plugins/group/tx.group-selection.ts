@@ -1,7 +1,7 @@
 import type { TElement, TGroup } from "@vibecanvas/service-automerge/types/canvas-doc.types";
 import type Konva from "konva";
+import type { CanvasRegistryService } from "../../services/canvas-registry/CanvasRegistryService";
 import type { CrdtService } from "../../services/crdt/CrdtService";
-import type { EditorService } from "../../services/editor/EditorService";
 import type { HistoryService } from "../../services/history/HistoryService";
 import type { SceneService } from "../../services/scene/SceneService";
 import type { SelectionService } from "../../services/selection/SelectionService";
@@ -14,8 +14,8 @@ export type TPortalGroupSelection = {
   Group: typeof Konva.Group;
   Shape: typeof Konva.Shape;
   Layer: typeof Konva.Layer;
+  canvasRegistry: CanvasRegistryService;
   crdt: CrdtService;
-  editor: EditorService;
   history: HistoryService;
   render: SceneService;
   selection: SelectionService;
@@ -51,7 +51,7 @@ export function txGroupSelection(
   const zIndex = portal.getNodeZIndex(selection[selection.length - 1] ?? selection[0]);
   const groupNode = portal.setupNode(portal.createGroupNode({
     id: groupId,
-    parentGroupId: fxIsCanvasGroupNode({}, { editor: portal.editor, node: parent }) ? parent.id() : null,
+    parentGroupId: fxIsCanvasGroupNode({}, { editor: portal.canvasRegistry, node: parent }) ? parent.id() : null,
     zIndex,
     locked: false,
     createdAt,
@@ -64,7 +64,7 @@ export function txGroupSelection(
 
   const elementPatches: TElement[] = [];
   const groupPatches: TGroup[] = [fxToGroupPatch({
-    editor: portal.editor,
+    canvasRegistry: portal.canvasRegistry,
     group: groupNode,
     getNodeZIndex: portal.getNodeZIndex,
     fallbackCreatedAt: createdAt,
@@ -75,17 +75,17 @@ export function txGroupSelection(
     groupNode.add(node);
     node.setAbsolutePosition(absolutePosition);
 
-    const kind = fxGetCanvasNodeKind({}, { editor: portal.editor, node });
+    const kind = fxGetCanvasNodeKind({}, { editor: portal.canvasRegistry, node });
     if (kind === "group") {
-      const groupPatch = portal.editor.toGroup(node);
+      const groupPatch = portal.canvasRegistry.toGroup(node);
       if (groupPatch) {
         groupPatches.push(groupPatch);
       }
       return;
     }
 
-    if (kind === "element") {
-      const element = portal.editor.toElement(node);
+    if (kind !== null) {
+      const element = portal.canvasRegistry.toElement(node);
       if (element) {
         elementPatches.push(element);
       }
@@ -104,12 +104,11 @@ export function txGroupSelection(
     label: "group",
     undo() {
       const currentGroupNode = fxFindSceneNodeById({ Group: portal.Group, Shape: portal.Shape, render: portal.render, id: groupId });
-      if (!fxIsCanvasGroupNode({}, { editor: portal.editor, node: currentGroupNode })) {
+      if (!fxIsCanvasGroupNode({}, { editor: portal.canvasRegistry, node: currentGroupNode })) {
         return;
       }
 
       const currentGroup = currentGroupNode as Konva.Group;
-
       const children = fxGetGroupChildren({ Group: portal.Group, Shape: portal.Shape, group: currentGroup, render: portal.render });
       const currentParentNode = currentGroup.getParent();
       if (!fxIsSceneParent({ Group: portal.Group, Layer: portal.Layer, render: portal.render, node: currentParentNode })) {
@@ -117,7 +116,6 @@ export function txGroupSelection(
       }
 
       const currentParent = currentParentNode as Konva.Group | Konva.Layer;
-
       const undoElementPatches: TElement[] = [];
       const undoGroupPatches: TGroup[] = [];
 
@@ -126,17 +124,17 @@ export function txGroupSelection(
         currentParent.add(child);
         child.setAbsolutePosition(absolutePosition);
 
-        const kind = fxGetCanvasNodeKind({}, { editor: portal.editor, node: child });
+        const kind = fxGetCanvasNodeKind({}, { editor: portal.canvasRegistry, node: child });
         if (kind === "group") {
-          const patch = portal.editor.toGroup(child);
+          const patch = portal.canvasRegistry.toGroup(child);
           if (patch) {
             undoGroupPatches.push(patch);
           }
           return;
         }
 
-        if (kind === "element") {
-          const element = portal.editor.toElement(child);
+        if (kind !== null) {
+          const element = portal.canvasRegistry.toElement(child);
           if (element) {
             undoElementPatches.push(element);
           }
@@ -166,7 +164,7 @@ export function txGroupSelection(
 
       const recreated = portal.setupNode(portal.createGroupNode({
         id: groupId,
-        parentGroupId: fxIsCanvasGroupNode({}, { editor: portal.editor, node: redoParent }) ? redoParent.id() : null,
+        parentGroupId: fxIsCanvasGroupNode({}, { editor: portal.canvasRegistry, node: redoParent }) ? redoParent.id() : null,
         zIndex,
         locked: false,
         createdAt,
@@ -179,7 +177,7 @@ export function txGroupSelection(
 
       const redoElementPatches: TElement[] = [];
       const redoGroupPatches: TGroup[] = [fxToGroupPatch({
-        editor: portal.editor,
+        canvasRegistry: portal.canvasRegistry,
         group: recreated,
         getNodeZIndex: portal.getNodeZIndex,
         fallbackCreatedAt: createdAt,
@@ -190,17 +188,17 @@ export function txGroupSelection(
         recreated.add(node);
         node.setAbsolutePosition(absolutePosition);
 
-        const kind = fxGetCanvasNodeKind({}, { editor: portal.editor, node });
+        const kind = fxGetCanvasNodeKind({}, { editor: portal.canvasRegistry, node });
         if (kind === "group") {
-          const patch = portal.editor.toGroup(node);
+          const patch = portal.canvasRegistry.toGroup(node);
           if (patch) {
             redoGroupPatches.push(patch);
           }
           return;
         }
 
-        if (kind === "element") {
-          const element = portal.editor.toElement(node);
+        if (kind !== null) {
+          const element = portal.canvasRegistry.toElement(node);
           if (element) {
             redoElementPatches.push(element);
           }

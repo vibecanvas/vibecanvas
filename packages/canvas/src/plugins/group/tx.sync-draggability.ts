@@ -1,5 +1,5 @@
 import type Konva from "konva";
-import type { EditorService } from "../../services/editor/EditorService";
+import type { CanvasRegistryService } from "../../services/canvas-registry/CanvasRegistryService";
 import type { SceneService } from "../../services/scene/SceneService";
 import type { SelectionService } from "../../services/selection/SelectionService";
 import { fxFilterSelection } from "../../core/fx.filter-selection";
@@ -7,7 +7,7 @@ import { fxIsSceneNode } from "./fn.scene-node";
 
 export type TPortalSyncDraggability = {
   Konva: typeof Konva;
-  editor: EditorService;
+  canvasRegistry: CanvasRegistryService;
   render: SceneService;
   selection: SelectionService;
 };
@@ -37,7 +37,7 @@ export function txSyncDraggability(
   const activeNodes = fxFilterSelection({
     Konva: portal.Konva,
   }, {
-    editor: portal.editor,
+    editor: portal.canvasRegistry,
     selection: portal.selection.selection,
   });
 

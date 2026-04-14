@@ -1,15 +1,15 @@
 import type { TElement, TGroup } from "@vibecanvas/service-automerge/types/canvas-doc.types";
 import type Konva from "konva";
+import type { CanvasRegistryService } from "../../services/canvas-registry/CanvasRegistryService";
 import type { CrdtService } from "../../services/crdt/CrdtService";
-import type { EditorService } from "../../services/editor/EditorService";
 import type { RenderOrderService } from "../../services/render-order/RenderOrderService";
 import type { SceneService } from "../../services/scene/SceneService";
 import type { SelectionService } from "../../services/selection/SelectionService";
 import { fxGetCanvasNodeKind, fxIsCanvasGroupNode } from "../../core/fx.canvas-node-semantics";
 
 export type TPortalCreateGroupCloneDrag = {
+  canvasRegistry: CanvasRegistryService;
   crdt: CrdtService;
-  editor: EditorService;
   render: SceneService;
   renderOrder: RenderOrderService;
   selection: SelectionService;
@@ -32,13 +32,13 @@ function refreshCloneSubtree(
   clone.setAttr("vcGroupNodeSetup", false);
 
   clone.getChildren().forEach((node) => {
-    if (fxIsCanvasGroupNode({}, { editor: portal.editor, node })) {
+    if (fxIsCanvasGroupNode({}, { editor: portal.canvasRegistry, node })) {
       refreshCloneSubtree(portal, node as Konva.Group);
       return;
     }
 
-    const kind = fxGetCanvasNodeKind({}, { editor: portal.editor, node });
-    if (kind === "element") {
+    const kind = fxGetCanvasNodeKind({}, { editor: portal.canvasRegistry, node });
+    if (kind !== null) {
       node.id(portal.createId());
     }
     node.setDraggable(false);
@@ -64,7 +64,7 @@ function registerSubtree(
   },
 ) {
   portal.setupGroupNode(args.cloneGroup);
-  const clonedGroup = portal.editor.toGroup(args.cloneGroup);
+  const clonedGroup = portal.canvasRegistry.toGroup(args.cloneGroup);
   if (clonedGroup) {
     args.groups.push(clonedGroup);
   }
@@ -79,8 +79,8 @@ function registerSubtree(
     }
 
     if (
-      fxIsCanvasGroupNode({}, { editor: portal.editor, node: sourceChild })
-      && fxIsCanvasGroupNode({}, { editor: portal.editor, node: cloneChild })
+      fxIsCanvasGroupNode({}, { editor: portal.canvasRegistry, node: sourceChild })
+      && fxIsCanvasGroupNode({}, { editor: portal.canvasRegistry, node: cloneChild })
     ) {
       registerSubtree(portal, {
         sourceGroup: sourceChild as Konva.Group,
@@ -91,19 +91,17 @@ function registerSubtree(
       return;
     }
 
-    if (fxGetCanvasNodeKind({}, { editor: portal.editor, node: cloneChild }) !== "element") {
+    if (fxGetCanvasNodeKind({}, { editor: portal.canvasRegistry, node: cloneChild }) === null) {
       return;
     }
 
-    portal.editor.setupExistingShape(cloneChild);
-    const sourceElement = portal.editor.toElement(sourceChild);
-    const clonedElement = portal.editor.toElement(cloneChild);
-    if (!sourceElement || !clonedElement) {
+    portal.canvasRegistry.attachListeners(cloneChild);
+    const clonedElement = portal.canvasRegistry.toElement(cloneChild);
+    if (!clonedElement) {
       return;
     }
 
     args.elements.push(clonedElement);
-    portal.editor.cloneElement({ sourceElement, clonedElement });
   });
 }
 

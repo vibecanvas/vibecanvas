@@ -1,7 +1,7 @@
 import type { TElement } from "@vibecanvas/service-automerge/types/canvas-doc.types";
 import type Konva from "konva";
 import type { CrdtService } from "../../services/crdt/CrdtService";
-import type { EditorService } from "../../services/editor/EditorService";
+import type { CanvasRegistryService } from "../../services/canvas-registry/CanvasRegistryService";
 import type { HistoryService } from "../../services/history/HistoryService";
 import type { SceneService } from "../../services/scene/SceneService";
 import type { SelectionService } from "../../services/selection/SelectionService";
@@ -10,7 +10,7 @@ import { fxSerializeSubtreeElements } from "./fn.serialize-subtree-elements";
 
 export type TPortalSetupGroupNode = {
   crdt: CrdtService;
-  editor: EditorService;
+  canvasRegistry: CanvasRegistryService;
   history: HistoryService;
   render: SceneService;
   selection: SelectionService;
@@ -86,7 +86,7 @@ export function txSetupGroupNode(
     }
 
     beforeElements = fxSerializeSubtreeElements({
-      editor: portal.editor,
+      canvasRegistry: portal.canvasRegistry,
       Shape: portal.Shape,
       group: args.group,
     }).map((element) => structuredClone(element));
@@ -111,7 +111,7 @@ export function txSetupGroupNode(
 
     portal.refreshBoundaries();
     throttledPatch(fxSerializeSubtreeElements({
-      editor: portal.editor,
+      canvasRegistry: portal.canvasRegistry,
       Shape: portal.Shape,
       group: args.group,
     }));
@@ -129,7 +129,7 @@ export function txSetupGroupNode(
     }
 
     const afterElements = fxSerializeSubtreeElements({
-      editor: portal.editor,
+      canvasRegistry: portal.canvasRegistry,
       Shape: portal.Shape,
       group: args.group,
     }).map((element) => structuredClone(element));
@@ -161,13 +161,13 @@ export function txSetupGroupNode(
       label: "drag-group",
       undo() {
         undoElements.forEach((element) => {
-          portal.editor.updateShapeFromTElement(element);
+          portal.canvasRegistry.updateElement(element);
         });
         portal.crdt.patch({ elements: undoElements, groups: [] });
       },
       redo() {
         redoElements.forEach((element) => {
-          portal.editor.updateShapeFromTElement(element);
+          portal.canvasRegistry.updateElement(element);
         });
         portal.crdt.patch({ elements: redoElements, groups: [] });
       },

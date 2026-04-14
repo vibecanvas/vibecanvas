@@ -6,9 +6,9 @@ import Konva from "konva";
 import { fnGetNodeZIndex } from "../../core/fn.get-node-z-index";
 import { txSetNodeZIndex } from "../../core/tx.set-node-z-index";
 import type { CameraService } from "../../services/camera/CameraService";
+import type { CanvasRegistryService } from "../../services/canvas-registry/CanvasRegistryService";
 import type { ContextMenuService } from "../../services/context-menu/ContextMenuService";
 import type { CrdtService } from "../../services/crdt/CrdtService";
-import type { EditorService } from "../../services/editor/EditorService";
 import type { HistoryService } from "../../services/history/HistoryService";
 import type { RenderOrderService } from "../../services/render-order/RenderOrderService";
 import type { SceneService } from "../../services/scene/SceneService";
@@ -25,7 +25,6 @@ import { txSyncDraggability } from "./tx.sync-draggability";
 import { fxCreateGroupBoundary } from "./fx.create-group-boundary";
 import { txSyncGroupBoundaries, type TGroupBoundary } from "./tx.sync-group-boundaries";
 import { txUngroupSelection } from "./tx.ungroup-selection";
-import { txDeleteSelection } from "../select/tx.delete-selection";
 
 const CANVAS_NODE_KIND_ATTR = "vcCanvasNodeKind";
 const CANVAS_GROUP_NODE_KIND = "group";
@@ -67,13 +66,12 @@ function sortChildrenByPersistedOrder(render: SceneService, parent: Konva.Layer 
 
 /**
  * Owns group node hydration, boundary UI, and basic group/ungroup behavior.
- * Clone-drag parity can come later.
  */
 export function createGroupPlugin(): IPlugin<{
   camera: CameraService;
+  canvasRegistry: CanvasRegistryService;
   contextMenu: ContextMenuService;
   crdt: CrdtService;
-  editor: EditorService;
   history: HistoryService;
   scene: SceneService;
   renderOrder: RenderOrderService;
@@ -84,9 +82,9 @@ export function createGroupPlugin(): IPlugin<{
     name: "group",
     apply(ctx) {
       const camera = ctx.services.require("camera");
+      const canvasRegistry = ctx.services.require("canvasRegistry");
       const contextMenu = ctx.services.require("contextMenu");
       const crdt = ctx.services.require("crdt");
-      const editor = ctx.services.require("editor");
       const history = ctx.services.require("history");
       const render = ctx.services.require("scene");
       const renderOrder = ctx.services.require("renderOrder");
@@ -96,7 +94,7 @@ export function createGroupPlugin(): IPlugin<{
 
       const refreshBoundaries = () => {
         txSyncGroupBoundaries({
-          editor,
+          canvasRegistry,
           render,
           selection,
           theme,
@@ -106,13 +104,13 @@ export function createGroupPlugin(): IPlugin<{
       };
 
       const syncDraggability = () => {
-        txSyncDraggability({ Konva, editor, render, selection }, {});
+        txSyncDraggability({ Konva, canvasRegistry, render, selection }, {});
       };
 
       const setupNode = (group: Konva.Group) => {
         return txSetupGroupNode({
+          canvasRegistry,
           crdt,
-          editor,
           history,
           render,
           selection,
@@ -121,8 +119,8 @@ export function createGroupPlugin(): IPlugin<{
           refreshBoundaries,
           startCloneDrag: (groupNode) => {
             txCreateGroupCloneDrag({
+              canvasRegistry,
               crdt,
-              editor,
               render,
               renderOrder,
               selection,
@@ -134,9 +132,7 @@ export function createGroupPlugin(): IPlugin<{
               sourceGroup: groupNode,
             });
           },
-          createThrottledPatch: (callback) => {
-            return throttle(callback, 100);
-          },
+          createThrottledPatch: (callback) => throttle(callback, 100),
         }, { group });
       };
 
@@ -145,8 +141,8 @@ export function createGroupPlugin(): IPlugin<{
           Group: Konva.Group,
           Shape: Konva.Shape,
           Layer: Konva.Layer,
+          canvasRegistry,
           crdt,
-          editor,
           history,
           render,
           selection,
@@ -164,8 +160,8 @@ export function createGroupPlugin(): IPlugin<{
           Group: Konva.Group,
           Shape: Konva.Shape,
           Layer: Konva.Layer,
+          canvasRegistry,
           crdt,
-          editor,
           history,
           render,
           selection,
@@ -181,9 +177,7 @@ export function createGroupPlugin(): IPlugin<{
         syncDraggability();
       });
 
-      camera.hooks.change.tap(() => {
-        refreshBoundaries();
-      });
+      camera.hooks.change.tap(refreshBoundaries);
 
       theme.hooks.change.tap(() => {
         refreshBoundaries();
@@ -197,7 +191,7 @@ export function createGroupPlugin(): IPlugin<{
 
       contextMenu.registerProvider("group", ({ scope, activeSelection }) => {
         const selectedGroups = [...activeSelection].reverse().filter((node): node is Konva.Group => {
-          return fxIsCanvasGroupNode({}, { editor, node });
+          return fxIsCanvasGroupNode({}, { editor: canvasRegistry, node });
         });
 
         const actions = [] as Array<{
@@ -230,35 +224,33 @@ export function createGroupPlugin(): IPlugin<{
               runUngroupSelection();
             },
           });
-          actions.push({
-            id: "delete-group-selection",
-            label: "Delete",
-            priority: 220,
-            onSelect: () => {
-              selection.setSelection(activeSelection);
-              txDeleteSelection({ crdt, editor, history, render, renderOrder, selection }, {});
-            },
-          });
         }
 
         return actions;
       });
 
-      editor.registerToGroup("group", (node) => {
-        if (!(node instanceof Konva.Group) || node.getAttr(CANVAS_NODE_KIND_ATTR) !== CANVAS_GROUP_NODE_KIND) {
-          return null;
-        }
+      canvasRegistry.registerGroup({
+        id: "group",
+        matchesNode: (node) => {
+          return node instanceof Konva.Group && node.getAttr(CANVAS_NODE_KIND_ATTR) === CANVAS_GROUP_NODE_KIND;
+        },
+        toGroup: (node) => {
+          if (!(node instanceof Konva.Group) || node.getAttr(CANVAS_NODE_KIND_ATTR) !== CANVAS_GROUP_NODE_KIND) {
+            return null;
+          }
 
-        return fxToGroupPatch({
-          editor,
-          group: node,
-          getNodeZIndex,
-          fallbackCreatedAt: Date.now(),
-        });
-      });
-
-      editor.registerCreateGroupFromTGroup("group", (group) => {
-        return setupNode(createGroupNode(render, group));
+          return fxToGroupPatch({
+            canvasRegistry,
+            group: node,
+            getNodeZIndex,
+            fallbackCreatedAt: Date.now(),
+          });
+        },
+        createNode: (group) => createGroupNode(render, group),
+        attachListeners: (node) => {
+          setupNode(node);
+          return true;
+        },
       });
 
       ctx.hooks.keydown.tap((event) => {
@@ -289,8 +281,7 @@ export function createGroupPlugin(): IPlugin<{
         });
         boundaries.clear();
         contextMenu.unregisterProvider("group");
-        editor.unregisterToGroup("group");
-        editor.unregisterCreateGroupFromTGroup("group");
+        canvasRegistry.unregisterGroup("group");
       });
     },
   };
