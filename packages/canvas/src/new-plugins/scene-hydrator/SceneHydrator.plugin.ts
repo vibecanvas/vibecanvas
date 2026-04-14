@@ -115,12 +115,18 @@ function loadElementsTopDown(args: {
       return fxIsCanvasGroupNode({ editor: args.editor, node: candidate });
     }).map((candidate) => [candidate.id(), candidate as Konva.Group]),
   );
+  const invalidElementIds: string[] = [];
 
   args.elements.forEach((element) => {
     const parent = element.parentGroupId
       ? groupsById.get(element.parentGroupId)
       : args.render.staticForegroundLayer;
     if (!parent) {
+      return;
+    }
+
+    if (!element.data) {
+      invalidElementIds.push(element.id);
       return;
     }
 
@@ -131,6 +137,8 @@ function loadElementsTopDown(args: {
 
     parent.add(node);
   });
+
+  return invalidElementIds;
 }
 
 function sortSceneTopDown(render: RenderService, editor: EditorService, parent: Konva.Layer | Konva.Group) {
@@ -208,7 +216,10 @@ function loadCanvas(crdt: CrdtService, editor: EditorService, render: RenderServ
   const elements = Object.values(doc.elements).sort(compareByPersistedOrder);
 
   loadGroupsTopDown({ groups, editor, render });
-  loadElementsTopDown({ elements, editor, render });
+  const invalidElementIds = loadElementsTopDown({ elements, editor, render });
+  if (invalidElementIds.length > 0) {
+    crdt.deleteById({ elementIds: invalidElementIds });
+  }
   sortSceneTopDown(render, editor, render.staticForegroundLayer);
   keepAttachedTextAboveHosts(render, editor, render.staticForegroundLayer);
   render.stage.batchDraw();
