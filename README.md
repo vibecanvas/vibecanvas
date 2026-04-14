@@ -107,6 +107,47 @@ Also remove any PATH line you added for `~/.vibecanvas/bin` in your shell profil
 - Dev monorepo default DB path: `./local-volume/data/vibecanvas.sqlite`
 - Schema source: `packages/service-db/src/schema.ts`
 
+## Debugging the live app
+
+The canvas runtime includes a built-in debug logger that can be enabled per plugin or per service from the browser devtools console.
+
+Debug keys use this format:
+
+```txt
+vibecanvas:debug:<plugin|service>:<name>
+```
+
+Levels:
+- `0`, `false`, `off`, or empty = disabled
+- `1` = important lifecycle logs
+- `2` = more detailed state/layout logs
+- `3` = very noisy per-frame/per-event logs
+
+Examples:
+
+```js
+// hosted component plugin logs
+localStorage.setItem("vibecanvas:debug:plugin:hosted-component", "3")
+
+// camera service logs
+localStorage.setItem("vibecanvas:debug:service:camera", "1")
+```
+
+Then reload the page and inspect the browser console.
+
+To turn a target back off:
+
+```js
+localStorage.setItem("vibecanvas:debug:plugin:hosted-component", "0")
+```
+
+Current log output includes prefixes like:
+
+```txt
+[vibecanvas][plugin:hosted-component][L2] ...
+```
+
+This is especially useful for debugging live layout, overlay, hydration, transform, and mount issues inside the running app.
 
 ## Contributing
 

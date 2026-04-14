@@ -4,6 +4,7 @@ import type Konva from "konva";
 
 export type TPortalSyncHostedComponentOverlays = {
   render: RenderService;
+  logging: import("../../new-services/logging/LoggingService").LoggingService;
 };
 
 export type TArgsSyncHostedComponentOverlays = {
@@ -15,6 +16,8 @@ export type TArgsSyncHostedComponentOverlays = {
   headerHeightPx: number;
   overlayBackground: string;
   overlayBorder: string;
+  onCreateOverlay?: (overlay: HTMLDivElement) => void;
+  onMountOverlay?: (overlay: HTMLDivElement) => void;
 };
 
 function getHostedComponentNodes(render: RenderService, kind: string, groupKindAttr: string) {
@@ -40,11 +43,15 @@ export function txSyncHostedComponentOverlays(portal: TPortalSyncHostedComponent
       overlay.style.border = args.overlayBorder;
       overlay.style.boxSizing = "border-box";
       args.root.appendChild(overlay);
+      args.onCreateOverlay?.(overlay);
       args.overlays.set(id, overlay);
     }
 
+    const rect = node.getClientRect();
+    const scale = node.getAbsoluteScale();
     const frame = fxComputeHostedComponentOverlayFrame({
-      rect: node.getClientRect(),
+      rect,
+      scale,
       insetPx: args.overlayInsetPx,
       headerHeightPx: args.headerHeightPx,
     });
@@ -54,6 +61,42 @@ export function txSyncHostedComponentOverlays(portal: TPortalSyncHostedComponent
     overlay.style.top = `${frame.top}px`;
     overlay.style.width = `${frame.width}px`;
     overlay.style.height = `${frame.height}px`;
+    overlay.style.overflow = "hidden";
+    overlay.style.setProperty("--vc-hosted-component-scale-x", `${scale.x}`);
+    overlay.style.setProperty("--vc-hosted-component-scale-y", `${scale.y}`);
+
+    if (frame.display === "block" && overlay.childElementCount === 0 && overlay.clientWidth > 0 && overlay.clientHeight > 0) {
+      portal.logging.log({
+        kind: "plugin",
+        name: args.kind,
+        level: 1,
+        event: "overlay.mount-ready",
+        payload: {
+          id,
+          overlayClientWidth: overlay.clientWidth,
+          overlayClientHeight: overlay.clientHeight,
+        },
+      });
+      args.onMountOverlay?.(overlay);
+    }
+
+    portal.logging.log({
+      kind: "plugin",
+      name: args.kind,
+      level: 3,
+      event: "overlay.sync",
+      payload: {
+        id,
+        rect,
+        scale,
+        frame,
+        overlayClientWidth: overlay.clientWidth,
+        overlayClientHeight: overlay.clientHeight,
+        firstChildTag: overlay.firstElementChild?.tagName ?? null,
+        firstChildClientWidth: overlay.firstElementChild instanceof portal.render.container.ownerDocument.defaultView?.HTMLElement ? overlay.firstElementChild.clientWidth : null,
+        firstChildClientHeight: overlay.firstElementChild instanceof portal.render.container.ownerDocument.defaultView?.HTMLElement ? overlay.firstElementChild.clientHeight : null,
+      },
+    });
   });
 
   for (const [id, overlay] of args.overlays.entries()) {

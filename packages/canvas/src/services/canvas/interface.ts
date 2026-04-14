@@ -2,8 +2,8 @@ import type { TOrpcSafeClient } from "@vibecanvas/orpc-client";
 import type { TElement, TFileData, TFiletreeData, TTerminalData } from "@vibecanvas/service-automerge/types/canvas-doc.types";
 import { Group } from "konva/lib/Group";
 import { Shape, ShapeConfig } from "konva/lib/Shape";
-import { CanvasMode } from "./enum";
-import type { ThemeId } from "./enum";
+import { CanvasMode } from "./CONSTANTS";
+import type { ThemeId } from "./CONSTANTS";
 
 export type TImageUploadFormat = "image/jpeg" | "image/png" | "image/gif" | "image/webp";
 

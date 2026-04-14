@@ -3,10 +3,12 @@ import type Konva from "konva";
 import { fxGetHostedComponentCreatePointer } from "./fx.get-hosted-component-create-pointer";
 import { fxToHostedComponentElement } from "./fx.to-hosted-component-element";
 import { txCreateHostedComponentOnPointerUp } from "./tx.create-hosted-component-on-pointer-up";
+import { txMountArrowSandbox } from "./tx.mount-arrow-sandbox";
 import { txSyncHostedComponentGroup } from "./tx.sync-hosted-component-group";
 import { txSyncHostedComponentOverlays } from "./tx.sync-hosted-component-overlays";
 import type { CrdtService } from "../../new-services/crdt/CrdtService";
 import type { EditorService, TEditorToolIcon } from "../../new-services/editor/EditorService";
+import type { LoggingService } from "../../new-services/logging/LoggingService";
 import type { RenderOrderService } from "../../new-services/render-order/RenderOrderService";
 import type { RenderService } from "../../new-services/render/RenderService";
 import type { SelectionService } from "../../new-services/selection/SelectionService";
@@ -65,6 +67,12 @@ export type TPortalSetupHostedComponent = {
   now: () => number;
   createId: () => string;
   render: RenderService;
+  arrow: {
+    html: typeof import("@arrow-js/core").html;
+    render: typeof import("@arrow-js/framework").render;
+    sandbox: typeof import("@arrow-js/sandbox").sandbox;
+  };
+  logging: LoggingService;
   renderOrder: RenderOrderService;
   selection: SelectionService;
 };
@@ -289,6 +297,7 @@ function updateHostedComponentNode(render: RenderService, element: TElement) {
 }
 
 function setupHostedComponentOverlay(portal: TPortalSetupHostedComponent) {
+  portal.logging.log({ kind: "plugin", name: TOOL_ID, level: 1, event: "overlay.setup" });
   const overlays = new Map<string, HTMLDivElement>();
   let root: HTMLDivElement | null = null;
   let rafId = 0;
@@ -298,7 +307,7 @@ function setupHostedComponentOverlay(portal: TPortalSetupHostedComponent) {
       return;
     }
 
-    txSyncHostedComponentOverlays({ render: portal.render }, {
+    txSyncHostedComponentOverlays({ render: portal.render, logging: portal.logging }, {
       root,
       overlays,
       kind: TOOL_ID,
@@ -307,6 +316,19 @@ function setupHostedComponentOverlay(portal: TPortalSetupHostedComponent) {
       headerHeightPx: HEADER_HEIGHT_PX,
       overlayBackground: OVERLAY_BACKGROUND,
       overlayBorder: OVERLAY_BORDER,
+      onCreateOverlay: (overlay) => {
+        portal.logging.log({
+          kind: "plugin",
+          name: TOOL_ID,
+          level: 1,
+          event: "overlay.create",
+          payload: { overlayId: overlay.dataset.hostedComponentOverlayId ?? null },
+        });
+        overlay.style.pointerEvents = "auto";
+      },
+      onMountOverlay: (overlay) => {
+        txMountArrowSandbox({ root: overlay, arrow: portal.arrow, logging: portal.logging }, {});
+      },
     });
   };
 
@@ -316,6 +338,7 @@ function setupHostedComponentOverlay(portal: TPortalSetupHostedComponent) {
   };
 
   portal.hooks.init.tap(() => {
+    portal.logging.log({ kind: "plugin", name: TOOL_ID, level: 1, event: "overlay.root.init" });
     const document = portal.render.container.ownerDocument;
     root = document.createElement("div");
     root.dataset.hostedComponentOverlayRoot = "true";
@@ -331,6 +354,13 @@ function setupHostedComponentOverlay(portal: TPortalSetupHostedComponent) {
   });
 
   portal.hooks.destroy.tap(() => {
+    portal.logging.log({
+      kind: "plugin",
+      name: TOOL_ID,
+      level: 1,
+      event: "overlay.root.destroy",
+      payload: { overlayCount: overlays.size },
+    });
     if (rafId !== 0) {
       portal.render.container.ownerDocument.defaultView?.cancelAnimationFrame(rafId);
       rafId = 0;

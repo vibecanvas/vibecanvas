@@ -16,7 +16,7 @@ import type { IPlugin, IPluginContext, TMouseEvent, TPointerEvent, TWheelEvent }
 import { AsyncParallelHook, SyncExitHook, SyncHook } from "../../tapable";
 import { Camera } from "./Camera";
 import { Crdt } from "./crdt";
-import { CanvasMode, THEME_ID_LIGHT } from "./enum";
+import { CanvasMode, THEME_ID_LIGHT } from "./CONSTANTS";
 import type { IState } from "./interface";
 import { History } from "./History";
 

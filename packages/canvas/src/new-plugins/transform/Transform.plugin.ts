@@ -13,7 +13,7 @@ import type { SelectionService } from "../../new-services/selection/SelectionSer
 import type { IHooks } from "../../runtime";
 import { fxIsCanvasGroupNode } from "../../core/fn.canvas-node-semantics";
 import { fxFilterSelection } from "../../core/fn.filter-selection";
-import { isShape1dNode } from "../shape1d/Shape1d.shared";
+import { fxIsShape1dNode } from "../shape1d/fx.node";
 
 const GROUP_ANCHORS = [
   "top-left",
@@ -120,7 +120,7 @@ function isProxyDragCandidate(args: {
     return false;
   }
 
-  if (isShape1dNode(args.node)) {
+  if (fxIsShape1dNode({ Shape: args.render.Shape }, { node: args.node })) {
     return true;
   }
 
@@ -216,7 +216,7 @@ function syncTransformer(args: {
   const isSingleGroupSelection = filteredSelection.length === 1 && fxIsCanvasGroupNode({ editor: args.editor, node: filteredSelection[0] });
   const isMultiSelection = filteredSelection.length > 1;
   const hasTextOnly = filteredSelection.length > 0 && filteredSelection.every((node) => node instanceof args.render.Text);
-  const hasShape1dOnly = filteredSelection.length > 0 && filteredSelection.every((node) => isShape1dNode(node));
+  const hasShape1dOnly = filteredSelection.length > 0 && filteredSelection.every((node) => fxIsShape1dNode({ Shape: args.render.Shape }, { node }));
   const hasPenOnly = hasPenOnlySelection({
     render: args.render,
     editor: args.editor,

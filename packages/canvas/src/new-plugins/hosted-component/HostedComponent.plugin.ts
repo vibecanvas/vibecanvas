@@ -1,7 +1,11 @@
 import type { IPlugin } from "@vibecanvas/runtime";
 import Square from "lucide-static/icons/square.svg?raw";
+import { html } from "@arrow-js/core";
+import { render as renderArrowView } from "@arrow-js/framework";
+import { sandbox as createArrowSandbox } from "@arrow-js/sandbox";
 import { HOSTED_COMPONENT_TOOL_ID } from "./CONSTANTS";
 import type { CrdtService, EditorService, RenderOrderService, RenderService, SelectionService } from "../../new-services";
+import type { LoggingService } from "../../new-services/logging/LoggingService";
 import type { IHooks } from "../../runtime";
 import { txSetupHostedComponent } from "./tx.setup";
 
@@ -24,6 +28,7 @@ export function createHostedComponentPlugin(): IPlugin<{
   render: RenderService;
   renderOrder: RenderOrderService;
   editor: EditorService;
+  logging: LoggingService;
   selection: SelectionService;
 }, IHooks> {
   return {
@@ -39,6 +44,12 @@ export function createHostedComponentPlugin(): IPlugin<{
         now: () => Date.now(),
         createId: createCreateId(render),
         render,
+        arrow: {
+          html,
+          render: renderArrowView,
+          sandbox: createArrowSandbox,
+        },
+        logging: ctx.services.require("logging"),
         renderOrder: ctx.services.require("renderOrder"),
         selection: ctx.services.require("selection"),
       }, {});
