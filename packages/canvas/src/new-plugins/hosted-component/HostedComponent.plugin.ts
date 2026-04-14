@@ -4,9 +4,10 @@ import { html } from "@arrow-js/core";
 import { render as renderArrowView } from "@arrow-js/framework";
 import { sandbox as createArrowSandbox } from "@arrow-js/sandbox";
 import { HOSTED_COMPONENT_TOOL_ID } from "./old/CONSTANTS";
-import type { CameraService, CrdtService, EditorService, RenderOrderService, RenderService, SelectionService } from "../../new-services";
+import type { CameraService, CrdtService, EditorService, RenderOrderService, RenderService, SelectionService, WidgetService } from "../../new-services";
 import type { IHooks } from "../../runtime";
 import { txSetupHostedComponent } from "./old/tx.setup";
+import { setupExampleTool } from "./example-tool";
 
 function createCreateId(render: RenderService) {
   let fallbackId = 0;
@@ -29,6 +30,7 @@ export function createHostedComponentPlugin(): IPlugin<{
   renderOrder: RenderOrderService;
   editor: EditorService;
   selection: SelectionService;
+  widget: WidgetService;
 }, IHooks> {
   return {
     name: HOSTED_COMPONENT_TOOL_ID,
@@ -39,6 +41,11 @@ export function createHostedComponentPlugin(): IPlugin<{
       const editor = ctx.services.require("editor");
       const renderOrder = ctx.services.require("renderOrder");
       const selection = ctx.services.require("selection");
+      const widget = ctx.services.require("widget");
+
+      ctx.hooks.init.tap(() => {
+        setupExampleTool(widget)
+      })
 
       // txSetupHostedComponent({
       //   camera: ctx.services.require("camera"),

@@ -109,6 +109,18 @@ export const zImageData = z.object({
   }),
 });
 
+export const zWidgetData = z.object({
+  type: z.literal('widget'),
+  kind: z.string(),
+  w: z.number(),
+  h: z.number(),
+  window: z.enum(['contained', 'minimized', 'fullscreen']),
+  payload: z.any()
+});
+
+/**
+ * @deprecated will be replaced with widget
+ */
 export const zCustomData = z.object({
   type: z.literal('custom'),
   w: z.number(),
@@ -118,7 +130,7 @@ export const zCustomData = z.object({
 });
 
 /**
- * @deprecated will be replaced with custom
+ * @deprecated will be replaced with widget
  */
 export const zFiletreeData = z.object({
   type: z.literal('filetree'),
@@ -130,7 +142,7 @@ export const zFiletreeData = z.object({
 });
 
 /**
- * @deprecated will be replaced with custom
+ * @deprecated will be replaced with widget
  */
 export const zTerminalData = z.object({
   type: z.literal('terminal'),
@@ -141,7 +153,7 @@ export const zTerminalData = z.object({
 });
 
 /**
- * @deprecated will be replaced with custom
+ * @deprecated will be replaced with widget
  */
 export const zFileData = z.object({
   type: z.literal('file'),
@@ -162,7 +174,7 @@ export const zFileData = z.object({
 });
 
 /**
- * @deprecated will be replaced with custom
+ * @deprecated will be replaced with widget
  */
 export const zIframeBrowserTab = z.object({
   id: z.string(),
@@ -171,7 +183,7 @@ export const zIframeBrowserTab = z.object({
 });
 
 /**
- * @deprecated will be replaced with custom
+ * @deprecated will be replaced with widget
  */
 export const zIframeBrowserData = z.object({
   type: z.literal('iframe-browser'),
@@ -196,6 +208,7 @@ export const zElementData = z.union([
   zTerminalData,
   zFileData,
   zIframeBrowserData,
+  zWidgetData,
 ]);
 
 export const zElementStyle = z.object({

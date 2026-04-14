@@ -1,5 +1,9 @@
 import { IService } from "@vibecanvas/runtime";
-import { type EditorService } from "../editor/EditorService";
+import type { EditorService, TEditorTool} from "../editor/EditorService";
+
+interface IWidget {
+  tool: TEditorTool
+}
 
 export class WidgetService implements IService<{}> {
   readonly name = "widget";
@@ -8,5 +12,8 @@ export class WidgetService implements IService<{}> {
 
   }
 
-  registerWidget() {}
+  registerWidget(widget: IWidget) {
+    this.editor.registerTool(widget.tool);
+    // this.editor.register
+  }
 }

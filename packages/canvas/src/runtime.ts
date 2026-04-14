@@ -139,7 +139,7 @@ function createServices(config: {
   const crdt = new CrdtService({ docHandle: config.docHandle });
   const logging = new LoggingService();
   const renderOrder = new RenderOrderService({
-    crdt: services.require("crdt"),
+    crdt,
     history,
     render,
     editor,
