@@ -16,7 +16,8 @@ import {
 import { createPenPlugin as createPenPluginV2 } from "./plugins/pen/Pen.pluginV2";
 import {
   CameraService, ContextMenuService, CrdtService, EditorService, HistoryService,
-  LoggingService, RenderOrderService, SceneService, SelectionService, WidgetService
+  LoggingService, RenderOrderService, SceneService, SelectionService, WidgetService,
+  CanvasRegistryService
 } from "./services";
 import { EditorServiceV2 } from "./services/editor/EditorServiceV2";
 import { ThemeService } from "@vibecanvas/service-theme";
@@ -114,6 +115,7 @@ declare module "@vibecanvas/runtime" {
     selection: SelectionService;
     theme: ThemeService;
     widget: WidgetService;
+    canvasRegistry: CanvasRegistryService;
   }
 }
 
@@ -150,6 +152,7 @@ function createServices(config: {
     docHandle: config.docHandle,
   });
   const camera = new CameraService({ scene });
+  const canvasRegistry = new CanvasRegistryService();
   const contextMenu = new ContextMenuService();
   const editor = new EditorService();
   const history = new HistoryService();
@@ -164,6 +167,7 @@ function createServices(config: {
     editor,
   });
 
+  services.provide("canvasRegistry", canvasRegistry);
   services.provide("editor2", new EditorServiceV2());
   services.provide("camera", camera);
   services.provide("contextMenu", contextMenu);
@@ -177,7 +181,6 @@ function createServices(config: {
   services.provide("theme", config.themeService);
   services.provide("widget", widget);
 
-
   return services;
 }
 
@@ -186,12 +189,12 @@ export function buildRuntime(config: IRuntimeConfig) {
     createEventListenerPlugin(),
     createGridPlugin(),
     createToolbarPlugin(),
-    createSelectionStyleMenuPlugin(),
-    createContextMenuPlugin(),
-    createHistoryControlPlugin(),
-    createRenderOrderPlugin(),
-    createSelectPlugin(),
-    createTransformPlugin(),
+    // createSelectionStyleMenuPlugin(),
+    // createContextMenuPlugin(),
+    // createHistoryControlPlugin(),
+    // createRenderOrderPlugin(),
+    // createSelectPlugin(),
+    // createTransformPlugin(),
     // createShape1dPlugin(),
     // createShape2dPlugin(),
     createPenPluginV2(),

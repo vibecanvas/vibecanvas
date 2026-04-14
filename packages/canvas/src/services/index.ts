@@ -1,3 +1,4 @@
+export * from "./canvas-registry/CanvasRegistryService";
 export * from "./camera/CameraService";
 export * from "./context-menu/ContextMenuService";
 export * from "./crdt/CrdtService";

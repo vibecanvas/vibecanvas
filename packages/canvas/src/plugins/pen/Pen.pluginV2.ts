@@ -24,6 +24,7 @@ import { fxCreatePenDataFromStrokePoints, type TStrokePoint } from "./fn.math";
 import { txSetupPenShapeListeners, txSafeStopPenDrag } from "./tx.listeners";
 import { txCreatePenPathFromElement, txUpdatePenPathFromElement } from "./tx.path";
 import { EditorServiceV2 } from "src/services/editor/EditorServiceV2";
+import { CanvasRegistryService } from "../../services";
 
 function getPointerPoint(render: SceneService, event?: MouseEvent | TouchEvent | PointerEvent): TStrokePoint | null {
   const pointer = render.dynamicLayer.getRelativePointerPosition();
@@ -74,6 +75,7 @@ export function createPenPlugin(): IPlugin<{
   renderOrder: RenderOrderService;
   selection: SelectionService;
   theme: ThemeService;
+  canvasRegistry: CanvasRegistryService;
 }, IHooks> {
   return {
     name: "pen",
@@ -88,7 +90,13 @@ export function createPenPlugin(): IPlugin<{
       const theme = ctx.services.require("theme");
       const createId = createCreateId(render);
       const now = () => Date.now();
+      const canvasRegistry = ctx.services.require("canvasRegistry");
 
+      canvasRegistry.registerElement({
+        id: "pen",
+        createNode: ()
+
+      })
 
       ctx.hooks.init.tap(() => {
         editor.registerTool({

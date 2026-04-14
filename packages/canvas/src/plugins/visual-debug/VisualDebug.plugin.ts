@@ -2,10 +2,10 @@ import type { IPlugin } from "@vibecanvas/runtime";
 import type { ThemeService } from "@vibecanvas/service-theme";
 import Konva from "konva";
 import type { CameraService } from "../../services/camera/CameraService";
-import type { EditorService } from "../../services/editor/EditorService";
 import type { SceneService } from "../../services/scene/SceneService";
 import type { SelectionService } from "../../services/selection/SelectionService";
 import type { IHooks } from "../../runtime";
+import type { EditorServiceV2 } from "src/services/editor/EditorServiceV2";
 
 const SHOULD_RENDER_SELECTION = true;
 const SHOULD_RENDER_FOCUSED_ID = true;
@@ -37,7 +37,7 @@ function formatCanvasNodeType(editor: EditorService, node: { getClassName(): str
   return node.getClassName();
 }
 
-function formatSelectionInfo(editor: EditorService, selection: SelectionService) {
+function formatSelectionInfo(editor: EditorServiceV2, selection: SelectionService) {
   const lines: string[] = [];
 
   if (SHOULD_RENDER_SELECTION) {
@@ -56,7 +56,7 @@ function formatSelectionInfo(editor: EditorService, selection: SelectionService)
 
 export function createVisualDebugPlugin(): IPlugin<{
   camera: CameraService;
-  editor: EditorService;
+  editor2: EditorServiceV2;
   scene: SceneService;
   selection: SelectionService;
   theme: ThemeService;
@@ -67,7 +67,7 @@ export function createVisualDebugPlugin(): IPlugin<{
       ctx.hooks.init.tap(() => {
         const scene = ctx.services.require("scene");
         const camera = ctx.services.require("camera");
-        const editor = ctx.services.require("editor");
+        const editor = ctx.services.require("editor2");
         const selection = ctx.services.require("selection");
         const theme = ctx.services.require("theme");
         const text = new Konva.Text({
@@ -98,12 +98,6 @@ export function createVisualDebugPlugin(): IPlugin<{
           syncText();
         });
         selection.hooks.change.tap(() => {
-          syncText();
-        });
-        editor.hooks.toElementRegistryChange.tap(() => {
-          syncText();
-        });
-        editor.hooks.toGroupRegistryChange.tap(() => {
           syncText();
         });
         theme.hooks.change.tap(() => {
