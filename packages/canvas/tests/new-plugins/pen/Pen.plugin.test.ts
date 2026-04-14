@@ -1,7 +1,7 @@
 import Konva from "konva";
 import type { TElement, TPenData } from "@vibecanvas/service-automerge/types/canvas-doc.types";
 import { describe, expect, test } from "vitest";
-import { createPenDataFromStrokePoints, type TStrokePoint } from "../../../src/new-plugins/pen/pen.math";
+import { fxCreatePenDataFromStrokePoints, type TStrokePoint } from "../../../src/new-plugins/pen/fn.math";
 import { THEME_ID_DARK } from "@vibecanvas/service-theme";
 import { createMockDocHandle, createNewCanvasHarness, flushCanvasEffects } from "../../new-test-setup";
 
@@ -16,7 +16,7 @@ function createPenElement(args?: {
     { x: 185, y: 110, pressure: 0.6 },
     { x: 220, y: 135, pressure: 0.5 },
   ];
-  const penData = createPenDataFromStrokePoints(strokePoints);
+  const penData = fxCreatePenDataFromStrokePoints({ points: strokePoints });
   if (!penData) {
     throw new Error("Failed to create pen data for test");
   }

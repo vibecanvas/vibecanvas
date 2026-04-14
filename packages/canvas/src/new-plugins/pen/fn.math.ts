@@ -1,4 +1,4 @@
-import { getStroke, type StrokeOptions } from "perfect-freehand";
+import type { StrokeOptions } from "perfect-freehand";
 import type { TElement, TPenData, TPoint2D } from "@vibecanvas/service-automerge/types/canvas-doc.types";
 
 export type TStrokePoint = {
@@ -14,7 +14,12 @@ type TSerializedPenStroke = {
   pressures: number[];
 };
 
-export const DEFAULT_STROKE_OPTIONS: StrokeOptions = {
+type TGetStroke = (
+  points: [number, number, number][],
+  options: StrokeOptions,
+) => number[][];
+
+const DEFAULT_STROKE_OPTIONS: StrokeOptions = {
   size: 7,
   thinning: 0.6,
   smoothing: 0.5,
@@ -53,16 +58,20 @@ function getSvgPathFromStroke(points: number[][]) {
   return `${path}Z`;
 }
 
-function getStrokePath(points: TStrokePoint[], options?: StrokeOptions) {
-  if (points.length < 2) {
+function getStrokePath(args: {
+  points: TStrokePoint[];
+  options?: StrokeOptions;
+  getStroke: TGetStroke;
+}) {
+  if (args.points.length < 2) {
     return "";
   }
 
-  const outlinePoints = getStroke(
-    points.map((point) => [point.x, point.y, point.pressure] as [number, number, number]),
+  const outlinePoints = args.getStroke(
+    args.points.map((point) => [point.x, point.y, point.pressure] as [number, number, number]),
     {
       ...DEFAULT_STROKE_OPTIONS,
-      ...options,
+      ...args.options,
     },
   );
 
@@ -103,15 +112,25 @@ function getLocalStrokePointsFromPenData(element: Pick<TElement, "data">): TStro
   }));
 }
 
-export function getStrokePathFromPenData(element: Pick<TElement, "data">, options?: StrokeOptions) {
-  return getStrokePath(getLocalStrokePointsFromPenData(element), {
-    ...options,
-    simulatePressure: element.data.type === "pen" ? element.data.simulatePressure : true,
+export function fxGetStrokePathFromPenData(args: {
+  element: Pick<TElement, "data">;
+  options?: StrokeOptions;
+  getStroke: TGetStroke;
+}) {
+  return getStrokePath({
+    points: getLocalStrokePointsFromPenData(args.element),
+    options: {
+      ...args.options,
+      simulatePressure: args.element.data.type === "pen" ? args.element.data.simulatePressure : true,
+    },
+    getStroke: args.getStroke,
   });
 }
 
-export function createPenDataFromStrokePoints(points: TStrokePoint[]): (TPenData & { x: number; y: number }) | null {
-  const serialized = serializeStrokePoints(points);
+export function fxCreatePenDataFromStrokePoints(args: {
+  points: TStrokePoint[];
+}): (TPenData & { x: number; y: number }) | null {
+  const serialized = serializeStrokePoints(args.points);
   if (!serialized) {
     return null;
   }
@@ -126,6 +145,10 @@ export function createPenDataFromStrokePoints(points: TStrokePoint[]): (TPenData
   };
 }
 
-export function scalePenDataPoints(points: TPoint2D[], scaleX: number, scaleY: number): TPoint2D[] {
-  return points.map((point) => [point[0] * scaleX, point[1] * scaleY]);
+export function fxScalePenDataPoints(args: {
+  points: TPoint2D[];
+  scaleX: number;
+  scaleY: number;
+}): TPoint2D[] {
+  return args.points.map((point) => [point[0] * args.scaleX, point[1] * args.scaleY]);
 }

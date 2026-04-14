@@ -1,4 +1,3 @@
-import { throttle } from "@solid-primitives/scheduled";
 import type { TElement } from "@vibecanvas/service-automerge/types/canvas-doc.types";
 import type Konva from "konva";
 import type { CrdtService } from "../../new-services/crdt/CrdtService";
@@ -8,17 +7,38 @@ import type { RenderService } from "../../new-services/render/RenderService";
 import type { SelectionService } from "../../new-services/selection/SelectionService";
 import type { IHooks, TElementPointerEvent } from "../../runtime";
 import { fxGetCanvasAncestorGroups, fxGetCanvasNodeKind, fxGetCanvasParentGroupId, fxIsCanvasGroupNode } from "../../core/fn.canvas-node-semantics";
-import { getWorldPosition } from "../../core/node-space";
-import { isPenNode } from "./pen.element";
+import { fxIsPenNode } from "./fx.path";
 import { fxSerializeSubtreeElements } from "../group/fn.serialize-subtree-elements";
 
-export type TPenListenersPortal = {
+export type TPortalTxSafeStopPenDrag = {};
+export type TArgsTxSafeStopPenDrag = {
+  node: Konva.Node;
+};
+
+export function txSafeStopPenDrag(portal: TPortalTxSafeStopPenDrag, args: TArgsTxSafeStopPenDrag) {
+  void portal;
+  try {
+    if (args.node.isDragging()) {
+      args.node.stopDrag();
+    }
+  } catch {
+    return;
+  }
+}
+
+type TThrottlePatch = (patch: Pick<TElement, "id" | "x" | "y" | "parentGroupId" | "updatedAt">) => void;
+
+export type TPortalTxSetupPenShapeListeners = {
   crdt: CrdtService;
   editor: EditorService;
   history: HistoryService;
   render: RenderService;
   selection: SelectionService;
   hooks: IHooks;
+  now: () => number;
+  Path: typeof Konva.Path;
+  getWorldPosition: (node: Konva.Path) => { x: number; y: number };
+  createThrottledPatch: (callback: TThrottlePatch) => TThrottlePatch;
   createPenCloneDrag: (node: Konva.Path) => Konva.Path;
   createPenPreviewClone: (node: Konva.Path) => Konva.Path;
   finalizePenPreviewClone: (node: Konva.Path) => Konva.Path;
@@ -26,42 +46,35 @@ export type TPenListenersPortal = {
   safeStopDrag: (node: Konva.Node) => void;
   toElement: (node: Konva.Path) => TElement;
 };
+export type TArgsTxSetupPenShapeListeners = {
+  node: Konva.Path;
+};
 
-export function safeStopPenDrag(node: Konva.Node) {
-  try {
-    if (node.isDragging()) {
-      node.stopDrag();
-    }
-  } catch {
-    return;
-  }
-}
-
-export function penNodeToPositionPatch(editor: EditorService, node: Konva.Path) {
-  const worldPosition = getWorldPosition(node);
+function penNodeToPositionPatch(portal: TPortalTxSetupPenShapeListeners, node: Konva.Path) {
+  const worldPosition = portal.getWorldPosition(node);
 
   return {
     id: node.id(),
     x: worldPosition.x,
     y: worldPosition.y,
-    parentGroupId: fxGetCanvasParentGroupId({ editor, node }),
-    updatedAt: Date.now(),
+    parentGroupId: fxGetCanvasParentGroupId({ editor: portal.editor, node }),
+    updatedAt: portal.now(),
   } satisfies Pick<TElement, "id" | "x" | "y" | "parentGroupId" | "updatedAt">;
 }
 
-function findSceneNodeById(render: RenderService, id: string) {
-  const node = render.staticForegroundLayer.findOne((candidate: Konva.Node) => {
-    return (candidate instanceof render.Group || candidate instanceof render.Shape) && candidate.id() === id;
+function findSceneNodeById(portal: TPortalTxSetupPenShapeListeners, id: string) {
+  const node = portal.render.staticForegroundLayer.findOne((candidate: Konva.Node) => {
+    return (candidate instanceof portal.render.Group || candidate instanceof portal.render.Shape) && candidate.id() === id;
   });
 
-  if (!(node instanceof render.Group) && !(node instanceof render.Shape)) {
+  if (!(node instanceof portal.render.Group) && !(node instanceof portal.render.Shape)) {
     return null;
   }
 
   return node;
 }
 
-function applyElement(portal: TPenListenersPortal, element: TElement) {
+function applyElement(portal: TPortalTxSetupPenShapeListeners, element: TElement) {
   const didUpdate = portal.editor.updateShapeFromTElement(element);
   if (!didUpdate) {
     return;
@@ -69,13 +82,13 @@ function applyElement(portal: TPenListenersPortal, element: TElement) {
 
   fxGetCanvasAncestorGroups({
     editor: portal.editor,
-    node: findSceneNodeById(portal.render, element.id),
+    node: findSceneNodeById(portal, element.id),
   }).forEach((group) => {
     group.fire("transform");
   });
 }
 
-function serializeNodeElements(portal: TPenListenersPortal, node: Konva.Node) {
+function serializeNodeElements(portal: TPortalTxSetupPenShapeListeners, node: Konva.Node) {
   const kind = fxGetCanvasNodeKind({ editor: portal.editor, node });
   if (kind === "element") {
     const element = portal.editor.toElement(node);
@@ -93,14 +106,14 @@ function serializeNodeElements(portal: TPenListenersPortal, node: Konva.Node) {
   return [] as TElement[];
 }
 
-function startMultiPenCloneDrag(portal: TPenListenersPortal, node: Konva.Path) {
+function startMultiPenCloneDrag(portal: TPortalTxSetupPenShapeListeners, node: Konva.Path) {
   const selected = portal.filterSelection(portal.selection.selection);
-  if (selected.length <= 1 || !selected.every(isPenNode) || !selected.includes(node)) {
+  if (selected.length <= 1 || !selected.every((selectedNode) => fxIsPenNode({ Path: portal.Path }, { node: selectedNode })) || !selected.includes(node)) {
     return false;
   }
 
   const entries = selected.map((sourceNode) => {
-    const previewNode = portal.createPenPreviewClone(sourceNode);
+    const previewNode = portal.createPenPreviewClone(sourceNode as Konva.Path);
     portal.render.dynamicLayer.add(previewNode);
     return { sourceNode, previewNode };
   });
@@ -155,22 +168,22 @@ function startMultiPenCloneDrag(portal: TPenListenersPortal, node: Konva.Path) {
   return true;
 }
 
-export function setupPenShapeListeners(portal: TPenListenersPortal, node: Konva.Path) {
-  if (node.getAttr("vcPenNodeSetup") === true) {
-    node.off("pointerclick pointerdown dragstart pointerdblclick dragmove dragend");
+export function txSetupPenShapeListeners(portal: TPortalTxSetupPenShapeListeners, args: TArgsTxSetupPenShapeListeners) {
+  if (args.node.getAttr("vcPenNodeSetup") === true) {
+    args.node.off("pointerclick pointerdown dragstart pointerdblclick dragmove dragend");
   }
 
-  node.setAttr("vcPenNodeSetup", true);
+  args.node.setAttr("vcPenNodeSetup", true);
 
   let originalElement: TElement | null = null;
   let isCloneDrag = false;
   const multiDragStartPositions = new Map<string, { x: number; y: number }>();
   const passengerOriginalElements = new Map<string, TElement[]>();
-  const throttledPatch = throttle((patch: Pick<TElement, "id" | "x" | "y" | "parentGroupId" | "updatedAt">) => {
+  const throttledPatch = portal.createThrottledPatch((patch) => {
     portal.crdt.patch({ elements: [patch], groups: [] });
-  }, 100);
+  });
 
-  node.on("pointerclick", (event) => {
+  args.node.on("pointerclick", (event) => {
     if (portal.selection.mode !== "select") {
       return;
     }
@@ -178,9 +191,9 @@ export function setupPenShapeListeners(portal: TPenListenersPortal, node: Konva.
     portal.hooks.elementPointerClick.call(event as TElementPointerEvent);
   });
 
-  node.on("pointerdown dragstart", (event) => {
+  args.node.on("pointerdown dragstart", (event) => {
     if (portal.selection.mode !== "select") {
-      portal.safeStopDrag(node);
+      portal.safeStopDrag(args.node);
       return;
     }
 
@@ -194,22 +207,22 @@ export function setupPenShapeListeners(portal: TPenListenersPortal, node: Konva.
 
     if (event.evt?.altKey) {
       isCloneDrag = true;
-      portal.safeStopDrag(node);
-      if (startMultiPenCloneDrag(portal, node)) {
+      portal.safeStopDrag(args.node);
+      if (startMultiPenCloneDrag(portal, args.node)) {
         return;
       }
-      portal.createPenCloneDrag(node);
+      portal.createPenCloneDrag(args.node);
       return;
     }
 
-    originalElement = portal.toElement(node);
+    originalElement = portal.toElement(args.node);
     multiDragStartPositions.clear();
     passengerOriginalElements.clear();
 
     const selected = portal.filterSelection(portal.selection.selection);
     selected.forEach((selectedNode) => {
       multiDragStartPositions.set(selectedNode.id(), { ...selectedNode.absolutePosition() });
-      if (selectedNode === node) {
+      if (selectedNode === args.node) {
         return;
       }
 
@@ -220,7 +233,7 @@ export function setupPenShapeListeners(portal: TPenListenersPortal, node: Konva.
     });
   });
 
-  node.on("pointerdblclick", (event) => {
+  args.node.on("pointerdblclick", (event) => {
     if (portal.selection.mode !== "select") {
       return;
     }
@@ -231,29 +244,29 @@ export function setupPenShapeListeners(portal: TPenListenersPortal, node: Konva.
     }
   });
 
-  node.on("dragmove", () => {
+  args.node.on("dragmove", () => {
     if (isCloneDrag) {
       return;
     }
 
-    throttledPatch(penNodeToPositionPatch(portal.editor, node));
+    throttledPatch(penNodeToPositionPatch(portal, args.node));
 
     const selected = portal.filterSelection(portal.selection.selection);
     if (selected.length <= 1) {
       return;
     }
 
-    const start = multiDragStartPositions.get(node.id());
+    const start = multiDragStartPositions.get(args.node.id());
     if (!start) {
       return;
     }
 
-    const current = node.absolutePosition();
+    const current = args.node.absolutePosition();
     const dx = current.x - start.x;
     const dy = current.y - start.y;
 
     selected.forEach((other) => {
-      if (other === node || other.isDragging()) {
+      if (other === args.node || other.isDragging()) {
         return;
       }
 
@@ -266,7 +279,7 @@ export function setupPenShapeListeners(portal: TPenListenersPortal, node: Konva.
     });
   });
 
-  node.on("dragend", () => {
+  args.node.on("dragend", () => {
     if (isCloneDrag) {
       isCloneDrag = false;
       originalElement = null;
@@ -275,13 +288,13 @@ export function setupPenShapeListeners(portal: TPenListenersPortal, node: Konva.
       return;
     }
 
-    const nextElement = portal.toElement(node);
+    const nextElement = portal.toElement(args.node);
     const beforeElement = originalElement ? structuredClone(originalElement) : null;
     const afterElement = structuredClone(nextElement);
     portal.crdt.patch({ elements: [afterElement], groups: [] });
 
     const selected = portal.filterSelection(portal.selection.selection);
-    const passengers = selected.filter((selectedNode) => selectedNode !== node);
+    const passengers = selected.filter((selectedNode) => selectedNode !== args.node);
     const passengerAfterElements = new Map<string, TElement[]>();
     const passengerEndPositions = new Map<string, { x: number; y: number }>();
 

@@ -9,16 +9,20 @@ import type { HistoryService } from "../../new-services/history/HistoryService";
 import type { RenderOrderService } from "../../new-services/render-order/RenderOrderService";
 import type { RenderService } from "../../new-services/render/RenderService";
 import type { SelectionService } from "../../new-services/selection/SelectionService";
-import type { ThemeService } from "@vibecanvas/service-theme";
+import { resolveThemeColor, type ThemeService } from "@vibecanvas/service-theme";
+import { getStroke } from "perfect-freehand";
+import { throttle } from "@solid-primitives/scheduled";
 import { CanvasMode } from "../../new-services/selection/enum";
 import type { IHooks } from "../../runtime";
 import { fxFilterSelection } from "../../core/fn.filter-selection";
+import { getWorldPosition } from "../../core/node-space";
 import { txDeleteSelection } from "../select/tx.delete-selection";
-import { DEFAULT_FILL, DEFAULT_OPACITY, DEFAULT_STROKE_WIDTH } from "./pen.constants";
-import { createPenCloneDrag, createPenPreviewClone, finalizePenPreviewClone } from "./pen.clone";
-import { createPenPathFromElement, isPenPath, penPathToElement, updatePenPathFromElement } from "./pen.element";
-import { createPenDataFromStrokePoints, type TStrokePoint } from "./pen.math";
-import { safeStopPenDrag, setupPenShapeListeners } from "./pen.listeners";
+import { DEFAULT_FILL, DEFAULT_OPACITY, DEFAULT_STROKE_WIDTH } from "./CONSTANTS";
+import { txCreatePenCloneDrag, txCreatePenPreviewClone, txFinalizePenPreviewClone } from "./tx.clone";
+import { fxIsPenPath, fxPenPathToElement } from "./fx.path";
+import { fxCreatePenDataFromStrokePoints, type TStrokePoint } from "./fn.math";
+import { txSetupPenShapeListeners, txSafeStopPenDrag } from "./tx.listeners";
+import { txCreatePenPathFromElement, txUpdatePenPathFromElement } from "./tx.path";
 
 function getPointerPoint(render: RenderService, event?: MouseEvent | TouchEvent | PointerEvent): TStrokePoint | null {
   const pointer = render.dynamicLayer.getRelativePointerPosition();
@@ -89,19 +93,23 @@ export function createPenPlugin(): IPlugin<{
       let draftElementId: string | null = null;
 
       const toElement = (node: Konva.Path) => {
-        return penPathToElement(render, editor, node);
+        return fxPenPathToElement({ editor, now }, { node });
       };
 
       const setupNode = (node: Konva.Path) => {
-        setupPenShapeListeners({
+        txSetupPenShapeListeners({
           crdt,
           editor,
           history,
           render,
           selection,
           hooks: ctx.hooks,
+          now,
+          Path: render.Path,
+          getWorldPosition: (sourceNode) => getWorldPosition(sourceNode),
+          createThrottledPatch: (callback) => throttle(callback, 100),
           createPenCloneDrag: (sourceNode) => {
-            return createPenCloneDrag({
+            return txCreatePenCloneDrag({
               crdt,
               render,
               renderOrder,
@@ -109,12 +117,14 @@ export function createPenPlugin(): IPlugin<{
               theme,
               createId,
               now,
+              getStroke,
+              resolveThemeColor,
               setupNode,
               toElement,
-            }, sourceNode);
+            }, { node: sourceNode });
           },
           createPenPreviewClone: (sourceNode) => {
-            return createPenPreviewClone({
+            return txCreatePenPreviewClone({
               crdt,
               render,
               renderOrder,
@@ -122,12 +132,14 @@ export function createPenPlugin(): IPlugin<{
               theme,
               createId,
               now,
+              getStroke,
+              resolveThemeColor,
               setupNode,
               toElement,
-            }, sourceNode);
+            }, { node: sourceNode });
           },
           finalizePenPreviewClone: (previewNode) => {
-            return finalizePenPreviewClone({
+            return txFinalizePenPreviewClone({
               crdt,
               render,
               renderOrder,
@@ -135,18 +147,20 @@ export function createPenPlugin(): IPlugin<{
               theme,
               createId,
               now,
+              getStroke,
+              resolveThemeColor,
               setupNode,
               toElement,
-            }, previewNode);
+            }, { previewClone: previewNode });
           },
           filterSelection: (nodes) => {
             return fxFilterSelection({ render, editor, selection: nodes.filter((node): node is Konva.Group | Konva.Shape => {
               return node instanceof render.Group || node instanceof render.Shape;
             }) });
           },
-          safeStopDrag: safeStopPenDrag,
+          safeStopDrag: (sourceNode) => txSafeStopPenDrag({}, { node: sourceNode }),
           toElement,
-        }, node);
+        }, { node });
 
         node.setDraggable(true);
         node.listening(true);
@@ -169,7 +183,7 @@ export function createPenPlugin(): IPlugin<{
       };
 
       const createElementFromPoints = (): TElement | null => {
-        const penData = createPenDataFromStrokePoints(points);
+        const penData = fxCreatePenDataFromStrokePoints({ points });
         if (!penData) {
           return null;
         }
@@ -226,7 +240,12 @@ export function createPenPlugin(): IPlugin<{
         }
 
         const node = ensurePreviewPath();
-        updatePenPathFromElement(node, theme, element);
+        txUpdatePenPathFromElement({
+          render,
+          theme,
+          getStroke,
+          resolveThemeColor,
+        }, { node, element });
         node.listening(false);
         node.draggable(false);
         node.visible(true);
@@ -268,7 +287,7 @@ export function createPenPlugin(): IPlugin<{
           return null;
         }
 
-        if (!isPenPath(node)) {
+        if (!fxIsPenPath({}, { node })) {
           return null;
         }
 
@@ -280,7 +299,12 @@ export function createPenPlugin(): IPlugin<{
           return null;
         }
 
-        return setupNode(createPenPathFromElement(render, theme, element));
+        return setupNode(txCreatePenPathFromElement({
+          render,
+          theme,
+          getStroke,
+          resolveThemeColor,
+        }, { element }));
       });
 
       editor.registerSetupExistingShape("pen", (node) => {
@@ -288,7 +312,7 @@ export function createPenPlugin(): IPlugin<{
           return false;
         }
 
-        if (!isPenPath(node)) {
+        if (!fxIsPenPath({}, { node })) {
           return false;
         }
 
@@ -308,7 +332,12 @@ export function createPenPlugin(): IPlugin<{
           return false;
         }
 
-        return updatePenPathFromElement(node, theme, element);
+        return txUpdatePenPathFromElement({
+          render,
+          theme,
+          getStroke,
+          resolveThemeColor,
+        }, { node, element });
       });
 
       ctx.hooks.toolSelect.tap((toolId) => {
@@ -383,7 +412,12 @@ export function createPenPlugin(): IPlugin<{
           return;
         }
 
-        const node = setupNode(createPenPathFromElement(render, theme, element));
+        const node = setupNode(txCreatePenPathFromElement({
+          render,
+          theme,
+          getStroke,
+          resolveThemeColor,
+        }, { element }));
         render.staticForegroundLayer.add(node);
         renderOrder.assignOrderOnInsert({
           parent: render.staticForegroundLayer,
@@ -430,14 +464,19 @@ export function createPenPlugin(): IPlugin<{
 
       theme.hooks.change.tap(() => {
         render.staticForegroundLayer.find((candidate: Konva.Node) => {
-          return candidate instanceof render.Path && isPenPath(candidate);
+          return candidate instanceof render.Path && fxIsPenPath({}, { node: candidate });
         }).forEach((candidate) => {
           if (!(candidate instanceof render.Path)) {
             return;
           }
 
           const element = toElement(candidate);
-          updatePenPathFromElement(candidate, theme, element);
+          txUpdatePenPathFromElement({
+            render,
+            theme,
+            getStroke,
+            resolveThemeColor,
+          }, { node: candidate, element });
         });
         render.staticForegroundLayer.batchDraw();
       });
