@@ -21,31 +21,42 @@ import { DEFAULT_FILL, DEFAULT_OPACITY, DEFAULT_STROKE_WIDTH } from "./CONSTANTS
 import { txCreatePenCloneDrag, txCreatePenPreviewClone, txFinalizePenPreviewClone } from "./tx.clone";
 import { fxIsPenPath, fxPenPathToElement } from "./fx.path";
 import { fxCreatePenDataFromStrokePoints, type TStrokePoint } from "./fn.math";
+import type { TEditorToolCanvasPoint } from "src/services/editor/EditorServiceV2";
 import { txSetupPenShapeListeners, txSafeStopPenDrag } from "./tx.listeners";
-import { txCreatePenPathFromElement, txUpdatePenPathFromElement } from "./tx.path";
+import { txUpdatePenPathFromElement } from "./tx.path";
 import { EditorServiceV2 } from "src/services/editor/EditorServiceV2";
 import { CanvasRegistryService } from "../../services";
 import { fxCreatePenNode } from "./fx.create-node";
 
-function getPointerPoint(render: SceneService, event?: MouseEvent | TouchEvent | PointerEvent): TStrokePoint | null {
-  const pointer = render.dynamicLayer.getRelativePointerPosition();
-  if (!pointer) {
-    return null;
+const DRAFT_POINTS_ATTR = "vcDraftStrokePoints";
+
+function createDraftElement(args: {
+  id: string;
+  now: number;
+  points: TEditorToolCanvasPoint[];
+}): TElement {
+  const penData = fxCreatePenDataFromStrokePoints({
+    points: args.points,
+  });
+  if (!penData) {
+    throw new Error("Failed to create pen draft data");
   }
 
-  const pressure = typeof event === "object"
-    && event !== null
-    && "pressure" in event
-    && typeof event.pressure === "number"
-    && Number.isFinite(event.pressure)
-    && event.pressure > 0
-      ? event.pressure
-      : 0.5;
-
   return {
-    x: pointer.x,
-    y: pointer.y,
-    pressure,
+    id: args.id,
+    x: penData.x,
+    y: penData.y,
+    rotation: 0,
+    zIndex: "",
+    parentGroupId: null,
+    bindings: [],
+    locked: false,
+    createdAt: args.now,
+    updatedAt: args.now,
+    data: penData,
+    style: {
+      backgroundColor: "black",
+    },
   };
 }
 
@@ -102,49 +113,54 @@ export function createPenPlugin(): IPlugin<{
           shortcuts: ['p'],
           drawCreate: {
             startDraft: (args) => {
-              const penData = fxCreatePenDataFromStrokePoints({
-                points: [
-                  args.point,
-                ],
-              });
-              if (!penData) {
-                throw new Error("Failed to create initial pen draft data");
-              }
-
               const node = fxCreatePenNode({
                 Path: Konva.Path,
                 theme,
                 getStroke,
                 resolveThemeColor,
               }, {
-                element: {
+                element: createDraftElement({
                   id: "pen-draft",
-                  x: penData.x,
-                  y: penData.y,
-                  rotation: 0,
-                  zIndex: "",
-                  parentGroupId: null,
-                  bindings: [],
-                  locked: false,
-                  createdAt: now(),
-                  updatedAt: now(),
-                  data: penData,
-                  style: {
-                    backgroundColor: "black",
-                  },
-                },
+                  now: now(),
+                  points: [args.point],
+                }),
               });
 
               if (!node) {
                 throw new Error("Failed to create pen node");
               }
 
+              node.setAttr(DRAFT_POINTS_ATTR, [args.point]);
               node.listening(false);
               node.draggable(false);
               return node;
             },
-            updateDraft: () => {
+            updateDraft: (previewNode, args) => {
+              if (!(previewNode instanceof Konva.Path)) {
+                return;
+              }
 
+              const points = [
+                ...((previewNode.getAttr(DRAFT_POINTS_ATTR) as TEditorToolCanvasPoint[] | undefined) ?? []),
+                args.point,
+              ];
+              previewNode.setAttr(DRAFT_POINTS_ATTR, points);
+
+              txUpdatePenPathFromElement({
+                Path: Konva.Path,
+                theme,
+                getStroke,
+                resolveThemeColor,
+              }, {
+                node: previewNode,
+                element: createDraftElement({
+                  id: previewNode.id(),
+                  now: args.now,
+                  points,
+                }),
+              });
+              previewNode.listening(false);
+              previewNode.draggable(false);
             },
           }
         })

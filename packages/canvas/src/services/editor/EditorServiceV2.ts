@@ -134,6 +134,7 @@ export class EditorServiceV2 implements IService<TEditorServiceHooks> {
   editingTextId: string | null = null;
   editingShape1dId: string | null = null;
   private previewNode: Konva.Shape | null = null;
+  private previewOrigin: TEditorToolCanvasPoint | null = null;
   transformer: Konva.Transformer | null = null;
 
   constructor(private sceneService: SceneService) { }
@@ -157,13 +158,36 @@ export class EditorServiceV2 implements IService<TEditorServiceHooks> {
           return;
         }
 
-        const preview = tool.drawCreate.startDraft({ event, point });
-        this.setPreviewNode(preview);
+        const preview = tool.drawCreate?.startDraft({ event, point });
+        this.previewOrigin = point;
+        if (preview) {
+          this.setPreviewNode(preview);
+        }
+      });
 
-        console.log("pointerdown,", { event, point });
-      })
+      portal.hooks.pointerMove.tap((event) => {
+        if (this.activeToolId !== tool.id) {
+          return;
+        }
 
+        if (!this.previewNode || !this.previewOrigin) {
+          return;
+        }
 
+        const point = getCanvasPoint(this.sceneService, event as TEditorToolPointerEvent);
+        if (!point) {
+          return;
+        }
+
+        tool.drawCreate?.updateDraft(this.previewNode, {
+          draft: this.previewNode,
+          event: event as TEditorToolPointerEvent,
+          point,
+          origin: this.previewOrigin,
+          shiftKey: event.evt.shiftKey,
+          now: Date.now(),
+        });
+      });
     }
 
     this.hooks.toolsChange.call();
@@ -264,11 +288,14 @@ export class EditorServiceV2 implements IService<TEditorServiceHooks> {
       return;
     }
 
-    if(node !== null) this.sceneService.dynamicLayer.add(node);
+    if (node !== null) {
+      this.sceneService.dynamicLayer.add(node);
+    } else {
+      this.previewOrigin = null;
+    }
 
     this.previewNode = node;
 
-    this.sceneService.dynamicLayer.batchDraw();
   }
 
   /**
