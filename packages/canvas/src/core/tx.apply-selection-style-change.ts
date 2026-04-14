@@ -11,11 +11,11 @@ import {
   fxCreateSelectionStyleDataPatch,
 } from "./fx.selection-style-element-patch";
 import type { TElement } from "@vibecanvas/service-automerge/types/canvas-doc.types";
-import type { CrdtService } from "../new-services/crdt/CrdtService";
-import type { EditorService } from "../new-services/editor/EditorService";
-import type { HistoryService } from "../new-services/history/HistoryService";
-import type { SceneService } from "../new-services/scene/SceneService";
-import type { SelectionService } from "../new-services/selection/SelectionService";
+import type { CrdtService } from "../services/crdt/CrdtService";
+import type { EditorService } from "../services/editor/EditorService";
+import type { HistoryService } from "../services/history/HistoryService";
+import type { SceneService } from "../services/scene/SceneService";
+import type { SelectionService } from "../services/selection/SelectionService";
 
 export type TPortalApplySelectionStyleChange = {
   Konva: typeof Konva;

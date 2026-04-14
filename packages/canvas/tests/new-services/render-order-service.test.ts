@@ -1,10 +1,10 @@
 import Konva from "konva";
 import { describe, expect, test } from "vitest";
-import { HistoryService } from "../../src/new-services/history/HistoryService";
-import { SceneService } from "../../src/new-services/scene/SceneService";
-import { RenderOrderService } from "../../src/new-services/render-order/RenderOrderService";
-import { CrdtService } from "../../src/new-services/crdt/CrdtService";
-import { EditorService } from "../../src/new-services/editor/EditorService";
+import { HistoryService } from "../../src/services/history/HistoryService";
+import { SceneService } from "../../src/services/scene/SceneService";
+import { RenderOrderService } from "../../src/services/render-order/RenderOrderService";
+import { CrdtService } from "../../src/services/crdt/CrdtService";
+import { EditorService } from "../../src/services/editor/EditorService";
 import type { TElement } from "@vibecanvas/service-automerge/types/canvas-doc.types";
 import { createMockDocHandle, createTestContainer, ensureResizeObserver } from "../test-setup";
 import { fxCreateOrderedZIndex } from "../../src/core/fn.create-ordered-z-index";

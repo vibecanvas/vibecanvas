@@ -1,7 +1,7 @@
 import Konva from "konva";
 import type { TElement, TPenData } from "@vibecanvas/service-automerge/types/canvas-doc.types";
 import { describe, expect, test } from "vitest";
-import { fxCreatePenDataFromStrokePoints, type TStrokePoint } from "../../../src/new-plugins/pen/fn.math";
+import { fxCreatePenDataFromStrokePoints, type TStrokePoint } from "../../../src/plugins/pen/fn.math";
 import { THEME_ID_DARK } from "@vibecanvas/service-theme";
 import { createMockDocHandle, createNewCanvasHarness, flushCanvasEffects } from "../../new-test-setup";
 

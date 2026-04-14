@@ -1,6 +1,6 @@
 import Konva from "konva";
 import { describe, expect, test } from "vitest";
-import { CanvasMode } from "../../../src/new-services/selection/enum";
+import { CanvasMode } from "../../../src/services/selection/enum";
 import { createNewCanvasHarness, flushCanvasEffects } from "../../new-test-setup";
 
 async function createHandHarness() {

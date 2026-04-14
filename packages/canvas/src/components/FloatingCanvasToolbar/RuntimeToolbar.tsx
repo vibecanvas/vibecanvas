@@ -1,6 +1,6 @@
 import DOMPurify from "dompurify";
 import "./styles.css";
-import type { TEditorToolIcon } from "../../new-services/editor/EditorService";
+import type { TEditorToolIcon } from "../../services/editor/EditorService";
 import type { Accessor } from "solid-js";
 import { For, createSignal } from "solid-js";
 import { ToolButton } from "./ToolButton";

@@ -2,9 +2,9 @@ import type Konva from "konva";
 import type { TElement } from "@vibecanvas/service-automerge/types/canvas-doc.types";
 import { fxFilterSelection } from "./fx.filter-selection";
 import { fnIsUnsupportedSelectionStyleElement } from "./fn.selection-style-menu";
-import type { EditorService } from "../new-services/editor/EditorService";
-import type { SceneService } from "../new-services/scene/SceneService";
-import type { SelectionService } from "../new-services/selection/SelectionService";
+import type { EditorService } from "../services/editor/EditorService";
+import type { SceneService } from "../services/scene/SceneService";
+import type { SelectionService } from "../services/selection/SelectionService";
 
 export type TPortalResolveSelectionStyleElements = {
   Konva: typeof Konva;

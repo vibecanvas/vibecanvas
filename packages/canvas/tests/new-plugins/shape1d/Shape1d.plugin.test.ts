@@ -1,8 +1,8 @@
 import Konva from "konva";
 import type { TArrowData, TElement, TLineData } from "@vibecanvas/service-automerge/types/canvas-doc.types";
 import { describe, expect, test } from "vitest";
-import { fxIsShape1dNode } from "../../../src/new-plugins/shape1d/fx.node";
-import type { TShape1dNode } from "../../../src/new-plugins/shape1d/CONSTANTS";
+import { fxIsShape1dNode } from "../../../src/plugins/shape1d/fx.node";
+import type { TShape1dNode } from "../../../src/plugins/shape1d/CONSTANTS";
 import { THEME_ID_DARK } from "@vibecanvas/service-theme";
 import { createMockDocHandle, createNewCanvasHarness, flushCanvasEffects } from "../../new-test-setup";
 

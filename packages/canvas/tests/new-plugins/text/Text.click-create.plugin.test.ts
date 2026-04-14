@@ -1,6 +1,6 @@
 import Konva from "konva";
 import { describe, expect, test } from "vitest";
-import { CanvasMode } from "../../../src/new-services/selection/enum";
+import { CanvasMode } from "../../../src/services/selection/enum";
 import { createNewCanvasHarness, flushCanvasEffects } from "../../new-test-setup";
 
 function firePointerUp(stage: Konva.Stage, layer: Konva.Layer, runtime: ReturnType<typeof createNewCanvasHarness> extends Promise<infer T> ? T["runtime"] : never, x: number, y: number) {

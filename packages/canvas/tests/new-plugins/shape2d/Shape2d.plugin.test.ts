@@ -1,7 +1,7 @@
 import Konva from "konva";
 import type { TElement, TTextData } from "@vibecanvas/service-automerge/types/canvas-doc.types";
 import { describe, expect, test } from "vitest";
-import { CanvasMode } from "../../../src/new-services/selection/enum";
+import { CanvasMode } from "../../../src/services/selection/enum";
 import { THEME_ID_DARK } from "@vibecanvas/service-theme";
 import { createMockDocHandle, createNewCanvasHarness, flushCanvasEffects } from "../../new-test-setup";
 

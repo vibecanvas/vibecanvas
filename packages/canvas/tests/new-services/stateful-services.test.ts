@@ -1,10 +1,10 @@
 import Konva from "konva";
 import { describe, expect, test, vi } from "vitest";
 import type { TElement, TGroup } from "@vibecanvas/service-automerge/types/canvas-doc.types";
-import { ContextMenuService } from "../../src/new-services/context-menu/ContextMenuService";
-import { EditorService } from "../../src/new-services/editor/EditorService";
-import { HistoryService } from "../../src/new-services/history/HistoryService";
-import { SelectionService } from "../../src/new-services/selection/SelectionService";
+import { ContextMenuService } from "../../src/services/context-menu/ContextMenuService";
+import { EditorService } from "../../src/services/editor/EditorService";
+import { HistoryService } from "../../src/services/history/HistoryService";
+import { SelectionService } from "../../src/services/selection/SelectionService";
 import { ThemeService, THEME_ID_DARK, THEME_ID_LIGHT } from "@vibecanvas/service-theme";
 
 function createElement(id: string): TElement {

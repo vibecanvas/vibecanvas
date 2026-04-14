@@ -1,7 +1,7 @@
 import Konva from "konva";
 import type { TCanvasDoc, TElement, TGroup, TTextData } from "@vibecanvas/service-automerge/types/canvas-doc.types";
 import { describe, expect, test, vi } from "vitest";
-import { ATTACHED_TEXT_NAME } from "../../../src/new-plugins/shape2d/fx.attached-text";
+import { ATTACHED_TEXT_NAME } from "../../../src/plugins/shape2d/fx.attached-text";
 import { createMockDocHandle, createNewCanvasHarness, flushCanvasEffects } from "../../new-test-setup";
 
 vi.mock("../../../src/utils/image", () => ({
@@ -238,7 +238,7 @@ describe("new RenderOrder plugin", () => {
 
   test.skip("context menu opens item actions on right click", async () => {
     // blocked for now
-    // reason: no migrated context-menu plugin path in src/new-plugins
+    // reason: no migrated context-menu plugin path in src/plugins
     // old test belongs to old ContextMenuPlugin behavior, not render-order service itself
   });
 });

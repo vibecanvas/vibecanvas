@@ -1,6 +1,6 @@
 import type { TElement } from "@vibecanvas/service-automerge/types/canvas-doc.types";
 import type Konva from "konva";
-import type { EditorService } from "../new-services/editor/EditorService";
+import type { EditorService } from "../services/editor/EditorService";
 
 export type TPortalResolveSelectionStyleTextElements = {
   editor: EditorService;

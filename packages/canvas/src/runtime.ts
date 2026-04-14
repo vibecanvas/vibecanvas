@@ -12,11 +12,11 @@ import {
   createRecorderPlugin, createRenderOrderPlugin, createSceneHydratorPlugin, createSelectPlugin,
   createSelectionStyleMenuPlugin, createShape1dPlugin, createShape2dPlugin, createTextPlugin,
   createToolbarPlugin, createTransformPlugin, createVisualDebugPlugin, createHostedComponentPlugin
-} from "./new-plugins";
+} from "./plugins";
 import {
   CameraService, ContextMenuService, CrdtService, EditorService, HistoryService,
   LoggingService, RenderOrderService, SceneService, SelectionService, WidgetService
-} from "./new-services";
+} from "./services";
 import { ThemeService } from "@vibecanvas/service-theme";
 
 

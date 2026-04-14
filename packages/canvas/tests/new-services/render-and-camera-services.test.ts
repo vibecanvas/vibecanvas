@@ -1,6 +1,6 @@
 import { describe, expect, test, vi } from "vitest";
-import { CameraService } from "../../src/new-services/camera/CameraService";
-import { SceneService } from "../../src/new-services/scene/SceneService";
+import { CameraService } from "../../src/services/camera/CameraService";
+import { SceneService } from "../../src/services/scene/SceneService";
 import { createMockDocHandle, createTestContainer, ensureResizeObserver } from "../test-setup";
 
 function setContainerSize(container: HTMLDivElement, args: { width: number; height: number }) {

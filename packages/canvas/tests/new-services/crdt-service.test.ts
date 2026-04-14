@@ -1,6 +1,6 @@
 import { describe, expect, test, vi } from "vitest";
 import type { TElement, TGroup } from "@vibecanvas/service-automerge/types/canvas-doc.types";
-import { CrdtService } from "../../src/new-services/crdt/CrdtService";
+import { CrdtService } from "../../src/services/crdt/CrdtService";
 import { createMockDocHandle } from "../test-setup";
 
 function createElement(id: string): TElement {
