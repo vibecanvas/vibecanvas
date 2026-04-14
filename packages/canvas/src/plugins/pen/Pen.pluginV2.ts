@@ -25,6 +25,7 @@ import { txSetupPenShapeListeners, txSafeStopPenDrag } from "./tx.listeners";
 import { txCreatePenPathFromElement, txUpdatePenPathFromElement } from "./tx.path";
 import { EditorServiceV2 } from "src/services/editor/EditorServiceV2";
 import { CanvasRegistryService } from "../../services";
+import { fxCreatePenNode } from "./fx.create-node";
 
 function getPointerPoint(render: SceneService, event?: MouseEvent | TouchEvent | PointerEvent): TStrokePoint | null {
   const pointer = render.dynamicLayer.getRelativePointerPosition();
@@ -45,20 +46,6 @@ function getPointerPoint(render: SceneService, event?: MouseEvent | TouchEvent |
     x: pointer.x,
     y: pointer.y,
     pressure,
-  };
-}
-
-function createCreateId(render: SceneService) {
-  let fallbackId = 0;
-
-  return () => {
-    const cryptoApi = render.container.ownerDocument.defaultView?.crypto;
-    if (cryptoApi?.randomUUID) {
-      return cryptoApi.randomUUID();
-    }
-
-    fallbackId += 1;
-    return `pen-${Date.now()}-${fallbackId}`;
   };
 }
 
@@ -88,23 +75,78 @@ export function createPenPlugin(): IPlugin<{
       const renderOrder = ctx.services.require("renderOrder");
       const selection = ctx.services.require("selection");
       const theme = ctx.services.require("theme");
-      const createId = createCreateId(render);
       const now = () => Date.now();
       const canvasRegistry = ctx.services.require("canvasRegistry");
 
       canvasRegistry.registerElement({
         id: "pen",
-        createNode: ()
-
+        matchesElement: (element) => element.data.type === "pen",
+        createNode: (element) => {
+          return fxCreatePenNode({
+            Path: Konva.Path,
+            theme,
+            getStroke,
+            resolveThemeColor,
+          }, {
+            element,
+          });
+        },
       })
 
       ctx.hooks.init.tap(() => {
-        editor.registerTool({
+        editor.registerTool(ctx, {
           id: "pen",
           label: "Pen",
           icon: Pencil,
           behavior: { type: "mode", mode: 'draw-create'  },
-          shortcuts: ['p']
+          shortcuts: ['p'],
+          drawCreate: {
+            startDraft: (args) => {
+              const penData = fxCreatePenDataFromStrokePoints({
+                points: [
+                  args.point,
+                ],
+              });
+              if (!penData) {
+                throw new Error("Failed to create initial pen draft data");
+              }
+
+              const node = fxCreatePenNode({
+                Path: Konva.Path,
+                theme,
+                getStroke,
+                resolveThemeColor,
+              }, {
+                element: {
+                  id: "pen-draft",
+                  x: penData.x,
+                  y: penData.y,
+                  rotation: 0,
+                  zIndex: "",
+                  parentGroupId: null,
+                  bindings: [],
+                  locked: false,
+                  createdAt: now(),
+                  updatedAt: now(),
+                  data: penData,
+                  style: {
+                    backgroundColor: "black",
+                  },
+                },
+              });
+
+              if (!node) {
+                throw new Error("Failed to create pen node");
+              }
+
+              node.listening(false);
+              node.draggable(false);
+              return node;
+            },
+            updateDraft: () => {
+
+            },
+          }
         })
       })
 

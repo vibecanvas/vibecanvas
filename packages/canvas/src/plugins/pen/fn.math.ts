@@ -63,12 +63,23 @@ function getStrokePath(args: {
   options?: StrokeOptions;
   getStroke: TGetStroke;
 }) {
-  if (args.points.length < 2) {
+  if (args.points.length === 0) {
     return "";
   }
 
+  const normalizedPoints = args.points.length === 1
+    ? [
+        args.points[0]!,
+        {
+          x: args.points[0]!.x + 0.5,
+          y: args.points[0]!.y + 0.5,
+          pressure: args.points[0]!.pressure,
+        },
+      ]
+    : args.points;
+
   const outlinePoints = args.getStroke(
-    args.points.map((point) => [point.x, point.y, point.pressure] as [number, number, number]),
+    normalizedPoints.map((point) => [point.x, point.y, point.pressure] as [number, number, number]),
     {
       ...DEFAULT_STROKE_OPTIONS,
       ...args.options,
@@ -79,7 +90,7 @@ function getStrokePath(args: {
 }
 
 function serializeStrokePoints(points: TStrokePoint[]): TSerializedPenStroke | null {
-  if (points.length < 2) {
+  if (points.length === 0) {
     return null;
   }
 

@@ -1,7 +1,11 @@
-import type { TElement, TGroup } from "@vibecanvas/service-automerge/types/canvas-doc.types";
 import type { IService } from "@vibecanvas/runtime";
+import type { TElement, TGroup } from "@vibecanvas/service-automerge/types/canvas-doc.types";
 import { SyncHook } from "@vibecanvas/tapable";
 import type Konva from "konva";
+import type { KonvaEventObject, Node, NodeConfig } from "konva/lib/Node";
+import type { Shape } from "konva/lib/Shape";
+import type { IHooks } from "src/runtime";
+import type { SceneService } from "../scene/SceneService";
 
 /**
  * Runtime mode for a registered editor tool.
@@ -15,6 +19,31 @@ export type TEditorToolMode = "select" | "hand" | "draw-create" | "click-create"
  */
 export type TEditorToolShortcut = string;
 export type TEditorToolIcon = string;
+export type TEditorToolPointerEvent = KonvaEventObject<PointerEvent, Node<NodeConfig>>;
+export type TEditorToolCanvasPoint = {
+  x: number;
+  y: number;
+  pressure: number;
+};
+
+export type TEditorToolDrawCreateStartDraftArgs = {
+  event: TEditorToolPointerEvent;
+  point: TEditorToolCanvasPoint;
+};
+
+export type TEditorToolDrawCreateUpdateDraftArgs = {
+  draft: unknown;
+  event: TEditorToolPointerEvent;
+  point: TEditorToolCanvasPoint;
+  origin: TEditorToolCanvasPoint;
+  shiftKey: boolean;
+  now: number;
+};
+
+export type TEditorToolDrawCreateBehavior = {
+  startDraft: (args: TEditorToolDrawCreateStartDraftArgs) => Konva.Shape;
+  updateDraft: (previewNode: Konva.Shape, args: TEditorToolDrawCreateUpdateDraftArgs) => unknown;
+};
 
 /**
  * Tool metadata registered by feature plugins.
@@ -33,6 +62,7 @@ export type TEditorTool = {
     | { type: "mode"; mode: TEditorToolMode }
     | { type: "action" }
     | { type: "modal" };
+  drawCreate?: TEditorToolDrawCreateBehavior;
 };
 
 export type TEditorToElement = (node: Konva.Node) => TElement | null;
@@ -53,8 +83,26 @@ export interface TEditorServiceHooks {
   activeToolChange: SyncHook<[string]>;
   editingTextChange: SyncHook<[string | null]>;
   editingShape1dChange: SyncHook<[string | null]>;
-  previewNodeChange: SyncHook<[Konva.Node | null]>;
   transformerChange: SyncHook<[Konva.Transformer | null]>;
+}
+
+function getCanvasPoint(scene: SceneService, event: TEditorToolPointerEvent): TEditorToolCanvasPoint | null {
+  const point = scene.dynamicLayer.getRelativePointerPosition();
+  if (!point) {
+    return null;
+  }
+
+  const pressure = typeof event.evt.pressure === "number"
+    && Number.isFinite(event.evt.pressure)
+    && event.evt.pressure > 0
+      ? event.evt.pressure
+      : 0.5;
+
+  return {
+    x: point.x,
+    y: point.y,
+    pressure,
+  };
 }
 
 /**
@@ -70,7 +118,6 @@ export class EditorServiceV2 implements IService<TEditorServiceHooks> {
     activeToolChange: new SyncHook(),
     editingTextChange: new SyncHook(),
     editingShape1dChange: new SyncHook(),
-    previewNodeChange: new SyncHook(),
     transformerChange: new SyncHook(),
   };
 
@@ -86,14 +133,39 @@ export class EditorServiceV2 implements IService<TEditorServiceHooks> {
   activeToolId = "select";
   editingTextId: string | null = null;
   editingShape1dId: string | null = null;
-  previewNode: Konva.Node | null = null;
+  private previewNode: Konva.Shape | null = null;
   transformer: Konva.Transformer | null = null;
 
+  constructor(private sceneService: SceneService) { }
   /**
    * Adds or replaces a tool in the editor registry.
    */
-  registerTool(tool: TEditorTool) {
+  registerTool(portal: { hooks: IHooks }, tool: TEditorTool) {
     this.tools.set(tool.id, tool);
+
+    // setup create-draw
+    if (tool.behavior.type === "mode" && tool.behavior.mode === "draw-create") {
+      if(!tool.drawCreate) throw new Error(`drawCreate is required for tool ${tool.id}`);
+      console.log(tool)
+      portal.hooks.pointerDown.tap((event) => {
+        if (this.activeToolId !== tool.id) {
+          return;
+        }
+
+        const point = getCanvasPoint(this.sceneService, event);
+        if (!point) {
+          return;
+        }
+
+        const preview = tool.drawCreate.startDraft({ event, point });
+        this.setPreviewNode(preview);
+
+        console.log("pointerdown,", { event, point });
+      })
+
+
+    }
+
     this.hooks.toolsChange.call();
   }
 
@@ -187,13 +259,16 @@ export class EditorServiceV2 implements IService<TEditorServiceHooks> {
   /**
    * Sets current preview node.
    */
-  setPreviewNode(node: Konva.Node | null) {
+  private setPreviewNode(node: Konva.Shape | null) {
     if (this.previewNode === node) {
       return;
     }
 
+    if(node !== null) this.sceneService.dynamicLayer.add(node);
+
     this.previewNode = node;
-    this.hooks.previewNodeChange.call(node);
+
+    this.sceneService.dynamicLayer.batchDraw();
   }
 
   /**
