@@ -6,6 +6,9 @@ import type { KonvaEventObject, Node, NodeConfig } from "konva/lib/Node";
 import type { Shape } from "konva/lib/Shape";
 import type { IHooks } from "src/runtime";
 import type { SceneService } from "../scene/SceneService";
+import type { CanvasRegistryService } from "../canvas-registry/CanvasRegistryService";
+import type { CrdtService } from "../crdt/CrdtService";
+import type { SelectionService } from "../selection/SelectionService";
 
 /**
  * Runtime mode for a registered editor tool.
@@ -137,7 +140,12 @@ export class EditorServiceV2 implements IService<TEditorServiceHooks> {
   private previewOrigin: TEditorToolCanvasPoint | null = null;
   transformer: Konva.Transformer | null = null;
 
-  constructor(private sceneService: SceneService) { }
+  constructor(
+    private sceneService: SceneService,
+    private canvasRegistry: CanvasRegistryService,
+    private crdt: CrdtService,
+    private selection: SelectionService,
+  ) { }
   /**
    * Adds or replaces a tool in the editor registry.
    */
@@ -198,8 +206,7 @@ export class EditorServiceV2 implements IService<TEditorServiceHooks> {
           return;
         }
 
-        // commit should happen here before clearing preview state
-        this.setPreviewNode(null);
+        this.commitPreview();
       });
 
       this.hooks.activeToolChange.tap((activeToolId) => {
@@ -211,7 +218,7 @@ export class EditorServiceV2 implements IService<TEditorServiceHooks> {
           return;
         }
 
-        this.setPreviewNode(null);
+        this.abortPreview();
       });
     }
 
@@ -305,6 +312,39 @@ export class EditorServiceV2 implements IService<TEditorServiceHooks> {
     this.hooks.editingShape1dChange.call(id);
   }
 
+  private clearPreviewState() {
+    this.previewOrigin = null;
+    this.previewNode = null;
+  }
+
+  private abortPreview() {
+    this.previewNode?.destroy();
+    this.clearPreviewState();
+    this.sceneService.dynamicLayer.batchDraw();
+  }
+
+  private commitPreview() {
+    if (!this.previewNode) {
+      return;
+    }
+
+    const previewNode = this.previewNode;
+    const element = this.canvasRegistry.toElement(previewNode);
+    if (!element) {
+      this.abortPreview();
+      return;
+    }
+    element.id = crypto.randomUUID()
+    previewNode.moveTo(this.sceneService.staticForegroundLayer);
+    this.canvasRegistry.attachListeners(previewNode);
+    this.crdt.patch({ elements: [element], groups: [] });
+    this.selection.setSelection([previewNode]);
+    this.selection.setFocusedNode(previewNode);
+    this.clearPreviewState();
+    this.sceneService.dynamicLayer.batchDraw();
+    this.sceneService.staticForegroundLayer.batchDraw();
+  }
+
   /**
    * Sets current preview node.
    */
@@ -314,9 +354,7 @@ export class EditorServiceV2 implements IService<TEditorServiceHooks> {
     }
 
     if (node === null) {
-      this.previewNode?.destroy();
-      this.previewOrigin = null;
-      this.previewNode = null;
+      this.abortPreview();
       return;
     }
 

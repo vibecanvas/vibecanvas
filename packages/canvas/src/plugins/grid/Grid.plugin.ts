@@ -23,7 +23,7 @@ export function createGridPlugin(): IPlugin<{
       const editor = ctx.services.require("editor2");
 
       const syncGridTool = () => {
-        editor.registerTool({
+        editor.registerTool(ctx, {
           id: "grid",
           label: "Grid",
           icon: Grid2x2,

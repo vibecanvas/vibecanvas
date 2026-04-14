@@ -137,7 +137,7 @@ export function createToolbarPlugin(): IPlugin<{
       const scene = ctx.services.require("scene");
       const selection = ctx.services.require("selection");
 
-      editor.registerTool({
+      editor.registerTool(ctx, {
         id: "hand",
         label: "Hand",
         icon: Hand,
@@ -145,7 +145,7 @@ export function createToolbarPlugin(): IPlugin<{
         priority: 0,
         behavior: { type: "mode", mode: "hand" },
       });
-      editor.registerTool({
+      editor.registerTool(ctx, {
         id: "select",
         label: "Select",
         icon: MousePointer2,
