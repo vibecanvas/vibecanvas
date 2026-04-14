@@ -1,22 +1,24 @@
 import type Konva from "konva";
 import type { TElement } from "@vibecanvas/service-automerge/types/canvas-doc.types";
-import { fxFilterSelection } from "./fn.filter-selection";
-import { fxIsUnsupportedSelectionStyleElement } from "./fn.selection-style-menu";
+import { fxFilterSelection } from "./fx.filter-selection";
+import { fnIsUnsupportedSelectionStyleElement } from "./fn.selection-style-menu";
 import type { EditorService } from "../new-services/editor/EditorService";
-import type { RenderService } from "../new-services/render/RenderService";
+import type { SceneService } from "../new-services/scene/SceneService";
 import type { SelectionService } from "../new-services/selection/SelectionService";
 
 export type TPortalResolveSelectionStyleElements = {
+  Konva: typeof Konva;
   editor: EditorService;
-  render: RenderService;
+  scene: SceneService;
   selection: SelectionService;
 };
 
 export type TArgsResolveSelectionStyleElements = Record<string, never>;
 
 export type TPortalResolveFocusedSelectionStyleElements = {
+  Konva: typeof Konva;
   editor: EditorService;
-  render: RenderService;
+  scene: SceneService;
 };
 
 export type TArgsResolveFocusedSelectionStyleElements = {
@@ -24,8 +26,8 @@ export type TArgsResolveFocusedSelectionStyleElements = {
 };
 
 function collectSelectionStyleElements(args: {
+  Konva: typeof Konva;
   editor: EditorService;
-  render: RenderService;
   rootNodes: Array<Konva.Group | Konva.Shape>;
 }) {
   const shapeNodes: Konva.Shape[] = [];
@@ -38,9 +40,9 @@ function collectSelectionStyleElements(args: {
 
     seenNodeIds.add(node.id());
 
-    if (node instanceof args.render.Group) {
+    if (node instanceof args.Konva.Group) {
       node.getChildren().forEach((child) => {
-        if (child instanceof args.render.Group || child instanceof args.render.Shape) {
+        if (child instanceof args.Konva.Group || child instanceof args.Konva.Shape) {
           visitNode(child);
         }
       });
@@ -56,7 +58,7 @@ function collectSelectionStyleElements(args: {
   return shapeNodes
     .map((node) => args.editor.toElement(node))
     .filter((element): element is TElement => Boolean(element))
-    .filter((element) => !fxIsUnsupportedSelectionStyleElement(element))
+    .filter((element) => !fnIsUnsupportedSelectionStyleElement(element))
     .filter((element) => {
       if (seenElementIds.has(element.id)) {
         return false;
@@ -74,7 +76,8 @@ export function fxResolveSelectionStyleElements(
   void args;
 
   const filteredSelection = fxFilterSelection({
-    render: portal.render,
+    Konva: portal.Konva,
+  }, {
     editor: portal.editor,
     selection: portal.selection.selection,
   });
@@ -89,8 +92,8 @@ export function fxResolveSelectionStyleElements(
   });
 
   return collectSelectionStyleElements({
+    Konva: portal.Konva,
     editor: portal.editor,
-    render: portal.render,
     rootNodes,
   });
 }
@@ -103,18 +106,18 @@ export function fxResolveFocusedSelectionStyleElements(
     return [];
   }
 
-  const focusedNode = portal.render.staticForegroundLayer.findOne((candidate: Konva.Node) => {
-    return (candidate instanceof portal.render.Group || candidate instanceof portal.render.Shape)
+  const focusedNode = portal.scene.staticForegroundLayer.findOne((candidate: Konva.Node) => {
+    return (candidate instanceof portal.Konva.Group || candidate instanceof portal.Konva.Shape)
       && candidate.id() === args.focusedId;
   });
 
-  if (!(focusedNode instanceof portal.render.Group) && !(focusedNode instanceof portal.render.Shape)) {
+  if (!(focusedNode instanceof portal.Konva.Group) && !(focusedNode instanceof portal.Konva.Shape)) {
     return [];
   }
 
   return collectSelectionStyleElements({
+    Konva: portal.Konva,
     editor: portal.editor,
-    render: portal.render,
     rootNodes: [focusedNode],
   });
 }

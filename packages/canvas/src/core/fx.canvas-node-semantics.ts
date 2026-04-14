@@ -9,12 +9,19 @@ export type TCanvasSemanticsEditor = {
 export type TCanvasNode = Konva.Group | Shape<ShapeConfig>;
 export type TCanvasNodeKind = "group" | "element";
 
+export type TPortalCanvasNodeSemantics = Record<string, never>;
+
 export type TArgsGetCanvasNodeKind = {
   editor: TCanvasSemanticsEditor;
   node: Konva.Node | null | undefined;
 };
 
-export function fxGetCanvasNodeKind(args: TArgsGetCanvasNodeKind): TCanvasNodeKind | null {
+export function fxGetCanvasNodeKind(
+  portal: TPortalCanvasNodeSemantics,
+  args: TArgsGetCanvasNodeKind,
+): TCanvasNodeKind | null {
+  void portal;
+
   if (!args.node) {
     return null;
   }
@@ -35,8 +42,11 @@ export type TArgsIsCanvasNode = {
   node: Konva.Node | null | undefined;
 };
 
-export function fxIsCanvasNode(args: TArgsIsCanvasNode): args is TArgsIsCanvasNode & { node: TCanvasNode } {
-  return fxGetCanvasNodeKind(args) !== null;
+export function fxIsCanvasNode(
+  portal: TPortalCanvasNodeSemantics,
+  args: TArgsIsCanvasNode,
+): args is TArgsIsCanvasNode & { node: TCanvasNode } {
+  return fxGetCanvasNodeKind(portal, args) !== null;
 }
 
 export type TArgsIsCanvasGroupNode = {
@@ -44,8 +54,11 @@ export type TArgsIsCanvasGroupNode = {
   node: Konva.Node | null | undefined;
 };
 
-export function fxIsCanvasGroupNode(args: TArgsIsCanvasGroupNode): args is TArgsIsCanvasGroupNode & { node: Konva.Group } {
-  return fxGetCanvasNodeKind(args) === "group";
+export function fxIsCanvasGroupNode(
+  portal: TPortalCanvasNodeSemantics,
+  args: TArgsIsCanvasGroupNode,
+): args is TArgsIsCanvasGroupNode & { node: Konva.Group } {
+  return fxGetCanvasNodeKind(portal, args) === "group";
 }
 
 export type TArgsIsCanvasElementHostNode = {
@@ -53,8 +66,11 @@ export type TArgsIsCanvasElementHostNode = {
   node: Konva.Node | null | undefined;
 };
 
-export function fxIsCanvasElementHostNode(args: TArgsIsCanvasElementHostNode): args is TArgsIsCanvasElementHostNode & { node: TCanvasNode } {
-  return fxGetCanvasNodeKind(args) === "element";
+export function fxIsCanvasElementHostNode(
+  portal: TPortalCanvasNodeSemantics,
+  args: TArgsIsCanvasElementHostNode,
+): args is TArgsIsCanvasElementHostNode & { node: TCanvasNode } {
+  return fxGetCanvasNodeKind(portal, args) === "element";
 }
 
 export type TArgsGetCanvasParentGroupId = {
@@ -62,9 +78,12 @@ export type TArgsGetCanvasParentGroupId = {
   node: Konva.Node | null | undefined;
 };
 
-export function fxGetCanvasParentGroupId(args: TArgsGetCanvasParentGroupId) {
+export function fxGetCanvasParentGroupId(
+  portal: TPortalCanvasNodeSemantics,
+  args: TArgsGetCanvasParentGroupId,
+) {
   const parent = args.node?.getParent();
-  if (!fxIsCanvasGroupNode({ editor: args.editor, node: parent })) {
+  if (!fxIsCanvasGroupNode(portal, { editor: args.editor, node: parent })) {
     return null;
   }
 
@@ -77,12 +96,15 @@ export type TArgsGetCanvasAncestorGroups = {
   node: Konva.Node | null | undefined;
 };
 
-export function fxGetCanvasAncestorGroups(args: TArgsGetCanvasAncestorGroups) {
+export function fxGetCanvasAncestorGroups(
+  portal: TPortalCanvasNodeSemantics,
+  args: TArgsGetCanvasAncestorGroups,
+) {
   const groups: Konva.Group[] = [];
   let current = args.node?.getParent() ?? null;
 
   while (current) {
-    if (fxIsCanvasGroupNode({ editor: args.editor, node: current })) {
+    if (fxIsCanvasGroupNode(portal, { editor: args.editor, node: current })) {
       groups.push(current as Konva.Group);
     }
 

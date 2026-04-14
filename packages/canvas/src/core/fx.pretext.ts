@@ -1,4 +1,5 @@
-import { layoutWithLines, prepareWithSegments } from "@chenglou/pretext";
+import type { layoutWithLines, prepareWithSegments } from "@chenglou/pretext";
+import { fnBuildPretextFont } from "./fn.pretext";
 
 export type TTextLayoutResult = {
   height: number;
@@ -6,44 +7,34 @@ export type TTextLayoutResult = {
   maxLineWidth: number;
 };
 
-function quoteFontFamily(fontFamily: string) {
-  if (fontFamily.includes(" ") && !fontFamily.startsWith('"')) {
-    return `"${fontFamily}"`;
-  }
+export type TPortalMeasureTextLayout = {
+  layoutWithLines: typeof layoutWithLines;
+  prepareWithSegments: typeof prepareWithSegments;
+};
 
-  return fontFamily;
-}
-
-export function buildPretextFont(args: {
-  fontStyle?: string;
-  fontSize: number;
-  fontFamily: string;
-}) {
-  const style = args.fontStyle && args.fontStyle !== "normal"
-    ? `${args.fontStyle} `
-    : "";
-
-  return `${style}${args.fontSize}px ${quoteFontFamily(args.fontFamily)}`;
-}
-
-export function measureTextLayout(args: {
+export type TArgsMeasureTextLayout = {
   text: string;
   fontSize: number;
   fontFamily: string;
   fontStyle?: string;
   lineHeight: number;
   width: number;
-}) {
-  const prepared = prepareWithSegments(
+};
+
+export function fxMeasureTextLayout(
+  portal: TPortalMeasureTextLayout,
+  args: TArgsMeasureTextLayout,
+) {
+  const prepared = portal.prepareWithSegments(
     args.text,
-    buildPretextFont({
+    fnBuildPretextFont({
       fontStyle: args.fontStyle,
       fontSize: args.fontSize,
       fontFamily: args.fontFamily,
     }),
     { whiteSpace: "pre-wrap" },
   );
-  const layout = layoutWithLines(
+  const layout = portal.layoutWithLines(
     prepared,
     Math.max(1, args.width),
     args.fontSize * args.lineHeight,

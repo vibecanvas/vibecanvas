@@ -20,15 +20,15 @@ const DEFAULT_STYLE: TElementStyle = {
   strokeWidth: 0,
 };
 
-export function fxIsShape2dToolId(toolId: string): toolId is TShape2dToolId {
+export function fnIsShape2dToolId(toolId: string): toolId is TShape2dToolId {
   return toolId === "rectangle" || toolId === "diamond" || toolId === "ellipse";
 }
 
-export function fxIsShape2dElementType(elementType: string): elementType is TShape2dElementType {
+export function fnIsShape2dElementType(elementType: string): elementType is TShape2dElementType {
   return elementType === "rect" || elementType === "diamond" || elementType === "ellipse";
 }
 
-export function fxGetShape2dElementTypeFromTool(toolId: TShape2dToolId): TShape2dElementType {
+export function fnGetShape2dElementTypeFromTool(toolId: TShape2dToolId): TShape2dElementType {
   if (toolId === "rectangle") {
     return "rect";
   }
@@ -40,7 +40,7 @@ export function fxGetShape2dElementTypeFromTool(toolId: TShape2dToolId): TShape2
   return "ellipse";
 }
 
-export function fxGetShape2dDraftBounds(args: {
+export function fnGetShape2dDraftBounds(args: {
   origin: TShape2dPoint;
   point: TShape2dPoint;
   preserveRatio: boolean;
@@ -66,7 +66,7 @@ export function fxGetShape2dDraftBounds(args: {
   };
 }
 
-export function fxGetDiamondPoints(args: { width: number; height: number }) {
+export function fnGetDiamondPoints(args: { width: number; height: number }) {
   return [
     args.width / 2,
     0,
@@ -79,7 +79,7 @@ export function fxGetDiamondPoints(args: { width: number; height: number }) {
   ];
 }
 
-export function fxCreateShape2dElement(args: {
+export function fnCreateShape2dElement(args: {
   id: string;
   type: TShape2dElementType;
   x: number;

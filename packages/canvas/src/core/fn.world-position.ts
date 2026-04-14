@@ -16,7 +16,7 @@ export type TArgsGetAbsolutePositionFromWorldPosition = {
   parentTransform: TTransformLike | null;
 };
 
-export function fxGetWorldPosition(args: TArgsGetWorldPosition) {
+export function fnGetWorldPosition(args: TArgsGetWorldPosition) {
   if (!args.parentTransform) {
     return args.absolutePosition;
   }
@@ -24,7 +24,7 @@ export function fxGetWorldPosition(args: TArgsGetWorldPosition) {
   return args.parentTransform.copy().invert().point(args.absolutePosition);
 }
 
-export function fxGetAbsolutePositionFromWorldPosition(args: TArgsGetAbsolutePositionFromWorldPosition) {
+export function fnGetAbsolutePositionFromWorldPosition(args: TArgsGetAbsolutePositionFromWorldPosition) {
   if (!args.parentTransform) {
     return args.worldPosition;
   }
