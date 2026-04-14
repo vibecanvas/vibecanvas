@@ -154,7 +154,7 @@ export function createToolbarPlugin(): IPlugin<{
         behavior: { type: "mode", mode: "select" },
       });
 
-      selection.mode = getModeFromTool(editor.getActiveTool());
+      selection.setMode(getModeFromTool(editor.getActiveTool()));
 
       ctx.hooks.init.tap(() => {
         toolbarMount = mountToolbar({
@@ -168,7 +168,7 @@ export function createToolbarPlugin(): IPlugin<{
       });
 
       editor.hooks.activeToolChange.tap((toolId) => {
-        selection.mode = getModeFromTool(editor.getTool(toolId));
+        selection.setMode(getModeFromTool(editor.getTool(toolId)));
         txSyncCursor(scene, selection);
         ctx.hooks.toolSelect.call(toolId);
       });
@@ -195,7 +195,7 @@ export function createToolbarPlugin(): IPlugin<{
         }
 
         if (toolId !== "hand") {
-          selection.selection = [];
+          selection.setSelection([]);
         }
         txSelectTool(editor, toolId);
         return true;
