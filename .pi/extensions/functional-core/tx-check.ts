@@ -18,21 +18,23 @@ type TWriteInput = {
 
 type TDeclKind = "function" | "type" | "class" | "value";
 
-const FX_FILE_RE = /^fx\..+\.ts$/;
-const FX_TEST_FILE_RE = /^fx\..+\.test\.ts$/;
-const ALLOWED_RUNTIME_IMPORT_RE = /^(fn|fx)\..+$/;
-const FX_CHECK_RULES = [
-  "ignore fx.*.test.ts files",
-  "exported functions must start with fx",
-  "imports must be type-only unless imported module leaf starts with fn. or fx.",
+const TX_FILE_RE = /^tx\..+\.ts$/;
+const TX_TEST_FILE_RE = /^tx\..+\.test\.ts$/;
+const ALLOWED_RUNTIME_IMPORT_RE = /^(fn|fx|tx)\..+$/;
+const TX_CHECK_RULES = [
+  "ignore tx.*.test.ts files",
+  "exported functions must start with tx",
+  "imports must be type-only unless imported module leaf starts with fn., fx., or tx., or is exactly CONSTANTS",
+  "CONSTANTS.ts imports are allowed for shared local constants",
   "no direct use of runtime globals like window, fetch, Bun, process, console, globalThis",
   "do not export classes or other runtime values; only functions and types",
-  "every fx* function must have exactly 2 params",
+  "every tx* function must have exactly 2 params",
   "first param must be named portal and typed as TPortal*",
   "second param must be named args and typed as TArgs*",
   "TPortal may hold side effects and mutable services objects",
   "TArgs is usually serializable payload data",
-  "fx is for impure reads; use brain and prefer tx for impure writes",
+  "tx is for impure writes; use brain and prefer tx when code changes external world state",
+  "tx may runtime-import fn.*, fx.*, tx.*, and CONSTANTS",
 ] as const;
 function stripToolPathPrefix(filePath: string): string {
   return filePath.startsWith("@") ? filePath.slice(1) : filePath;
@@ -42,16 +44,20 @@ function resolveToolPath(cwd: string, filePath: string): string {
   return path.resolve(cwd, stripToolPathPrefix(filePath));
 }
 
-function isFxFilePath(filePath: string): boolean {
+function isTxFilePath(filePath: string): boolean {
   const baseName = path.basename(stripToolPathPrefix(filePath));
-  if (FX_TEST_FILE_RE.test(baseName)) return false;
-  return FX_FILE_RE.test(baseName);
+  if (TX_TEST_FILE_RE.test(baseName)) return false;
+  return TX_FILE_RE.test(baseName);
 }
 
 function getModuleLeaf(modulePath: string): string {
   const clean = modulePath.replace(/\\/g, "/").replace(/\.(cts|mts|ts|tsx|js|jsx)$/, "");
   const parts = clean.split("/").filter(Boolean);
   return parts.at(-1) ?? clean;
+}
+
+function isAllowedConstantsImport(modulePath: string): boolean {
+  return getModuleLeaf(modulePath) === "CONSTANTS";
 }
 
 function isAllowedRuntimeImport(modulePath: string): boolean {
@@ -250,6 +256,7 @@ function validateImports(content: string): string[] {
 
     if (!clause || clause.startsWith("type ")) continue;
     if (isAllowedRuntimeImport(modulePath)) continue;
+    if (isAllowedConstantsImport(modulePath)) continue;
 
     const namedMatch = clause.match(/\{([\s\S]*)\}/);
     const beforeNamed = namedMatch ? clause.slice(0, namedMatch.index).replace(/,/g, "").trim() : clause;
@@ -257,11 +264,11 @@ function validateImports(content: string): string[] {
     const hasNamespaceImport = /\*\s+as\s+[A-Za-z_$][\w$]*/.test(clause);
 
     if (hasDefaultImport) {
-      errors.push(`line ${line}: runtime default import from \"${modulePath}\" not allowed in fx.*.ts`);
+      errors.push(`line ${line}: runtime default import from \"${modulePath}\" not allowed in tx.*.ts`);
     }
 
     if (hasNamespaceImport) {
-      errors.push(`line ${line}: runtime namespace import from \"${modulePath}\" not allowed in fx.*.ts`);
+      errors.push(`line ${line}: runtime namespace import from \"${modulePath}\" not allowed in tx.*.ts`);
     }
 
     if (namedMatch) {
@@ -269,7 +276,7 @@ function validateImports(content: string): string[] {
         if (specifier.startsWith("type ")) continue;
         const importedName = specifier.split(/\s+as\s+/i).at(-1) ?? specifier;
         errors.push(
-          `line ${line}: runtime import \"${importedName.trim()}\" from \"${modulePath}\" not allowed in fx.*.ts`,
+          `line ${line}: runtime import \"${importedName.trim()}\" from \"${modulePath}\" not allowed in tx.*.ts`,
         );
       }
     }
@@ -320,7 +327,7 @@ function validateExports(content: string): string[] {
 
   for (const match of clean.matchAll(/(^|\n)\s*export\s+class\s+([A-Za-z_$][\w$]*)\b/g)) {
     const line = getLineNumber(clean, (match.index ?? 0) + (match[1]?.length ?? 0));
-    errors.push(`line ${line}: exported classes not allowed in fx.*.ts`);
+    errors.push(`line ${line}: exported classes not allowed in tx.*.ts`);
   }
 
   for (const match of clean.matchAll(/(^|\n)\s*export\s+enum\s+([A-Za-z_$][\w$]*)\b/g)) {
@@ -331,8 +338,8 @@ function validateExports(content: string): string[] {
   for (const match of clean.matchAll(/(^|\n)\s*export\s+(?:default\s+)?(?:async\s+)?function\s+([A-Za-z_$][\w$]*)\s*\(/g)) {
     const name = match[2] ?? "";
     const line = getLineNumber(clean, (match.index ?? 0) + (match[1]?.length ?? 0));
-    if (!name.startsWith("fx")) {
-      errors.push(`line ${line}: exported function must start with fx`);
+    if (!name.startsWith("tx")) {
+      errors.push(`line ${line}: exported function must start with tx`);
     }
   }
 
@@ -347,14 +354,14 @@ function validateExports(content: string): string[] {
       continue;
     }
 
-    if (!name.startsWith("fx")) {
-      errors.push(`line ${line}: exported function must start with fx`);
+    if (!name.startsWith("tx")) {
+      errors.push(`line ${line}: exported function must start with tx`);
     }
   }
 
   for (const match of clean.matchAll(/(^|\n)\s*export\s+default\s+(?!function\b)(?!class\b)/g)) {
     const line = getLineNumber(clean, (match.index ?? 0) + (match[1]?.length ?? 0));
-    errors.push(`line ${line}: export assignment not allowed in fx.*.ts`);
+    errors.push(`line ${line}: export assignment not allowed in tx.*.ts`);
   }
 
   for (const match of clean.matchAll(/(^|\n)\s*export\s*\{([\s\S]*?)\}\s*(?:from\s+['"][^'"]+['"])?\s*;?/g)) {
@@ -370,23 +377,23 @@ function validateExports(content: string): string[] {
       const exportedName = parts.at(-1) ?? localName;
 
       if (hasFrom) {
-        if (!exportedName.startsWith("fx")) {
-          errors.push(`line ${line}: exported function must start with fx`);
+        if (!exportedName.startsWith("tx")) {
+          errors.push(`line ${line}: exported function must start with tx`);
         }
         continue;
       }
 
       const kind = kinds.get(localName);
       if (kind === "class") {
-        errors.push(`line ${line}: exported classes not allowed in fx.*.ts`);
+        errors.push(`line ${line}: exported classes not allowed in tx.*.ts`);
         continue;
       }
       if (kind === "value") {
         errors.push(`line ${line}: exported value \"${exportedName}\" not allowed; export functions or types only`);
         continue;
       }
-      if (kind === "function" && !exportedName.startsWith("fx")) {
-        errors.push(`line ${line}: exported function must start with fx`);
+      if (kind === "function" && !exportedName.startsWith("tx")) {
+        errors.push(`line ${line}: exported function must start with tx`);
       }
     }
   }
@@ -395,7 +402,7 @@ function validateExports(content: string): string[] {
 }
 
 function validateGlobals(content: string): string[] {
-  return validateNoDirectRuntimeGlobals(content, "fx.*.ts");
+  return validateNoDirectRuntimeGlobals(content, "tx.*.ts");
 }
 
 function splitTopLevelParams(paramText: string): string[] {
@@ -434,12 +441,12 @@ function splitTopLevelParams(paramText: string): string[] {
   return parts.filter(Boolean);
 }
 
-function validateFxFunctionParams(content: string): string[] {
+function validateTxFunctionParams(content: string): string[] {
   const errors: string[] = [];
   const clean = maskCommentsAndStrings(content);
   const signatures: Array<{ name: string; params: string; line: number }> = [];
 
-  for (const match of clean.matchAll(/(^|\n)\s*(?:export\s+)?(?:async\s+)?function\s+(fx[A-Za-z_$][\w$]*)\s*\(([^)]*)\)/g)) {
+  for (const match of clean.matchAll(/(^|\n)\s*(?:export\s+)?(?:async\s+)?function\s+(tx[A-Za-z_$][\w$]*)\s*\(([^)]*)\)/g)) {
     signatures.push({
       name: match[2] ?? "",
       params: match[3] ?? "",
@@ -447,7 +454,7 @@ function validateFxFunctionParams(content: string): string[] {
     });
   }
 
-  for (const match of clean.matchAll(/(^|\n)\s*(?:export\s+)?(?:const|let|var)\s+(fx[A-Za-z_$][\w$]*)\s*=\s*(?:async\s*)?(?:function\s*)?\(([^)]*)\)\s*=>?/g)) {
+  for (const match of clean.matchAll(/(^|\n)\s*(?:export\s+)?(?:const|let|var)\s+(tx[A-Za-z_$][\w$]*)\s*=\s*(?:async\s*)?(?:function\s*)?\(([^)]*)\)\s*=>?/g)) {
     signatures.push({
       name: match[2] ?? "",
       params: match[3] ?? "",
@@ -482,12 +489,12 @@ function validateFxFunctionParams(content: string): string[] {
   return errors;
 }
 
-function validateFxFileContent(filePath: string, content: string): string[] {
+function validateTxFileContent(filePath: string, content: string): string[] {
   return [
     ...validateImports(content),
     ...validateExports(content),
     ...validateGlobals(content),
-    ...validateFxFunctionParams(content),
+    ...validateTxFunctionParams(content),
   ].map((error) => `${path.basename(filePath)}: ${error}`);
 }
 
@@ -498,7 +505,7 @@ async function buildEditedContent(absolutePath: string, input: TEditInput): Prom
     original = await readFile(absolutePath, "utf8");
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    return { error: `fx-check could not read file before edit: ${message}` };
+    return { error: `tx-check could not read file before edit: ${message}` };
   }
 
   const matches = input.edits.map((edit, index) => {
@@ -522,7 +529,7 @@ async function buildEditedContent(absolutePath: string, input: TEditInput): Prom
 
   const failed = matches.find((match) => "error" in match);
   if (failed && "error" in failed) {
-    return { error: `fx-check could not validate edit: ${failed.error}` };
+    return { error: `tx-check could not validate edit: ${failed.error}` };
   }
 
   const ranges = matches as Array<{ index: number; start: number; end: number; newText: string }>;
@@ -530,7 +537,7 @@ async function buildEditedContent(absolutePath: string, input: TEditInput): Prom
 
   for (let index = 1; index < sorted.length; index += 1) {
     if (sorted[index - 1]!.end > sorted[index]!.start) {
-      return { error: "fx-check could not validate edit: edit ranges overlap" };
+      return { error: "tx-check could not validate edit: edit ranges overlap" };
     }
   }
 
@@ -544,21 +551,21 @@ async function buildEditedContent(absolutePath: string, input: TEditInput): Prom
 
 function formatViolations(filePath: string, violations: string[]): string {
   return [
-    `fx-check blocked ${filePath}`,
+    `tx-check blocked ${filePath}`,
     "what went wrong:",
     ...violations.map((violation) => `- ${violation}`),
     RUNTIME_GLOBAL_BLOCK_NOTE,
     "rules:",
-    ...FX_CHECK_RULES.map((rule) => `- ${rule}`),
+    ...TX_CHECK_RULES.map((rule) => `- ${rule}`),
   ].join("\n");
 }
 
-export default function fxCheckExtension(pi: ExtensionAPI) {
+export default function txCheckExtension(pi: ExtensionAPI) {
   pi.on("before_agent_start", async (event) => {
     return {
       systemPrompt:
         event.systemPrompt +
-        `\n\n## fx-check\nWhen editing or writing any fx.*.ts file, obey these rules:\n${FX_CHECK_RULES.map((rule) => `- ${rule}`).join("\n")}\n`,
+        `\n\n## tx-check\nWhen editing or writing any tx.*.ts file, obey these rules:\n${TX_CHECK_RULES.map((rule) => `- ${rule}`).join("\n")}\n`,
     };
   });
 
@@ -568,7 +575,7 @@ export default function fxCheckExtension(pi: ExtensionAPI) {
     }
 
     const input = event.input as Partial<TWriteInput & TEditInput>;
-    if (typeof input.path !== "string" || !isFxFilePath(input.path)) {
+    if (typeof input.path !== "string" || !isTxFilePath(input.path)) {
       return undefined;
     }
 
@@ -579,14 +586,14 @@ export default function fxCheckExtension(pi: ExtensionAPI) {
 
     if (event.toolName === "write") {
       if (typeof input.content !== "string") {
-        return { block: true, reason: "fx-check could not validate write: missing content" };
+        return { block: true, reason: "tx-check could not validate write: missing content" };
       }
       nextContent = input.content;
     }
 
     if (event.toolName === "edit") {
       if (!Array.isArray(input.edits)) {
-        return { block: true, reason: "fx-check could not validate edit: missing edits" };
+        return { block: true, reason: "tx-check could not validate edit: missing edits" };
       }
       const result = await buildEditedContent(absolutePath, input as TEditInput);
       nextContent = result.content;
@@ -601,17 +608,17 @@ export default function fxCheckExtension(pi: ExtensionAPI) {
     }
 
     if (typeof nextContent !== "string") {
-      return { block: true, reason: "fx-check could not validate file content" };
+      return { block: true, reason: "tx-check could not validate file content" };
     }
 
-    const violations = validateFxFileContent(absolutePath, nextContent);
+    const violations = validateTxFileContent(absolutePath, nextContent);
     if (violations.length === 0) {
       return undefined;
     }
 
     const reason = formatViolations(input.path, violations);
     if (ctx.hasUI) {
-      ctx.ui.notify(`fx-check blocked ${input.path}`, "warning");
+      ctx.ui.notify(`tx-check blocked ${input.path}`, "warning");
     }
     return { block: true, reason };
   });
