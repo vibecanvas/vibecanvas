@@ -1,4 +1,5 @@
 import { IService } from "@vibecanvas/runtime";
+import Konva from "konva";
 import type { EditorService, TEditorTool} from "../editor/EditorService";
 
 interface IWidget {
@@ -14,6 +15,12 @@ export class WidgetService implements IService<{}> {
 
   registerWidget(widget: IWidget) {
     this.editor.registerTool(widget.tool);
-    // this.editor.register
+    this.editor.registerCreateShapeFromTElement(widget.tool.id, (element) => {
+
+      const node = new Konva.Group();
+
+      return node;
+    });
+
   }
 }
