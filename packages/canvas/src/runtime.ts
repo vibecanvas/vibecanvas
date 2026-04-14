@@ -13,10 +13,12 @@ import {
   createSelectionStyleMenuPlugin, createShape1dPlugin, createShape2dPlugin, createTextPlugin,
   createToolbarPlugin, createTransformPlugin, createVisualDebugPlugin, createHostedComponentPlugin
 } from "./plugins";
+import { createPenPlugin as createPenPluginV2 } from "./plugins/pen/Pen.pluginV2";
 import {
   CameraService, ContextMenuService, CrdtService, EditorService, HistoryService,
   LoggingService, RenderOrderService, SceneService, SelectionService, WidgetService
 } from "./services";
+import { EditorServiceV2 } from "./services/editor/EditorServiceV2";
 import { ThemeService } from "@vibecanvas/service-theme";
 
 
@@ -104,6 +106,7 @@ declare module "@vibecanvas/runtime" {
     contextMenu: ContextMenuService;
     crdt: CrdtService;
     editor: EditorService;
+    editor2: EditorServiceV2;
     history: HistoryService;
     logging: LoggingService;
     scene: SceneService;
@@ -161,6 +164,7 @@ function createServices(config: {
     editor,
   });
 
+  services.provide("editor2", new EditorServiceV2());
   services.provide("camera", camera);
   services.provide("contextMenu", contextMenu);
   services.provide("crdt", crdt);
@@ -190,7 +194,8 @@ export function buildRuntime(config: IRuntimeConfig) {
     createTransformPlugin(),
     // createShape1dPlugin(),
     // createShape2dPlugin(),
-    createPenPlugin(),
+    createPenPluginV2(),
+    // createPenPlugin(),
     // createTextPlugin(),
     // createImagePlugin(),
     createGroupPlugin(),
