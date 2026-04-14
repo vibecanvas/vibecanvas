@@ -89,7 +89,7 @@ export function createPenPlugin(): IPlugin<{
       let draftElementId: string | null = null;
 
       const toElement = (node: Konva.Path) => {
-        return penPathToElement(render, node);
+        return penPathToElement(render, editor, node);
       };
 
       const setupNode = (node: Konva.Path) => {

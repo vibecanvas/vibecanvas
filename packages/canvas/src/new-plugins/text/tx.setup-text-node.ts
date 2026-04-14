@@ -4,6 +4,7 @@ import type { ThemeService } from "@vibecanvas/service-theme";
 import type { TElement } from "@vibecanvas/service-automerge/types/canvas-doc.types";
 import type { CrdtService } from "../../new-services/crdt/CrdtService";
 import type { HistoryService } from "../../new-services/history/HistoryService";
+import type { EditorService } from "../../new-services/editor/EditorService";
 import type { RenderService } from "../../new-services/render/RenderService";
 import type { SelectionService } from "../../new-services/selection/SelectionService";
 import type { IHooks } from "../../runtime";
@@ -13,6 +14,7 @@ export type TPortalSetupTextNode = {
   crdt: CrdtService;
   crypto: typeof crypto;
   history: HistoryService;
+  editor: EditorService;
   hooks: IHooks;
   render: RenderService;
   selection: SelectionService;
@@ -88,7 +90,7 @@ export function txSetupTextNode(portal: TPortalSetupTextNode, args: TArgsSetupTe
         const cloned = portal.setupNode(previewClone);
         const now = Date.now();
         const clonedElement = fxToElement(
-          { render: portal.render },
+          { editor: portal.editor, render: portal.render },
           { node: cloned, createdAt: now, updatedAt: now },
         );
         portal.crdt.patch({ elements: [clonedElement], groups: [] });
@@ -103,7 +105,7 @@ export function txSetupTextNode(portal: TPortalSetupTextNode, args: TArgsSetupTe
     }
 
     const now = Date.now();
-    beforeDragElement = fxToElement({ render: portal.render }, { node: args.node, createdAt: now, updatedAt: now });
+    beforeDragElement = fxToElement({ editor: portal.editor, render: portal.render }, { node: args.node, createdAt: now, updatedAt: now });
   });
 
   args.node.on("dragend", () => {
@@ -113,7 +115,7 @@ export function txSetupTextNode(portal: TPortalSetupTextNode, args: TArgsSetupTe
       return;
     }
     const now = Date.now();
-    const afterDragElement = fxToElement({ render: portal.render }, { node: args.node, createdAt: beforeDragElement?.createdAt ?? now, updatedAt: now });
+    const afterDragElement = fxToElement({ editor: portal.editor, render: portal.render }, { node: args.node, createdAt: beforeDragElement?.createdAt ?? now, updatedAt: now });
     portal.crdt.patch({ elements: [afterDragElement], groups: [] });
 
     if (!beforeDragElement) {

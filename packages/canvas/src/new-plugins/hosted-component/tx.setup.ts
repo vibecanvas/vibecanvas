@@ -357,7 +357,7 @@ export function txSetupHostedComponent(portal: TPortalSetupHostedComponent, args
   });
 
   portal.editor.registerToElement(TOOL_ID, (node) => {
-    return fxToHostedComponentElement({ render: portal.render }, {
+    return fxToHostedComponentElement({ editor: portal.editor, render: portal.render }, {
       node,
       kind: TOOL_ID,
       groupKindAttr: GROUP_KIND_ATTR,
@@ -461,7 +461,7 @@ export function txSetupHostedComponent(portal: TPortalSetupHostedComponent, args
       defaultBackgroundColor: DEFAULT_BACKGROUND,
       createNode: (element) => portal.editor.createShapeFromTElement(element),
       toElement: (node) => {
-        return fxToHostedComponentElement({ render: portal.render }, {
+        return fxToHostedComponentElement({ editor: portal.editor, render: portal.render }, {
           node,
           kind: TOOL_ID,
           groupKindAttr: GROUP_KIND_ATTR,

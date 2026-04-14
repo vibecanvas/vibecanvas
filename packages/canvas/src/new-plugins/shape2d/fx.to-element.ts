@@ -3,12 +3,15 @@ import type { TElement, TElementStyle } from "@vibecanvas/service-automerge/type
 import { fxGetNodeZIndex } from "../../core/fn.get-node-z-index";
 import { fxCreateShape2dElement } from "../../core/fn.shape2d";
 import { fxGetWorldPosition } from "../../core/fn.world-position";
+import { fxGetCanvasParentGroupId } from "../../core/fn.canvas-node-semantics";
+import type { EditorService } from "../../new-services/editor/EditorService";
 import type { RenderService } from "../../new-services/render/RenderService";
 import { fxGetShape2dNodeType } from "./fn.node";
 
 const ELEMENT_STYLE_ATTR = "vcElementStyle";
 
 export type TPortalToShape2dElement = {
+  editor: EditorService;
   render: RenderService;
   now: () => number;
 };
@@ -70,7 +73,6 @@ export function fxToShape2dElement(portal: TPortalToShape2dElement, args: TArgsT
   const layerScaleY = layer?.scaleY() ?? 1;
   const scaleX = absoluteScale.x / layerScaleX;
   const scaleY = absoluteScale.y / layerScaleY;
-  const parent = node.getParent();
   const updatedAt = portal.now();
   const createdAt = Number(node.getAttr("vcElementCreatedAt") ?? updatedAt);
 
@@ -105,7 +107,7 @@ export function fxToShape2dElement(portal: TPortalToShape2dElement, args: TArgsT
     height,
     createdAt,
     updatedAt,
-    parentGroupId: parent instanceof portal.render.Group ? parent.id() : null,
+    parentGroupId: fxGetCanvasParentGroupId({ editor: portal.editor, node }),
     zIndex: fxGetNodeZIndex(node),
     style: getNodeStyle(node),
   }) satisfies TElement;

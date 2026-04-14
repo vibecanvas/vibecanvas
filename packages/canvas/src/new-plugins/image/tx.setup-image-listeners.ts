@@ -6,6 +6,7 @@ import type { HistoryService } from "../../new-services/history/HistoryService";
 import type { RenderService } from "../../new-services/render/RenderService";
 import type { SelectionService } from "../../new-services/selection/SelectionService";
 import type { IHooks, TElementPointerEvent } from "../../runtime";
+import { fxGetCanvasAncestorGroups } from "../../core/fn.canvas-node-semantics";
 import { txCreateImageCloneDrag } from "./tx.create-image-clone-drag";
 import type { TPortalCreateImageCloneDrag } from "./tx.create-image-clone-drag";
 import { txUpdateImageNodeFromElement } from "./tx.update-image-node-from-element";
@@ -45,11 +46,12 @@ export function txSetupImageListeners(
       element,
     });
 
-    let parent = args.node.getParent();
-    while (parent instanceof portal.render.Group) {
-      parent.fire("transform");
-      parent = parent.getParent();
-    }
+    fxGetCanvasAncestorGroups({
+      editor: portal.editor,
+      node: args.node,
+    }).forEach((group) => {
+      group.fire("transform");
+    });
   };
 
   const throttledPatch = portal.createThrottledPatch(args.node);

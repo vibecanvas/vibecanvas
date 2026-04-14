@@ -1,9 +1,11 @@
 import type { TElement } from "@vibecanvas/service-automerge/types/canvas-doc.types";
 import type Konva from "konva";
 import { fxHostedComponentSnapshotToElement } from "./fn.hosted-component-snapshot-to-element";
+import { fxGetCanvasParentGroupId } from "../../core/fn.canvas-node-semantics";
 import type { RenderService } from "../../new-services/render/RenderService";
 
 export type TPortalToHostedComponentElement = {
+  editor: { toGroup(node: Konva.Node): unknown };
   render: RenderService;
 };
 
@@ -44,8 +46,7 @@ export function fxToHostedComponentElement(portal: TPortalToHostedComponentEleme
   const width = Number(group.getAttr(args.widthAttr) ?? args.defaultWidth) * group.scaleX();
   const height = Number(group.getAttr(args.heightAttr) ?? args.defaultHeight) * group.scaleY();
   const backgroundColor = String(group.getAttr(args.backgroundAttr) ?? args.defaultBackgroundColor);
-  const parent = group.getParent();
-  const parentGroupId = parent instanceof portal.render.Group ? parent.id() : null;
+  const parentGroupId = fxGetCanvasParentGroupId({ editor: portal.editor, node: group });
 
   return fxHostedComponentSnapshotToElement({
     id: group.id(),

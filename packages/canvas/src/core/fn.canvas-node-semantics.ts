@@ -1,12 +1,16 @@
 import type Konva from "konva";
 import type { Shape, ShapeConfig } from "konva/lib/Shape";
-import type { EditorService } from "../new-services/editor/EditorService";
+
+export type TCanvasSemanticsEditor = {
+  toElement?(node: Konva.Node): unknown;
+  toGroup(node: Konva.Node): unknown;
+};
 
 export type TCanvasNode = Konva.Group | Shape<ShapeConfig>;
 export type TCanvasNodeKind = "group" | "element";
 
 export type TArgsGetCanvasNodeKind = {
-  editor: EditorService;
+  editor: TCanvasSemanticsEditor;
   node: Konva.Node | null | undefined;
 };
 
@@ -19,7 +23,7 @@ export function fxGetCanvasNodeKind(args: TArgsGetCanvasNodeKind): TCanvasNodeKi
     return "group";
   }
 
-  if (args.editor.toElement(args.node)) {
+  if (args.editor.toElement?.(args.node)) {
     return "element";
   }
 
@@ -27,7 +31,7 @@ export function fxGetCanvasNodeKind(args: TArgsGetCanvasNodeKind): TCanvasNodeKi
 }
 
 export type TArgsIsCanvasNode = {
-  editor: EditorService;
+  editor: TCanvasSemanticsEditor;
   node: Konva.Node | null | undefined;
 };
 
@@ -36,7 +40,7 @@ export function fxIsCanvasNode(args: TArgsIsCanvasNode): args is TArgsIsCanvasNo
 }
 
 export type TArgsIsCanvasGroupNode = {
-  editor: EditorService;
+  editor: TCanvasSemanticsEditor;
   node: Konva.Node | null | undefined;
 };
 
@@ -45,7 +49,7 @@ export function fxIsCanvasGroupNode(args: TArgsIsCanvasGroupNode): args is TArgs
 }
 
 export type TArgsIsCanvasElementHostNode = {
-  editor: EditorService;
+  editor: TCanvasSemanticsEditor;
   node: Konva.Node | null | undefined;
 };
 
@@ -54,7 +58,7 @@ export function fxIsCanvasElementHostNode(args: TArgsIsCanvasElementHostNode): a
 }
 
 export type TArgsGetCanvasParentGroupId = {
-  editor: EditorService;
+  editor: TCanvasSemanticsEditor;
   node: Konva.Node | null | undefined;
 };
 
@@ -69,7 +73,7 @@ export function fxGetCanvasParentGroupId(args: TArgsGetCanvasParentGroupId) {
 }
 
 export type TArgsGetCanvasAncestorGroups = {
-  editor: EditorService;
+  editor: TCanvasSemanticsEditor;
   node: Konva.Node | null | undefined;
 };
 

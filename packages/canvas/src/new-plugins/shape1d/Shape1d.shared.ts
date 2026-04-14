@@ -1,6 +1,7 @@
 import type { TArrowData, TElement, TElementStyle, TLineData } from "@vibecanvas/service-automerge/types/canvas-doc.types";
 import Konva from "konva";
 import { fxGetWorldPosition } from "../../core/fn.world-position";
+import { fxGetCanvasParentGroupId } from "../../core/fn.canvas-node-semantics";
 import type { RenderService } from "../../new-services/render/RenderService";
 import { resolveThemeColor, type ThemeService } from "@vibecanvas/service-theme";
 
@@ -80,18 +81,16 @@ export function getColorStyleKey(style: TElementStyle): "backgroundColor" | "str
     : "strokeColor";
 }
 
-export function toPositionPatch(render: RenderService, node: TShape1dNode) {
+export function toPositionPatch(render: RenderService, editor: { toGroup(node: Konva.Node): unknown }, node: TShape1dNode) {
   const worldPosition = fxGetWorldPosition({
     absolutePosition: node.absolutePosition(),
     parentTransform: node.getLayer()?.getAbsoluteTransform() ?? null,
   });
-  const parent = node.getParent();
-
   return {
     id: node.id(),
     x: worldPosition.x,
     y: worldPosition.y,
-    parentGroupId: parent instanceof render.Group ? parent.id() : null,
+    parentGroupId: fxGetCanvasParentGroupId({ editor, node }),
     updatedAt: Date.now(),
   } satisfies Pick<TElement, "id" | "x" | "y" | "parentGroupId" | "updatedAt">;
 }

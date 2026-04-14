@@ -2,12 +2,14 @@ import type { TElement, TElementStyle, TTextData } from "@vibecanvas/service-aut
 import { fxGetNodeZIndex } from "../../core/fn.get-node-z-index";
 import { fxGetNearestFontSizePreset } from "../../core/fn.text-style";
 import { fxGetWorldPosition } from "../../core/fn.world-position";
+import { fxGetCanvasParentGroupId } from "../../core/fn.canvas-node-semantics";
 import type { RenderService } from "../../new-services/render/RenderService";
 import type Konva from "konva";
 
 const ELEMENT_STYLE_ATTR = "vcElementStyle";
 
 export type TPortalToElement = {
+  editor: { toGroup(node: Konva.Node): unknown };
   render: RenderService;
 };
 
@@ -26,8 +28,7 @@ export function fxToElement(portal: TPortalToElement, args: TArgsToElement) {
   const layer = args.node.getLayer();
   const layerScaleX = layer?.scaleX() ?? 1;
   const layerScaleY = layer?.scaleY() ?? 1;
-  const parent = args.node.getParent();
-  const parentGroupId = parent instanceof portal.render.Group ? parent.id() : null;
+  const parentGroupId = fxGetCanvasParentGroupId({ editor: portal.editor, node: args.node });
 
   const baseStyle = structuredClone((args.node.getAttr(ELEMENT_STYLE_ATTR) as TElementStyle | undefined) ?? {});
   const style: TElementStyle = {

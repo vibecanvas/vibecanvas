@@ -1,6 +1,7 @@
 import type { TElement, TElementStyle } from "@vibecanvas/service-automerge/types/canvas-doc.types";
 import Konva from "konva";
 import { fxGetAbsolutePositionFromWorldPosition, fxGetWorldPosition } from "../../core/fn.world-position";
+import { fxGetCanvasParentGroupId, type TCanvasSemanticsEditor } from "../../core/fn.canvas-node-semantics";
 import { fxGetNodeZIndex } from "../../core/fn.get-node-z-index";
 import { setNodeZIndex } from "../../core/render-order";
 import type { ThemeService } from "@vibecanvas/service-theme";
@@ -60,7 +61,7 @@ export function updateShapeFromElement(theme: ThemeService, node: TShape1dNode, 
   setNodeZIndex(node, element.zIndex);
 }
 
-export function toTElement(node: TShape1dNode): TElement {
+export function toTElement(editor: TCanvasSemanticsEditor, node: TShape1dNode): TElement {
   const baseData = structuredClone(node.getAttr("vcElementData") as TShape1dData | undefined);
   if (!baseData || !isSupportedElementType(baseData.type)) {
     throw new Error("Shape1d node is missing vcElementData metadata");
@@ -75,7 +76,6 @@ export function toTElement(node: TShape1dNode): TElement {
     absolutePosition: node.absolutePosition(),
     parentTransform: node.getLayer()?.getAbsoluteTransform() ?? null,
   });
-  const parent = node.getParent();
   const now = Date.now();
 
   return {
@@ -86,7 +86,7 @@ export function toTElement(node: TShape1dNode): TElement {
     bindings: [],
     createdAt: Number(node.getAttr(ELEMENT_CREATED_AT_ATTR) ?? now),
     locked: false,
-    parentGroupId: parent instanceof Konva.Group ? parent.id() : null,
+    parentGroupId: fxGetCanvasParentGroupId({ editor, node }),
     updatedAt: now,
     zIndex: fxGetNodeZIndex(node),
     data: {
@@ -103,7 +103,7 @@ export function createPreviewClone(
   now: () => number,
   theme: ThemeService,
 ) {
-  const element = toTElement(node);
+  const element = toTElement({ toGroup: () => null }, node);
   const timestamp = now();
   const clone = createShapeFromElement(theme, {
     ...element,

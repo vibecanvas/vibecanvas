@@ -9,6 +9,7 @@ import type { HistoryService } from "../../new-services/history/HistoryService";
 import type { RenderOrderService } from "../../new-services/render-order/RenderOrderService";
 import type { RenderService } from "../../new-services/render/RenderService";
 import type { SelectionService } from "../../new-services/selection/SelectionService";
+import { fxGetCanvasParentGroupId, fxIsCanvasGroupNode } from "../../core/fn.canvas-node-semantics";
 
 export const ATTACHED_TEXT_NAME = "attached-text";
 
@@ -44,7 +45,6 @@ function createAttachedTextElement(portal: TPortalAttachedText, shapeNode: Konva
   }
 
   const now = portal.now();
-  const parent = shapeNode.getParent();
 
   return {
     id: portal.createId(),
@@ -53,7 +53,7 @@ function createAttachedTextElement(portal: TPortalAttachedText, shapeNode: Konva
     rotation: bounds.rotation,
     bindings: [],
     locked: false,
-    parentGroupId: parent instanceof portal.render.Group ? parent.id() : null,
+    parentGroupId: fxGetCanvasParentGroupId({ editor: portal.editor, node: shapeNode }),
     zIndex: "",
     createdAt: now,
     updatedAt: now,
@@ -114,15 +114,16 @@ export function fxCreateAttachedTextNode(portal: TPortalAttachedText, shapeNode:
   }
 
   fxSyncAttachedTextNodeToShape(portal, shapeNode, node);
-  const parent = shapeNode.getParent();
-  if (parent instanceof portal.render.Group || parent instanceof portal.render.Layer) {
-    parent.add(node);
-  } else {
-    portal.render.staticForegroundLayer.add(node);
-  }
+  const parentNode = shapeNode.getParent();
+  const parent = parentNode instanceof portal.render.Layer || fxIsCanvasGroupNode({ editor: portal.editor, node: parentNode })
+    ? parentNode
+    : portal.render.staticForegroundLayer;
+  const parentContainer = parent as Konva.Layer | Konva.Group;
+
+  parentContainer.add(node);
 
   portal.renderOrder.assignOrderOnInsert({
-    parent: (parent instanceof portal.render.Group || parent instanceof portal.render.Layer) ? parent : portal.render.staticForegroundLayer,
+    parent: parentContainer,
     nodes: [shapeNode, node],
     position: "front",
   });

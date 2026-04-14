@@ -127,6 +127,7 @@ export function createTextPlugin(): IPlugin<{
             crdt,
             crypto,
             history,
+            editor,
             hooks: ctx.hooks,
             render,
             selection,
@@ -169,7 +170,7 @@ export function createTextPlugin(): IPlugin<{
         }
 
         const now = Date.now();
-        return fxToElement({ render }, { node, createdAt: now, updatedAt: now });
+        return fxToElement({ editor, render }, { node, createdAt: now, updatedAt: now });
       });
 
       editor.registerCreateShapeFromTElement("text", (element) => {

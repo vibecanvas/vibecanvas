@@ -119,7 +119,7 @@ function suppressNextSelectionHandling(portal: TPortalEnterEditMode, args: { rea
 
 export function txEnterEditMode(portal: TPortalEnterEditMode, args: TArgsEnterEditMode) {
   const now = Date.now();
-  const originalElement = fxToElement({ render: portal.render }, { node: args.node, createdAt: now, updatedAt: now });
+  const originalElement = fxToElement({ editor: portal.editor, render: portal.render }, { node: args.node, createdAt: now, updatedAt: now });
   const originalText = args.node.text();
   const originalData = originalElement.data as TTextData;
   const isAttachedText = originalData.containerId !== null;
@@ -337,7 +337,7 @@ export function txEnterEditMode(portal: TPortalEnterEditMode, args: TArgsEnterEd
     portal.render.staticForegroundLayer.batchDraw();
 
     const nextNow = Date.now();
-    const nextElement = fxToElement({ render: portal.render }, { node: args.node, createdAt: originalElement.createdAt, updatedAt: nextNow });
+    const nextElement = fxToElement({ editor: portal.editor, render: portal.render }, { node: args.node, createdAt: originalElement.createdAt, updatedAt: nextNow });
     const patchElements = [nextHostElement, nextElement].filter((element): element is TElement => element !== null);
     portal.crdt.patch({ elements: patchElements, groups: [] });
 

@@ -101,6 +101,7 @@ export function createShape2dPlugin(): IPlugin<{
 
       const toElement = (node: Konva.Node) => {
         return fxToShape2dElement({
+          editor,
           render,
           now,
         }, {

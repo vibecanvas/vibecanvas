@@ -280,7 +280,7 @@ export function createShape1dPlugin(): IPlugin<{
             activeHandleDrag = {
               nodeId: editableNode.id(),
               pointIndex,
-              beforeElement: toTElement(editableNode),
+              beforeElement: toTElement(editor, editableNode),
               beforePoints: structuredClone(getElementData(editableNode)?.points ?? []),
               beforeAbsoluteTransform: editableNode.getAbsoluteTransform().copy(),
             };
@@ -312,7 +312,7 @@ export function createShape1dPlugin(): IPlugin<{
               return;
             }
 
-            const afterElement = toTElement(editableNode);
+            const afterElement = toTElement(editor, editableNode);
             crdt.patch({ elements: [afterElement], groups: [] });
             recordElementHistory(historyPortal, {
               beforeElement: drag.beforeElement,
@@ -348,7 +348,7 @@ export function createShape1dPlugin(): IPlugin<{
               return;
             }
 
-            const beforeElement = toTElement(editableNode);
+            const beforeElement = toTElement(editor, editableNode);
             const currentData = getElementData(editableNode);
             if (!currentData) {
               return;
@@ -400,7 +400,7 @@ export function createShape1dPlugin(): IPlugin<{
               return;
             }
 
-            const afterElement = toTElement(editableNode);
+            const afterElement = toTElement(editor, editableNode);
             crdt.patch({ elements: [afterElement], groups: [] });
             recordElementHistory(historyPortal, {
               beforeElement: drag.beforeElement,
@@ -421,12 +421,12 @@ export function createShape1dPlugin(): IPlugin<{
               return;
             }
 
-            const beforeElement = toTElement(editableNode);
+            const beforeElement = toTElement(editor, editableNode);
             const nextData = structuredClone(currentData);
             nextData.points.splice(index + 1, 0, insertPoint);
             editableNode.setAttr("vcElementData", nextData);
             editableNode.getLayer()?.batchDraw();
-            const afterElement = toTElement(editableNode);
+            const afterElement = toTElement(editor, editableNode);
             crdt.patch({ elements: [afterElement], groups: [] });
             recordElementHistory(historyPortal, {
               beforeElement,
@@ -527,7 +527,7 @@ export function createShape1dPlugin(): IPlugin<{
           nodes: [node],
           position: "front",
         });
-        const createdElement = toTElement(node);
+        const createdElement = toTElement(editor, node);
         crdt.patch({ elements: [createdElement], groups: [] });
         recordCreateHistory(historyPortal, {
           element: createdElement,
@@ -579,7 +579,7 @@ export function createShape1dPlugin(): IPlugin<{
           return null;
         }
 
-        return toTElement(node);
+        return toTElement(editor, node);
       });
 
       editor.registerCreateShapeFromTElement("shape1d", (element) => {
@@ -762,7 +762,7 @@ export function createShape1dPlugin(): IPlugin<{
             return;
           }
 
-          const element = toTElement(candidate);
+          const element = toTElement(editor, candidate);
           updateShapeFromElement(theme, candidate, element);
         });
         render.staticForegroundLayer.batchDraw();

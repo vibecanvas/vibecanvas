@@ -82,7 +82,7 @@ export function finalizePreviewClone(portal: TPortalShape1dRuntime, previewClone
     position: "front",
   });
 
-  const createdElement = toTElement(previewClone);
+  const createdElement = toTElement(portal.editor, previewClone);
   portal.crdt.patch({ elements: [createdElement], groups: [] });
   recordCreateHistory(portal, {
     element: createdElement,
@@ -154,7 +154,7 @@ export function setupShapeListeners(portal: TPortalShape1dRuntime, node: TShape1
       return;
     }
 
-    originalElement = toTElement(node);
+    originalElement = toTElement(portal.editor, node);
     multiDragStartPositions.clear();
     passengerOriginalElements.clear();
 
@@ -197,7 +197,7 @@ export function setupShapeListeners(portal: TPortalShape1dRuntime, node: TShape1
       return;
     }
 
-    throttledPatch(toPositionPatch(portal.render, node));
+    throttledPatch(toPositionPatch(portal.render, portal.editor, node));
 
     const selected = fxFilterSelection({
       render: portal.render,
@@ -240,7 +240,7 @@ export function setupShapeListeners(portal: TPortalShape1dRuntime, node: TShape1
       return;
     }
 
-    const nextElement = toTElement(node);
+    const nextElement = toTElement(portal.editor, node);
     const beforeElement = originalElement ? structuredClone(originalElement) : null;
     const afterElement = structuredClone(nextElement);
     portal.crdt.patch({ elements: [afterElement], groups: [] });

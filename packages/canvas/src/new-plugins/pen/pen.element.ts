@@ -3,6 +3,7 @@ import type { RenderService } from "../../new-services/render/RenderService";
 import { resolveThemeColor, type ThemeService } from "@vibecanvas/service-theme";
 import Konva from "konva";
 import { fxGetAbsolutePositionFromWorldPosition, fxGetWorldPosition } from "../../core/fn.world-position";
+import { fxGetCanvasParentGroupId } from "../../core/fn.canvas-node-semantics";
 import { fxGetNodeZIndex } from "../../core/fn.get-node-z-index";
 import { setNodeZIndex } from "../../core/render-order";
 import { getStrokePathFromPenData, scalePenDataPoints } from "./pen.math";
@@ -110,7 +111,7 @@ export function updatePenPathFromElement(node: Konva.Path, theme: ThemeService, 
   return true;
 }
 
-export function penPathToElement(render: RenderService, node: Konva.Path): TElement {
+export function penPathToElement(render: RenderService, editor: { toGroup(node: Konva.Node): unknown }, node: Konva.Path): TElement {
   const baseData = structuredClone(node.getAttr(ELEMENT_DATA_ATTR) as TPenData | undefined);
   if (!baseData || baseData.type !== "pen") {
     throw new Error("Pen path is missing vcElementData metadata");
@@ -127,8 +128,7 @@ export function penPathToElement(render: RenderService, node: Konva.Path): TElem
     absolutePosition: node.absolutePosition(),
     parentTransform: node.getLayer()?.getAbsoluteTransform() ?? null,
   });
-  const parent = node.getParent();
-  const parentGroupId = parent instanceof render.Group ? parent.id() : null;
+  const parentGroupId = fxGetCanvasParentGroupId({ editor, node });
 
   return {
     id: node.id(),
