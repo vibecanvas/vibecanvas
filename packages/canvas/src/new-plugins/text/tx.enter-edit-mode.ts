@@ -170,7 +170,12 @@ export function txEnterEditMode(portal: TPortalEnterEditMode, args: TArgsEnterEd
     }
 
     const hostBounds = attachedHostNode
-      ? fxGetShapeTextHostBounds({ render: portal.scene, node: attachedHostNode })
+      ? fxGetShapeTextHostBounds({
+          Rect: portal.Konva.Rect,
+          Ellipse: portal.Konva.Ellipse,
+          Line: portal.Konva.Line,
+          node: attachedHostNode,
+        })
       : null;
     if (hostBounds) {
       args.node.position({ x: hostBounds.x, y: hostBounds.y });
@@ -312,7 +317,9 @@ export function txEnterEditMode(portal: TPortalEnterEditMode, args: TArgsEnterEd
       }
 
       const nextBounds = fxGetShapeTextHostBounds({
-        render: portal.scene,
+        Rect: portal.Konva.Rect,
+        Ellipse: portal.Konva.Ellipse,
+        Line: portal.Konva.Line,
         node: attachedHostNode ?? args.node,
       });
       if (nextBounds) {
