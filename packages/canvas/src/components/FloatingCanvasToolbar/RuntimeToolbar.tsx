@@ -3,6 +3,7 @@ import "./styles.css";
 import type { EditorService, TEditorToolIcon } from "../../services/editor/EditorService";
 import { For, createSignal, onCleanup } from "solid-js";
 import { ToolButton } from "./ToolButton";
+import { EditorServiceV2 } from "src/services/editor/EditorServiceV2";
 
 export type TRuntimeToolbarTool = {
   id: string;
@@ -13,7 +14,7 @@ export type TRuntimeToolbarTool = {
 };
 
 export type TRuntimeToolbarProps = {
-  editor: EditorService;
+  editor: EditorServiceV2;
   onToolSelect: (toolId: string) => void;
 };
 

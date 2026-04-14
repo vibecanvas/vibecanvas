@@ -95,7 +95,8 @@ export function createPenPlugin(): IPlugin<{
           id: "pen",
           label: "Pen",
           icon: Pencil,
-          behavior: { type: "action" },
+          behavior: { type: "mode", mode: 'draw-create'  },
+          shortcuts: ['p']
         })
       })
 

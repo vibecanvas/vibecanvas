@@ -115,6 +115,13 @@ export class EditorServiceV2 implements IService<TEditorServiceHooks> {
   }
 
   /**
+   * Returns one registered tool by id.
+   */
+  getTool(id: string) {
+    return this.tools.get(id);
+  }
+
+  /**
    * Returns registered tools in stable toolbar order.
    * Priority is expected in the range 0..10000.
    */

@@ -7,10 +7,11 @@ import type { EditorService } from "../../services/editor/EditorService";
 import type { SceneService } from "../../services/scene/SceneService";
 import type { IHooks } from "../../runtime";
 import { txDrawGrid } from "./tx.draw";
+import { EditorServiceV2 } from "src/services/editor/EditorServiceV2";
 
 export function createGridPlugin(): IPlugin<{
   camera: CameraService;
-  editor: EditorService;
+  editor2: EditorServiceV2;
   scene: SceneService;
   theme: ThemeService;
 }, IHooks> {
@@ -19,7 +20,7 @@ export function createGridPlugin(): IPlugin<{
   return {
     name: "grid",
     apply(ctx) {
-      const editor = ctx.services.require("editor");
+      const editor = ctx.services.require("editor2");
 
       const syncGridTool = () => {
         editor.registerTool({
