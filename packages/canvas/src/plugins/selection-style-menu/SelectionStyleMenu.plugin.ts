@@ -14,8 +14,9 @@ import {
   type TSelectionStyleProperty,
 } from "../../core/fn.selection-style-menu";
 import { txApplySelectionStyleChange } from "../../core/tx.apply-selection-style-change";
+import type { CanvasRegistryService } from "../../services/canvas-registry/CanvasRegistryService";
 import type { CrdtService } from "../../services/crdt/CrdtService";
-import type { EditorService } from "../../services/editor/EditorService";
+import type { EditorServiceV2 } from "../../services/editor/EditorServiceV2";
 import type { HistoryService } from "../../services/history/HistoryService";
 import type { SceneService } from "../../services/scene/SceneService";
 import type { SelectionService } from "../../services/selection/SelectionService";
@@ -23,8 +24,9 @@ import { fxFindShape1dNodeById } from "../shape1d/fx.node";
 import type { IHooks } from "../../runtime";
 
 function mountSelectionStyleMenu(args: {
+  canvasRegistry: CanvasRegistryService;
   crdt: CrdtService;
-  editor: EditorService;
+  editor: EditorServiceV2;
   history: HistoryService;
   scene: SceneService;
   selection: SelectionService;
@@ -55,7 +57,7 @@ function mountSelectionStyleMenu(args: {
   args.selection.hooks.change.tap(syncVersion);
   args.editor.hooks.editingTextChange.tap(syncVersion);
   args.editor.hooks.editingShape1dChange.tap(syncVersion);
-  args.editor.hooks.toElementRegistryChange.tap(syncVersion);
+  args.canvasRegistry.hooks.elementsChange.tap(syncVersion);
   args.crdt.hooks.change.tap(syncVersion);
   args.theme.hooks.change.tap(syncVersion);
 
@@ -128,6 +130,7 @@ function mountSelectionStyleMenu(args: {
         Konva,
         crdt: args.crdt,
         editor: args.editor,
+        canvasRegistry: args.canvasRegistry,
         history: args.history,
         scene: args.scene,
         selection: args.selection,
@@ -175,8 +178,9 @@ function mountSelectionStyleMenu(args: {
 }
 
 export function createSelectionStyleMenuPlugin(): IPlugin<{
+  canvasRegistry: CanvasRegistryService;
   crdt: CrdtService;
-  editor: EditorService;
+  editor2: EditorServiceV2;
   history: HistoryService;
   scene: SceneService;
   selection: SelectionService;
@@ -187,8 +191,9 @@ export function createSelectionStyleMenuPlugin(): IPlugin<{
   return {
     name: "selection-style-menu",
     apply(ctx) {
+      const canvasRegistry = ctx.services.require("canvasRegistry");
       const crdt = ctx.services.require("crdt");
-      const editor = ctx.services.require("editor");
+      const editor = ctx.services.require("editor2");
       const history = ctx.services.require("history");
       const scene = ctx.services.require("scene");
       const selection = ctx.services.require("selection");
@@ -196,6 +201,7 @@ export function createSelectionStyleMenuPlugin(): IPlugin<{
 
       ctx.hooks.init.tap(() => {
         menuMount = mountSelectionStyleMenu({
+          canvasRegistry,
           crdt,
           editor,
           history,

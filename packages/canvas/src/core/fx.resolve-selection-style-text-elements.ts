@@ -1,9 +1,12 @@
 import type { TElement } from "@vibecanvas/service-automerge/types/canvas-doc.types";
 import type Konva from "konva";
-import type { EditorService } from "../services/editor/EditorService";
+
+export type TSelectionStyleTextEditor = {
+  toElement(node: Konva.Node): TElement | null;
+};
 
 export type TPortalResolveSelectionStyleTextElements = {
-  editor: EditorService;
+  editor: TSelectionStyleTextEditor;
   fxFindAttachedTextNodeByContainerId: (containerId: string) => Konva.Text | null;
 };
 

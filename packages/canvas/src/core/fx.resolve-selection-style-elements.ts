@@ -2,13 +2,17 @@ import type Konva from "konva";
 import type { TElement } from "@vibecanvas/service-automerge/types/canvas-doc.types";
 import { fxFilterSelection } from "./fx.filter-selection";
 import { fnIsUnsupportedSelectionStyleElement } from "./fn.selection-style-menu";
-import type { EditorService } from "../services/editor/EditorService";
+import type { TCanvasSemanticsEditor } from "./fx.canvas-node-semantics";
 import type { SceneService } from "../services/scene/SceneService";
 import type { SelectionService } from "../services/selection/SelectionService";
 
+export type TSelectionStyleElementEditor = TCanvasSemanticsEditor & {
+  toElement(node: Konva.Node): TElement | null;
+};
+
 export type TPortalResolveSelectionStyleElements = {
   Konva: typeof Konva;
-  editor: EditorService;
+  editor: TSelectionStyleElementEditor;
   scene: SceneService;
   selection: SelectionService;
 };
@@ -17,7 +21,7 @@ export type TArgsResolveSelectionStyleElements = Record<string, never>;
 
 export type TPortalResolveFocusedSelectionStyleElements = {
   Konva: typeof Konva;
-  editor: EditorService;
+  editor: TSelectionStyleElementEditor;
   scene: SceneService;
 };
 
@@ -27,7 +31,7 @@ export type TArgsResolveFocusedSelectionStyleElements = {
 
 function collectSelectionStyleElements(args: {
   Konva: typeof Konva;
-  editor: EditorService;
+  editor: TSelectionStyleElementEditor;
   rootNodes: Array<Konva.Group | Konva.Shape>;
 }) {
   const shapeNodes: Konva.Shape[] = [];

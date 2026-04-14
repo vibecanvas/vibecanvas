@@ -12,15 +12,23 @@ import {
 } from "./fx.selection-style-element-patch";
 import type { TElement } from "@vibecanvas/service-automerge/types/canvas-doc.types";
 import type { CrdtService } from "../services/crdt/CrdtService";
-import type { EditorService } from "../services/editor/EditorService";
 import type { HistoryService } from "../services/history/HistoryService";
 import type { SceneService } from "../services/scene/SceneService";
 import type { SelectionService } from "../services/selection/SelectionService";
 
+export type TApplySelectionStyleChangeEditor = {
+  toElement(node: Konva.Node): TElement | null;
+};
+
+export type TApplySelectionStyleChangeCanvasRegistry = {
+  updateElement(element: TElement): boolean;
+};
+
 export type TPortalApplySelectionStyleChange = {
   Konva: typeof Konva;
   crdt: CrdtService;
-  editor: EditorService;
+  editor: TApplySelectionStyleChangeEditor;
+  canvasRegistry: TApplySelectionStyleChangeCanvasRegistry;
   history: HistoryService;
   scene: SceneService;
   selection: SelectionService;
@@ -34,9 +42,9 @@ export type TArgsApplySelectionStyleChange = {
   value: string | number;
 };
 
-function fnApplyElements(editor: EditorService, elements: TElement[]) {
+function fnApplyElements(canvasRegistry: TApplySelectionStyleChangeCanvasRegistry, elements: TElement[]) {
   elements.forEach((element) => {
-    editor.updateShapeFromTElement(element);
+    canvasRegistry.updateElement(element);
   });
 }
 
@@ -120,7 +128,7 @@ export function txApplySelectionStyleChange(
     beforeById.set(id, element);
   });
 
-  fnApplyElements(portal.editor, dedupedAfterElements);
+  fnApplyElements(portal.canvasRegistry, dedupedAfterElements);
   portal.txRefreshEditingShape1d();
   portal.crdt.patch({ elements: dedupedAfterElements, groups: [] });
 
@@ -130,12 +138,12 @@ export function txApplySelectionStyleChange(
       const revert = dedupedAfterElements
         .map((element) => beforeById.get(element.id))
         .filter((element): element is TElement => Boolean(element));
-      fnApplyElements(portal.editor, revert);
+      fnApplyElements(portal.canvasRegistry, revert);
       portal.txRefreshEditingShape1d();
       portal.crdt.patch({ elements: revert, groups: [] });
     },
     redo: () => {
-      fnApplyElements(portal.editor, dedupedAfterElements);
+      fnApplyElements(portal.canvasRegistry, dedupedAfterElements);
       portal.txRefreshEditingShape1d();
       portal.crdt.patch({ elements: dedupedAfterElements, groups: [] });
     },
