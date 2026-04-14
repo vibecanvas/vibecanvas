@@ -168,7 +168,7 @@ function createServices(config: {
   });
 
   services.provide("canvasRegistry", canvasRegistry);
-  services.provide("editor2", new EditorServiceV2());
+  services.provide("editor2", new EditorServiceV2(scene, canvasRegistry, crdt, selection));
   services.provide("camera", camera);
   services.provide("contextMenu", contextMenu);
   services.provide("crdt", crdt);
