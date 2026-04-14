@@ -5,8 +5,9 @@ import type { Group } from "konva/lib/Group";
 import type { Shape, ShapeConfig } from "konva/lib/Shape";
 import type { TElement } from "@vibecanvas/service-automerge/types/canvas-doc.types";
 import { throttle } from "@solid-primitives/scheduled";
+import type { CanvasRegistryService } from "../../services/canvas-registry/CanvasRegistryService";
 import type { CrdtService } from "../../services/crdt/CrdtService";
-import type { EditorService } from "../../services/editor/EditorService";
+import type { EditorServiceV2 } from "../../services/editor/EditorServiceV2";
 import type { HistoryService } from "../../services/history/HistoryService";
 import type { SceneService } from "../../services/scene/SceneService";
 import type { SelectionService } from "../../services/selection/SelectionService";
@@ -46,13 +47,13 @@ type TTransformDragProxyState = {
 };
 
 function collectSerializableNodes(
-  editor: EditorService,
+  canvasRegistry: CanvasRegistryService,
   render: SceneService,
   nodes: Konva.Node[],
 ): Array<Group | Shape<ShapeConfig>> {
   return nodes.flatMap((node) => {
     if (node instanceof Konva.Group) {
-      return editor.toElement(node) ? [node] : collectSerializableNodes(editor, render, node.getChildren());
+      return canvasRegistry.toElement(node) ? [node] : collectSerializableNodes(canvasRegistry, render, node.getChildren());
     }
 
     if (node instanceof Konva.Shape) {
@@ -63,20 +64,21 @@ function collectSerializableNodes(
   });
 }
 
-function serializeSelection(editor: EditorService, render: SceneService, nodes: Konva.Node[]) {
-  const serializableNodes = collectSerializableNodes(editor, render, nodes);
+function serializeSelection(canvasRegistry: CanvasRegistryService, render: SceneService, nodes: Konva.Node[]) {
+  const serializableNodes = collectSerializableNodes(canvasRegistry, render, nodes);
   return serializableNodes
-    .map((node) => editor.toElement(node))
+    .map((node) => canvasRegistry.toElement(node))
     .filter((element): element is TElement => element !== null);
 }
 
-function applyElements(editor: EditorService, elements: TElement[]) {
+function applyElements(canvasRegistry: CanvasRegistryService, elements: TElement[]) {
   elements.forEach((element) => {
-    editor.updateShapeFromTElement(element);
+    canvasRegistry.updateElement(element);
   });
 }
 
 function normalizeSelectedGroupTransforms(render: SceneService, nodes: Konva.Node[]) {
+  void render;
   nodes.forEach((node) => {
     if (!(node instanceof Konva.Group)) {
       return;
@@ -88,9 +90,9 @@ function normalizeSelectedGroupTransforms(render: SceneService, nodes: Konva.Nod
   });
 }
 
-function refreshSelectedGroups(editor: EditorService, selection: SelectionService) {
+function refreshSelectedGroups(canvasRegistry: CanvasRegistryService, selection: SelectionService) {
   selection.selection.forEach((node) => {
-    if (fxIsCanvasGroupNode({}, { editor, node })) {
+    if (fxIsCanvasGroupNode({}, { editor: canvasRegistry, node })) {
       node.fire("transform");
     }
   });
@@ -99,15 +101,16 @@ function refreshSelectedGroups(editor: EditorService, selection: SelectionServic
 function hasPenOnlySelection(args: {
   Konva: typeof Konva;
   scene: SceneService;
-  editor: EditorService;
+  canvasRegistry: CanvasRegistryService;
   selection: Array<Group | Shape<ShapeConfig>>;
 }) {
+  void args.scene;
   return args.selection.length > 0 && args.selection.every((node) => {
     if (!(node instanceof args.Konva.Path)) {
       return false;
     }
 
-    const element = args.editor.toElement(node);
+    const element = args.canvasRegistry.toElement(node);
     return element?.data.type === "pen";
   });
 }
@@ -115,9 +118,10 @@ function hasPenOnlySelection(args: {
 function isProxyDragCandidate(args: {
   Konva: typeof Konva;
   scene: SceneService;
-  editor: EditorService;
+  canvasRegistry: CanvasRegistryService;
   node: Group | Shape<ShapeConfig>;
 }) {
+  void args.scene;
   if (!(args.node instanceof args.Konva.Shape)) {
     return false;
   }
@@ -131,13 +135,13 @@ function isProxyDragCandidate(args: {
     return false;
   }
 
-  const element = args.editor.toElement(pathNode);
+  const element = args.canvasRegistry.toElement(pathNode);
   return element?.data.type === "pen";
 }
 
 function getProxyDragTarget(args: {
   scene: SceneService;
-  editor: EditorService;
+  canvasRegistry: CanvasRegistryService;
   selection: SelectionService;
 }) {
   if (args.selection.mode !== "select") {
@@ -148,7 +152,7 @@ function getProxyDragTarget(args: {
   const filteredSelection = fxFilterSelection({
     Konva,
   }, {
-    editor: args.editor,
+    editor: args.canvasRegistry,
     selection: rawSelection,
   });
 
@@ -165,7 +169,7 @@ function getProxyDragTarget(args: {
   return isProxyDragCandidate({
     Konva,
     scene: args.scene,
-    editor: args.editor,
+    canvasRegistry: args.canvasRegistry,
     node: rawNode,
   })
     ? rawNode as Shape<ShapeConfig>
@@ -206,7 +210,8 @@ function syncTransformerTheme(theme: ThemeService, transformer: Konva.Transforme
 function syncTransformer(args: {
   Konva: typeof Konva;
   scene: SceneService;
-  editor: EditorService;
+  canvasRegistry: CanvasRegistryService;
+  editor: EditorServiceV2;
   selection: SelectionService;
   transformer: Konva.Transformer;
 }) {
@@ -217,15 +222,15 @@ function syncTransformer(args: {
     return;
   }
 
-  const filteredSelection = fxFilterSelection({ Konva }, { editor: args.editor, selection: args.selection.selection });
-  const isSingleGroupSelection = filteredSelection.length === 1 && fxIsCanvasGroupNode({}, { editor: args.editor, node: filteredSelection[0] });
+  const filteredSelection = fxFilterSelection({ Konva }, { editor: args.canvasRegistry, selection: args.selection.selection });
+  const isSingleGroupSelection = filteredSelection.length === 1 && fxIsCanvasGroupNode({}, { editor: args.canvasRegistry, node: filteredSelection[0] });
   const isMultiSelection = filteredSelection.length > 1;
   const hasTextOnly = filteredSelection.length > 0 && filteredSelection.every((node) => node instanceof args.Konva.Text);
   const hasShape1dOnly = filteredSelection.length > 0 && filteredSelection.every((node) => fxIsShape1dNode({ Shape: args.Konva.Shape }, { node }));
   const hasPenOnly = hasPenOnlySelection({
     Konva: args.Konva,
     scene: args.scene,
-    editor: args.editor,
+    canvasRegistry: args.canvasRegistry,
     selection: filteredSelection,
   });
   const useCornerAnchors = isSingleGroupSelection || hasTextOnly || hasShape1dOnly || hasPenOnly || isMultiSelection;
@@ -245,8 +250,9 @@ function syncTransformer(args: {
  * Proxy sits behind selected node, so direct stroke clicks still work.
  */
 export function createTransformPlugin(): IPlugin<{
+  canvasRegistry: CanvasRegistryService;
   crdt: CrdtService;
-  editor: EditorService;
+  editor2: EditorServiceV2;
   history: HistoryService;
   scene: SceneService;
   selection: SelectionService;
@@ -260,8 +266,9 @@ export function createTransformPlugin(): IPlugin<{
   return {
     name: "transform",
     apply(ctx) {
+      const canvasRegistry = ctx.services.require("canvasRegistry");
       const crdt = ctx.services.require("crdt");
-      const editor = ctx.services.require("editor");
+      const editor = ctx.services.require("editor2");
       const history = ctx.services.require("history");
       const render = ctx.services.require("scene");
       const selection = ctx.services.require("selection");
@@ -275,6 +282,7 @@ export function createTransformPlugin(): IPlugin<{
         syncTransformer({
           Konva,
           scene: render,
+          canvasRegistry,
           editor,
           selection,
           transformer,
@@ -302,7 +310,7 @@ export function createTransformPlugin(): IPlugin<{
           return;
         }
 
-        const target = getProxyDragTarget({ render, editor, selection });
+        const target = getProxyDragTarget({ render, canvasRegistry, selection });
         if (!target) {
           hideDragProxy();
           return;
@@ -323,7 +331,7 @@ export function createTransformPlugin(): IPlugin<{
       };
 
       const applyProxyDragElement = (element: TElement) => {
-        applyElements(editor, [element]);
+        applyElements(canvasRegistry, [element]);
         refreshTransformer();
         render.staticForegroundLayer.batchDraw();
       };
@@ -351,7 +359,7 @@ export function createTransformPlugin(): IPlugin<{
             return;
           }
 
-          const target = getProxyDragTarget({ render, editor, selection });
+          const target = getProxyDragTarget({ render, canvasRegistry, selection });
 
           if (event.evt?.altKey) {
             dragProxy.stopDrag();
@@ -373,7 +381,7 @@ export function createTransformPlugin(): IPlugin<{
             return;
           }
 
-          const beforeElement = editor.toElement(target);
+          const beforeElement = canvasRegistry.toElement(target);
           if (!beforeElement) {
             dragProxy.stopDrag();
             refreshDragProxy();
@@ -405,7 +413,7 @@ export function createTransformPlugin(): IPlugin<{
             y: dragProxyState.nodeStartPosition.y + dy,
           });
 
-          const element = editor.toElement(dragProxyState.node);
+          const element = canvasRegistry.toElement(dragProxyState.node);
           if (element) {
             dragProxyState.throttledPatch(element);
           }
@@ -420,7 +428,7 @@ export function createTransformPlugin(): IPlugin<{
 
           const state = dragProxyState;
           dragProxyState = null;
-          const afterElement = editor.toElement(state.node);
+          const afterElement = canvasRegistry.toElement(state.node);
           if (!afterElement) {
             refreshDragProxy();
             return;
@@ -457,7 +465,7 @@ export function createTransformPlugin(): IPlugin<{
         editor.setTransformer(transformer);
 
         transformer.on("transformstart", () => {
-          beforeElements = serializeSelection(editor, render, transformer?.getNodes() ?? []);
+          beforeElements = serializeSelection(canvasRegistry, render, transformer?.getNodes() ?? []);
         });
 
         transformer.on("transformend", () => {
@@ -465,14 +473,14 @@ export function createTransformPlugin(): IPlugin<{
             return;
           }
 
-          const afterElements = serializeSelection(editor, render, transformer.getNodes());
+          const afterElements = serializeSelection(canvasRegistry, render, transformer.getNodes());
           if (afterElements.length === 0) {
             return;
           }
 
           normalizeSelectedGroupTransforms(render, transformer.getNodes());
-          applyElements(editor, afterElements);
-          refreshSelectedGroups(editor, selection);
+          applyElements(canvasRegistry, afterElements);
+          refreshSelectedGroups(canvasRegistry, selection);
           refreshTransformer();
           refreshDragProxy();
           crdt.patch({ elements: afterElements, groups: [] });
@@ -487,15 +495,15 @@ export function createTransformPlugin(): IPlugin<{
           history.record({
             label: "transform",
             undo: () => {
-              applyElements(editor, undoElements);
-              refreshSelectedGroups(editor, selection);
+              applyElements(canvasRegistry, undoElements);
+              refreshSelectedGroups(canvasRegistry, selection);
               refreshTransformer();
               refreshDragProxy();
               crdt.patch({ elements: undoElements, groups: [] });
             },
             redo: () => {
-              applyElements(editor, redoElements);
-              refreshSelectedGroups(editor, selection);
+              applyElements(canvasRegistry, redoElements);
+              refreshSelectedGroups(canvasRegistry, selection);
               refreshTransformer();
               refreshDragProxy();
               crdt.patch({ elements: redoElements, groups: [] });
@@ -518,11 +526,11 @@ export function createTransformPlugin(): IPlugin<{
           refreshTransformer();
           refreshDragProxy();
         });
-        editor.hooks.toElementRegistryChange.tap(() => {
+        canvasRegistry.hooks.elementsChange.tap(() => {
           refreshTransformer();
           refreshDragProxy();
         });
-        editor.hooks.updateShapeFromTElementRegistryChange.tap(() => {
+        canvasRegistry.hooks.groupsChange.tap(() => {
           refreshTransformer();
           refreshDragProxy();
         });
