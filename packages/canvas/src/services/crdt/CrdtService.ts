@@ -14,6 +14,19 @@ export interface TCrdtServiceHooks {
   write: SyncHook<[TCrdtRecordedOp[]]>;
 }
 
+export type TCrdtCommitResult = ReturnType<TCrdtBuilder["commit"]>;
+
+/**
+ * Thin runtime facade around the canvas CRDT document.
+ *
+ * Responsibilities:
+ * - expose read access to the current Automerge doc
+ * - build granular write batches through `build()`
+ * - replay concrete recorded ops through `applyOps()`
+ * - mark local writes so runtime consumers like scene hydration can skip
+ *   re-applying changes that already originated from the local UI
+ * - forward document lifecycle events through service hooks
+ */
 export class CrdtService implements IService<TCrdtServiceHooks>, IStartableService, IStoppableService {
   readonly name = "crdt";
   readonly docHandle: DocHandle<TCanvasDoc>;
@@ -59,10 +72,18 @@ export class CrdtService implements IService<TCrdtServiceHooks>, IStartableServi
     this.started = false;
   }
 
+  /**
+   * Returns the current materialized canvas document snapshot.
+   */
   doc() {
     return this.docHandle.doc();
   }
 
+  /**
+   * Creates a fluent CRDT builder whose commit/rollback paths are tracked as
+   * local writes. This prevents local runtime edits from being mistaken for
+   * remote updates by consumers such as the scene hydrator.
+   */
   build(): TCrdtBuilder {
     const builder = fxCreateCrdtBuilder({
       docHandle: this.docHandle,
@@ -98,28 +119,28 @@ export class CrdtService implements IService<TCrdtServiceHooks>, IStartableServi
         builder.patchGroup(id, keyOrValue as never);
         return wrappedBuilder;
       }) as TCrdtBuilder["patchGroup"],
-      deleteElement: ((id: string, key?: never, nestedKey?: never) => {
+      deleteElement: ((id: string, key?: unknown, nestedKey?: unknown) => {
         if (nestedKey !== undefined) {
-          builder.deleteElement(id, key, nestedKey);
+          builder.deleteElement(id, key as never, nestedKey as never);
           return wrappedBuilder;
         }
 
         if (key !== undefined) {
-          builder.deleteElement(id, key);
+          builder.deleteElement(id, key as never);
           return wrappedBuilder;
         }
 
         builder.deleteElement(id);
         return wrappedBuilder;
       }) as TCrdtBuilder["deleteElement"],
-      deleteGroup: ((id: string, key?: never, nestedKey?: never) => {
+      deleteGroup: ((id: string, key?: unknown, nestedKey?: unknown) => {
         if (nestedKey !== undefined) {
-          builder.deleteGroup(id, key, nestedKey);
+          builder.deleteGroup(id, key as never, nestedKey as never);
           return wrappedBuilder;
         }
 
         if (key !== undefined) {
-          builder.deleteGroup(id, key);
+          builder.deleteGroup(id, key as never);
           return wrappedBuilder;
         }
 
@@ -127,7 +148,7 @@ export class CrdtService implements IService<TCrdtServiceHooks>, IStartableServi
         return wrappedBuilder;
       }) as TCrdtBuilder["deleteGroup"],
       commit: () => {
-        let commitResult: ReturnType<typeof builder.commit> | null = null;
+        let commitResult: TCrdtCommitResult | null = null;
 
         this.#runLocalChange(() => {
           commitResult = builder.commit();
@@ -137,12 +158,14 @@ export class CrdtService implements IService<TCrdtServiceHooks>, IStartableServi
           throw new Error("CRDT builder commit failed to produce a result");
         }
 
-        this.hooks.write.call(commitResult.redoOps);
+        const resolvedCommitResult = commitResult;
+        this.hooks.write.call(resolvedCommitResult.redoOps);
 
         return {
-          ...commitResult,
+          undoOps: resolvedCommitResult.undoOps,
+          redoOps: resolvedCommitResult.redoOps,
           rollback: () => {
-            this.applyOps({ ops: commitResult.undoOps });
+            this.applyOps({ ops: resolvedCommitResult.undoOps });
           },
         };
       },
@@ -151,6 +174,10 @@ export class CrdtService implements IService<TCrdtServiceHooks>, IStartableServi
     return wrappedBuilder;
   }
 
+  /**
+   * Applies previously recorded concrete CRDT ops as one local write batch.
+   * Used for redo/rollback and other deterministic replays.
+   */
   applyOps(args: { ops: TCrdtRecordedOp[] }) {
     this.#runLocalChange(() => {
       txApplyCrdtOps({
@@ -161,6 +188,10 @@ export class CrdtService implements IService<TCrdtServiceHooks>, IStartableServi
     this.hooks.write.call(args.ops);
   }
 
+  /**
+   * Consumes one pending local change marker.
+   * Runtime listeners can use this to distinguish local writes from remote ones.
+   */
   consumePendingLocalChangeEvent() {
     if (this.#pendingLocalChangeEvents <= 0) {
       return false;
@@ -170,6 +201,11 @@ export class CrdtService implements IService<TCrdtServiceHooks>, IStartableServi
     return true;
   }
 
+  /**
+   * Executes a local write path and leaves one pending local marker behind on
+   * success. The marker is intentionally consumed later by CRDT change
+   * listeners. On failure the pending marker is removed immediately.
+   */
   #runLocalChange(callback: () => void) {
     this.#pendingLocalChangeEvents += 1;
 
