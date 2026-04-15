@@ -1,15 +1,15 @@
 import type { layoutWithLines, prepareWithSegments } from "@chenglou/pretext";
 import type { TElement, TTextData } from "@vibecanvas/service-automerge/types/canvas-doc.types";
-import type Konva from "konva";
 import type { ThemeService } from "@vibecanvas/service-theme";
-import { fxGetShapeTextHostBounds } from "./fn.text-host-bounds";
+import type Konva from "konva";
+import { fxGetCanvasParentGroupId, fxIsCanvasGroupNode } from "../../core/fx.canvas-node-semantics";
 import type { CrdtService } from "../../services/crdt/CrdtService";
-import type { EditorService } from "../../services/editor/EditorService";
+import type { EditorServiceV2 } from "../../services/editor/EditorServiceV2";
 import type { HistoryService } from "../../services/history/HistoryService";
 import type { RenderOrderService } from "../../services/render-order/RenderOrderService";
 import type { SceneService } from "../../services/scene/SceneService";
 import type { SelectionService } from "../../services/selection/SelectionService";
-import { fxGetCanvasParentGroupId, fxIsCanvasGroupNode } from "../../core/fx.canvas-node-semantics";
+import { fxGetShapeTextHostBounds } from "./fn.text-host-bounds";
 
 const ATTACHED_TEXT_NAME = "attached-text";
 
@@ -17,7 +17,10 @@ export type TPortalAttachedText = {
   Konva: typeof Konva;
   crdt: CrdtService;
   document: Document;
-  editor: EditorService;
+  editor: Pick<EditorServiceV2, "createShapeFromTElement" | "editingTextId"> & {
+    toGroup(node: Konva.Node): unknown;
+    toElement(node: Konva.Node): TElement | null;
+  };
   history: HistoryService;
   scene: SceneService;
   renderOrder: RenderOrderService;
@@ -172,7 +175,9 @@ export function fxPersistAttachedTextNode(portal: TPortalAttachedText, args: TAr
     return null;
   }
 
-  portal.crdt.patch({ elements: [element], groups: [] });
+  const builder = portal.crdt.build();
+  builder.patchElement(element.id, element);
+  builder.commit();
   return element;
 }
 

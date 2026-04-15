@@ -1,8 +1,8 @@
 import type { TElement } from "@vibecanvas/service-automerge/types/canvas-doc.types";
 import type Konva from "konva";
 import type { TThemeDefinition } from "@vibecanvas/service-theme";
+import type { CanvasRegistryService } from "../../services/canvas-registry/CanvasRegistryService";
 import type { CrdtService } from "../../services/crdt/CrdtService";
-import type { EditorService } from "../../services/editor/EditorService";
 import type { HistoryService } from "../../services/history/HistoryService";
 import type { RenderOrderService } from "../../services/render-order/RenderOrderService";
 import type { SceneService } from "../../services/scene/SceneService";
@@ -13,8 +13,8 @@ import { txCreateShapeFromElement } from "./tx.render";
 
 export type TPortalTxRecordShape1dHistory = {
   Shape: typeof Konva.Shape;
+  canvasRegistry: CanvasRegistryService;
   crdt: CrdtService;
-  editor: EditorService;
   history: HistoryService;
   render: SceneService;
   renderOrder: RenderOrderService;
@@ -31,15 +31,21 @@ export function txRecordElementHistory(portal: TPortalTxRecordShape1dHistory, ar
     return;
   }
 
+  const commitResult = (() => {
+    const builder = portal.crdt.build();
+    builder.patchElement(args.afterElement.id, args.afterElement);
+    return builder.commit();
+  })();
+
   portal.history.record({
     label: args.label,
     undo() {
-      portal.editor.updateShapeFromTElement(args.beforeElement);
-      portal.crdt.patch({ elements: [args.beforeElement], groups: [] });
+      portal.canvasRegistry.updateElement(args.beforeElement);
+      commitResult.rollback();
     },
     redo() {
-      portal.editor.updateShapeFromTElement(args.afterElement);
-      portal.crdt.patch({ elements: [args.afterElement], groups: [] });
+      portal.canvasRegistry.updateElement(args.afterElement);
+      portal.crdt.applyOps({ ops: commitResult.redoOps });
     },
   });
 }
@@ -47,13 +53,18 @@ export function txRecordElementHistory(portal: TPortalTxRecordShape1dHistory, ar
 export type TArgsTxRecordCreateHistory = { element: TElement; node: TShape1dNode; label: string };
 export function txRecordCreateHistory(portal: TPortalTxRecordShape1dHistory, args: TArgsTxRecordCreateHistory) {
   const snapshot = structuredClone(args.element);
+  const commitResult = (() => {
+    const builder = portal.crdt.build();
+    builder.patchElement(snapshot.id, snapshot);
+    return builder.commit();
+  })();
 
   portal.history.record({
     label: args.label,
     undo() {
       const currentNode = fxFindShape1dNodeById({ Shape: portal.Shape, render: portal.render } satisfies TPortalFxFindShape1dNodeById, { id: snapshot.id });
       currentNode?.destroy();
-      portal.crdt.deleteById({ elementIds: [snapshot.id] });
+      commitResult.rollback();
 
       const nextSelection = portal.selection.selection.filter((candidate) => candidate.id() !== snapshot.id);
       portal.selection.setSelection(nextSelection);
@@ -76,9 +87,9 @@ export function txRecordCreateHistory(portal: TPortalTxRecordShape1dHistory, arg
         portal.render.staticForegroundLayer.add(currentNode);
       }
 
-      portal.editor.updateShapeFromTElement(snapshot);
+      portal.canvasRegistry.updateElement(snapshot);
       portal.renderOrder.sortChildren(portal.render.staticForegroundLayer);
-      portal.crdt.patch({ elements: [snapshot], groups: [] });
+      portal.crdt.applyOps({ ops: commitResult.redoOps });
       portal.selection.setSelection([currentNode]);
       portal.selection.setFocusedNode(currentNode);
       portal.render.staticForegroundLayer.batchDraw();

@@ -148,8 +148,7 @@ export class EditorServiceV2 implements IService<TEditorServiceHooks> {
     this.tools.set(tool.id, tool);
 
     // setup create-draw
-    if (tool.behavior.type === "mode" && tool.behavior.mode === "draw-create") {
-      if(!tool.drawCreate) throw new Error(`drawCreate is required for tool ${tool.id}`);
+    if (tool.behavior.type === "mode" && tool.behavior.mode === "draw-create" && tool.drawCreate) {
       portal.hooks.pointerDown.tap((event) => {
         if (this.activeToolId !== tool.id) {
           return;

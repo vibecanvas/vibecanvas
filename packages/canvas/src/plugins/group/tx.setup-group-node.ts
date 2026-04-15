@@ -1,17 +1,69 @@
 import type { TElement } from "@vibecanvas/service-automerge/types/canvas-doc.types";
 import type Konva from "konva";
-import type { CrdtService } from "../../services/crdt/CrdtService";
 import type { CanvasRegistryService } from "../../services/canvas-registry/CanvasRegistryService";
+import type { CrdtService } from "../../services/crdt/CrdtService";
 import type { HistoryService } from "../../services/history/HistoryService";
+import type { LoggingService } from "../../services/logging/LoggingService";
 import type { SceneService } from "../../services/scene/SceneService";
 import type { SelectionService } from "../../services/selection/SelectionService";
 import type { IHooks, TElementPointerEvent } from "../../runtime";
 import { fxSerializeSubtreeElements } from "./fn.serialize-subtree-elements";
 
+type TGroupDragMetrics = {
+  startedAt: number;
+  moveEvents: number;
+  serializeCalls: number;
+  serializeMs: number;
+  boundaryCalls: number;
+  boundaryMs: number;
+  moveCommitCount: number;
+  moveCommitMs: number;
+  moveCommitKinds: Record<string, number>;
+  finalCommitMs: number;
+  finalCommitKinds: Record<string, number>;
+  descendantCount: number;
+  totalPenPoints: number;
+  elementTypes: Record<string, number>;
+};
+
+const GROUP_LOG_TARGET = {
+  kind: "plugin",
+  name: "group",
+} as const;
+
+function fxCollectGroupElementTypes(elements: TElement[]) {
+  return elements.reduce<Record<string, number>>((acc, element) => {
+    const type = element.data.type;
+    acc[type] = (acc[type] ?? 0) + 1;
+    return acc;
+  }, {});
+}
+
+function fxCountGroupPenPoints(elements: TElement[]) {
+  return elements.reduce((total, element) => {
+    if (element.data.type !== "pen") {
+      return total;
+    }
+
+    return total + element.data.points.length;
+  }, 0);
+}
+
+function fxRecordGroupOpKinds(counts: Record<string, number>, kinds: string[]) {
+  kinds.forEach((kind) => {
+    counts[kind] = (counts[kind] ?? 0) + 1;
+  });
+}
+
+function fxRoundGroupMetric(value: number) {
+  return Math.round(value * 100) / 100;
+}
+
 export type TPortalSetupGroupNode = {
   crdt: CrdtService;
   canvasRegistry: CanvasRegistryService;
   history: HistoryService;
+  logging: LoggingService;
   render: SceneService;
   selection: SelectionService;
   hooks: IHooks;
@@ -19,6 +71,7 @@ export type TPortalSetupGroupNode = {
   refreshBoundaries: () => void;
   startCloneDrag: (group: Konva.Group) => void;
   createThrottledPatch: (callback: (elements: TElement[]) => void) => (elements: TElement[]) => void;
+  now: () => number;
 };
 
 export type TArgsSetupGroupNode = {
@@ -38,12 +91,64 @@ export function txSetupGroupNode(
 
   let beforeElements: TElement[] = [];
   let isCloneDrag = false;
+  let dragMetrics: TGroupDragMetrics | null = null;
+
+  const fxIsGroupLoggingEnabled = (level: 1 | 2 | 3) => {
+    return portal.logging.isEnabled({
+      ...GROUP_LOG_TARGET,
+      level,
+    });
+  };
+
+  const fxLogGroupDragSummary = (didMove: boolean, reason: string) => {
+    if (!dragMetrics || !fxIsGroupLoggingEnabled(1)) {
+      dragMetrics = null;
+      return;
+    }
+
+    portal.logging.log({
+      ...GROUP_LOG_TARGET,
+      level: 1,
+      event: "group-drag-summary",
+      payload: {
+        groupId: args.group.id(),
+        didMove,
+        reason,
+        durationMs: fxRoundGroupMetric(portal.now() - dragMetrics.startedAt),
+        descendantCount: dragMetrics.descendantCount,
+        elementTypes: dragMetrics.elementTypes,
+        totalPenPoints: dragMetrics.totalPenPoints,
+        moveEvents: dragMetrics.moveEvents,
+        serializeCalls: dragMetrics.serializeCalls,
+        serializeMs: fxRoundGroupMetric(dragMetrics.serializeMs),
+        boundaryCalls: dragMetrics.boundaryCalls,
+        boundaryMs: fxRoundGroupMetric(dragMetrics.boundaryMs),
+        moveCommitCount: dragMetrics.moveCommitCount,
+        moveCommitMs: fxRoundGroupMetric(dragMetrics.moveCommitMs),
+        moveCommitKinds: dragMetrics.moveCommitKinds,
+        finalCommitMs: fxRoundGroupMetric(dragMetrics.finalCommitMs),
+        finalCommitKinds: dragMetrics.finalCommitKinds,
+      },
+    });
+
+    dragMetrics = null;
+  };
+
   const throttledPatch = portal.createThrottledPatch((elements) => {
+    const commitStartedAt = dragMetrics ? portal.now() : 0;
     const builder = portal.crdt.build();
     elements.forEach((element) => {
       builder.patchElement(element.id, element);
     });
-    builder.commit();
+    const commitResult = builder.commit();
+
+    if (!dragMetrics) {
+      return;
+    }
+
+    dragMetrics.moveCommitCount += 1;
+    dragMetrics.moveCommitMs += portal.now() - commitStartedAt;
+    fxRecordGroupOpKinds(dragMetrics.moveCommitKinds, commitResult.redoOps.map((op) => op.kind));
   });
 
   args.group.off("pointerclick pointerdown dragstart pointerdblclick dragmove dragend transform");
@@ -94,6 +199,39 @@ export function txSetupGroupNode(
       Shape: portal.Shape,
       group: args.group,
     }).map((element) => structuredClone(element));
+
+    dragMetrics = fxIsGroupLoggingEnabled(1)
+      ? {
+        startedAt: portal.now(),
+        moveEvents: 0,
+        serializeCalls: 0,
+        serializeMs: 0,
+        boundaryCalls: 0,
+        boundaryMs: 0,
+        moveCommitCount: 0,
+        moveCommitMs: 0,
+        moveCommitKinds: {},
+        finalCommitMs: 0,
+        finalCommitKinds: {},
+        descendantCount: beforeElements.length,
+        totalPenPoints: fxCountGroupPenPoints(beforeElements),
+        elementTypes: fxCollectGroupElementTypes(beforeElements),
+      }
+      : null;
+
+    if (dragMetrics && fxIsGroupLoggingEnabled(2)) {
+      portal.logging.log({
+        ...GROUP_LOG_TARGET,
+        level: 2,
+        event: "group-drag-start",
+        payload: {
+          groupId: args.group.id(),
+          descendantCount: dragMetrics.descendantCount,
+          elementTypes: dragMetrics.elementTypes,
+          totalPenPoints: dragMetrics.totalPenPoints,
+        },
+      });
+    }
   });
 
   args.group.on("pointerdblclick", (event) => {
@@ -113,6 +251,25 @@ export function txSetupGroupNode(
       return;
     }
 
+    if (dragMetrics) {
+      dragMetrics.moveEvents += 1;
+      const boundaryStartedAt = portal.now();
+      portal.refreshBoundaries();
+      dragMetrics.boundaryCalls += 1;
+      dragMetrics.boundaryMs += portal.now() - boundaryStartedAt;
+
+      const serializeStartedAt = portal.now();
+      const elements = fxSerializeSubtreeElements({
+        canvasRegistry: portal.canvasRegistry,
+        Shape: portal.Shape,
+        group: args.group,
+      });
+      dragMetrics.serializeCalls += 1;
+      dragMetrics.serializeMs += portal.now() - serializeStartedAt;
+      throttledPatch(elements);
+      return;
+    }
+
     portal.refreshBoundaries();
     throttledPatch(fxSerializeSubtreeElements({
       canvasRegistry: portal.canvasRegistry,
@@ -129,6 +286,7 @@ export function txSetupGroupNode(
     if (isCloneDrag) {
       isCloneDrag = false;
       beforeElements = [];
+      dragMetrics = null;
       return;
     }
 
@@ -137,6 +295,7 @@ export function txSetupGroupNode(
       Shape: portal.Shape,
       group: args.group,
     }).map((element) => structuredClone(element));
+    const finalCommitStartedAt = dragMetrics ? portal.now() : 0;
     const dragCommitResult = (() => {
       const builder = portal.crdt.build();
       afterElements.forEach((element) => {
@@ -145,8 +304,14 @@ export function txSetupGroupNode(
       return builder.commit();
     })();
 
+    if (dragMetrics) {
+      dragMetrics.finalCommitMs += portal.now() - finalCommitStartedAt;
+      fxRecordGroupOpKinds(dragMetrics.finalCommitKinds, dragCommitResult.redoOps.map((op) => op.kind));
+    }
+
     if (beforeElements.length === 0 || afterElements.length === 0) {
       beforeElements = [];
+      fxLogGroupDragSummary(false, "empty-elements");
       return;
     }
 
@@ -158,6 +323,7 @@ export function txSetupGroupNode(
 
     if (!didMove) {
       beforeElements = [];
+      fxLogGroupDragSummary(false, "no-position-change");
       return;
     }
 
@@ -165,7 +331,14 @@ export function txSetupGroupNode(
     const redoElements = afterElements.map((element) => structuredClone(element));
     beforeElements = [];
 
-    portal.refreshBoundaries();
+    if (dragMetrics) {
+      const boundaryStartedAt = portal.now();
+      portal.refreshBoundaries();
+      dragMetrics.boundaryCalls += 1;
+      dragMetrics.boundaryMs += portal.now() - boundaryStartedAt;
+    } else {
+      portal.refreshBoundaries();
+    }
 
     portal.history.record({
       label: "drag-group",
@@ -182,6 +355,8 @@ export function txSetupGroupNode(
         portal.crdt.applyOps({ ops: dragCommitResult.redoOps });
       },
     });
+
+    fxLogGroupDragSummary(true, "history-recorded");
   });
 
   return args.group;

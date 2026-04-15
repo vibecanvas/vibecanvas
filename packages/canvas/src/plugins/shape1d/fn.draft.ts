@@ -8,13 +8,42 @@ import {
   type TShape1dTool,
 } from "./CONSTANTS";
 
+function fxGetShape1dStyleDefaults(args: {
+  rememberedStyle?: {
+    strokeColor?: string;
+    strokeWidth?: number;
+    opacity?: number;
+    lineType?: "straight" | "curved";
+    startCap?: "none" | "arrow" | "dot" | "diamond";
+    endCap?: "none" | "arrow" | "dot" | "diamond";
+  };
+}) {
+  return {
+    strokeColor: args.rememberedStyle?.strokeColor ?? DEFAULT_STROKE,
+    strokeWidth: args.rememberedStyle?.strokeWidth ?? DEFAULT_STROKE_WIDTH,
+    opacity: args.rememberedStyle?.opacity ?? DEFAULT_OPACITY,
+    lineType: args.rememberedStyle?.lineType ?? "straight",
+    startCap: args.rememberedStyle?.startCap ?? "none",
+    endCap: args.rememberedStyle?.endCap ?? "arrow",
+  } as const;
+}
+
 export function fxCreateFallbackPreviewElement(args: {
   activeTool: TShape1dTool;
   draftElementId: string | null;
   createId: () => string;
   now: () => number;
+  rememberedStyle?: {
+    strokeColor?: string;
+    strokeWidth?: number;
+    opacity?: number;
+    lineType?: "straight" | "curved";
+    startCap?: "none" | "arrow" | "dot" | "diamond";
+    endCap?: "none" | "arrow" | "dot" | "diamond";
+  };
 }) {
   const timestamp = args.now();
+  const defaults = fxGetShape1dStyleDefaults({ rememberedStyle: args.rememberedStyle });
 
   return {
     id: args.draftElementId ?? args.createId(),
@@ -29,16 +58,16 @@ export function fxCreateFallbackPreviewElement(args: {
     zIndex: "",
     data: {
       type: args.activeTool === "arrow" ? "arrow" : "line",
-      lineType: "straight",
+      lineType: defaults.lineType,
       points: [[0, 0], [0, 0]],
       startBinding: null,
       endBinding: null,
-      ...(args.activeTool === "arrow" ? { startCap: "none", endCap: "arrow" } : {}),
+      ...(args.activeTool === "arrow" ? { startCap: defaults.startCap, endCap: defaults.endCap } : {}),
     } as TShape1dData,
     style: {
-      strokeColor: DEFAULT_STROKE,
-      opacity: DEFAULT_OPACITY,
-      strokeWidth: DEFAULT_STROKE_WIDTH,
+      strokeColor: defaults.strokeColor,
+      opacity: defaults.opacity,
+      strokeWidth: defaults.strokeWidth,
     },
   } satisfies TElement;
 }
@@ -50,6 +79,14 @@ export function fxCreateDraftElement(args: {
   draftCurrentPoint: TPoint | null;
   createId: () => string;
   now: () => number;
+  rememberedStyle?: {
+    strokeColor?: string;
+    strokeWidth?: number;
+    opacity?: number;
+    lineType?: "straight" | "curved";
+    startCap?: "none" | "arrow" | "dot" | "diamond";
+    endCap?: "none" | "arrow" | "dot" | "diamond";
+  };
 }) {
   if (!args.draftStartPoint || !args.draftCurrentPoint) {
     return null;
@@ -64,6 +101,7 @@ export function fxCreateDraftElement(args: {
   }
 
   const timestamp = args.now();
+  const defaults = fxGetShape1dStyleDefaults({ rememberedStyle: args.rememberedStyle });
   return {
     id: args.draftElementId ?? args.createId(),
     x: startX,
@@ -78,24 +116,24 @@ export function fxCreateDraftElement(args: {
     data: args.activeTool === "arrow"
       ? {
           type: "arrow",
-          lineType: "straight",
+          lineType: defaults.lineType,
           points: [[0, 0], [dx, dy]],
           startBinding: null,
           endBinding: null,
-          startCap: "none",
-          endCap: "arrow",
+          startCap: defaults.startCap,
+          endCap: defaults.endCap,
         }
       : {
           type: "line",
-          lineType: "straight",
+          lineType: defaults.lineType,
           points: [[0, 0], [dx, dy]],
           startBinding: null,
           endBinding: null,
         },
     style: {
-      strokeColor: DEFAULT_STROKE,
-      opacity: DEFAULT_OPACITY,
-      strokeWidth: DEFAULT_STROKE_WIDTH,
+      strokeColor: defaults.strokeColor,
+      opacity: defaults.opacity,
+      strokeWidth: defaults.strokeWidth,
     },
   } satisfies TElement;
 }

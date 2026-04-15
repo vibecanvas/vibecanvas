@@ -1,16 +1,16 @@
 import type { TElement } from "@vibecanvas/service-automerge/types/canvas-doc.types";
 import type Konva from "konva";
+import type { TThemeDefinition } from "@vibecanvas/service-theme";
 import type { CrdtService } from "../../services/crdt/CrdtService";
-import type { EditorService } from "../../services/editor/EditorService";
 import type { HistoryService } from "../../services/history/HistoryService";
 import type { RenderOrderService } from "../../services/render-order/RenderOrderService";
 import type { SceneService } from "../../services/scene/SceneService";
 import type { SelectionService } from "../../services/selection/SelectionService";
-import type { TThemeDefinition } from "@vibecanvas/service-theme";
 import type { IHooks, TElementPointerEvent } from "../../runtime";
 import { fxGetCanvasAncestorGroups, fxGetCanvasNodeKind, fxIsCanvasGroupNode } from "../../core/fx.canvas-node-semantics";
 import { fxFilterSelection } from "../../core/fx.filter-selection";
 import { fxSerializeSubtreeElements } from "../group/fn.serialize-subtree-elements";
+import type { CanvasRegistryService } from "../../services/canvas-registry/CanvasRegistryService";
 import { type TShape1dNode } from "./CONSTANTS";
 import { fxToPositionPatch, fxToTElement } from "./fx.node";
 import { txCreatePreviewClone } from "./tx.element";
@@ -52,26 +52,26 @@ function findSceneNodeById(portal: TPortalTxShape1dRuntime, id: string) {
 }
 
 function applyElement(portal: TPortalTxShape1dRuntime, element: TElement) {
-  const didUpdate = portal.editor.updateShapeFromTElement(element);
+  const didUpdate = portal.canvasRegistry.updateElement(element);
   if (!didUpdate) {
     return;
   }
 
-  fxGetCanvasAncestorGroups({}, { editor: portal.editor, node: findSceneNodeById(portal, element.id) }).forEach((group) => {
+  fxGetCanvasAncestorGroups({}, { editor: portal.canvasRegistry, node: findSceneNodeById(portal, element.id) }).forEach((group) => {
     group.fire("transform");
   });
 }
 
 function serializeNodeElements(portal: TPortalTxShape1dRuntime, node: Konva.Node) {
-  const kind = fxGetCanvasNodeKind({}, { editor: portal.editor, node });
+  const kind = fxGetCanvasNodeKind({}, { editor: portal.canvasRegistry, node });
   if (kind === "element") {
-    const element = portal.editor.toElement(node);
+    const element = portal.canvasRegistry.toElement(node);
     return element ? [structuredClone(element)] : [];
   }
 
-  if (kind === "group" && fxIsCanvasGroupNode({}, { editor: portal.editor, node })) {
+  if (kind === "group" && fxIsCanvasGroupNode({}, { editor: portal.canvasRegistry, node })) {
     return fxSerializeSubtreeElements({
-      editor: portal.editor,
+      canvasRegistry: portal.canvasRegistry,
       Shape: portal.Konva.Shape,
       group: node as Konva.Group,
     }).map((element) => structuredClone(element));
@@ -91,8 +91,7 @@ export function txFinalizePreviewClone(portal: TPortalTxShape1dRuntime, args: TA
   args.previewClone.setDraggable(true);
   portal.renderOrder.assignOrderOnInsert({ parent: portal.render.staticForegroundLayer, nodes: [args.previewClone], position: "front" });
 
-  const createdElement = fxToTElement({ editor: portal.editor, now: portal.now }, { node: args.previewClone });
-  portal.crdt.patch({ elements: [createdElement], groups: [] });
+  const createdElement = fxToTElement({ editor: portal.canvasRegistry, now: portal.now }, { node: args.previewClone });
   txRecordCreateHistory(portal, { element: createdElement, node: args.previewClone, label: "clone-shape1d" });
   portal.render.dynamicLayer.batchDraw();
   portal.render.staticForegroundLayer.batchDraw();
@@ -104,7 +103,7 @@ export function txCreateCloneDrag(portal: TPortalTxShape1dRuntime, args: TArgsTx
   const previewClone = txCreatePreviewClone({
     createId: portal.createId,
     now: portal.now,
-    editor: portal.editor,
+    editor: portal.canvasRegistry,
     theme: portal.theme,
     resolveThemeColor: portal.resolveThemeColor,
     createShapeNode: portal.createShapeNode,
@@ -135,7 +134,12 @@ export function txSetupShapeListeners(portal: TPortalTxShape1dRuntime, args: TAr
   const multiDragStartPositions = new Map<string, { x: number; y: number }>();
   const passengerOriginalElements = new Map<string, TElement[]>();
   const throttledPatch = portal.createThrottledPatch((patch) => {
-    portal.crdt.patch({ elements: [patch], groups: [] });
+    const builder = portal.crdt.build();
+    builder.patchElement(patch.id, "x", patch.x);
+    builder.patchElement(patch.id, "y", patch.y);
+    builder.patchElement(patch.id, "parentGroupId", patch.parentGroupId);
+    builder.patchElement(patch.id, "updatedAt", patch.updatedAt);
+    builder.commit();
   });
 
   args.node.on("pointerclick", (event) => {
@@ -146,7 +150,7 @@ export function txSetupShapeListeners(portal: TPortalTxShape1dRuntime, args: TAr
   });
 
   args.node.on("pointerdown dragstart", (event) => {
-    if (portal.selection.mode !== "select" || portal.editor.editingShape1dId === args.node.id()) {
+    if (portal.selection.mode !== "select") {
       txSafeStopDrag({}, { node: args.node });
       return;
     }
@@ -164,11 +168,11 @@ export function txSetupShapeListeners(portal: TPortalTxShape1dRuntime, args: TAr
       return;
     }
 
-    originalElement = fxToTElement({ editor: portal.editor, now: portal.now }, { node: args.node });
+    originalElement = fxToTElement({ editor: portal.canvasRegistry, now: portal.now }, { node: args.node });
     multiDragStartPositions.clear();
     passengerOriginalElements.clear();
 
-    const selected = fxFilterSelection({ Konva: portal.Konva }, { editor: portal.editor, selection: portal.selection.selection });
+    const selected = fxFilterSelection({ Konva: portal.Konva }, { editor: portal.canvasRegistry, selection: portal.selection.selection });
     selected.forEach((selectedNode) => {
       multiDragStartPositions.set(selectedNode.id(), { ...selectedNode.absolutePosition() });
       if (selectedNode === args.node) {
@@ -199,8 +203,8 @@ export function txSetupShapeListeners(portal: TPortalTxShape1dRuntime, args: TAr
     if (isCloneDrag) {
       return;
     }
-    throttledPatch(fxToPositionPatch({ editor: portal.editor, now: portal.now }, { node: args.node }));
-    const selected = fxFilterSelection({ Konva: portal.Konva }, { editor: portal.editor, selection: portal.selection.selection });
+    throttledPatch(fxToPositionPatch({ editor: portal.canvasRegistry, now: portal.now }, { node: args.node }));
+    const selected = fxFilterSelection({ Konva: portal.Konva }, { editor: portal.canvasRegistry, selection: portal.selection.selection });
     if (selected.length <= 1) {
       return;
     }
@@ -232,12 +236,11 @@ export function txSetupShapeListeners(portal: TPortalTxShape1dRuntime, args: TAr
       return;
     }
 
-    const nextElement = fxToTElement({ editor: portal.editor, now: portal.now }, { node: args.node });
+    const nextElement = fxToTElement({ editor: portal.canvasRegistry, now: portal.now }, { node: args.node });
     const beforeElement = originalElement ? structuredClone(originalElement) : null;
     const afterElement = structuredClone(nextElement);
-    portal.crdt.patch({ elements: [afterElement], groups: [] });
 
-    const selected = fxFilterSelection({ Konva: portal.Konva }, { editor: portal.editor, selection: portal.selection.selection });
+    const selected = fxFilterSelection({ Konva: portal.Konva }, { editor: portal.canvasRegistry, selection: portal.selection.selection });
     const passengers = selected.filter((selectedNode) => selectedNode !== args.node);
     const passengerAfterElements = new Map<string, TElement[]>();
     const passengerEndPositions = new Map<string, { x: number; y: number }>();
@@ -248,8 +251,18 @@ export function txSetupShapeListeners(portal: TPortalTxShape1dRuntime, args: TAr
         return;
       }
       passengerAfterElements.set(passenger.id(), elements);
-      portal.crdt.patch({ elements, groups: [] });
     });
+
+    const dragCommitResult = (() => {
+      const builder = portal.crdt.build();
+      builder.patchElement(afterElement.id, afterElement);
+      passengerAfterElements.forEach((elements) => {
+        elements.forEach((element) => {
+          builder.patchElement(element.id, element);
+        });
+      });
+      return builder.commit();
+    })();
 
     const capturedStartPositions = new Map(multiDragStartPositions);
     const capturedEndPositions = new Map(passengerEndPositions);
@@ -269,7 +282,6 @@ export function txSetupShapeListeners(portal: TPortalTxShape1dRuntime, args: TAr
       label: "drag-shape1d",
       undo() {
         applyElement(portal, beforeElement);
-        portal.crdt.patch({ elements: [beforeElement], groups: [] });
         passengers.forEach((passenger) => {
           const startPos = capturedStartPositions.get(passenger.id());
           if (startPos) {
@@ -282,12 +294,11 @@ export function txSetupShapeListeners(portal: TPortalTxShape1dRuntime, args: TAr
           originalEls.forEach((element) => {
             applyElement(portal, element);
           });
-          portal.crdt.patch({ elements: originalEls, groups: [] });
         });
+        dragCommitResult.rollback();
       },
       redo() {
         applyElement(portal, afterElement);
-        portal.crdt.patch({ elements: [afterElement], groups: [] });
         passengers.forEach((passenger) => {
           const endPos = capturedEndPositions.get(passenger.id());
           if (endPos) {
@@ -300,8 +311,8 @@ export function txSetupShapeListeners(portal: TPortalTxShape1dRuntime, args: TAr
           afterEls.forEach((element) => {
             applyElement(portal, element);
           });
-          portal.crdt.patch({ elements: afterEls, groups: [] });
         });
+        portal.crdt.applyOps({ ops: dragCommitResult.redoOps });
       },
     });
   });

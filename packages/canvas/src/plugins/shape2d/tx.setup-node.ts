@@ -1,19 +1,19 @@
-import { fxSerializeSubtreeElements } from "../group/fn.serialize-subtree-elements";
 import type { TElement } from "@vibecanvas/service-automerge/types/canvas-doc.types";
 import type Konva from "konva";
+import { fxGetCanvasAncestorGroups, fxGetCanvasNodeKind, fxIsCanvasGroupNode } from "../../core/fx.canvas-node-semantics";
+import type { IHooks, TElementPointerEvent } from "../../runtime";
+import type { CanvasRegistryService } from "../../services/canvas-registry/CanvasRegistryService";
 import type { CrdtService } from "../../services/crdt/CrdtService";
-import type { EditorService } from "../../services/editor/EditorService";
 import type { HistoryService } from "../../services/history/HistoryService";
 import type { SceneService } from "../../services/scene/SceneService";
 import type { SelectionService } from "../../services/selection/SelectionService";
-import type { IHooks, TElementPointerEvent } from "../../runtime";
-import { fxGetCanvasAncestorGroups, fxGetCanvasNodeKind, fxIsCanvasGroupNode } from "../../core/fx.canvas-node-semantics";
+import { fxSerializeSubtreeElements } from "../group/fn.serialize-subtree-elements";
 
 export type TPortalSetupShape2dNode = {
   Group: typeof Konva.Group;
   Shape: typeof Konva.Shape;
+  canvasRegistry: CanvasRegistryService;
   crdt: CrdtService;
-  editor: EditorService;
   history: HistoryService;
   render: SceneService;
   selection: SelectionService;
@@ -45,13 +45,13 @@ function findSceneNodeById(portal: TPortalSetupShape2dNode, id: string) {
 }
 
 function applyElement(portal: TPortalSetupShape2dNode, element: TElement) {
-  const didUpdate = portal.editor.updateShapeFromTElement(element);
+  const didUpdate = portal.canvasRegistry.updateElement(element);
   if (!didUpdate) {
     return;
   }
 
   fxGetCanvasAncestorGroups({}, {
-    editor: portal.editor,
+    editor: portal.canvasRegistry,
     node: findSceneNodeById(portal, element.id),
   }).forEach((group) => {
     group.fire("transform");
@@ -59,15 +59,15 @@ function applyElement(portal: TPortalSetupShape2dNode, element: TElement) {
 }
 
 function serializeNodeElements(portal: TPortalSetupShape2dNode, node: Konva.Node) {
-  const kind = fxGetCanvasNodeKind({}, { editor: portal.editor, node });
+  const kind = fxGetCanvasNodeKind({}, { editor: portal.canvasRegistry, node });
   if (kind === "element") {
-    const element = portal.editor.toElement(node);
+    const element = portal.canvasRegistry.toElement(node);
     return element ? [structuredClone(element)] : [];
   }
 
-  if (kind === "group" && fxIsCanvasGroupNode({}, { editor: portal.editor, node })) {
+  if (kind === "group" && fxIsCanvasGroupNode({}, { editor: portal.canvasRegistry, node })) {
     return fxSerializeSubtreeElements({
-      editor: portal.editor,
+      canvasRegistry: portal.canvasRegistry,
       Shape: portal.Shape,
       group: node as Konva.Group,
     }).map((element) => structuredClone(element));
@@ -220,7 +220,6 @@ export function txSetupShape2dNode(
 
     const beforeElement = originalElement ? structuredClone(originalElement) : null;
     const afterElement = structuredClone(nextElement);
-    portal.crdt.patch({ elements: [afterElement], groups: [] });
 
     const selected = portal.filterSelection(portal.selection.selection);
     const passengers = selected.filter((selectedNode) => selectedNode !== args.node);
@@ -235,8 +234,16 @@ export function txSetupShape2dNode(
       }
 
       passengerAfterElements.set(passenger.id(), elements);
-      portal.crdt.patch({ elements, groups: [] });
     });
+
+    const dragBuilder = portal.crdt.build();
+    dragBuilder.patchElement(afterElement.id, afterElement);
+    passengerAfterElements.forEach((elements) => {
+      elements.forEach((element) => {
+        dragBuilder.patchElement(element.id, element);
+      });
+    });
+    const dragCommitResult = dragBuilder.commit();
 
     const capturedStartPositions = new Map(multiDragStartPositions);
     const capturedEndPositions = new Map(passengerEndPositions);
@@ -258,7 +265,6 @@ export function txSetupShape2dNode(
       label: "drag-shape2d",
       undo() {
         applyElement(portal, beforeElement);
-        portal.crdt.patch({ elements: [beforeElement], groups: [] });
         passengers.forEach((passenger) => {
           const startPos = capturedStartPositions.get(passenger.id());
           if (startPos) {
@@ -273,12 +279,11 @@ export function txSetupShape2dNode(
           originalEls.forEach((element) => {
             applyElement(portal, element);
           });
-          portal.crdt.patch({ elements: originalEls, groups: [] });
         });
+        dragCommitResult.rollback();
       },
       redo() {
         applyElement(portal, afterElement);
-        portal.crdt.patch({ elements: [afterElement], groups: [] });
         passengers.forEach((passenger) => {
           const endPos = capturedEndPositions.get(passenger.id());
           if (endPos) {
@@ -293,8 +298,8 @@ export function txSetupShape2dNode(
           afterEls.forEach((element) => {
             applyElement(portal, element);
           });
-          portal.crdt.patch({ elements: afterEls, groups: [] });
         });
+        portal.crdt.applyOps({ ops: dragCommitResult.redoOps });
       },
     });
   });

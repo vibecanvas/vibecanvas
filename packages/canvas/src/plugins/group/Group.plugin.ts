@@ -10,6 +10,7 @@ import type { CanvasRegistryService } from "../../services/canvas-registry/Canva
 import type { ContextMenuService } from "../../services/context-menu/ContextMenuService";
 import type { CrdtService } from "../../services/crdt/CrdtService";
 import type { HistoryService } from "../../services/history/HistoryService";
+import type { LoggingService } from "../../services/logging/LoggingService";
 import type { RenderOrderService } from "../../services/render-order/RenderOrderService";
 import type { SceneService } from "../../services/scene/SceneService";
 import type { SelectionService } from "../../services/selection/SelectionService";
@@ -73,6 +74,7 @@ export function createGroupPlugin(): IPlugin<{
   contextMenu: ContextMenuService;
   crdt: CrdtService;
   history: HistoryService;
+  logging: LoggingService;
   scene: SceneService;
   renderOrder: RenderOrderService;
   selection: SelectionService;
@@ -86,6 +88,7 @@ export function createGroupPlugin(): IPlugin<{
       const contextMenu = ctx.services.require("contextMenu");
       const crdt = ctx.services.require("crdt");
       const history = ctx.services.require("history");
+      const logging = ctx.services.require("logging");
       const render = ctx.services.require("scene");
       const renderOrder = ctx.services.require("renderOrder");
       const selection = ctx.services.require("selection");
@@ -112,6 +115,7 @@ export function createGroupPlugin(): IPlugin<{
           canvasRegistry,
           crdt,
           history,
+          logging,
           render,
           selection,
           hooks: ctx.hooks,
@@ -133,6 +137,7 @@ export function createGroupPlugin(): IPlugin<{
             });
           },
           createThrottledPatch: (callback) => throttle(callback, 100),
+          now: () => performance.now(),
         }, { group });
       };
 

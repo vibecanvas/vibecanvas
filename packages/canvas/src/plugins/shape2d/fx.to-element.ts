@@ -1,10 +1,10 @@
 import type Konva from "konva";
 import type { TElement, TElementStyle } from "@vibecanvas/service-automerge/types/canvas-doc.types";
+import { fxGetCanvasParentGroupId } from "../../core/fx.canvas-node-semantics";
 import { fnGetNodeZIndex } from "../../core/fn.get-node-z-index";
 import { fnCreateShape2dElement } from "../../core/fn.shape2d";
 import { fnGetWorldPosition } from "../../core/fn.world-position";
-import { fxGetCanvasParentGroupId } from "../../core/fx.canvas-node-semantics";
-import type { EditorService } from "../../services/editor/EditorService";
+import type { CanvasRegistryService } from "../../services/canvas-registry/CanvasRegistryService";
 import type { SceneService } from "../../services/scene/SceneService";
 import { fxGetShape2dNodeType } from "./fn.node";
 
@@ -14,7 +14,7 @@ export type TPortalToShape2dElement = {
   Rect: typeof Konva.Rect;
   Line: typeof Konva.Line;
   Ellipse: typeof Konva.Ellipse;
-  editor: EditorService;
+  canvasRegistry: Pick<CanvasRegistryService, "toGroup">;
   render: SceneService;
   now: () => number;
 };
@@ -110,7 +110,7 @@ export function fxToShape2dElement(portal: TPortalToShape2dElement, args: TArgsT
     height,
     createdAt,
     updatedAt,
-    parentGroupId: fxGetCanvasParentGroupId({}, { editor: portal.editor, node }),
+    parentGroupId: fxGetCanvasParentGroupId({}, { editor: portal.canvasRegistry, node }),
     zIndex: fnGetNodeZIndex({ node }),
     style: getNodeStyle(node),
   }) satisfies TElement;

@@ -1,24 +1,33 @@
 import { throttle } from "@solid-primitives/scheduled";
+import { layoutWithLines, prepareWithSegments } from "@chenglou/pretext";
 import type { IPlugin } from "@vibecanvas/runtime";
 import type { TElement } from "@vibecanvas/service-automerge/types/canvas-doc.types";
+import type { ThemeService } from "@vibecanvas/service-theme";
 import Circle from "lucide-static/icons/circle.svg?raw";
 import Diamond from "lucide-static/icons/diamond.svg?raw";
-import Konva from "konva";
-import { layoutWithLines, prepareWithSegments } from "@chenglou/pretext";
 import Square from "lucide-static/icons/square.svg?raw";
-import { fnCreateShape2dElement, fnGetShape2dDraftBounds, fnGetShape2dElementTypeFromTool, fnIsShape2dElementType, fnIsShape2dToolId, type TShape2dToolId } from "../../core/fn.shape2d";
+import Konva from "konva";
 import { fxFilterSelection } from "../../core/fx.filter-selection";
+import {
+  fnCreateShape2dElement,
+  fnGetShape2dDraftBounds,
+  fnGetShape2dElementTypeFromTool,
+  fnIsShape2dElementType,
+  fnIsShape2dToolId,
+  type TShape2dElementType,
+  type TShape2dToolId,
+} from "../../core/fn.shape2d";
 import { txSetNodeZIndex } from "../../core/tx.set-node-z-index";
+import type { IHooks } from "../../runtime";
+import type { CanvasRegistryService } from "../../services/canvas-registry/CanvasRegistryService";
 import type { ContextMenuService } from "../../services/context-menu/ContextMenuService";
 import type { CrdtService } from "../../services/crdt/CrdtService";
-import type { EditorService } from "../../services/editor/EditorService";
+import type { EditorServiceV2 } from "../../services/editor/EditorServiceV2";
 import type { HistoryService } from "../../services/history/HistoryService";
 import type { RenderOrderService } from "../../services/render-order/RenderOrderService";
 import type { SceneService } from "../../services/scene/SceneService";
 import type { SelectionService } from "../../services/selection/SelectionService";
-import type { ThemeService } from "@vibecanvas/service-theme";
 import { CanvasMode } from "../../services/selection/CONSTANTS";
-import type { IHooks } from "../../runtime";
 import { txDeleteSelection } from "../select/tx.delete-selection";
 import { txEnterEditMode } from "../text/tx.enter-edit-mode";
 import { fxGetAttachedTextNode, fxOpenAttachedTextEditMode, fxPersistAttachedTextNode, fxSyncAttachedTextNodeToShape } from "./fx.attached-text";
@@ -55,30 +64,43 @@ function safeStopDrag(node: Konva.Node) {
   }
 }
 
-function isShape2dTextHostNode(render: SceneService, node: Konva.Node | null | undefined): node is Konva.Shape {
+function isShape2dTextHostNode(node: Konva.Node | null | undefined): node is Konva.Shape {
   return Boolean(node)
     && node instanceof Konva.Shape
     && fxGetShape2dNodeType({ Rect: Konva.Rect, Line: Konva.Line, Ellipse: Konva.Ellipse, node }) !== null;
 }
 
-function getFocusedShape2dTextHost(render: SceneService, editor: EditorService, selection: SelectionService) {
-  const filtered = fxFilterSelection({ Konva }, { editor, selection: selection.selection });
+function getFocusedShape2dTextHost(canvasRegistry: CanvasRegistryService, selection: SelectionService) {
+  const filtered = fxFilterSelection({ Konva }, { editor: canvasRegistry, selection: selection.selection });
   if (filtered.length !== 1) {
     return null;
   }
 
   const candidate = filtered[0];
-  return isShape2dTextHostNode(render, candidate) ? candidate : null;
+  return isShape2dTextHostNode(candidate) ? candidate : null;
 }
 
-/**
- * Owns rectangle, diamond, and ellipse runtime behavior.
- * Uses editor tool registry for toolbar shortcuts and scene hydration hooks.
- */
+function getSelectionStyleMenuConfig() {
+  return {
+    sections: {
+      showFillPicker: true,
+      showStrokeColorPicker: true,
+      showStrokeWidthPicker: true,
+      showOpacityPicker: true,
+    },
+    values: {
+      fillColor: "red",
+      strokeWidth: 0,
+      opacity: 1,
+    },
+  };
+}
+
 export function createShape2dPlugin(): IPlugin<{
+  canvasRegistry: CanvasRegistryService;
   contextMenu: ContextMenuService;
   crdt: CrdtService;
-  editor: EditorService;
+  editor2: EditorServiceV2;
   history: HistoryService;
   scene: SceneService;
   renderOrder: RenderOrderService;
@@ -88,9 +110,10 @@ export function createShape2dPlugin(): IPlugin<{
   return {
     name: "shape2d",
     apply(ctx) {
+      const canvasRegistry = ctx.services.require("canvasRegistry");
       const contextMenu = ctx.services.require("contextMenu");
       const crdt = ctx.services.require("crdt");
-      const editor = ctx.services.require("editor");
+      const editor = ctx.services.require("editor2");
       const history = ctx.services.require("history");
       const render = ctx.services.require("scene");
       const renderOrder = ctx.services.require("renderOrder");
@@ -115,6 +138,7 @@ export function createShape2dPlugin(): IPlugin<{
         enterEditMode: (args: { freeTextName: string; node: Konva.Text; isNew: boolean }) => {
           return txEnterEditMode({
             Konva,
+            canvasRegistry,
             crdt,
             document: render.container.ownerDocument,
             editor,
@@ -136,7 +160,7 @@ export function createShape2dPlugin(): IPlugin<{
           Rect: Konva.Rect,
           Line: Konva.Line,
           Ellipse: Konva.Ellipse,
-          editor,
+          canvasRegistry,
           render,
           now,
         }, {
@@ -157,6 +181,10 @@ export function createShape2dPlugin(): IPlugin<{
         });
       };
 
+      const applyElement = (element: TElement) => {
+        canvasRegistry.updateElement(element);
+      };
+
       const syncShapeAttachedText = (shapeNode: Konva.Shape) => {
         const attachedTextPortal = createAttachedTextPortal();
         const textNode = fxGetAttachedTextNode(attachedTextPortal, { shapeNode });
@@ -172,14 +200,16 @@ export function createShape2dPlugin(): IPlugin<{
         txSetupShape2dNode({
           Group: Konva.Group,
           Shape: Konva.Shape,
+          canvasRegistry,
           crdt,
-          editor,
           history,
           render,
           selection,
           hooks: ctx.hooks,
           createCloneDrag: (sourceNode) => {
             return txCreateShape2dCloneDrag({
+              Konva,
+              canvasRegistry,
               crdt,
               history,
               render,
@@ -191,7 +221,7 @@ export function createShape2dPlugin(): IPlugin<{
               setupNode,
               toElement,
               cloneLinkedNodes: ({ sourceNode: sourceShape, clonedNode }) => {
-                if (!isShape2dTextHostNode(render, sourceShape) || !isShape2dTextHostNode(render, clonedNode)) {
+                if (!isShape2dTextHostNode(sourceShape) || !isShape2dTextHostNode(clonedNode)) {
                   return { nodes: [], elements: [] };
                 }
 
@@ -201,13 +231,13 @@ export function createShape2dPlugin(): IPlugin<{
                   return { nodes: [], elements: [] };
                 }
 
-                const sourceTextElement = editor.toElement(sourceTextNode);
+                const sourceTextElement = canvasRegistry.toElement(sourceTextNode);
                 if (!sourceTextElement || sourceTextElement.data.type !== "text") {
                   return { nodes: [], elements: [] };
                 }
 
                 const timestamp = now();
-                const clonedTextNode = editor.createShapeFromTElement({
+                const clonedTextNode = canvasRegistry.createNodeFromElement({
                   ...sourceTextElement,
                   id: createId(),
                   x: clonedNode.x(),
@@ -234,7 +264,7 @@ export function createShape2dPlugin(): IPlugin<{
                   nodes: [clonedNode, clonedTextNode],
                   position: "front",
                 });
-                const clonedTextElement = editor.toElement(clonedTextNode);
+                const clonedTextElement = canvasRegistry.toElement(clonedTextNode);
                 return clonedTextElement && clonedTextElement.data.type === "text"
                   ? { nodes: [clonedTextNode], elements: [clonedTextElement] }
                   : { nodes: [clonedTextNode], elements: [] };
@@ -244,10 +274,8 @@ export function createShape2dPlugin(): IPlugin<{
             });
           },
           filterSelection: (nodes) => {
-            return fxFilterSelection({
-              Konva,
-            }, {
-              editor,
+            return fxFilterSelection({ Konva }, {
+              editor: canvasRegistry,
               selection: nodes.filter((candidate): candidate is Konva.Group | Konva.Shape => {
                 return candidate instanceof Konva.Group || candidate instanceof Konva.Shape;
               }),
@@ -257,21 +285,25 @@ export function createShape2dPlugin(): IPlugin<{
           toElement,
           createThrottledPatch: () => {
             return throttle((element: TElement) => {
-              crdt.patch({ elements: [element], groups: [] });
+              const builder = crdt.build();
+              builder.patchElement(element.id, "x", element.x);
+              builder.patchElement(element.id, "y", element.y);
+              builder.patchElement(element.id, "updatedAt", element.updatedAt);
+              builder.commit();
             }, 100);
           },
           onNodeDragMove: (dragNode) => {
-            if (isShape2dTextHostNode(render, dragNode)) {
+            if (isShape2dTextHostNode(dragNode)) {
               syncShapeAttachedText(dragNode);
             }
           },
           onNodeDragEnd: (dragNode) => {
-            if (isShape2dTextHostNode(render, dragNode)) {
+            if (isShape2dTextHostNode(dragNode)) {
               syncShapeAttachedText(dragNode);
             }
           },
           onNodeTransform: (transformNode) => {
-            if (isShape2dTextHostNode(render, transformNode)) {
+            if (isShape2dTextHostNode(transformNode)) {
               syncShapeAttachedText(transformNode);
             }
           },
@@ -285,7 +317,6 @@ export function createShape2dPlugin(): IPlugin<{
         previewNode = null;
         previewOrigin = null;
         previewToolId = null;
-        editor.setPreviewNode(null);
       };
 
       const destroyPreview = () => {
@@ -322,7 +353,9 @@ export function createShape2dPlugin(): IPlugin<{
           return;
         }
 
-        crdt.patch({ elements: [element], groups: [] });
+        const builder = crdt.build();
+        builder.patchElement(element.id, element);
+        builder.commit();
         selection.setSelection([createdNode]);
         selection.setFocusedNode(createdNode);
         editor.setActiveTool("select");
@@ -330,8 +363,41 @@ export function createShape2dPlugin(): IPlugin<{
         render.staticForegroundLayer.batchDraw();
       };
 
+      const registerShapeElement = (args: {
+        id: TShape2dToolId;
+        type: TShape2dElementType;
+        label: string;
+        icon: string;
+        shortcuts: string[];
+        priority: number;
+      }) => {
+        editor.registerTool(ctx, {
+          id: args.id,
+          label: args.label,
+          icon: args.icon,
+          shortcuts: args.shortcuts,
+          priority: args.priority,
+          behavior: { type: "mode", mode: "draw-create" },
+        });
+
+        return canvasRegistry.registerElement({
+          id: args.id,
+          matchesElement: (element) => element.data.type === args.type,
+          matchesNode: (node) => fxGetShape2dNodeType({ Rect: Konva.Rect, Line: Konva.Line, Ellipse: Konva.Ellipse, node }) === args.type,
+          toElement: (node) => toElement(node),
+          createNode: (element) => {
+            if (element.data.type !== args.type) {
+              return null;
+            }
+
+            return createNode(element);
+          },
+          getSelectionStyleMenu: () => getSelectionStyleMenuConfig(),
+        });
+      };
+
       renderOrder.registerBundleResolver("shape2d", (node) => {
-        if (!isShape2dTextHostNode(render, node)) {
+        if (!isShape2dTextHostNode(node)) {
           return null;
         }
 
@@ -359,89 +425,148 @@ export function createShape2dPlugin(): IPlugin<{
         }];
       });
 
-      editor.registerTool({
+      const unregisterRectangle = registerShapeElement({
         id: "rectangle",
+        type: "rect",
         label: "Rectangle",
         icon: Square,
         shortcuts: ["2", "r"],
         priority: 20,
-        behavior: { type: "mode", mode: "draw-create" },
       });
-      editor.registerTool({
+      const unregisterDiamond = registerShapeElement({
         id: "diamond",
+        type: "diamond",
         label: "Diamond",
         icon: Diamond,
         shortcuts: ["3", "d"],
         priority: 30,
-        behavior: { type: "mode", mode: "draw-create" },
       });
-      editor.registerTool({
+      const unregisterEllipse = registerShapeElement({
         id: "ellipse",
+        type: "ellipse",
         label: "Ellipse",
         icon: Circle,
         shortcuts: ["4", "o"],
         priority: 40,
-        behavior: { type: "mode", mode: "draw-create" },
       });
+      const unregisterShapeRuntime = canvasRegistry.registerElement({
+        id: "shape2d-runtime",
+        priority: 100,
+        matchesElement: (element) => fnIsShape2dElementType(element.data.type),
+        matchesNode: (node) => isShape2dTextHostNode(node),
+        attachListeners: (node) => {
+          if (!isShape2dTextHostNode(node)) {
+            return false;
+          }
 
-      editor.registerToElement("shape2d", (node) => {
-        return toElement(node);
-      });
+          setupNode(node);
+          return true;
+        },
+        updateElement: (element) => {
+          if (!fnIsShape2dElementType(element.data.type)) {
+            return false;
+          }
 
-      editor.registerCreateShapeFromTElement("shape2d", (element) => {
-        if (!fnIsShape2dElementType(element.data.type)) {
-          return null;
-        }
+          const node = render.staticForegroundLayer.findOne((candidate: Konva.Node) => {
+            return candidate instanceof Konva.Shape && candidate.id() === element.id;
+          });
+          if (!(node instanceof Konva.Shape)) {
+            return false;
+          }
 
-        const node = createNode(element);
-        if (!node) {
-          return null;
-        }
+          const didUpdate = txUpdateShape2dNodeFromElement({
+            Rect: Konva.Rect,
+            Line: Konva.Line,
+            Ellipse: Konva.Ellipse,
+            render,
+            theme,
+            setNodeZIndex,
+          }, {
+            node,
+            element,
+          });
+          if (!didUpdate) {
+            return false;
+          }
 
-        return setupNode(node);
-      });
+          if (isShape2dTextHostNode(node)) {
+            syncShapeAttachedText(node);
+          }
 
-      editor.registerSetupExistingShape("shape2d", (node) => {
-        if (!fxGetShape2dNodeType({ Rect: Konva.Rect, Line: Konva.Line, Ellipse: Konva.Ellipse, node })) {
-          return false;
-        }
+          return true;
+        },
+        createDragClone: ({ node }) => {
+          if (!isShape2dTextHostNode(node)) {
+            return false;
+          }
 
-        setupNode(node as Konva.Shape);
-        return true;
-      });
+          txCreateShape2dCloneDrag({
+            Konva,
+            canvasRegistry,
+            crdt,
+            history,
+            render,
+            renderOrder,
+            selection,
+            createId,
+            now,
+            createNode,
+            setupNode,
+            toElement,
+            cloneLinkedNodes: ({ sourceNode: sourceShape, clonedNode }) => {
+              if (!isShape2dTextHostNode(sourceShape) || !isShape2dTextHostNode(clonedNode)) {
+                return { nodes: [], elements: [] };
+              }
 
-      editor.registerUpdateShapeFromTElement("shape2d", (element) => {
-        if (!fnIsShape2dElementType(element.data.type)) {
-          return false;
-        }
+              const attachedTextPortal = createAttachedTextPortal();
+              const sourceTextNode = fxGetAttachedTextNode(attachedTextPortal, { shapeNode: sourceShape });
+              if (!sourceTextNode) {
+                return { nodes: [], elements: [] };
+              }
 
-        const node = render.staticForegroundLayer.findOne((candidate: Konva.Node) => {
-          return candidate instanceof Konva.Shape && candidate.id() === element.id;
-        });
-        if (!(node instanceof Konva.Shape)) {
-          return false;
-        }
+              const sourceTextElement = canvasRegistry.toElement(sourceTextNode);
+              if (!sourceTextElement || sourceTextElement.data.type !== "text") {
+                return { nodes: [], elements: [] };
+              }
 
-        const didUpdate = txUpdateShape2dNodeFromElement({
-          Rect: Konva.Rect,
-          Line: Konva.Line,
-          Ellipse: Konva.Ellipse,
-          render,
-          theme,
-          setNodeZIndex,
-        }, {
-          node,
-          element,
-        });
-        if (!didUpdate) {
-          return false;
-        }
+              const timestamp = now();
+              const clonedTextNode = canvasRegistry.createNodeFromElement({
+                ...sourceTextElement,
+                id: createId(),
+                x: clonedNode.x(),
+                y: clonedNode.y(),
+                rotation: clonedNode.rotation(),
+                parentGroupId: null,
+                createdAt: timestamp,
+                updatedAt: timestamp,
+                zIndex: "",
+                data: {
+                  ...sourceTextElement.data,
+                  containerId: clonedNode.id(),
+                  originalText: sourceTextElement.data.text,
+                },
+              });
+              if (!(clonedTextNode instanceof Konva.Text)) {
+                return { nodes: [], elements: [] };
+              }
 
-        if (isShape2dTextHostNode(render, node)) {
-          syncShapeAttachedText(node);
-        }
-
-        return true;
+              render.staticForegroundLayer.add(clonedTextNode);
+              fxSyncAttachedTextNodeToShape(attachedTextPortal, { shapeNode: clonedNode, textNode: clonedTextNode });
+              renderOrder.assignOrderOnInsert({
+                parent: render.staticForegroundLayer,
+                nodes: [clonedNode, clonedTextNode],
+                position: "front",
+              });
+              const clonedTextElement = canvasRegistry.toElement(clonedTextNode);
+              return clonedTextElement && clonedTextElement.data.type === "text"
+                ? { nodes: [clonedTextNode], elements: [clonedTextElement] }
+                : { nodes: [clonedTextNode], elements: [] };
+            },
+          }, {
+            node,
+          });
+          return true;
+        },
       });
 
       ctx.hooks.toolSelect.tap((toolId) => {
@@ -485,6 +610,7 @@ export function createShape2dPlugin(): IPlugin<{
           updatedAt: timestamp,
           parentGroupId: null,
           zIndex: "",
+          style: editor.getToolSelectionStyleValues(editor.activeToolId),
         });
         const node = createNode(element);
         if (!node) {
@@ -497,7 +623,6 @@ export function createShape2dPlugin(): IPlugin<{
         previewOrigin = { x: pointer.x, y: pointer.y };
         previewToolId = editor.activeToolId;
         render.dynamicLayer.add(node);
-        editor.setPreviewNode(node);
         render.dynamicLayer.batchDraw();
       });
 
@@ -566,7 +691,7 @@ export function createShape2dPlugin(): IPlugin<{
       });
 
       ctx.hooks.elementPointerDoubleClick.tap((event) => {
-        if (!isShape2dTextHostNode(render, event.currentTarget)) {
+        if (!isShape2dTextHostNode(event.currentTarget)) {
           return false;
         }
 
@@ -614,7 +739,7 @@ export function createShape2dPlugin(): IPlugin<{
           return;
         }
 
-        const shapeNode = getFocusedShape2dTextHost(render, editor, selection);
+        const shapeNode = getFocusedShape2dTextHost(canvasRegistry, selection);
         if (!shapeNode) {
           return;
         }
@@ -632,7 +757,7 @@ export function createShape2dPlugin(): IPlugin<{
             return;
           }
 
-          const element = editor.toElement(candidate);
+          const element = canvasRegistry.toElement(candidate);
           if (!element || !fnIsShape2dElementType(element.data.type)) {
             return;
           }
@@ -656,13 +781,13 @@ export function createShape2dPlugin(): IPlugin<{
         destroyPreview();
         contextMenu.unregisterProvider("shape2d");
         renderOrder.unregisterBundleResolver("shape2d");
+        unregisterShapeRuntime();
+        unregisterRectangle();
+        unregisterDiamond();
+        unregisterEllipse();
         editor.unregisterTool("rectangle");
         editor.unregisterTool("diamond");
         editor.unregisterTool("ellipse");
-        editor.unregisterToElement("shape2d");
-        editor.unregisterCreateShapeFromTElement("shape2d");
-        editor.unregisterSetupExistingShape("shape2d");
-        editor.unregisterUpdateShapeFromTElement("shape2d");
       });
     },
   };
