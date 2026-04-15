@@ -120,7 +120,7 @@ function createArrowElement(args?: {
 describe("shape1d plugin", () => {
   test("draw-create commits a line to scene and CRDT then returns to select", async () => {
     const harness = await createNewCanvasHarness();
-    const editor = harness.runtime.services.require("editor2");
+    const editor = harness.runtime.services.require("editor");
     const selection = harness.runtime.services.require("selection");
 
     editor.setActiveTool("line");
@@ -152,7 +152,7 @@ describe("shape1d plugin", () => {
 
   test("remembered line tool style is used for newly created lines", async () => {
     const harness = await createNewCanvasHarness();
-    const editor = harness.runtime.services.require("editor2");
+    const editor = harness.runtime.services.require("editor");
 
     editor.setToolSelectionStyleValue("line", "strokeColor", "@blue/700");
     editor.setToolSelectionStyleValue("line", "strokeWidth", 2);
@@ -185,7 +185,7 @@ describe("shape1d plugin", () => {
 
   test("remembered arrow tool style is used for newly created arrows", async () => {
     const harness = await createNewCanvasHarness();
-    const editor = harness.runtime.services.require("editor2");
+    const editor = harness.runtime.services.require("editor");
 
     editor.setToolSelectionStyleValue("arrow", "strokeColor", "@red/600");
     editor.setToolSelectionStyleValue("arrow", "strokeWidth", 1);

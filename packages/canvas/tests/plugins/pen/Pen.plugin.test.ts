@@ -168,7 +168,7 @@ function simulateTransformerRotate(transformer: Konva.Transformer, node: Konva.P
 describe("new Pen plugin", () => {
   test("Escape cancels an in-progress pen preview", async () => {
     const harness = await createNewCanvasHarness();
-    const editor = harness.runtime.services.require("editor2");
+    const editor = harness.runtime.services.require("editor");
     const selection = harness.runtime.services.require("selection");
 
     editor.setActiveTool("pen");
@@ -198,7 +198,7 @@ describe("new Pen plugin", () => {
 
   test("draw-create commits a pen path to scene and CRDT and stays in pen mode", async () => {
     const harness = await createNewCanvasHarness();
-    const editor = harness.runtime.services.require("editor2");
+    const editor = harness.runtime.services.require("editor");
     const selection = harness.runtime.services.require("selection");
 
     editor.setActiveTool("pen");
@@ -241,7 +241,7 @@ describe("new Pen plugin", () => {
 
   test("remembered pen tool style is used for the next stroke", async () => {
     const harness = await createNewCanvasHarness();
-    const editor = harness.runtime.services.require("editor2");
+    const editor = harness.runtime.services.require("editor");
 
     editor.setToolSelectionStyleValue("pen", "strokeColor", "@blue/700");
     editor.setToolSelectionStyleValue("pen", "strokeWidth", 12);
@@ -587,7 +587,7 @@ describe("new Pen plugin", () => {
 
     const harness = await createNewCanvasHarness({ docHandle });
     const theme = harness.runtime.services.require("theme");
-    const editor = harness.runtime.services.require("editor2");
+    const editor = harness.runtime.services.require("editor");
     const node = harness.staticForegroundLayer.findOne<Konva.Path>(`#${element.id}`)!;
 
     expect(node.fill()).toBe("#22c55e");

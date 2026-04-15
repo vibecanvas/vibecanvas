@@ -65,7 +65,7 @@ function clickElement(element: HTMLElement) {
 describe("SelectionStyleMenu plugin", () => {
   test("stores remembered pen tool color from the menu when nothing is selected", async () => {
     const harness = await createNewCanvasHarness();
-    const editor = harness.runtime.services.require("editor2");
+    const editor = harness.runtime.services.require("editor");
     const root = getStageDom(harness);
 
     editor.setActiveTool("pen");
@@ -89,7 +89,7 @@ describe("SelectionStyleMenu plugin", () => {
       },
     });
     const harness = await createNewCanvasHarness({ docHandle });
-    const editor = harness.runtime.services.require("editor2");
+    const editor = harness.runtime.services.require("editor");
     const selection = harness.runtime.services.require("selection");
     const root = getStageDom(harness);
     const selectedNode = harness.staticForegroundLayer.findOne<Konva.Path>(`#${element.id}`);
@@ -122,7 +122,7 @@ describe("SelectionStyleMenu plugin", () => {
 
   test("renders expanded color shades in a side panel", async () => {
     const harness = await createNewCanvasHarness();
-    const editor = harness.runtime.services.require("editor2");
+    const editor = harness.runtime.services.require("editor");
     const root = getStageDom(harness);
 
     editor.setActiveTool("pen");

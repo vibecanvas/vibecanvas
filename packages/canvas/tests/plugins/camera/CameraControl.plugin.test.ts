@@ -5,7 +5,7 @@ import { createNewCanvasHarness, flushCanvasEffects } from "../../new-test-setup
 
 async function createHandHarness() {
   const harness = await createNewCanvasHarness();
-  const editor = harness.runtime.services.require("editor2");
+  const editor = harness.runtime.services.require("editor");
   const selection = harness.runtime.services.require("selection");
   const camera = harness.runtime.services.require("camera");
 

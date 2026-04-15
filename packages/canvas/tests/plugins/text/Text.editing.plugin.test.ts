@@ -39,7 +39,7 @@ function createTextElement(overrides?: Partial<TElement>): TElement {
 }
 
 function addHydratedTextNode(harness: Awaited<ReturnType<typeof createNewCanvasHarness>>, element?: TElement) {
-  const editor = harness.runtime.services.require("editor2");
+  const editor = harness.runtime.services.require("editor");
   const node = editor.createShapeFromTElement(element ?? createTextElement());
   if (!(node instanceof Konva.Text)) {
     throw new Error("Expected text node");

@@ -51,7 +51,7 @@ describe("Image plugin", () => {
       },
     });
 
-    const editor = harness.runtime.services.require("editor2");
+    const editor = harness.runtime.services.require("editor");
     const canvasRegistry = harness.runtime.services.require("canvasRegistry");
 
     expect(editor.getTool("image")?.id).toBe("image");

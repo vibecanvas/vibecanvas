@@ -42,7 +42,7 @@ function createTextElement(overrides?: Partial<TElement>): TElement {
 }
 
 function addHydratedTextNode(harness: Awaited<ReturnType<typeof createNewCanvasHarness>>, element?: TElement) {
-  const editor = harness.runtime.services.require("editor2");
+  const editor = harness.runtime.services.require("editor");
   const node = editor.createShapeFromTElement(element ?? createTextElement());
   if (!(node instanceof Konva.Text)) {
     throw new Error("Expected text node");
@@ -73,7 +73,7 @@ function simulateTransformerRotate(transformer: Konva.Transformer, node: Konva.T
 describe("new Text plugin core", () => {
   test("createShapeFromTElement hydrates a Konva.Text and editor.toElement serializes it back", async () => {
     const harness = await createNewCanvasHarness();
-    const editor = harness.runtime.services.require("editor2");
+    const editor = harness.runtime.services.require("editor");
     const render = harness.runtime.services.require("scene");
 
     const element = createTextElement({
@@ -102,7 +102,7 @@ describe("new Text plugin core", () => {
   test("token text color repaints on theme change and round-trips stored token", async () => {
     const harness = await createNewCanvasHarness();
     const theme = harness.runtime.services.require("theme");
-    const editor = harness.runtime.services.require("editor2");
+    const editor = harness.runtime.services.require("editor");
     const node = addHydratedTextNode(harness, createTextElement({
       id: "text-token-1",
       style: {
@@ -302,7 +302,7 @@ describe("new Text plugin core", () => {
     node.scaleX(1.5);
     node.scaleY(1.2);
 
-    const editor = harness.runtime.services.require("editor2");
+    const editor = harness.runtime.services.require("editor");
     const element = fxToElement({ editor }, { node, createdAt: 1, updatedAt: 2 });
     const updated = txUpdateTextNodeFromElement({ Konva, scene, theme }, { element, freeTextName: "free-text" });
 
