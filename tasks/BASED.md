@@ -175,6 +175,7 @@ Use the leaf files for execution history and local context.
 - [ ]: [S33] - canvas architecture: rename SceneService -> SceneService and split EditorService so editor keeps only edit/transform state while scene registries/mapping move to SceneService
 - [x]: [S34] - test canvas/core if all fn fx file function are correct
 - [x]: [S35](s/S35.md) - canvas/core: align fn fx tx file boundaries, injected portals, and callers
+- [ ]: [S36](s/S36.md) - transform ownership: plugin only renders/dispatches; element plugins own drag + crdt
 
 ## E xplorations
 - [ ]: [E1](e/E1.md) - Tauri Research
@@ -192,6 +193,7 @@ Use the leaf files for execution history and local context.
 - [ ]: [E17](e/E17.md) - automerge authority: optimistic local writes with server validation/reject path
 - [ ]: [E18] - replace iframe with bun.webview??
 - [ ]: [E19](e/E19.md) - canvas performance longterm: worker automerge + incremental notifications
+- [ ]: [E20](e/E20.md) - improvement crdt updates
 
 ## D irections
 - [x]: [D1] - AI can edit the canvas directly
