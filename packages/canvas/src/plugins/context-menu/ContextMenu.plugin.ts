@@ -121,35 +121,35 @@ function mountContextMenu(args: {
   args.scene.stage.container().appendChild(mountElement);
 
   const [version, setVersion] = createSignal(0);
-  const mounted = createMemo(() => {
-    version();
-    return args.contextMenu.open;
-  });
-  const x = createMemo(() => {
-    version();
-    return args.contextMenu.x;
-  });
-  const y = createMemo(() => {
-    version();
-    return args.contextMenu.y;
-  });
-  const items = createMemo(() => {
-    version();
-    return args.contextMenu.actions;
-  });
-  const openRequestId = createMemo(() => {
-    version();
-    return args.contextMenu.requestId;
-  });
-
   const syncVersion = () => {
     setVersion((value) => value + 1);
   };
 
-  args.contextMenu.hooks.stateChange.tap(syncVersion);
-  args.contextMenu.hooks.providersChange.tap(syncVersion);
+  const offStateChange = args.contextMenu.hooks.stateChange.tap(syncVersion);
+  const offProvidersChange = args.contextMenu.hooks.providersChange.tap(syncVersion);
 
   const disposeRender = renderSolid(() => {
+    const mounted = createMemo(() => {
+      version();
+      return args.contextMenu.open;
+    });
+    const x = createMemo(() => {
+      version();
+      return args.contextMenu.x;
+    });
+    const y = createMemo(() => {
+      version();
+      return args.contextMenu.y;
+    });
+    const items = createMemo(() => {
+      version();
+      return args.contextMenu.actions;
+    });
+    const openRequestId = createMemo(() => {
+      version();
+      return args.contextMenu.requestId;
+    });
+
     return createComponent(CanvasContextMenu, {
       mounted,
       x,
@@ -169,6 +169,8 @@ function mountContextMenu(args: {
   return {
     mountElement,
     dispose() {
+      offStateChange();
+      offProvidersChange();
       disposeRender();
       mountElement.remove();
     },
