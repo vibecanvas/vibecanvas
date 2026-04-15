@@ -1,11 +1,4 @@
-import { dirname, join, resolve } from 'path';
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'fs';
 import type { Database } from 'bun:sqlite';
-import { migrate } from 'drizzle-orm/bun-sqlite/migrator';
-import { getEmbeddedMigrationPath, listEmbeddedMigrationFiles } from '../embedded-migrations';
-
-const MIGRATIONS_TABLE = '__drizzle_migrations';
-const legacyBootstrapTables = ['automerge_repo_data', 'canvas', 'files'] as const;
 
 type TJournalEntry = {
   idx: number;
@@ -14,15 +7,43 @@ type TJournalEntry = {
   breakpoints: boolean;
 };
 
-type TArgs = {
-  dataDir: string;
-  cacheDir: string;
-  db: Parameters<typeof migrate>[0];
-  sqlite?: Database;
-  silent?: boolean;
+type TEmbeddedMigrationsModule = {
+  getEmbeddedMigrationPath: (relativePath: string) => string | null;
+  listEmbeddedMigrationFiles: () => string[];
 };
 
-type TBuildCandidateArgs = {
+type TPortalMigrations = {
+  env: {
+    VIBECANVAS_MIGRATIONS_DIR?: string;
+    VIBECANVAS_COMPILED?: string;
+  };
+  paths: {
+    dirname: typeof import('path').dirname;
+    join: typeof import('path').join;
+    resolve: typeof import('path').resolve;
+    importMetaDir: string;
+    execPath: string;
+  };
+  fs: {
+    existsSync: typeof import('fs').existsSync;
+    mkdirSync: typeof import('fs').mkdirSync;
+    readFileSync: typeof import('fs').readFileSync;
+    writeFileSync: typeof import('fs').writeFileSync;
+  };
+  loadEmbeddedMigrationsModule: () => Promise<TEmbeddedMigrationsModule | null>;
+};
+
+type TArgsHasMigrationJournal = {
+  pathname: string;
+};
+
+type TArgsExtractEmbeddedMigrations = {
+  cacheDir: string;
+};
+
+type TArgsBuildMigrationsFolderCandidates = {
+  dataDir: string;
+  cacheDir: string;
   envOverride?: string;
   isCompiled?: boolean;
   embeddedFolder?: string | null;
@@ -30,59 +51,87 @@ type TBuildCandidateArgs = {
   sourceDir?: string;
 };
 
-function hasMigrationJournal(pathname: string): boolean {
-  return existsSync(join(pathname, 'meta', '_journal.json'));
-}
+type TArgsResolveMigrationsFolder = {
+  dataDir: string;
+  cacheDir: string;
+};
 
-function hasEmbeddedMigrationAssets(): boolean {
-  const files = listEmbeddedMigrationFiles();
+type TArgsReadMigrationJournalEntries = {
+  migrationsFolder: string;
+};
+
+type TArgsShouldBootstrapLegacyMigrationState = {
+  sqlite: {
+    query: (sql: string) => { get(...args: unknown[]): unknown };
+  };
+};
+
+const MIGRATIONS_TABLE = '__drizzle_migrations';
+const legacyBootstrapTables = ['automerge_repo_data', 'canvas', 'files'] as const;
+
+type TArgsHasEmbeddedMigrationAssets = {
+  embeddedModule: TEmbeddedMigrationsModule | null;
+};
+
+function hasEmbeddedMigrationAssets(_portal: TPortalMigrations, args: TArgsHasEmbeddedMigrationAssets): args is { embeddedModule: TEmbeddedMigrationsModule } {
+  if (args.embeddedModule === null) {
+    return false;
+  }
+
+  const files = args.embeddedModule.listEmbeddedMigrationFiles();
   return files.length > 0 && files.includes('meta/_journal.json');
 }
 
-function fxExtractEmbeddedMigrations(cacheDir: string): string | null {
-  if (!hasEmbeddedMigrationAssets()) {
+export function fxHasMigrationJournal(portal: TPortalMigrations, args: TArgsHasMigrationJournal): boolean {
+  return portal.fs.existsSync(portal.paths.join(args.pathname, 'meta', '_journal.json'));
+}
+
+export async function fxExtractEmbeddedMigrations(portal: TPortalMigrations, args: TArgsExtractEmbeddedMigrations): Promise<string | null> {
+  const embeddedModule = await portal.loadEmbeddedMigrationsModule();
+
+  if (!hasEmbeddedMigrationAssets(portal, { embeddedModule })) {
     return null;
   }
 
-  const outputDir = join(cacheDir, 'database-migrations-embedded');
-  const migrationFiles = listEmbeddedMigrationFiles();
+  const outputDir = portal.paths.join(args.cacheDir, 'database-migrations-embedded');
+  const migrationFiles = embeddedModule.listEmbeddedMigrationFiles();
 
   for (const relativePath of migrationFiles) {
-    const sourcePath = getEmbeddedMigrationPath(relativePath);
+    const sourcePath = embeddedModule.getEmbeddedMigrationPath(relativePath);
     if (sourcePath === null) {
       continue;
     }
 
-    const destinationPath = join(outputDir, relativePath);
-    mkdirSync(dirname(destinationPath), { recursive: true });
-    writeFileSync(destinationPath, readFileSync(sourcePath));
+    const destinationPath = portal.paths.join(outputDir, relativePath);
+    portal.fs.mkdirSync(portal.paths.dirname(destinationPath), { recursive: true });
+    portal.fs.writeFileSync(destinationPath, portal.fs.readFileSync(sourcePath));
   }
 
-  return hasMigrationJournal(outputDir) ? outputDir : null;
+  return fxHasMigrationJournal(portal, { pathname: outputDir }) ? outputDir : null;
 }
 
-function buildMigrationsFolderCandidates(dataDir: string, cacheDir: string, args: TBuildCandidateArgs = {}): string[] {
-  const envOverride = args.envOverride ?? process.env.VIBECANVAS_MIGRATIONS_DIR;
-  const isCompiled = args.isCompiled ?? process.env.VIBECANVAS_COMPILED === 'true';
-  const embeddedFolder = args.embeddedFolder ?? fxExtractEmbeddedMigrations(cacheDir);
-  const execPath = args.execPath ?? process.execPath;
-  const sourceDir = args.sourceDir ?? resolve(import.meta.dir, '..', '..', 'database-migrations');
+export async function fxBuildMigrationsFolderCandidates(portal: TPortalMigrations, args: TArgsBuildMigrationsFolderCandidates): Promise<string[]> {
+  const envOverride = args.envOverride ?? portal.env.VIBECANVAS_MIGRATIONS_DIR;
+  const isCompiled = args.isCompiled ?? portal.env.VIBECANVAS_COMPILED === 'true';
+  const embeddedFolder = args.embeddedFolder ?? await fxExtractEmbeddedMigrations(portal, { cacheDir: args.cacheDir });
+  const execPath = args.execPath ?? portal.paths.execPath;
+  const sourceDir = args.sourceDir ?? portal.paths.resolve(portal.paths.importMetaDir, '..', '..', 'database-migrations');
   const sourceTreeFolder = isCompiled ? null : sourceDir;
 
   return [
     envOverride,
     sourceTreeFolder,
-    join(dataDir, 'database-migrations'),
-    resolve(dirname(execPath), '..', 'database-migrations'),
+    portal.paths.join(args.dataDir, 'database-migrations'),
+    portal.paths.resolve(portal.paths.dirname(execPath), '..', 'database-migrations'),
     embeddedFolder,
-  ].filter(Boolean) as string[];
+  ].filter((value): value is string => Boolean(value));
 }
 
-function resolveMigrationsFolder(dataDir: string, cacheDir: string): string {
-  const candidates = buildMigrationsFolderCandidates(dataDir, cacheDir);
+export async function fxResolveMigrationsFolder(portal: TPortalMigrations, args: TArgsResolveMigrationsFolder): Promise<string> {
+  const candidates = await fxBuildMigrationsFolderCandidates(portal, args);
 
   for (const candidate of candidates) {
-    if (hasMigrationJournal(candidate)) {
+    if (fxHasMigrationJournal(portal, { pathname: candidate })) {
       return candidate;
     }
   }
@@ -95,67 +144,20 @@ function tableExists(sqlite: { query: (sql: string) => { get(...args: unknown[])
   return row !== null && row !== undefined;
 }
 
-function readMigrationJournalEntries(migrationsFolder: string): TJournalEntry[] {
-  const journalPath = join(migrationsFolder, 'meta', '_journal.json');
-  const journal = JSON.parse(readFileSync(journalPath, 'utf8')) as { entries?: TJournalEntry[] };
+export function fxReadMigrationJournalEntries(portal: TPortalMigrations, args: TArgsReadMigrationJournalEntries): TJournalEntry[] {
+  const journalPath = portal.paths.join(args.migrationsFolder, 'meta', '_journal.json');
+  const journal = JSON.parse(portal.fs.readFileSync(journalPath, 'utf8')) as { entries?: TJournalEntry[] };
   return journal.entries ?? [];
 }
 
-function shouldBootstrapLegacyMigrationState(sqlite: { query: (sql: string) => { get(...args: unknown[]): unknown } }): boolean {
-  if (tableExists(sqlite, MIGRATIONS_TABLE)) {
+export function fxShouldBootstrapLegacyMigrationState(portal: TPortalMigrations, args: TArgsShouldBootstrapLegacyMigrationState): boolean {
+  void portal;
+
+  if (tableExists(args.sqlite, MIGRATIONS_TABLE)) {
     return false;
   }
 
-  return legacyBootstrapTables.every((tableName) => tableExists(sqlite, tableName));
+  return legacyBootstrapTables.every((tableName) => tableExists(args.sqlite, tableName));
 }
 
-function bootstrapLegacyMigrationState(
-  sqlite: {
-    run: (sql: string, ...args: unknown[]) => unknown;
-    transaction: (fn: () => void) => () => void;
-  },
-  migrationsFolder: string,
-): void {
-  const entries = readMigrationJournalEntries(migrationsFolder);
-  if (entries.length === 0) return;
-
-  sqlite.transaction(() => {
-    sqlite.run(`
-      CREATE TABLE IF NOT EXISTS ${MIGRATIONS_TABLE} (
-        id integer PRIMARY KEY AUTOINCREMENT NOT NULL,
-        hash text NOT NULL,
-        created_at numeric
-      )
-    `);
-
-    for (const entry of entries) {
-      sqlite.run(
-        `INSERT INTO ${MIGRATIONS_TABLE} (hash, created_at) VALUES (?, ?)`,
-        entry.tag,
-        entry.when,
-      );
-    }
-  })();
-}
-
-function fxRunDatabaseMigrations(args: TArgs): void {
-  const migrationsFolder = resolveMigrationsFolder(args.dataDir, args.cacheDir);
-  const sqlite = (args.sqlite ?? (args.db as { $client?: unknown }).$client) as {
-    run: (sql: string, ...args: unknown[]) => unknown;
-    query: (sql: string) => { get(...args: unknown[]): unknown };
-    transaction: (fn: () => void) => () => void;
-  } | undefined;
-
-  if (sqlite && shouldBootstrapLegacyMigrationState(sqlite)) {
-    if (!args.silent) console.log('[DB] Legacy schema detected without drizzle journal; bootstrapping migration state');
-    bootstrapLegacyMigrationState(sqlite, migrationsFolder);
-  }
-
-  if (!args.silent) console.log(`[DB] Applying migrations from ${migrationsFolder}`);
-
-  migrate(args.db, { migrationsFolder });
-
-  if (!args.silent) console.log('[DB] Migrations complete');
-}
-
-export { buildMigrationsFolderCandidates, fxRunDatabaseMigrations, readMigrationJournalEntries, resolveMigrationsFolder, shouldBootstrapLegacyMigrationState };
+export type { TJournalEntry, TPortalMigrations, TArgsBuildMigrationsFolderCandidates, TArgsResolveMigrationsFolder };

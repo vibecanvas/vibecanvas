@@ -1,8 +1,11 @@
 import { Database } from 'bun:sqlite';
 import { drizzle } from 'drizzle-orm/bun-sqlite';
 import type { BunSQLiteDatabase } from 'drizzle-orm/bun-sqlite';
+import { migrate } from 'drizzle-orm/bun-sqlite/migrator';
 import { eq } from 'drizzle-orm';
-import { fxRunDatabaseMigrations } from '../core/fx.migrations';
+import { dirname, join, resolve } from 'path';
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'fs';
+import { txRunDatabaseMigrations } from '../core/tx.migrations';
 import type { IDbConfig } from '../interface';
 import type {
   IDbService,
@@ -43,7 +46,34 @@ export class DbServiceBunSqlite implements IDbService {
 
     this.drizzle = drizzle({ client: this.sqlite, schema });
 
-    fxRunDatabaseMigrations({
+    void txRunDatabaseMigrations({
+      env: {
+        VIBECANVAS_MIGRATIONS_DIR: process.env.VIBECANVAS_MIGRATIONS_DIR,
+        VIBECANVAS_COMPILED: process.env.VIBECANVAS_COMPILED,
+      },
+      paths: {
+        dirname,
+        join,
+        resolve,
+        importMetaDir: import.meta.dir,
+        execPath: process.execPath,
+      },
+      fs: {
+        existsSync,
+        mkdirSync,
+        readFileSync,
+        writeFileSync,
+      },
+      loadEmbeddedMigrationsModule: async () => {
+        try {
+          return await import('../embedded-migrations');
+        } catch {
+          return null;
+        }
+      },
+      migrate,
+      log: (message) => console.log(message),
+    }, {
       dataDir: config.dataDir,
       cacheDir: config.cacheDir,
       db: this.drizzle,
