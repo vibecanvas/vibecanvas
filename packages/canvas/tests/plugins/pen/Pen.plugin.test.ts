@@ -239,6 +239,42 @@ describe("new Pen plugin", () => {
     await harness.destroy();
   });
 
+  test("remembered pen tool style is used for the next stroke", async () => {
+    const harness = await createNewCanvasHarness();
+    const editor = harness.runtime.services.require("editor2");
+
+    editor.setToolSelectionStyleValue("pen", "strokeColor", "@blue/700");
+    editor.setToolSelectionStyleValue("pen", "strokeWidth", 12);
+    editor.setToolSelectionStyleValue("pen", "opacity", 0.5);
+    editor.setActiveTool("pen");
+    await flushCanvasEffects();
+
+    withDynamicPointer(harness, { x: 120, y: 80 }, () => {
+      harness.runtime.hooks.pointerDown.call(createHookPointerEvent("pointerdown", 0.4));
+    });
+    withDynamicPointer(harness, { x: 170, y: 115 }, () => {
+      harness.runtime.hooks.pointerMove.call(createHookPointerEvent("pointermove", 0.6) as Konva.KonvaEventObject<MouseEvent>);
+    });
+    withDynamicPointer(harness, { x: 210, y: 145 }, () => {
+      harness.runtime.hooks.pointerMove.call(createHookPointerEvent("pointermove", 0.5) as Konva.KonvaEventObject<MouseEvent>);
+    });
+
+    harness.runtime.hooks.pointerUp.call(createHookPointerEvent("pointerup", 0.5));
+    await flushCanvasEffects();
+
+    const docElements = Object.values(harness.docHandle.doc().elements);
+    expect(docElements).toHaveLength(1);
+    if (docElements[0]?.data.type !== "pen") {
+      throw new Error("Expected created document element to be a pen");
+    }
+
+    expect(docElements[0].style.backgroundColor).toBe("@blue/700");
+    expect(docElements[0].style.strokeWidth).toBe(12);
+    expect(docElements[0].style.opacity).toBe(0.5);
+
+    await harness.destroy();
+  });
+
   test("SceneHydratorPlugin mounts persisted pen elements", async () => {
     const element = createPenElement();
     const docHandle = createMockDocHandle({
@@ -560,7 +596,7 @@ describe("new Pen plugin", () => {
     theme.setTheme(THEME_ID_DARK);
     await flushCanvasEffects();
 
-    expect(node.fill()).toBe("#22c55e");
+    expect(node.fill()).toBe("#16a34a");
     expect(editor.toElement(node)?.style.backgroundColor).toBe("@green/500");
 
     await harness.destroy();

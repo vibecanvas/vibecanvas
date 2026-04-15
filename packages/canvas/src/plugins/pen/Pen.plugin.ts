@@ -16,12 +16,13 @@ import type { SelectionService } from "../../services/selection/SelectionService
 import { fxPenPathToElement } from "./fx.path";
 import { fxCreatePenDataFromStrokePoints } from "./fn.math";
 import { EditorServiceV2, type TEditorToolCanvasPoint } from "src/services/editor/EditorServiceV2";
-import { DEFAULT_FILL, DEFAULT_OPACITY, DEFAULT_STROKE_WIDTH } from "./CONSTANTS";
+import { DEFAULT_OPACITY, DEFAULT_STROKE_WIDTH } from "./CONSTANTS";
 import { fxCreatePenNode } from "./fx.create-node";
 import { txCreatePenCloneDrag } from "./tx.clone";
 import { txUpdatePenPathFromElement } from "./tx.path";
 import { txFinalizeOwnedTransform } from "../transform/tx.finalize-owned-transform";
 
+const DEFAULT_PEN_COLOR_TOKEN = "@gray/900";
 const DRAFT_POINTS_ATTR = "vcDraftStrokePoints";
 const PEN_NODE_SETUP_ATTR = "vcPenNodeSetup";
 const PEN_MOVE_BEFORE_ELEMENT_ATTR = "vcPenMoveBeforeElement";
@@ -39,6 +40,11 @@ function fxCreatePenElementFromDraft(args: {
   id: string;
   now: number;
   points: TEditorToolCanvasPoint[];
+  rememberedStyle?: {
+    strokeColor?: string;
+    strokeWidth?: number;
+    opacity?: number;
+  };
 }): TElement {
   const penData = fxCreatePenDataFromStrokePoints({ points: args.points });
   if (!penData) {
@@ -58,9 +64,9 @@ function fxCreatePenElementFromDraft(args: {
     updatedAt: args.now,
     data: penData,
     style: {
-      backgroundColor: DEFAULT_FILL,
-      opacity: DEFAULT_OPACITY,
-      strokeWidth: DEFAULT_STROKE_WIDTH,
+      backgroundColor: args.rememberedStyle?.strokeColor ?? DEFAULT_PEN_COLOR_TOKEN,
+      opacity: args.rememberedStyle?.opacity ?? DEFAULT_OPACITY,
+      strokeWidth: args.rememberedStyle?.strokeWidth ?? DEFAULT_STROKE_WIDTH,
     },
   };
 }
@@ -93,11 +99,17 @@ function fxStartPenDraftNode(args: {
   theme: ThemeService;
   now: () => number;
   point: TEditorToolCanvasPoint;
+  rememberedStyle?: {
+    strokeColor?: string;
+    strokeWidth?: number;
+    opacity?: number;
+  };
 }) {
   const node = fxCreatePenRuntimeNode(args.theme, fxCreatePenElementFromDraft({
     id: "pen-draft",
     now: args.now(),
     points: [args.point],
+    rememberedStyle: args.rememberedStyle,
   }));
 
   if (!node) {
@@ -116,6 +128,11 @@ function txUpdatePenDraftNode(args: {
   previewNode: Konva.Path;
   point: TEditorToolCanvasPoint;
   now: number;
+  rememberedStyle?: {
+    strokeColor?: string;
+    strokeWidth?: number;
+    opacity?: number;
+  };
 }) {
   const points = [
     ...((args.previewNode.getAttr(DRAFT_POINTS_ATTR) as TEditorToolCanvasPoint[] | undefined) ?? []),
@@ -135,6 +152,7 @@ function txUpdatePenDraftNode(args: {
       id: args.previewNode.id(),
       now: args.now,
       points,
+      rememberedStyle: args.rememberedStyle,
     }),
   });
   args.previewNode.listening(false);
@@ -147,6 +165,11 @@ function txUpdatePenDraft(args: {
   previewNode: Konva.Shape;
   point: TEditorToolCanvasPoint;
   now: number;
+  rememberedStyle?: {
+    strokeColor?: string;
+    strokeWidth?: number;
+    opacity?: number;
+  };
 }) {
   if (!(args.previewNode instanceof Konva.Path)) {
     return;
@@ -158,6 +181,7 @@ function txUpdatePenDraft(args: {
     previewNode: args.previewNode,
     point: args.point,
     now: args.now,
+    rememberedStyle: args.rememberedStyle,
   });
 }
 
@@ -510,7 +534,7 @@ export function createPenPlugin(): IPlugin<{
             showOpacityPicker: true,
           },
           values: {
-            strokeColor: DEFAULT_FILL,
+            strokeColor: DEFAULT_PEN_COLOR_TOKEN,
             strokeWidth: DEFAULT_STROKE_WIDTH,
             opacity: DEFAULT_OPACITY,
           },
@@ -587,6 +611,24 @@ export function createPenPlugin(): IPlugin<{
         }),
       });
 
+      theme.hooks.change.tap(() => {
+        render.staticForegroundLayer.find((candidate: Konva.Node) => {
+          return candidate instanceof Konva.Path;
+        }).forEach((candidate) => {
+          if (!(candidate instanceof Konva.Path)) {
+            return;
+          }
+
+          const element = fxToPenElement(canvasRegistry, now, candidate);
+          if (!element || element.data.type !== "pen") {
+            return;
+          }
+
+          updateNodeFromElement(element);
+        });
+        render.staticForegroundLayer.batchDraw();
+      });
+
       ctx.hooks.init.tap(() => {
         editor.registerTool(ctx, {
           id: "pen",
@@ -595,13 +637,19 @@ export function createPenPlugin(): IPlugin<{
           behavior: { type: "mode", mode: "draw-create" },
           shortcuts: ["p"],
           drawCreate: {
-            startDraft: (args) => fxStartPenDraftNode({ theme, now, point: args.point }),
+            startDraft: (args) => fxStartPenDraftNode({
+              theme,
+              now,
+              point: args.point,
+              rememberedStyle: editor.getToolSelectionStyleValues("pen"),
+            }),
             updateDraft: (previewNode, args) => txUpdatePenDraft({
               render,
               theme,
               previewNode,
               point: args.point,
               now: args.now,
+              rememberedStyle: editor.getToolSelectionStyleValues("pen"),
             }),
           },
         });

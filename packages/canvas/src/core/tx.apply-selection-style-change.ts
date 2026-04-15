@@ -47,6 +47,20 @@ export type TArgsApplySelectionStyleChange = {
   value: string | number;
 };
 
+export type TSelectionStyleChangePlan = {
+  beforeById: Map<string, TElement>;
+  afterElements: TElement[];
+};
+
+export type TArgsCreateSelectionStyleChangePlan = TArgsApplySelectionStyleChange;
+export type TArgsApplySelectionStyleChangeRuntime = {
+  plan: TSelectionStyleChangePlan;
+};
+export type TArgsCommitSelectionStyleChange = {
+  property: TSelectionStyleProperty;
+  plan: TSelectionStyleChangePlan;
+};
+
 function fnApplyElements(canvasRegistry: TApplySelectionStyleChangeCanvasRegistry, elements: TElement[]) {
   elements.forEach((element) => {
     canvasRegistry.updateElement(element);
@@ -73,10 +87,10 @@ function fnIsDataStyleProperty(property: TSelectionStyleProperty): property is E
     || property === "endCap";
 }
 
-export function txApplySelectionStyleChange(
+export function txCreateSelectionStyleChangePlan(
   portal: TPortalApplySelectionStyleChange,
-  args: TArgsApplySelectionStyleChange,
-) {
+  args: TArgsCreateSelectionStyleChangePlan,
+): TSelectionStyleChangePlan | null {
   const resolvedElements = fxResolveSelectionStyleElements({
     Konva: portal.Konva,
     editor: portal.editor,
@@ -142,7 +156,7 @@ export function txApplySelectionStyleChange(
 
   const dedupedAfterElements = [...new Map(afterElements.map((element) => [element.id, element])).values()];
   if (dedupedAfterElements.length === 0) {
-    return;
+    return null;
   }
 
   const beforeById = new Map(beforeElements.map((element) => [element.id, element]));
@@ -150,12 +164,27 @@ export function txApplySelectionStyleChange(
     beforeById.set(id, element);
   });
 
-  fnApplyElements(portal.canvasRegistry, dedupedAfterElements);
-  portal.txRefreshEditingShape1d();
+  return {
+    beforeById,
+    afterElements: dedupedAfterElements,
+  };
+}
 
+export function txApplySelectionStyleChangeRuntime(
+  portal: TPortalApplySelectionStyleChange,
+  args: TArgsApplySelectionStyleChangeRuntime,
+) {
+  fnApplyElements(portal.canvasRegistry, args.plan.afterElements);
+  portal.txRefreshEditingShape1d();
+}
+
+export function txCommitSelectionStyleChange(
+  portal: TPortalApplySelectionStyleChange,
+  args: TArgsCommitSelectionStyleChange,
+) {
   const commitResult = (() => {
     const builder = portal.crdt.build();
-    dedupedAfterElements.forEach((element) => {
+    args.plan.afterElements.forEach((element) => {
       builder.patchElement(element.id, element);
     });
     return builder.commit();
@@ -164,17 +193,31 @@ export function txApplySelectionStyleChange(
   portal.history.record({
     label: `selection-style-${args.property}`,
     undo: () => {
-      const revert = dedupedAfterElements
-        .map((element) => beforeById.get(element.id))
+      const revert = args.plan.afterElements
+        .map((element) => args.plan.beforeById.get(element.id))
         .filter((element): element is TElement => Boolean(element));
       fnApplyElements(portal.canvasRegistry, revert);
       portal.txRefreshEditingShape1d();
       commitResult.rollback();
     },
     redo: () => {
-      fnApplyElements(portal.canvasRegistry, dedupedAfterElements);
+      fnApplyElements(portal.canvasRegistry, args.plan.afterElements);
       portal.txRefreshEditingShape1d();
       portal.crdt.applyOps({ ops: commitResult.redoOps });
     },
   });
+}
+
+export function txApplySelectionStyleChange(
+  portal: TPortalApplySelectionStyleChange,
+  args: TArgsApplySelectionStyleChange,
+) {
+  const plan = txCreateSelectionStyleChangePlan(portal, args);
+  if (!plan) {
+    return null;
+  }
+
+  txApplySelectionStyleChangeRuntime(portal, { plan });
+  txCommitSelectionStyleChange(portal, { property: args.property, plan });
+  return plan;
 }

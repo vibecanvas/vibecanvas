@@ -182,3 +182,13 @@ export function fxGetSelectionStyleMenuValues(args: {
       : undefined,
   };
 }
+
+export function fxGetSelectionStyleMenuValuesWithOverrides(args: {
+  values: TSelectionStyleMenuValues;
+  overrides: Partial<TSelectionStyleMenuValues>;
+}): TSelectionStyleMenuValues {
+  return {
+    ...args.values,
+    ...Object.fromEntries(Object.entries(args.overrides).filter(([, value]) => value !== undefined)),
+  };
+}

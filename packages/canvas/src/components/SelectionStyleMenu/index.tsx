@@ -1,7 +1,7 @@
 import type { TThemeColorPickerPalette } from "@vibecanvas/service-theme";
-import { Show, createMemo, type JSX } from "solid-js";
+import { Show, createMemo, createSignal, type JSX } from "solid-js";
 import { CapPicker } from "./CapPicker";
-import { ColorPicker } from "./ColorPicker";
+import { ColorPalettePanel, ColorPicker } from "./ColorPicker";
 import { FontFamilyPicker } from "./FontFamilyPicker";
 import { FontSizePicker } from "./FontSizePicker";
 import { LineTypePicker } from "./LineTypePicker";
@@ -69,6 +69,7 @@ export function SelectionStyleMenu(props: {
   onEndCapChange: (capStyle: TCapStyle) => void;
 }) {
   const shouldShow = createMemo(() => props.visible());
+  const [expandedColorPanel, setExpandedColorPanel] = createSignal<"fill" | "stroke" | null>(null);
 
   return (
     <Show when={shouldShow()}>
@@ -81,27 +82,28 @@ export function SelectionStyleMenu(props: {
           "pointer-events": "none",
         }}
       >
-        <div
-          style={{
-            width: "18.5rem",
-            height: "24rem",
-            border: "1px solid var(--border)",
-            background: "var(--card)",
-            "box-shadow": "0 6px 18px rgba(0, 0, 0, 0.12)",
-            "pointer-events": "auto",
-            overflow: "hidden",
-          }}
-        >
+        <div style={{ display: "flex", gap: "0.5rem", "align-items": "flex-start" }}>
           <div
             style={{
-              height: "100%",
-              padding: "0.75rem",
-              display: "flex",
-              "flex-direction": "column",
-              gap: "0.75rem",
-              overflow: "auto",
+              width: "18.5rem",
+              height: "24rem",
+              border: "1px solid var(--border)",
+              background: "var(--card)",
+              "box-shadow": "0 6px 18px rgba(0, 0, 0, 0.12)",
+              "pointer-events": "auto",
+              overflow: "hidden",
             }}
           >
+            <div
+              style={{
+                height: "100%",
+                padding: "0.75rem",
+                display: "flex",
+                "flex-direction": "column",
+                gap: "0.75rem",
+                overflow: "auto",
+              }}
+            >
             <Show when={props.sections().showFillPicker}>
               <div style={sectionStyle}>
                 <span style={labelStyle}>FILL</span>
@@ -111,6 +113,8 @@ export function SelectionStyleMenu(props: {
                   showTransparent
                   mode="fill"
                   palette={props.colorPalette()}
+                  expanded={expandedColorPanel() === "fill"}
+                  onExpandedChange={(expanded) => setExpandedColorPanel(expanded ? "fill" : null)}
                 />
               </div>
             </Show>
@@ -123,6 +127,8 @@ export function SelectionStyleMenu(props: {
                   onChange={props.onStrokeChange}
                   mode="stroke"
                   palette={props.colorPalette()}
+                  expanded={expandedColorPanel() === "stroke"}
+                  onExpandedChange={(expanded) => setExpandedColorPanel(expanded ? "stroke" : null)}
                 />
               </div>
             </Show>
@@ -215,7 +221,28 @@ export function SelectionStyleMenu(props: {
                 />
               </div>
             </Show>
+            </div>
           </div>
+
+          <Show when={expandedColorPanel() === "fill" && props.sections().showFillPicker}>
+            <div style={{ "pointer-events": "auto" }}>
+              <ColorPalettePanel
+                value={props.values().fillColor}
+                onChange={props.onFillChange}
+                palette={props.colorPalette()}
+              />
+            </div>
+          </Show>
+
+          <Show when={expandedColorPanel() === "stroke" && props.sections().showStrokeColorPicker}>
+            <div style={{ "pointer-events": "auto" }}>
+              <ColorPalettePanel
+                value={props.values().strokeColor}
+                onChange={props.onStrokeChange}
+                palette={props.colorPalette()}
+              />
+            </div>
+          </Show>
         </div>
       </div>
     </Show>

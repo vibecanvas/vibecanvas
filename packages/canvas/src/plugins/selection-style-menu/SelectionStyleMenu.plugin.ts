@@ -1,242 +1,18 @@
 import type { IPlugin } from "@vibecanvas/runtime";
-import type { TElement } from "@vibecanvas/service-automerge/types/canvas-doc.types";
 import Konva from "konva";
 import { createComponent, createMemo, createSignal } from "solid-js";
 import { render as renderSolid } from "solid-js/web";
 import { SelectionStyleMenu } from "../../components/SelectionStyleMenu";
 import type { ThemeService } from "@vibecanvas/service-theme";
-import type { TCapStyle, TFontFamily, TLineType } from "../../components/SelectionStyleMenu/types";
-import { fxResolveSelectionStyleElements } from "../../core/fx.resolve-selection-style-elements";
-import { fxResolveSelectionStyleTextElements } from "../../core/fx.resolve-selection-style-text-elements";
-import {
-  fxGetSelectionStyleMenuSections,
-  fxGetSelectionStyleMenuValues,
-  fxGetSelectionStyleStrokeWidthOptions,
-  type TSelectionStyleProperty,
-} from "../../core/fn.selection-style-menu";
-import { txApplySelectionStyleChange } from "../../core/tx.apply-selection-style-change";
-import type { CanvasRegistryService, TCanvasRegistrySelectionStyleConfig } from "../../services/canvas-registry/CanvasRegistryService";
+import { txApplySelectionStyleChange, txApplySelectionStyleChangeRuntime, txCommitSelectionStyleChange, txCreateSelectionStyleChangePlan } from "../../core/tx.apply-selection-style-change";
+import type { CanvasRegistryService } from "../../services/canvas-registry/CanvasRegistryService";
 import type { CrdtService } from "../../services/crdt/CrdtService";
 import type { EditorServiceV2 } from "../../services/editor/EditorServiceV2";
 import type { HistoryService } from "../../services/history/HistoryService";
 import type { SceneService } from "../../services/scene/SceneService";
 import type { SelectionService } from "../../services/selection/SelectionService";
-import { fxFindShape1dNodeById } from "../shape1d/fx.node";
 import type { IHooks } from "../../runtime";
-
-function mountSelectionStyleMenu(args: {
-  canvasRegistry: CanvasRegistryService;
-  crdt: CrdtService;
-  editor: EditorServiceV2;
-  history: HistoryService;
-  scene: SceneService;
-  selection: SelectionService;
-  theme: ThemeService;
-}) {
-  const mountElement = args.scene.container.ownerDocument.createElement("div");
-  Object.assign(mountElement.style, {
-    position: "absolute",
-    inset: "0",
-    pointerEvents: "none",
-    zIndex: "50",
-  });
-  args.scene.stage.container().appendChild(mountElement);
-
-  const fxFindAttachedTextNodeByContainerId = (containerId: string) => {
-    const node = args.scene.staticForegroundLayer.findOne((candidate: Konva.Node) => {
-      return candidate instanceof Konva.Text && candidate.getAttr("vcContainerId") === containerId;
-    });
-
-    return node instanceof Konva.Text ? node : null;
-  };
-
-  const [version, setVersion] = createSignal(0);
-  const syncVersion = () => {
-    setVersion((value) => value + 1);
-  };
-
-  args.selection.hooks.change.tap(syncVersion);
-  args.editor.hooks.activeToolChange.tap(syncVersion);
-  args.editor.hooks.editingTextChange.tap(syncVersion);
-  args.editor.hooks.editingShape1dChange.tap(syncVersion);
-  args.canvasRegistry.hooks.elementsChange.tap(syncVersion);
-  args.crdt.hooks.change.tap(syncVersion);
-  args.theme.hooks.change.tap(syncVersion);
-
-  const disposeRender = renderSolid(() => {
-    const selectedElements = createMemo(() => {
-      version();
-      return fxResolveSelectionStyleElements({
-        Konva,
-        editor: args.editor,
-        scene: args.scene,
-        selection: args.selection,
-      }, {});
-    });
-
-    const selectedEntries = createMemo(() => {
-      version();
-
-      const entries: Array<{ element: TElement; config: TCanvasRegistrySelectionStyleConfig }> = [];
-      selectedElements().forEach((element) => {
-        const config = args.canvasRegistry.getSelectionStyleMenuConfigByElement({
-          element,
-          theme: args.theme,
-        });
-        if (!config) {
-          return;
-        }
-
-        entries.push({ element, config });
-      });
-
-      return entries;
-    });
-
-    const elements = createMemo(() => {
-      return selectedEntries().map((entry) => entry.element);
-    });
-
-    const textElements = createMemo(() => {
-      version();
-
-      return fxResolveSelectionStyleTextElements({
-        editor: args.editor,
-        fxFindAttachedTextNodeByContainerId,
-      }, {
-        elements: elements(),
-      }).filter((element) => {
-        return args.canvasRegistry.getSelectionStyleMenuConfigByElement({
-          element,
-          theme: args.theme,
-        }) !== null;
-      });
-    });
-
-    const activeToolConfig = createMemo(() => {
-      version();
-
-      const activeTool = args.editor.getActiveTool();
-      if (!activeTool || activeTool.behavior.type !== "mode") {
-        return null;
-      }
-
-      if (activeTool.behavior.mode === "hand" || activeTool.behavior.mode === "select") {
-        return null;
-      }
-
-      return args.canvasRegistry.getSelectionStyleMenuConfigById({
-        id: activeTool.id,
-        theme: args.theme,
-      });
-    });
-
-    const configs = createMemo(() => {
-      const entries = selectedEntries();
-      if (entries.length > 0) {
-        return entries.map((entry) => entry.config);
-      }
-
-      const toolConfig = activeToolConfig();
-      return toolConfig ? [toolConfig] : [];
-    });
-
-    const sections = createMemo(() => {
-      return fxGetSelectionStyleMenuSections({
-        configs: configs(),
-      });
-    });
-
-    const visible = createMemo(() => {
-      version();
-
-      const textareaMounted = args.scene.stage.container().querySelector("textarea") !== null;
-      const isEditingTextActive = args.editor.editingTextId !== null && textareaMounted;
-      if (isEditingTextActive) {
-        return false;
-      }
-
-      const next = sections();
-      return next.showFillPicker
-        || next.showStrokeColorPicker
-        || next.showStrokeWidthPicker
-        || next.showTextPickers
-        || next.showOpacityPicker
-        || next.showLineTypePicker
-        || next.showStartCapPicker
-        || next.showEndCapPicker;
-    });
-
-    const values = createMemo(() => {
-      return fxGetSelectionStyleMenuValues({
-        elements: elements(),
-        textElements: textElements(),
-        configs: configs(),
-      });
-    });
-
-    const strokeWidthOptions = createMemo(() => {
-      return fxGetSelectionStyleStrokeWidthOptions({
-        configs: configs(),
-      });
-    });
-
-    const colorPalette = createMemo(() => {
-      version();
-      return args.theme.getThemeColorPickerPalette();
-    });
-
-    const applyStyle = (property: TSelectionStyleProperty, value: string | number) => {
-      txApplySelectionStyleChange({
-        Konva,
-        crdt: args.crdt,
-        editor: args.editor,
-        canvasRegistry: args.canvasRegistry,
-        history: args.history,
-        scene: args.scene,
-        selection: args.selection,
-        fxFindAttachedTextNodeByContainerId,
-        txRefreshEditingShape1d: () => {
-          if (args.editor.editingShape1dId === null) {
-            return;
-          }
-
-          const editingNode = fxFindShape1dNodeById({ Shape: Konva.Shape, render: args.scene }, { id: args.editor.editingShape1dId });
-          editingNode?.getLayer()?.batchDraw();
-        },
-        now: () => Date.now(),
-      }, { property, value });
-      syncVersion();
-    };
-
-    return createComponent(SelectionStyleMenu, {
-      visible,
-      sections,
-      values,
-      strokeWidthOptions: () => strokeWidthOptions() ?? [],
-      colorPalette,
-      onFillChange: (color) => applyStyle("fill", color),
-      onStrokeChange: (color) => applyStyle("stroke", color),
-      onStrokeWidthChange: (width) => applyStyle("strokeWidth", width),
-      onOpacityChange: (opacity) => applyStyle("opacity", opacity),
-      onFontFamilyChange: (fontFamily: TFontFamily) => applyStyle("fontFamily", fontFamily),
-      onFontSizePresetChange: (preset) => applyStyle("fontSizePreset", preset),
-      onTextAlignChange: (textAlign) => applyStyle("textAlign", textAlign),
-      onVerticalAlignChange: (verticalAlign) => applyStyle("verticalAlign", verticalAlign),
-      onLineTypeChange: (lineType: TLineType) => applyStyle("lineType", lineType),
-      onStartCapChange: (capStyle: TCapStyle) => applyStyle("startCap", capStyle),
-      onEndCapChange: (capStyle: TCapStyle) => applyStyle("endCap", capStyle),
-    });
-  }, mountElement);
-
-  return {
-    mountElement,
-    dispose() {
-      disposeRender();
-      mountElement.remove();
-    },
-  };
-}
+import { fxMountSelectionStyleMenu } from "./fx.mount-selection-style-menu";
 
 export function createSelectionStyleMenuPlugin(): IPlugin<{
   canvasRegistry: CanvasRegistryService;
@@ -247,7 +23,7 @@ export function createSelectionStyleMenuPlugin(): IPlugin<{
   selection: SelectionService;
   theme: ThemeService;
 }, IHooks> {
-  let menuMount: ReturnType<typeof mountSelectionStyleMenu> | null = null;
+  let menuMount: ReturnType<typeof fxMountSelectionStyleMenu> | null = null;
 
   return {
     name: "selection-style-menu",
@@ -261,7 +37,34 @@ export function createSelectionStyleMenuPlugin(): IPlugin<{
       const theme = ctx.services.require("theme");
 
       ctx.hooks.init.tap(() => {
-        menuMount = mountSelectionStyleMenu({
+        menuMount = fxMountSelectionStyleMenu({
+          Konva,
+          SelectionStyleMenu,
+          createComponent,
+          createMemo,
+          createSignal,
+          renderSolid,
+          txApplySelectionStyleChange,
+          txApplySelectionStyleChangeRuntime,
+          txCommitSelectionStyleChange,
+          txCreateSelectionStyleChangePlan,
+          setTimeout: (handler, timeout, ...rest) => {
+            const view = scene.container.ownerDocument.defaultView;
+            if (view) {
+              return view.setTimeout(handler, timeout, ...rest);
+            }
+
+            return globalThis.setTimeout(handler, timeout, ...rest);
+          },
+          clearTimeout: (timer) => {
+            const view = scene.container.ownerDocument.defaultView;
+            if (view) {
+              view.clearTimeout(timer);
+              return;
+            }
+
+            globalThis.clearTimeout(timer);
+          },
           canvasRegistry,
           crdt,
           editor,
@@ -269,7 +72,7 @@ export function createSelectionStyleMenuPlugin(): IPlugin<{
           scene,
           selection,
           theme,
-        });
+        }, {});
       });
 
       ctx.hooks.destroy.tap(() => {

@@ -1,0 +1,403 @@
+import type { ThemeService } from "@vibecanvas/service-theme";
+import type { TElement } from "@vibecanvas/service-automerge/types/canvas-doc.types";
+import type * as Solid from "solid-js";
+import type * as SolidWeb from "solid-js/web";
+import type { SelectionStyleMenu as TSelectionStyleMenuComponent } from "../../components/SelectionStyleMenu";
+import type { TCapStyle, TFontFamily, TLineType } from "../../components/SelectionStyleMenu/types";
+import { fxResolveSelectionStyleElements } from "../../core/fx.resolve-selection-style-elements";
+import { fxResolveSelectionStyleTextElements } from "../../core/fx.resolve-selection-style-text-elements";
+import {
+  fxGetSelectionStyleMenuSections,
+  fxGetSelectionStyleMenuValues,
+  fxGetSelectionStyleMenuValuesWithOverrides,
+  fxGetSelectionStyleStrokeWidthOptions,
+  fxHasSelectionStylePropertySupport,
+  type TSelectionStyleProperty,
+} from "../../core/fn.selection-style-menu";
+import type { CanvasRegistryService, TCanvasRegistrySelectionStyleConfig } from "../../services/canvas-registry/CanvasRegistryService";
+import type { CrdtService } from "../../services/crdt/CrdtService";
+import type { EditorServiceV2 } from "../../services/editor/EditorServiceV2";
+import type { HistoryService } from "../../services/history/HistoryService";
+import type { SceneService } from "../../services/scene/SceneService";
+import type { SelectionService } from "../../services/selection/SelectionService";
+import { fxFindShape1dNodeById } from "../shape1d/fx.node";
+import type {
+  TPortalApplySelectionStyleChange,
+  TSelectionStyleChangePlan,
+  txApplySelectionStyleChange as TTxApplySelectionStyleChange,
+  txApplySelectionStyleChangeRuntime as TTxApplySelectionStyleChangeRuntime,
+  txCommitSelectionStyleChange as TTxCommitSelectionStyleChange,
+  txCreateSelectionStyleChangePlan as TTxCreateSelectionStyleChangePlan,
+} from "../../core/tx.apply-selection-style-change";
+
+const OPACITY_COMMIT_DEBOUNCE_MS = 120;
+
+type TPortalMountSelectionStyleMenu = {
+  Konva: typeof import("konva");
+  SelectionStyleMenu: typeof TSelectionStyleMenuComponent;
+  createComponent: typeof Solid.createComponent;
+  createMemo: typeof Solid.createMemo;
+  createSignal: typeof Solid.createSignal;
+  renderSolid: typeof SolidWeb.render;
+  txApplySelectionStyleChange: typeof TTxApplySelectionStyleChange;
+  txApplySelectionStyleChangeRuntime: typeof TTxApplySelectionStyleChangeRuntime;
+  txCommitSelectionStyleChange: typeof TTxCommitSelectionStyleChange;
+  txCreateSelectionStyleChangePlan: typeof TTxCreateSelectionStyleChangePlan;
+  setTimeout: typeof setTimeout;
+  clearTimeout: typeof clearTimeout;
+  canvasRegistry: CanvasRegistryService;
+  crdt: CrdtService;
+  editor: EditorServiceV2;
+  history: HistoryService;
+  scene: SceneService;
+  selection: SelectionService;
+  theme: ThemeService;
+};
+
+type TArgsMountSelectionStyleMenu = Record<string, never>;
+
+function mergeSelectionStyleChangePlans(args: {
+  current: TSelectionStyleChangePlan | null;
+  next: TSelectionStyleChangePlan;
+}) {
+  if (!args.current) {
+    return args.next;
+  }
+
+  const beforeById = new Map(args.current.beforeById);
+  args.next.beforeById.forEach((element, id) => {
+    if (!beforeById.has(id)) {
+      beforeById.set(id, element);
+    }
+  });
+
+  return {
+    beforeById,
+    afterElements: args.next.afterElements,
+  } satisfies TSelectionStyleChangePlan;
+}
+
+export function fxMountSelectionStyleMenu(portal: TPortalMountSelectionStyleMenu, args: TArgsMountSelectionStyleMenu) {
+  void args;
+
+  const mountElement = portal.scene.container.ownerDocument.createElement("div");
+  Object.assign(mountElement.style, {
+    position: "absolute",
+    inset: "0",
+    pointerEvents: "none",
+    zIndex: "50",
+  });
+  portal.scene.stage.container().appendChild(mountElement);
+
+  const findAttachedTextNodeByContainerId = (containerId: string) => {
+    const node = portal.scene.staticForegroundLayer.findOne((candidate: InstanceType<typeof portal.Konva.Node>) => {
+      return candidate instanceof portal.Konva.Text && candidate.getAttr("vcContainerId") === containerId;
+    });
+
+    return node instanceof portal.Konva.Text ? node : null;
+  };
+
+  const txRefreshEditingShape1d = () => {
+    if (portal.editor.editingShape1dId === null) {
+      return;
+    }
+
+    const editingNode = fxFindShape1dNodeById({ Shape: portal.Konva.Shape, render: portal.scene }, { id: portal.editor.editingShape1dId });
+    editingNode?.getLayer()?.batchDraw();
+  };
+
+  const txPortal: TPortalApplySelectionStyleChange = {
+    Konva: portal.Konva,
+    crdt: portal.crdt,
+    editor: portal.editor,
+    canvasRegistry: portal.canvasRegistry,
+    history: portal.history,
+    scene: portal.scene,
+    selection: portal.selection,
+    fxFindAttachedTextNodeByContainerId: findAttachedTextNodeByContainerId,
+    txRefreshEditingShape1d,
+    now: () => Date.now(),
+  };
+
+  let pendingOpacityCommitPlan: TSelectionStyleChangePlan | null = null;
+  let pendingOpacityCommitTimer: ReturnType<TPortalMountSelectionStyleMenu["setTimeout"]> | null = null;
+
+  const clearPendingOpacityCommit = () => {
+    if (pendingOpacityCommitTimer !== null) {
+      portal.clearTimeout(pendingOpacityCommitTimer);
+      pendingOpacityCommitTimer = null;
+    }
+  };
+
+  const flushOpacityCommit = () => {
+    if (!pendingOpacityCommitPlan) {
+      return;
+    }
+
+    portal.txCommitSelectionStyleChange(txPortal, {
+      property: "opacity",
+      plan: pendingOpacityCommitPlan,
+    });
+    pendingOpacityCommitPlan = null;
+    pendingOpacityCommitTimer = null;
+  };
+
+  const scheduleSelectionStyleCommit = (plan: TSelectionStyleChangePlan) => {
+    pendingOpacityCommitPlan = mergeSelectionStyleChangePlans({
+      current: pendingOpacityCommitPlan,
+      next: plan,
+    });
+    clearPendingOpacityCommit();
+    pendingOpacityCommitTimer = portal.setTimeout(() => {
+      flushOpacityCommit();
+    }, OPACITY_COMMIT_DEBOUNCE_MS);
+  };
+
+  const [version, setVersion] = portal.createSignal(0);
+  const syncVersion = () => {
+    setVersion((value) => value + 1);
+  };
+
+  portal.selection.hooks.change.tap(syncVersion);
+  portal.editor.hooks.activeToolChange.tap(syncVersion);
+  portal.editor.hooks.editingTextChange.tap(syncVersion);
+  portal.editor.hooks.editingShape1dChange.tap(syncVersion);
+  portal.editor.hooks.toolSelectionStyleChange.tap(syncVersion);
+  portal.canvasRegistry.hooks.elementsChange.tap(syncVersion);
+  portal.crdt.hooks.change.tap(syncVersion);
+  portal.theme.hooks.change.tap(syncVersion);
+
+  const disposeRender = portal.renderSolid(() => {
+    const selectedElements = portal.createMemo(() => {
+      version();
+      return fxResolveSelectionStyleElements({
+        Konva: portal.Konva,
+        editor: portal.editor,
+        scene: portal.scene,
+        selection: portal.selection,
+      }, {});
+    });
+
+    const selectedEntries = portal.createMemo(() => {
+      version();
+
+      const entries: Array<{ element: TElement; config: TCanvasRegistrySelectionStyleConfig }> = [];
+      selectedElements().forEach((element) => {
+        const config = portal.canvasRegistry.getSelectionStyleMenuConfigByElement({
+          element,
+          theme: portal.theme,
+        });
+        if (!config) {
+          return;
+        }
+
+        entries.push({ element, config });
+      });
+
+      return entries;
+    });
+
+    const elements = portal.createMemo(() => {
+      return selectedEntries().map((entry) => entry.element);
+    });
+
+    const textElements = portal.createMemo(() => {
+      version();
+
+      return fxResolveSelectionStyleTextElements({
+        editor: portal.editor,
+        fxFindAttachedTextNodeByContainerId: findAttachedTextNodeByContainerId,
+      }, {
+        elements: elements(),
+      }).filter((element) => {
+        return portal.canvasRegistry.getSelectionStyleMenuConfigByElement({
+          element,
+          theme: portal.theme,
+        }) !== null;
+      });
+    });
+
+    const activeToolId = portal.createMemo(() => {
+      version();
+
+      const activeTool = portal.editor.getActiveTool();
+      if (!activeTool || activeTool.behavior.type !== "mode") {
+        return null;
+      }
+
+      if (activeTool.behavior.mode === "hand" || activeTool.behavior.mode === "select") {
+        return null;
+      }
+
+      return activeTool.id;
+    });
+
+    const activeToolConfig = portal.createMemo(() => {
+      const toolId = activeToolId();
+      if (!toolId) {
+        return null;
+      }
+
+      return portal.canvasRegistry.getSelectionStyleMenuConfigById({
+        id: toolId,
+        theme: portal.theme,
+      });
+    });
+
+    const activeToolRememberedValues = portal.createMemo(() => {
+      version();
+
+      const toolId = activeToolId();
+      if (!toolId) {
+        return {};
+      }
+
+      return portal.editor.getToolSelectionStyleValues(toolId);
+    });
+
+    const configs = portal.createMemo(() => {
+      const entries = selectedEntries();
+      if (entries.length > 0) {
+        return entries.map((entry) => entry.config);
+      }
+
+      const toolConfig = activeToolConfig();
+      return toolConfig ? [toolConfig] : [];
+    });
+
+    const sections = portal.createMemo(() => {
+      return fxGetSelectionStyleMenuSections({
+        configs: configs(),
+      });
+    });
+
+    const visible = portal.createMemo(() => {
+      version();
+
+      const textareaMounted = portal.scene.stage.container().querySelector("textarea") !== null;
+      const isEditingTextActive = portal.editor.editingTextId !== null && textareaMounted;
+      if (isEditingTextActive) {
+        return false;
+      }
+
+      const next = sections();
+      return next.showFillPicker
+        || next.showStrokeColorPicker
+        || next.showStrokeWidthPicker
+        || next.showTextPickers
+        || next.showOpacityPicker
+        || next.showLineTypePicker
+        || next.showStartCapPicker
+        || next.showEndCapPicker;
+    });
+
+    const values = portal.createMemo(() => {
+      const resolvedValues = fxGetSelectionStyleMenuValues({
+        elements: elements(),
+        textElements: textElements(),
+        configs: configs(),
+      });
+
+      if (elements().length > 0) {
+        return resolvedValues;
+      }
+
+      return fxGetSelectionStyleMenuValuesWithOverrides({
+        values: resolvedValues,
+        overrides: activeToolRememberedValues(),
+      });
+    });
+
+    const strokeWidthOptions = portal.createMemo(() => {
+      return fxGetSelectionStyleStrokeWidthOptions({
+        configs: configs(),
+      });
+    });
+
+    const colorPalette = portal.createMemo(() => {
+      version();
+      return portal.theme.getThemeColorPickerPalette();
+    });
+
+    const applyStyle = (property: TSelectionStyleProperty, value: string | number) => {
+      const toolId = activeToolId();
+      const toolConfig = activeToolConfig();
+      const valueKey = (() => {
+        switch (property) {
+          case "fill":
+            return "fillColor" as const;
+          case "stroke":
+            return "strokeColor" as const;
+          case "strokeWidth":
+            return "strokeWidth" as const;
+          case "opacity":
+            return "opacity" as const;
+          case "fontFamily":
+            return "fontFamily" as const;
+          case "fontSizePreset":
+            return "fontSizePreset" as const;
+          case "textAlign":
+            return "textAlign" as const;
+          case "verticalAlign":
+            return "verticalAlign" as const;
+          case "lineType":
+            return "lineType" as const;
+          case "startCap":
+            return "startCap" as const;
+          case "endCap":
+            return "endCap" as const;
+        }
+      })();
+
+      if (toolId && fxHasSelectionStylePropertySupport({ config: toolConfig, property })) {
+        portal.editor.setToolSelectionStyleValue(toolId, valueKey, value as never);
+      }
+
+      if (elements().length === 0) {
+        syncVersion();
+        return;
+      }
+
+      if (property === "opacity") {
+        const plan = portal.txCreateSelectionStyleChangePlan(txPortal, { property, value });
+        if (plan) {
+          portal.txApplySelectionStyleChangeRuntime(txPortal, { plan });
+          scheduleSelectionStyleCommit(plan);
+          syncVersion();
+        }
+        return;
+      }
+
+      portal.txApplySelectionStyleChange(txPortal, { property, value });
+      syncVersion();
+    };
+
+    return portal.createComponent(portal.SelectionStyleMenu, {
+      visible,
+      sections,
+      values,
+      strokeWidthOptions: () => strokeWidthOptions() ?? [],
+      colorPalette,
+      onFillChange: (color) => applyStyle("fill", color),
+      onStrokeChange: (color) => applyStyle("stroke", color),
+      onStrokeWidthChange: (width) => applyStyle("strokeWidth", width),
+      onOpacityChange: (opacity) => applyStyle("opacity", opacity),
+      onFontFamilyChange: (fontFamily: TFontFamily) => applyStyle("fontFamily", fontFamily),
+      onFontSizePresetChange: (preset) => applyStyle("fontSizePreset", preset),
+      onTextAlignChange: (textAlign) => applyStyle("textAlign", textAlign),
+      onVerticalAlignChange: (verticalAlign) => applyStyle("verticalAlign", verticalAlign),
+      onLineTypeChange: (lineType: TLineType) => applyStyle("lineType", lineType),
+      onStartCapChange: (capStyle: TCapStyle) => applyStyle("startCap", capStyle),
+      onEndCapChange: (capStyle: TCapStyle) => applyStyle("endCap", capStyle),
+    });
+  }, mountElement);
+
+  return {
+    mountElement,
+    dispose() {
+      clearPendingOpacityCommit();
+      disposeRender();
+      mountElement.remove();
+    },
+  };
+}
