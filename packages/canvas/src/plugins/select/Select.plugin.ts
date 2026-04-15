@@ -143,6 +143,10 @@ export function createSelectPlugin(): IPlugin<{
           return false;
         }
 
+        if (event.evt.button !== 0) {
+          return false;
+        }
+
         if (selection.isSelectionHandlingSuppressed()) {
           return true;
         }
@@ -164,6 +168,10 @@ export function createSelectPlugin(): IPlugin<{
 
       ctx.hooks.pointerDown.tap((event) => {
         if (selection.mode !== CanvasMode.SELECT) {
+          return;
+        }
+
+        if (event.evt.button !== 0) {
           return;
         }
 
