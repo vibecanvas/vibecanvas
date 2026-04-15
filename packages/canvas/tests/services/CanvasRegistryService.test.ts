@@ -212,4 +212,81 @@ describe("CanvasRegistryService", () => {
     expect(groupChangeSpy).toHaveBeenCalledTimes(2);
     expect(service.getGroups()).toEqual([]);
   });
+
+  test("merges transform options and aggregates transform hook results", () => {
+    const service = new CanvasRegistryService();
+    const node = new Konva.Rect({ id: "shape-3" });
+    const element = createElement({ id: "shape-3", type: "text" });
+    const selection = [node] as Array<Konva.Group | Konva.Shape>;
+    const calls: string[] = [];
+
+    service.registerElement({
+      id: "base",
+      priority: 10,
+      matchesNode: (candidate) => candidate.id() === node.id(),
+      toElement: () => element,
+      getTransformOptions: ({ node: candidateNode, element: candidateElement, selection: candidateSelection }) => {
+        calls.push(`options-base:${candidateNode.id()}:${candidateElement.id}:${candidateSelection.length}`);
+        return {
+          enabledAnchors: ["top-left", "bottom-right"],
+          keepRatio: true,
+        };
+      },
+      onTransform: ({ node: candidateNode }) => {
+        calls.push(`on-base:${candidateNode.id()}`);
+        return { cancel: false, crdt: true };
+      },
+      afterTransform: ({ node: candidateNode }) => {
+        calls.push(`after-base:${candidateNode.id()}`);
+        return { cancel: false, crdt: false };
+      },
+    });
+
+    service.registerElement({
+      id: "modifier",
+      priority: 20,
+      matchesNode: (candidate) => candidate.id() === node.id(),
+      getTransformOptions: ({ node: candidateNode }) => {
+        calls.push(`options-modifier:${candidateNode.id()}`);
+        return {
+          flipEnabled: true,
+          keepRatio: false,
+        };
+      },
+      onTransform: ({ node: candidateNode }) => {
+        calls.push(`on-modifier:${candidateNode.id()}`);
+        return { cancel: true, crdt: false };
+      },
+      afterTransform: ({ node: candidateNode }) => {
+        calls.push(`after-modifier:${candidateNode.id()}`);
+        return { cancel: true, crdt: true };
+      },
+    });
+
+    expect(service.getTransformOptions({ node, selection })).toEqual({
+      enabledAnchors: ["top-left", "bottom-right"],
+      keepRatio: false,
+      flipEnabled: true,
+    });
+    expect(service.onTransform({ node, selection })).toEqual({ cancel: true, crdt: true });
+    expect(service.afterTransform({ node, selection })).toEqual({ cancel: true, crdt: true });
+    expect(calls).toEqual([
+      "options-base:shape-3:shape-3:1",
+      "options-modifier:shape-3",
+      "on-base:shape-3",
+      "on-modifier:shape-3",
+      "after-base:shape-3",
+      "after-modifier:shape-3",
+    ]);
+  });
+
+  test("returns default transform results when node does not resolve to an element", () => {
+    const service = new CanvasRegistryService();
+    const node = new Konva.Rect({ id: "unknown" });
+    const selection = [node] as Array<Konva.Group | Konva.Shape>;
+
+    expect(service.getTransformOptions({ node, selection })).toEqual({});
+    expect(service.onTransform({ node, selection })).toEqual({ cancel: false, crdt: false });
+    expect(service.afterTransform({ node, selection })).toEqual({ cancel: false, crdt: false });
+  });
 });

@@ -111,7 +111,7 @@ export class RenderOrderService implements IService<Record<string, never>> {
   }
 
   getNodeZIndex(node: TOrderedNode) {
-    return fnGetNodeZIndex({}, { node });
+    return fnGetNodeZIndex({ node });
   }
 
   setNodeZIndex(node: TOrderedNode, zIndex: string) {
@@ -137,7 +137,7 @@ export class RenderOrderService implements IService<Record<string, never>> {
   getOrderedSiblings(parent: TParentContainer) {
     const children = getImmediateOrderedChildren(parent);
     return [...children].sort((left, right) => {
-      const zCompare = fnGetNodeZIndex({}, { node: left }).localeCompare(fnGetNodeZIndex({}, { node: right }));
+      const zCompare = fnGetNodeZIndex({ node: left }).localeCompare(fnGetNodeZIndex({ node: right }));
       if (zCompare !== 0) {
         return zCompare;
       }
@@ -192,7 +192,7 @@ export class RenderOrderService implements IService<Record<string, never>> {
       parentId: parent.id() || "__layer__",
       items: getImmediateOrderedChildren(parent).map((node) => ({
         id: node.id(),
-        zIndex: fnGetNodeZIndex({}, { node }),
+        zIndex: fnGetNodeZIndex({ node }),
         kind: this.editor.toGroup(node) ? "group" : "element",
       })),
     };
