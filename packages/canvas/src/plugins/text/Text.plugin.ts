@@ -13,7 +13,7 @@ import type { RenderOrderService } from "../../services/render-order/RenderOrder
 import type { SceneService } from "../../services/scene/SceneService";
 import type { TCanvasTransformAnchor, SelectionService, CanvasRegistryService } from "../../services";
 import { CanvasMode } from "../../services/selection/CONSTANTS";
-import { fnGetNearestFontSizePreset } from "../../core/fn.text-style";
+import { fnGetFontSizePresetValue, fnGetNearestFontSizePreset, type TFontSizePreset } from "../../core/fn.text-style";
 import type { IHooks } from "../../runtime";
 import { fxCreateTextElement } from "./fn.create-text-element";
 import { fxToElement } from "./fx.to-element";
@@ -35,6 +35,7 @@ const TEXT_TRANSFORM_ANCHORS: TCanvasTransformAnchor[] = [
   "bottom-left",
   "bottom-right",
 ];
+const DEFAULT_TEXT_COLOR_TOKEN = "@gray/900";
 
 function usesThemeTextColor(element: Pick<TElement, "style">) {
   return !element.style.strokeColor;
@@ -94,6 +95,49 @@ function fxSerializeTextNode(canvasRegistry: CanvasRegistryService, args: {
     createdAt: args.createdAt,
     updatedAt: args.updatedAt,
   });
+}
+
+function fxApplyRememberedTextToolStyle(args: {
+  element: TElement;
+  rememberedStyle: ReturnType<EditorServiceV2["getToolSelectionStyleValues"]>;
+}) {
+  const nextElement = structuredClone(args.element);
+  const rememberedStrokeColor = args.rememberedStyle.strokeColor;
+  if (typeof rememberedStrokeColor === "string") {
+    nextElement.style.strokeColor = rememberedStrokeColor;
+  }
+
+  const rememberedOpacity = args.rememberedStyle.opacity;
+  if (typeof rememberedOpacity === "number") {
+    nextElement.style.opacity = rememberedOpacity;
+  }
+
+  if (nextElement.data.type !== "text") {
+    return nextElement;
+  }
+
+  const rememberedFontFamily = args.rememberedStyle.fontFamily;
+  if (typeof rememberedFontFamily === "string") {
+    nextElement.data.fontFamily = rememberedFontFamily;
+  }
+
+  const rememberedFontSizePreset = args.rememberedStyle.fontSizePreset;
+  if (typeof rememberedFontSizePreset === "string") {
+    nextElement.data.fontSizePreset = rememberedFontSizePreset as TFontSizePreset;
+    nextElement.data.fontSize = fnGetFontSizePresetValue(rememberedFontSizePreset as TFontSizePreset);
+  }
+
+  const rememberedTextAlign = args.rememberedStyle.textAlign;
+  if (rememberedTextAlign === "left" || rememberedTextAlign === "center" || rememberedTextAlign === "right") {
+    nextElement.data.textAlign = rememberedTextAlign;
+  }
+
+  const rememberedVerticalAlign = args.rememberedStyle.verticalAlign;
+  if (rememberedVerticalAlign === "top" || rememberedVerticalAlign === "middle" || rememberedVerticalAlign === "bottom") {
+    nextElement.data.verticalAlign = rememberedVerticalAlign;
+  }
+
+  return nextElement;
 }
 
 function txApplyTextTransform(args: {
@@ -273,7 +317,7 @@ export function createTextPlugin(): IPlugin<{
             showOpacityPicker: true,
           },
           values: {
-            strokeColor: activeTheme?.getTheme().colors.canvasText ?? theme.getTheme().colors.canvasText,
+            strokeColor: DEFAULT_TEXT_COLOR_TOKEN,
             opacity: 1,
             fontFamily: "Arial, sans-serif",
             fontSizePreset: fnGetNearestFontSizePreset(16),
@@ -411,12 +455,23 @@ export function createTextPlugin(): IPlugin<{
         }
 
         const timestamp = now();
-        const element = fxCreateTextElement({
-          id: createId(),
-          x: pointer.x,
-          y: pointer.y,
-          createdAt: timestamp,
-          updatedAt: timestamp,
+        const element = fxApplyRememberedTextToolStyle({
+          element: fxCreateTextElement({
+            id: createId(),
+            x: pointer.x,
+            y: pointer.y,
+            createdAt: timestamp,
+            updatedAt: timestamp,
+          }),
+          rememberedStyle: {
+            strokeColor: DEFAULT_TEXT_COLOR_TOKEN,
+            opacity: 1,
+            fontFamily: "Arial, sans-serif",
+            fontSizePreset: fnGetNearestFontSizePreset(16),
+            textAlign: "left",
+            verticalAlign: "top",
+            ...editor.getToolSelectionStyleValues("text"),
+          },
         });
         const node = canvasRegistry.createNodeFromElement(element);
         if (!(node instanceof Konva.Text)) {

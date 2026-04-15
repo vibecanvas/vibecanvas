@@ -43,6 +43,36 @@ describe("new Text plugin click-create", () => {
     await harness.destroy();
   });
 
+  test("remembered text tool style is used for new text", async () => {
+    const harness = await createNewCanvasHarness();
+    const editor = harness.runtime.services.require("editor2");
+
+    editor.setToolSelectionStyleValue("text", "strokeColor", "@purple/700");
+    editor.setToolSelectionStyleValue("text", "fontFamily", "monospace");
+    editor.setToolSelectionStyleValue("text", "fontSizePreset", "XL");
+    editor.setToolSelectionStyleValue("text", "textAlign", "center");
+    editor.setToolSelectionStyleValue("text", "verticalAlign", "middle");
+    editor.setToolSelectionStyleValue("text", "opacity", 0.5);
+    editor.setActiveTool("text");
+    await flushCanvasEffects();
+
+    firePointerUp(harness.stage, harness.staticForegroundLayer, harness.runtime, 100, 150);
+    await flushCanvasEffects();
+
+    const textNodes = harness.staticForegroundLayer.getChildren().filter((node) => node instanceof Konva.Text) as Konva.Text[];
+    const added = textNodes.at(-1);
+
+    expect(added).toBeTruthy();
+    expect(added?.fill()).toBe("#7e22ce");
+    expect(added?.fontFamily()).toBe("monospace");
+    expect(added?.fontSize()).toBe(36);
+    expect(added?.align()).toBe("center");
+    expect(added?.verticalAlign()).toBe("middle");
+    expect(added?.opacity()).toBe(0.5);
+
+    await harness.destroy();
+  });
+
   test("new text opens textarea edit UI and Escape cancels the empty new node", async () => {
     const harness = await createNewCanvasHarness();
     const editor = harness.runtime.services.require("editor2");

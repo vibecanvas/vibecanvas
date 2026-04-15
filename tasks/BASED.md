@@ -173,7 +173,7 @@ Use the leaf files for execution history and local context.
 - [x]: [S30](s/S30.md) - canvas: remove remaining Tailwind-style classes from component TSX
 - [x]: [S31](s/S31.md) - frontend: remove remaining Tailwind-pattern source from app UI
 - [x]: [S31] - how to deal with /Users/omarezzat/Workspace/vibecanvas/vibecanvas/packages/canvas/src/core/pretext.ts
-- [~]: [S32] - show stylemenu already in create mode when tool like rect,pen is pressed. ux -> user knows where to draw
+- [x]: [S32] - show stylemenu already in create mode when tool like rect,pen is pressed. ux -> user knows where to draw
 - [x]: [S33] - canvas architecture: rename SceneService -> SceneService and split EditorService so editor keeps only edit/transform state while scene registries/mapping move to SceneService
 - [x]: [S34] - test canvas/core if all fn fx file function are correct
 - [x]: [S35](s/S35.md) - canvas/core: align fn fx tx file boundaries, injected portals, and callers
