@@ -1,0 +1,77 @@
+import type Konva from "konva";
+import type { Group } from "konva/lib/Group";
+import type { Shape, ShapeConfig } from "konva/lib/Shape";
+import type { CanvasRegistryService, TCanvasTransformAnchor } from "../../services";
+import { fxIsCanvasGroupNode } from "../../core/fx.canvas-node-semantics";
+import { fxIsShape1dNode } from "../shape1d/fx.node";
+
+const GROUP_ANCHORS: TCanvasTransformAnchor[] = [
+  "top-left",
+  "top-right",
+  "bottom-left",
+  "bottom-right",
+];
+
+const DEFAULT_ANCHORS: TCanvasTransformAnchor[] = [
+  "top-left",
+  "top-center",
+  "top-right",
+  "middle-right",
+  "middle-left",
+  "bottom-left",
+  "bottom-center",
+  "bottom-right",
+];
+
+export type TPortalFxGetSelectionTransformOptions = {
+  canvasRegistry: CanvasRegistryService;
+  Konva: typeof Konva;
+};
+
+export type TArgsFxGetSelectionTransformOptions = {
+  selection: Array<Group | Shape<ShapeConfig>>;
+};
+
+export function fxGetSelectionTransformOptions(portal: TPortalFxGetSelectionTransformOptions, args: TArgsFxGetSelectionTransformOptions) {
+  const isSingleGroupSelection = args.selection.length === 1
+    && fxIsCanvasGroupNode({}, { editor: portal.canvasRegistry, node: args.selection[0] });
+  const isMultiSelection = args.selection.length > 1;
+  const hasTextOnly = args.selection.length > 0 && args.selection.every((node) => node instanceof portal.Konva.Text);
+  const hasShape1dOnly = args.selection.length > 0 && args.selection.every((node) => fxIsShape1dNode({ Shape: portal.Konva.Shape }, { node }));
+
+  const defaultUseCornerAnchors = isSingleGroupSelection || hasTextOnly || hasShape1dOnly || isMultiSelection;
+  let enabledAnchors: TCanvasTransformAnchor[] = defaultUseCornerAnchors ? [...GROUP_ANCHORS] : [...DEFAULT_ANCHORS];
+  let keepRatio = defaultUseCornerAnchors;
+  let flipEnabled = true;
+
+  for (const node of args.selection) {
+    const transformOptions = portal.canvasRegistry.getTransformOptions({
+      node,
+      selection: args.selection,
+    });
+
+    if (args.selection.length === 1 && transformOptions.enabledAnchors) {
+      enabledAnchors = [...transformOptions.enabledAnchors];
+    }
+    if (transformOptions.keepRatio === true) {
+      keepRatio = true;
+    }
+    if (args.selection.length === 1 && transformOptions.keepRatio === false) {
+      keepRatio = false;
+    }
+    if (transformOptions.flipEnabled === false) {
+      flipEnabled = false;
+    }
+    if (args.selection.length === 1 && transformOptions.flipEnabled === true) {
+      flipEnabled = true;
+    }
+  }
+
+  return {
+    borderEnabled: !isSingleGroupSelection,
+    borderDash: isMultiSelection ? [2, 2] : [0, 0],
+    enabledAnchors,
+    keepRatio,
+    flipEnabled,
+  };
+}

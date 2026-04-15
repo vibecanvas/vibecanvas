@@ -13,26 +13,10 @@ import type { SceneService } from "../../services/scene/SceneService";
 import type { SelectionService } from "../../services/selection/SelectionService";
 import type { IHooks } from "../../runtime";
 import { fxIsCanvasGroupNode } from "../../core/fx.canvas-node-semantics";
-import { fxFilterSelection } from "../../core/fx.filter-selection";
-import { fxIsShape1dNode } from "../shape1d/fx.node";
-
-const GROUP_ANCHORS: TCanvasTransformAnchor[] = [
-  "top-left",
-  "top-right",
-  "bottom-left",
-  "bottom-right",
-];
-
-const DEFAULT_ANCHORS: TCanvasTransformAnchor[] = [
-  "top-left",
-  "top-center",
-  "top-right",
-  "middle-right",
-  "middle-left",
-  "bottom-left",
-  "bottom-center",
-  "bottom-right",
-];
+import { fxGetProxyDragTarget } from "./fx.proxy-drag-target";
+import { fxGetProxyBounds } from "./fx.proxy-bounds";
+import { txDispatchSelectionTransformHooks } from "./tx.dispatch-selection-transform-hooks";
+import { txSyncTransformer } from "./tx.sync-transformer";
 
 const TRANSFORM_DRAG_PROXY_NAME = "transform-drag-proxy";
 const INTERACTION_OVERLAY_ATTR = "vcInteractionOverlay";
@@ -120,58 +104,6 @@ function refreshSelectedGroups(canvasRegistry: CanvasRegistryService, selection:
 }
 
 /**
- * Resolves transformer UI options for the active selection.
- * Defaults handle common multi-select and text/1d/group cases, then registry overrides apply.
- */
-function getSelectionTransformOptions(args: {
-  Konva: typeof Konva;
-  canvasRegistry: CanvasRegistryService;
-  selection: Array<Group | Shape<ShapeConfig>>;
-}) {
-  const isSingleGroupSelection = args.selection.length === 1
-    && fxIsCanvasGroupNode({}, { editor: args.canvasRegistry, node: args.selection[0] });
-  const isMultiSelection = args.selection.length > 1;
-  const hasTextOnly = args.selection.length > 0 && args.selection.every((node) => node instanceof args.Konva.Text);
-  const hasShape1dOnly = args.selection.length > 0 && args.selection.every((node) => fxIsShape1dNode({ Shape: args.Konva.Shape }, { node }));
-
-  const defaultUseCornerAnchors = isSingleGroupSelection || hasTextOnly || hasShape1dOnly || isMultiSelection;
-  let enabledAnchors: TCanvasTransformAnchor[] = defaultUseCornerAnchors ? [...GROUP_ANCHORS] : [...DEFAULT_ANCHORS];
-  let keepRatio = defaultUseCornerAnchors;
-  let flipEnabled = true;
-
-  for (const node of args.selection) {
-    const transformOptions = args.canvasRegistry.getTransformOptions({
-      node,
-      selection: args.selection,
-    });
-
-    if (args.selection.length === 1 && transformOptions.enabledAnchors) {
-      enabledAnchors = [...transformOptions.enabledAnchors];
-    }
-    if (transformOptions.keepRatio === true) {
-      keepRatio = true;
-    }
-    if (args.selection.length === 1 && transformOptions.keepRatio === false) {
-      keepRatio = false;
-    }
-    if (transformOptions.flipEnabled === false) {
-      flipEnabled = false;
-    }
-    if (args.selection.length === 1 && transformOptions.flipEnabled === true) {
-      flipEnabled = true;
-    }
-  }
-
-  return {
-    borderEnabled: !isSingleGroupSelection,
-    borderDash: isMultiSelection ? [2, 2] : [0, 0],
-    enabledAnchors,
-    keepRatio,
-    flipEnabled,
-  };
-}
-
-/**
  * Returns transformer-local pointer position from the dynamic layer.
  */
 function getTransformerPointer(scene: SceneService) {
@@ -193,62 +125,6 @@ function isTypedAnchor(anchor: string | null): anchor is TCanvasTransformAnchor 
 }
 
 /**
- * Dispatches live resize callbacks to registry element definitions for the current selection.
- */
-function fnMergeTransformHookResult(
-  current: { cancel: boolean; crdt: boolean },
-  next: { cancel: boolean; crdt: boolean } | void,
-) {
-  if (!next) {
-    return current;
-  }
-
-  return {
-    cancel: current.cancel || next.cancel,
-    crdt: current.crdt || next.crdt,
-  };
-}
-
-/**
- * Dispatches transform callbacks for one selection across all matching registry definitions.
- * Defaults remain owned by this plugin; registry callbacks are only optional overrides.
- */
-function txDispatchSelectionTransformHooks<TArgs extends { node: Konva.Node; element: TElement; selection: Array<Group | Shape<ShapeConfig>> }>(args: {
-  canvasRegistry: CanvasRegistryService;
-  selection: Array<Group | Shape<ShapeConfig>>;
-  createArgs: (node: Group | Shape<ShapeConfig>, element: TElement) => TArgs;
-  getHook: (definition: ReturnType<CanvasRegistryService["getMatchingElementDefinitionsByNode"]>[number]) => ((args: TArgs) => { cancel: boolean; crdt: boolean } | void) | undefined;
-}) {
-  let result = { cancel: false, crdt: false };
-  const handledNodeIds = new Set<string>();
-
-  for (const node of args.selection) {
-    const element = args.canvasRegistry.toElement(node);
-    if (!element) {
-      continue;
-    }
-
-    const hookArgs = args.createArgs(node, element);
-    const definitions = args.canvasRegistry.getMatchingElementDefinitionsByNode(node);
-    let handledNode = false;
-    for (const definition of definitions) {
-      const hookResult = args.getHook(definition)?.(hookArgs);
-      result = fnMergeTransformHookResult(result, hookResult);
-      handledNode = handledNode || Boolean(hookResult?.cancel);
-    }
-
-    if (handledNode) {
-      handledNodeIds.add(node.id());
-    }
-  }
-
-  return {
-    ...result,
-    handledNodeIds,
-  };
-}
-
-/**
  * Dispatches resize-finalization callbacks after the interactive transformer gesture ends.
  */
 function txApplySelectionResizeHooks(args: {
@@ -261,6 +137,7 @@ function txApplySelectionResizeHooks(args: {
 
   return txDispatchSelectionTransformHooks({
     canvasRegistry: args.canvasRegistry,
+  }, {
     selection: args.selection,
     createArgs: (node, element) => ({
       node,
@@ -279,6 +156,7 @@ function txApplySelectionRotateHooks(args: {
 }) {
   return txDispatchSelectionTransformHooks({
     canvasRegistry: args.canvasRegistry,
+  }, {
     selection: args.selection,
     createArgs: (node, element) => ({
       node,
@@ -303,6 +181,7 @@ function txFinalizeSelectionResize(args: {
 
   return txDispatchSelectionTransformHooks({
     canvasRegistry: args.canvasRegistry,
+  }, {
     selection: args.selection,
     createArgs: (node, element) => ({
       node,
@@ -321,6 +200,7 @@ function txFinalizeSelectionRotate(args: {
 }) {
   return txDispatchSelectionTransformHooks({
     canvasRegistry: args.canvasRegistry,
+  }, {
     selection: args.selection,
     createArgs: (node, element) => ({
       node,
@@ -333,100 +213,10 @@ function txFinalizeSelectionRotate(args: {
 }
 
 /**
- * Returns true when the selected node should be moved through the invisible drag proxy.
- * Today this is used for pen and shape1d nodes that benefit from a larger drag hit target.
- */
-function isProxyDragCandidate(args: {
-  Konva: typeof Konva;
-  scene: SceneService;
-  canvasRegistry: CanvasRegistryService;
-  node: Group | Shape<ShapeConfig>;
-}) {
-  void args.scene;
-  if (!(args.node instanceof args.Konva.Shape)) {
-    return false;
-  }
-
-  if (fxIsShape1dNode({ Shape: args.Konva.Shape }, { node: args.node })) {
-    return true;
-  }
-
-  const pathNode = args.node as unknown as Konva.Node;
-  if (!(pathNode instanceof args.Konva.Path)) {
-    return false;
-  }
-
-  const element = args.canvasRegistry.toElement(pathNode);
-  return element?.data.type === "pen";
-}
-
-/**
- * Resolves the one selected node eligible for drag-proxy movement.
- * Proxy drag is only enabled for a single filtered selection in select mode.
- */
-function getProxyDragTarget(args: {
-  scene: SceneService;
-  canvasRegistry: CanvasRegistryService;
-  selection: SelectionService;
-}) {
-  if (args.selection.mode !== "select") {
-    return null;
-  }
-
-  const rawSelection = args.selection.selection;
-  const filteredSelection = fxFilterSelection({
-    Konva,
-  }, {
-    editor: args.canvasRegistry,
-    selection: rawSelection,
-  });
-
-  if (rawSelection.length !== 1 || filteredSelection.length !== 1) {
-    return null;
-  }
-
-  const rawNode = rawSelection[0];
-  const filteredNode = filteredSelection[0];
-  if (!rawNode || rawNode !== filteredNode) {
-    return null;
-  }
-
-  return isProxyDragCandidate({
-    Konva,
-    scene: args.scene,
-    canvasRegistry: args.canvasRegistry,
-    node: rawNode,
-  })
-    ? rawNode as Shape<ShapeConfig>
-    : null;
-}
-
-/**
  * Produces the history label for drag-proxy move operations.
  */
 function getProxyDragLabel(element: TElement) {
   return element.data.type === "pen" ? "drag-pen" : "drag-shape1d";
-}
-
-/**
- * Computes proxy rectangle bounds in layer space from the target node's world transform.
- */
-function getProxyBounds(render: SceneService, node: Shape<ShapeConfig>) {
-  const localRect = node.getClientRect({ relativeTo: node });
-  const nodeTransform = node.getAbsoluteTransform();
-  const layerInverseTransform = render.staticForegroundLayer.getAbsoluteTransform().copy();
-  layerInverseTransform.invert();
-
-  const topLeft = layerInverseTransform.point(nodeTransform.point({ x: localRect.x, y: localRect.y }));
-  const topRight = layerInverseTransform.point(nodeTransform.point({ x: localRect.x + localRect.width, y: localRect.y }));
-  const bottomLeft = layerInverseTransform.point(nodeTransform.point({ x: localRect.x, y: localRect.y + localRect.height }));
-
-  return {
-    position: topLeft,
-    width: Math.max(1, Math.hypot(topRight.x - topLeft.x, topRight.y - topLeft.y)),
-    height: Math.max(1, Math.hypot(bottomLeft.x - topLeft.x, bottomLeft.y - topLeft.y)),
-    rotation: Math.atan2(topRight.y - topLeft.y, topRight.x - topLeft.x) * 180 / Math.PI,
-  };
 }
 
 /**
@@ -439,41 +229,6 @@ function syncTransformerTheme(theme: ThemeService, transformer: Konva.Transforme
   transformer.anchorFill(activeTheme.colors.background);
   transformer.anchorCornerRadius(0);
   transformer.anchorSize(8);
-}
-
-/**
- * Syncs transformer nodes and UI options from current editor/selection state.
- */
-function syncTransformer(args: {
-  Konva: typeof Konva;
-  scene: SceneService;
-  canvasRegistry: CanvasRegistryService;
-  editor: EditorServiceV2;
-  selection: SelectionService;
-  transformer: Konva.Transformer;
-}) {
-  if (args.editor.editingTextId !== null || args.editor.editingShape1dId !== null) {
-    args.transformer.setNodes([]);
-    args.transformer.update();
-    args.scene.dynamicLayer.batchDraw();
-    return;
-  }
-
-  const filteredSelection = fxFilterSelection({ Konva }, { editor: args.canvasRegistry, selection: args.selection.selection });
-  const transformOptions = getSelectionTransformOptions({
-    Konva,
-    canvasRegistry: args.canvasRegistry,
-    selection: filteredSelection,
-  });
-
-  args.transformer.borderEnabled(transformOptions.borderEnabled);
-  args.transformer.borderDash(transformOptions.borderDash);
-  args.transformer.keepRatio(transformOptions.keepRatio);
-  args.transformer.flipEnabled(transformOptions.flipEnabled);
-  args.transformer.enabledAnchors(transformOptions.enabledAnchors);
-  args.transformer.setNodes(filteredSelection);
-  args.transformer.update();
-  args.scene.dynamicLayer.batchDraw();
 }
 
 /**
@@ -520,14 +275,14 @@ export function createTransformPlugin(): IPlugin<{
           return;
         }
 
-        syncTransformer({
+        txSyncTransformer({
           Konva,
           scene: render,
           canvasRegistry,
           editor,
           selection,
           transformer,
-        });
+        }, {});
       };
 
       const hideDragProxy = () => {
@@ -551,13 +306,13 @@ export function createTransformPlugin(): IPlugin<{
           return;
         }
 
-        const target = getProxyDragTarget({ scene: render, canvasRegistry, selection });
+        const target = fxGetProxyDragTarget({ scene: render, canvasRegistry, Konva }, { selection });
         if (!target) {
           hideDragProxy();
           return;
         }
 
-        const bounds = getProxyBounds(render, target);
+        const bounds = fxGetProxyBounds({ render }, { node: target });
         dragProxy.position(bounds.position);
         dragProxy.rotation(bounds.rotation);
         dragProxy.scale({ x: 1, y: 1 });
@@ -600,7 +355,7 @@ export function createTransformPlugin(): IPlugin<{
             return;
           }
 
-          const target = getProxyDragTarget({ scene: render, canvasRegistry, selection });
+          const target = fxGetProxyDragTarget({ scene: render, canvasRegistry, Konva }, { selection });
 
           if (event.evt?.altKey) {
             dragProxy.stopDrag();
@@ -659,6 +414,7 @@ export function createTransformPlugin(): IPlugin<{
           if (element) {
             const moveResult = txDispatchSelectionTransformHooks({
               canvasRegistry,
+            }, {
               selection: selection.selection,
               createArgs: () => ({
                 node: state.node,
@@ -696,6 +452,7 @@ export function createTransformPlugin(): IPlugin<{
 
           const afterMoveResult = txDispatchSelectionTransformHooks({
             canvasRegistry,
+          }, {
             selection: selection.selection,
             createArgs: () => ({
               node: state.node,
