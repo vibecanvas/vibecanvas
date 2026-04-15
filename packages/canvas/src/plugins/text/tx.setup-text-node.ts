@@ -44,6 +44,10 @@ export function txSetupTextNode(portal: TPortalSetupTextNode, args: TArgsSetupTe
   let beforeDragElement: TElement | null = null;
   let isCloneDrag = false;
   const throttledPatch = portal.createThrottledPatch((element) => {
+    if (portal.crdt.doc().elements[element.id] === undefined) {
+      return;
+    }
+
     const builder = portal.crdt.build();
     builder.patchElement(element.id, "x", element.x);
     builder.patchElement(element.id, "y", element.y);

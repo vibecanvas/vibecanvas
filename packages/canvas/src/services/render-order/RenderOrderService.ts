@@ -367,14 +367,22 @@ export class RenderOrderService implements IService<Record<string, never>> {
 
       const nodeType = this.canvasRegistry.getNodeType(node);
       if (nodeType === "group") {
-        groupPatches.push({
-          id: node.id(),
-          zIndex,
-        } as TGroup);
+        // Some flows insert runtime nodes before their first CRDT create commit.
+        // Persist zIndex only after the group exists in the doc, otherwise
+        // builder path patches would throw on a missing entity.
+        if (this.crdt.doc().groups[node.id()] !== undefined) {
+          groupPatches.push({
+            id: node.id(),
+            zIndex,
+          } as TGroup);
+        }
         return;
       }
 
-      if (nodeType !== null) {
+      // Some flows insert runtime nodes before their first CRDT create commit.
+      // Persist zIndex only after the element exists in the doc, otherwise
+      // builder path patches would throw on a missing entity.
+      if (nodeType !== null && this.crdt.doc().elements[node.id()] !== undefined) {
         elementPatches.push({
           id: node.id(),
           zIndex,

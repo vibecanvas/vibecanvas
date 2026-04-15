@@ -1,7 +1,7 @@
 import Konva from "konva";
 import type { TElement } from "@vibecanvas/service-automerge/types/canvas-doc.types";
-import { describe, expect, test } from "vitest";
-import { createNewCanvasHarness, flushCanvasEffects } from "../../new-test-setup";
+import { describe, expect, test, vi } from "vitest";
+import { createNewCanvasHarness, createMockDocHandle, flushCanvasEffects } from "../../new-test-setup";
 
 function createTextElement(overrides?: Partial<TElement>): TElement {
   return {
@@ -143,5 +143,51 @@ describe("new Text plugin regressions", () => {
     expect(node.text()).toBe("this is all a single line of text but should stay on one line");
 
     await harness.destroy();
+  });
+
+  test("throttled drag patch does not patch a new text node before its first CRDT commit", async () => {
+    vi.useFakeTimers();
+
+    try {
+      const docHandle = createMockDocHandle();
+      const harness = await createNewCanvasHarness({ docHandle });
+      const editor = harness.runtime.services.require("editor2");
+
+      editor.setActiveTool("text");
+      await flushCanvasEffects();
+
+      firePointerUp(harness, 100, 150);
+      await flushCanvasEffects();
+
+      const node = harness.staticForegroundLayer.findOne((candidate) => candidate instanceof Konva.Text) as Konva.Text | null;
+      const textarea = harness.stage.container().querySelector("textarea") as HTMLTextAreaElement | null;
+
+      expect(node).not.toBeNull();
+      expect(textarea).not.toBeNull();
+      expect(docHandle.doc().elements[node!.id()]).toBeUndefined();
+
+      node!.position({ x: 140, y: 190 });
+      node!.fire("dragmove", {
+        target: node!,
+        currentTarget: node!,
+        evt: new MouseEvent("dragmove", { bubbles: true }),
+      });
+
+      expect(() => {
+        vi.runAllTimers();
+      }).not.toThrow();
+      expect(docHandle.doc().elements[node!.id()]).toBeUndefined();
+
+      textarea!.value = "hello";
+      textarea!.dispatchEvent(new Event("blur"));
+      await flushCanvasEffects();
+
+      expect(docHandle.doc().elements[node!.id()]).toBeDefined();
+      expect((docHandle.doc().elements[node!.id()].data as TElement["data"] & { text: string }).text).toBe("hello");
+
+      await harness.destroy();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });

@@ -148,24 +148,15 @@ export class CrdtService implements IService<TCrdtServiceHooks>, IStartableServi
         return wrappedBuilder;
       }) as TCrdtBuilder["deleteGroup"],
       commit: () => {
-        let commitResult: TCrdtCommitResult | null = null;
+        const commitResult = this.#runLocalChange(() => builder.commit());
 
-        this.#runLocalChange(() => {
-          commitResult = builder.commit();
-        });
-
-        if (commitResult === null) {
-          throw new Error("CRDT builder commit failed to produce a result");
-        }
-
-        const resolvedCommitResult = commitResult;
-        this.hooks.write.call(resolvedCommitResult.redoOps);
+        this.hooks.write.call(commitResult.redoOps);
 
         return {
-          undoOps: resolvedCommitResult.undoOps,
-          redoOps: resolvedCommitResult.redoOps,
+          undoOps: commitResult.undoOps,
+          redoOps: commitResult.redoOps,
           rollback: () => {
-            this.applyOps({ ops: resolvedCommitResult.undoOps });
+            this.applyOps({ ops: commitResult.undoOps });
           },
         };
       },
@@ -206,11 +197,11 @@ export class CrdtService implements IService<TCrdtServiceHooks>, IStartableServi
    * success. The marker is intentionally consumed later by CRDT change
    * listeners. On failure the pending marker is removed immediately.
    */
-  #runLocalChange(callback: () => void) {
+  #runLocalChange<TResult>(callback: () => TResult) {
     this.#pendingLocalChangeEvents += 1;
 
     try {
-      callback();
+      return callback();
     } catch (error) {
       this.#pendingLocalChangeEvents = Math.max(0, this.#pendingLocalChangeEvents - 1);
       throw error;
