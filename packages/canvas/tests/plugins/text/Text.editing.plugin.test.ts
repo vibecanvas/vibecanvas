@@ -111,6 +111,31 @@ describe("new Text plugin editing", () => {
     await harness.destroy();
   });
 
+  test("edit mode textarea uses the text color", async () => {
+    const harness = await createNewCanvasHarness();
+    const theme = harness.runtime.services.require("theme");
+
+    const node = addHydratedTextNode(harness, createTextElement({
+      id: "color-text-1",
+      style: {
+        opacity: 1,
+        strokeColor: "@purple/700",
+      },
+    }));
+    await openEdit(node);
+
+    const textarea = harness.stage.container().querySelector("textarea") as HTMLTextAreaElement;
+    const probe = harness.stage.container().ownerDocument.createElement("div");
+    probe.style.color = theme.resolveThemeColor("@purple/700", theme.getTheme().colors.canvasText) ?? theme.getTheme().colors.canvasText;
+
+    expect(textarea.style.color).toBe(probe.style.color);
+
+    textarea.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+    await flushCanvasEffects();
+
+    await harness.destroy();
+  });
+
   test("leading and trailing whitespace is preserved", async () => {
     const harness = await createNewCanvasHarness();
 

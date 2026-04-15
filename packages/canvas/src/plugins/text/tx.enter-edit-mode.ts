@@ -153,6 +153,16 @@ function applyRuntimeElement(portal: TPortalEnterEditMode, args: { element: TEle
   return portal.canvasRegistry?.updateElement(args.element) ?? portal.editor.updateShapeFromTElement?.(args.element) ?? false;
 }
 
+function txSyncTextareaColor(portal: TPortalEnterEditMode, args: {
+  element: Pick<TElement, "style">;
+  textarea: HTMLTextAreaElement;
+}) {
+  args.textarea.style.color = portal.theme.resolveThemeColor(
+    args.element.style.strokeColor,
+    portal.theme.getTheme().colors.canvasText,
+  ) ?? portal.theme.getTheme().colors.canvasText;
+}
+
 export function txEnterEditMode(portal: TPortalEnterEditMode, args: TArgsEnterEditMode) {
   const now = Date.now();
   const originalElement = fxSerializeTextNode(portal, { node: args.node, createdAt: now, updatedAt: now });
@@ -275,10 +285,14 @@ export function txEnterEditMode(portal: TPortalEnterEditMode, args: TArgsEnterEd
     padding: "0",
     boxSizing: "border-box",
     zIndex: "9999",
-    color: "var(--vc-canvas-text, #000000)",
+  });
+  txSyncTextareaColor(portal, { element: originalElement, textarea });
+  const offThemeChange = portal.theme.hooks.change.tap(() => {
+    txSyncTextareaColor(portal, { element: originalElement, textarea });
   });
 
   const cleanup = () => {
+    offThemeChange();
     textarea.removeEventListener("input", autoGrow);
     textarea.removeEventListener("keydown", onKeyDown);
     textarea.removeEventListener("keyup", stopKeyPropagation);
