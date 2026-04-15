@@ -5,10 +5,10 @@ import { fnCreateOrderedZIndex } from "../../core/fn.create-ordered-z-index";
 import { fnGetNodeZIndex } from "../../core/fn.get-node-z-index";
 import { txSetNodeZIndex } from "../../core/tx.set-node-z-index";
 import type { TRenderOrderSnapshot } from "../../runtime";
+import type { CanvasRegistryService } from "../canvas-registry/CanvasRegistryService";
 import type { CrdtService } from "../crdt/CrdtService";
 import type { HistoryService } from "../history/HistoryService";
 import type { SceneService } from "../scene/SceneService";
-import type { EditorService } from "../editor/EditorService";
 
 export type TOrderedNode = Konva.Group | Konva.Shape;
 export type TParentContainer = Konva.Layer | Konva.Group;
@@ -19,12 +19,12 @@ export type TRenderOrderServiceArgs = {
   crdt: CrdtService;
   history: HistoryService;
   scene: SceneService;
-  editor: EditorService;
+  canvasRegistry: CanvasRegistryService;
   syncDomOrder?: () => void;
 };
 
 function isOrderedNode(node: Konva.Node): node is TOrderedNode {
-  return node instanceof Konva.Group || node instanceof Konva.Shape;
+  return node instanceof Konva.Node
 }
 
 function isParentContainer(node: Konva.Node | null | undefined): node is TParentContainer {
@@ -86,7 +86,7 @@ export class RenderOrderService implements IService<Record<string, never>> {
   readonly crdt: CrdtService;
   readonly history: HistoryService;
   readonly scene: SceneService;
-  readonly editor: EditorService;
+  readonly canvasRegistry: CanvasRegistryService
   readonly syncDomOrder?: () => void;
   #bundleResolvers = new Map<string, TRenderOrderBundleResolver>();
 
@@ -94,7 +94,7 @@ export class RenderOrderService implements IService<Record<string, never>> {
     this.crdt = args.crdt;
     this.history = args.history;
     this.scene = args.scene;
-    this.editor = args.editor;
+    this.canvasRegistry = args.canvasRegistry;
     this.syncDomOrder = args.syncDomOrder;
   }
 
@@ -193,7 +193,7 @@ export class RenderOrderService implements IService<Record<string, never>> {
       items: getImmediateOrderedChildren(parent).map((node) => ({
         id: node.id(),
         zIndex: fnGetNodeZIndex({ node }),
-        kind: this.editor.toGroup(node) ? "group" : "element",
+        kind: this.canvasRegistry.getNodeType(node) === "group" ? "group" : "element",
       })),
     };
   }
@@ -365,7 +365,8 @@ export class RenderOrderService implements IService<Record<string, never>> {
       const zIndex = fnCreateOrderedZIndex(persistedIndex);
       persistedIndex += 1;
 
-      if (this.editor.toGroup(node)) {
+      const nodeType = this.canvasRegistry.getNodeType(node);
+      if (nodeType === "group") {
         groupPatches.push({
           id: node.id(),
           zIndex,
@@ -373,7 +374,7 @@ export class RenderOrderService implements IService<Record<string, never>> {
         return;
       }
 
-      if (this.editor.toElement(node)) {
+      if (nodeType !== null) {
         elementPatches.push({
           id: node.id(),
           zIndex,

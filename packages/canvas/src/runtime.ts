@@ -160,15 +160,16 @@ function createServices(config: {
   const widget = new WidgetService(editor);
   const crdt = new CrdtService({ docHandle: config.docHandle });
   const logging = new LoggingService();
+  const editor2 = new EditorServiceV2(scene, canvasRegistry, crdt, selection);
   const renderOrder = new RenderOrderService({
     crdt,
     history,
     scene,
-    editor,
+    canvasRegistry,
   });
 
   services.provide("canvasRegistry", canvasRegistry);
-  services.provide("editor2", new EditorServiceV2(scene, canvasRegistry, crdt, selection));
+  services.provide("editor2", editor2);
   services.provide("camera", camera);
   services.provide("contextMenu", contextMenu);
   services.provide("crdt", crdt);
