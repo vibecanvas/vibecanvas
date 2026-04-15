@@ -17,6 +17,7 @@ import { fnGetNearestFontSizePreset } from "../../core/fn.text-style";
 import type { IHooks } from "../../runtime";
 import { fxCreateTextElement } from "./fn.create-text-element";
 import { fxToElement } from "./fx.to-element";
+import { txCreateTextCloneDrag } from "./tx.create-text-clone-drag";
 import { txEnterEditMode } from "./tx.enter-edit-mode";
 import { txSetupTextNode } from "./tx.setup-text-node";
 import { txUpdateTextNodeFromElement } from "./tx.update-text-node-from-element";
@@ -115,8 +116,8 @@ function txApplyTextTransform(args: {
 }
 
 /**
- * Owns free-text create, edit, drag, and editor transform registries.
- * Attached-text and clone-drag parity can come later.
+ * Owns free-text create, edit, drag, clone-drag, and editor transform registries.
+ * Attached-text behavior stays separate from free-text interactions.
  */
 export function createTextPlugin(): IPlugin<{
   canvasRegistry: CanvasRegistryService;
@@ -142,6 +143,8 @@ export function createTextPlugin(): IPlugin<{
       const selection = ctx.services.require("selection");
       const theme = ctx.services.require("theme");
       const document = scene.container.ownerDocument;
+      const createId = () => crypto.randomUUID();
+      const now = () => Date.now();
 
       const syncThemeTextNodes = () => {
         scene.staticForegroundLayer.find((candidate: Konva.Node) => {
@@ -172,14 +175,14 @@ export function createTextPlugin(): IPlugin<{
         txSetupTextNode({
           Konva,
           crdt,
-          crypto,
           history,
           hooks: ctx.hooks,
           render: scene,
           selection,
           serializeNode: ({ node, createdAt, updatedAt }) => fxSerializeTextNode(canvasRegistry, { node, createdAt, updatedAt }),
-          setupNode,
           theme,
+          now,
+          startDragClone: (args) => editor.startDragClone(args),
           createThrottledPatch: (callback) => throttle(callback, 100),
         }, {
           freeTextName: FREE_TEXT_NAME,
@@ -202,11 +205,11 @@ export function createTextPlugin(): IPlugin<{
             return null;
           }
 
-          const now = Date.now();
+          const timestamp = now();
           return fxSerializeTextNode(canvasRegistry, {
             node,
-            createdAt: now,
-            updatedAt: now,
+            createdAt: timestamp,
+            updatedAt: timestamp,
           });
         },
         createNode: (element) => {
@@ -215,6 +218,35 @@ export function createTextPlugin(): IPlugin<{
           }
 
           return createTextNode(theme, element);
+        },
+        createDragClone: ({ node }) => {
+          if (!(node instanceof Konva.Text)) {
+            return false;
+          }
+
+          const element = canvasRegistry.toElement(node);
+          if (!element || element.data.type !== "text" || element.data.containerId !== null) {
+            return false;
+          }
+
+          txCreateTextCloneDrag({
+            Konva,
+            crdt,
+            render: scene,
+            selection,
+            createId,
+            now,
+            serializeNode: ({ node: candidateNode, createdAt, updatedAt }) => fxSerializeTextNode(canvasRegistry, {
+              node: candidateNode,
+              createdAt,
+              updatedAt,
+            }),
+            setupNode,
+          }, {
+            freeTextName: FREE_TEXT_NAME,
+            node,
+          });
+          return true;
         },
         attachListeners: (node) => {
           if (!(node instanceof Konva.Text)) {
@@ -286,11 +318,11 @@ export function createTextPlugin(): IPlugin<{
                   return null;
                 }
 
-                const now = Date.now();
+                const timestamp = now();
                 return fxSerializeTextNode(canvasRegistry, {
                   node: candidateNode,
-                  createdAt: beforeElement?.createdAt ?? now,
-                  updatedAt: now,
+                  createdAt: beforeElement?.createdAt ?? timestamp,
+                  updatedAt: timestamp,
                 });
               },
             }, {
@@ -316,11 +348,11 @@ export function createTextPlugin(): IPlugin<{
                   return null;
                 }
 
-                const now = Date.now();
+                const timestamp = now();
                 return fxSerializeTextNode(canvasRegistry, {
                   node: candidateNode,
-                  createdAt: beforeElement?.createdAt ?? now,
-                  updatedAt: now,
+                  createdAt: beforeElement?.createdAt ?? timestamp,
+                  updatedAt: timestamp,
                 });
               },
             }, {
@@ -378,13 +410,13 @@ export function createTextPlugin(): IPlugin<{
           return;
         }
 
-        const now = Date.now();
+        const timestamp = now();
         const element = fxCreateTextElement({
-          id: crypto.randomUUID(),
+          id: createId(),
           x: pointer.x,
           y: pointer.y,
-          createdAt: now,
-          updatedAt: now,
+          createdAt: timestamp,
+          updatedAt: timestamp,
         });
         const node = canvasRegistry.createNodeFromElement(element);
         if (!(node instanceof Konva.Text)) {

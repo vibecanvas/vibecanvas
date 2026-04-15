@@ -11,14 +11,17 @@ import type Konva from "konva";
 export type TPortalSetupTextNode = {
   Konva: typeof Konva;
   crdt: CrdtService;
-  crypto: typeof crypto;
   history: HistoryService;
   hooks: IHooks;
   render: SceneService;
   selection: SelectionService;
   serializeNode: (args: { node: Konva.Text; createdAt: number; updatedAt: number }) => TElement;
-  setupNode: (node: Konva.Text) => Konva.Text;
   theme: ThemeService;
+  now: () => number;
+  startDragClone: (args: {
+    node: Konva.Node;
+    selection: Array<Konva.Group | Konva.Shape>;
+  }) => boolean;
   createThrottledPatch: (callback: (element: TElement) => void) => (element: TElement) => void;
 };
 
@@ -71,39 +74,15 @@ export function txSetupTextNode(portal: TPortalSetupTextNode, args: TArgsSetupTe
       isCloneDrag = true;
       stopDragSafely(args.node);
 
-      const previewClone = new portal.Konva.Text(args.node.getAttrs());
-      previewClone.id(portal.crypto.randomUUID());
-      previewClone.name(args.freeTextName);
-      previewClone.draggable(true);
-      portal.render.dynamicLayer.add(previewClone);
-      previewClone.startDrag();
-
-      const finalizeCloneDrag = () => {
-        previewClone.off("dragend", finalizeCloneDrag);
-        stopDragSafely(previewClone);
-        previewClone.moveTo(portal.render.staticForegroundLayer);
-        const cloned = portal.setupNode(previewClone);
-        const now = Date.now();
-        const clonedElement = portal.serializeNode({
-          node: cloned,
-          createdAt: now,
-          updatedAt: now,
-        });
-        const createBuilder = portal.crdt.build();
-        createBuilder.patchElement(clonedElement.id, clonedElement);
-        createBuilder.commit();
-        portal.selection.setSelection([cloned]);
-        portal.selection.setFocusedNode(cloned);
-        portal.render.dynamicLayer.batchDraw();
-        portal.render.staticForegroundLayer.batchDraw();
-      };
-
-      previewClone.on("dragend", finalizeCloneDrag);
+      portal.startDragClone({
+        node: args.node,
+        selection: portal.selection.selection,
+      });
       return;
     }
 
-    const now = Date.now();
-    beforeDragElement = portal.serializeNode({ node: args.node, createdAt: now, updatedAt: now });
+    const timestamp = portal.now();
+    beforeDragElement = portal.serializeNode({ node: args.node, createdAt: timestamp, updatedAt: timestamp });
   });
 
   args.node.on("dragmove", () => {
@@ -111,11 +90,11 @@ export function txSetupTextNode(portal: TPortalSetupTextNode, args: TArgsSetupTe
       return;
     }
 
-    const now = Date.now();
+    const timestamp = portal.now();
     throttledPatch(portal.serializeNode({
       node: args.node,
-      createdAt: beforeDragElement?.createdAt ?? now,
-      updatedAt: now,
+      createdAt: beforeDragElement?.createdAt ?? timestamp,
+      updatedAt: timestamp,
     }));
   });
 
@@ -125,11 +104,11 @@ export function txSetupTextNode(portal: TPortalSetupTextNode, args: TArgsSetupTe
       beforeDragElement = null;
       return;
     }
-    const now = Date.now();
+    const timestamp = portal.now();
     const afterDragElement = portal.serializeNode({
       node: args.node,
-      createdAt: beforeDragElement?.createdAt ?? now,
-      updatedAt: now,
+      createdAt: beforeDragElement?.createdAt ?? timestamp,
+      updatedAt: timestamp,
     });
     const dragBuilder = portal.crdt.build();
     dragBuilder.patchElement(afterDragElement.id, afterDragElement);

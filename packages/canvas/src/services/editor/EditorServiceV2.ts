@@ -331,6 +331,17 @@ export class EditorServiceV2 implements IService<TEditorServiceHooks> {
     this.hooks.editingShape1dChange.call(id);
   }
 
+  /**
+   * Starts alt-drag clone behavior for one existing runtime node.
+   * Element-specific clone implementation stays in the canvas registry.
+   */
+  startDragClone(args: {
+    node: Konva.Node;
+    selection: Array<Konva.Group | Konva.Shape>;
+  }) {
+    return this.canvasRegistry.createDragClone(args);
+  }
+
   private clearPreviewState() {
     this.previewOrigin = null;
     this.previewNode = null;
