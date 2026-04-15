@@ -191,6 +191,7 @@ Use the leaf files for execution history and local context.
 - [x]: [E16] - filewatch performance. -> on big folders are slow
 - [ ]: [E17](e/E17.md) - automerge authority: optimistic local writes with server validation/reject path
 - [ ]: [E18] - replace iframe with bun.webview??
+- [ ]: [E19](e/E19.md) - canvas performance longterm: worker automerge + incremental notifications
 
 ## D irections
 - [x]: [D1] - AI can edit the canvas directly
