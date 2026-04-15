@@ -90,7 +90,10 @@ export async function txInsertImage(
     portal.render.staticForegroundLayer.batchDraw();
 
     const insertedElement = portal.toElement(node);
-    portal.crdt.patch({ elements: [insertedElement], groups: [] });
+    const createBuilder = portal.crdt.build();
+    createBuilder.patchElement(insertedElement.id, insertedElement);
+    const createCommitResult = createBuilder.commit();
+    let activeNode: Konva.Image | null = node;
     portal.selection.setSelection([node]);
     portal.selection.setFocusedNode(node);
 
@@ -98,8 +101,9 @@ export async function txInsertImage(
       label: "insert-image",
       undo() {
         portal.selection.clear();
-        node.destroy();
-        portal.crdt.deleteById({ elementIds: [insertedElement.id] });
+        activeNode?.destroy();
+        activeNode = null;
+        createCommitResult.rollback();
         portal.render.staticForegroundLayer.batchDraw();
       },
       redo() {
@@ -108,9 +112,10 @@ export async function txInsertImage(
         portal.render.staticForegroundLayer.add(recreatedNode);
         portal.renderOrder.setNodeZIndex(recreatedNode, insertedElement.zIndex);
         portal.renderOrder.sortChildren(portal.render.staticForegroundLayer);
-        portal.crdt.patch({ elements: [insertedElement], groups: [] });
+        portal.crdt.applyOps({ ops: createCommitResult.redoOps });
         portal.selection.setSelection([recreatedNode]);
         portal.selection.setFocusedNode(recreatedNode);
+        activeNode = recreatedNode;
         portal.render.staticForegroundLayer.batchDraw();
       },
     });

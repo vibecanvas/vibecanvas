@@ -50,7 +50,10 @@ export function txCreateImageCloneDrag(
     });
 
     const element = portal.toElement(previewClone);
-    portal.crdt.patch({ elements: [element], groups: [] });
+    const createBuilder = portal.crdt.build();
+    createBuilder.patchElement(element.id, element);
+    const createCommitResult = createBuilder.commit();
+    let activeNode: Konva.Image | null = previewClone;
     txCloneBackendFileForElement(portal.cloneBackendFileForElementPortal, {
       element,
       now: portal.now(),
@@ -59,8 +62,9 @@ export function txCreateImageCloneDrag(
     portal.history.record({
       label: "clone-image",
       undo() {
-        previewClone.destroy();
-        portal.crdt.deleteById({ elementIds: [element.id] });
+        activeNode?.destroy();
+        activeNode = null;
+        createCommitResult.rollback();
         portal.selection.clear();
         portal.render.staticForegroundLayer.batchDraw();
       },
@@ -70,9 +74,10 @@ export function txCreateImageCloneDrag(
         portal.render.staticForegroundLayer.add(recreated);
         portal.renderOrder.setNodeZIndex(recreated, element.zIndex);
         portal.renderOrder.sortChildren(portal.render.staticForegroundLayer);
-        portal.crdt.patch({ elements: [element], groups: [] });
+        portal.crdt.applyOps({ ops: createCommitResult.redoOps });
         portal.selection.setSelection([recreated]);
         portal.selection.setFocusedNode(recreated);
+        activeNode = recreated;
         portal.render.staticForegroundLayer.batchDraw();
       },
     });

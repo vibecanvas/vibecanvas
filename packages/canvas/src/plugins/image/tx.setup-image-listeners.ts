@@ -1,30 +1,32 @@
 import type { TElement } from "@vibecanvas/service-automerge/types/canvas-doc.types";
 import type Konva from "konva";
 import type { CrdtService } from "../../services/crdt/CrdtService";
-import type { EditorService } from "../../services/editor/EditorService";
+import type { EditorServiceV2 } from "../../services/editor/EditorServiceV2";
 import type { HistoryService } from "../../services/history/HistoryService";
 import type { SceneService } from "../../services/scene/SceneService";
 import type { SelectionService } from "../../services/selection/SelectionService";
 import type { IHooks, TElementPointerEvent } from "../../runtime";
 import { fxGetCanvasAncestorGroups } from "../../core/fx.canvas-node-semantics";
-import { txCreateImageCloneDrag } from "./tx.create-image-clone-drag";
-import type { TPortalCreateImageCloneDrag } from "./tx.create-image-clone-drag";
 import { txUpdateImageNodeFromElement } from "./tx.update-image-node-from-element";
 import type { TPortalUpdateImageNodeFromElement } from "./tx.update-image-node-from-element";
 
 export type TPortalSetupImageListeners = {
   crdt: CrdtService;
-  editor: EditorService;
+  editor: EditorServiceV2;
   history: HistoryService;
   render: SceneService;
   selection: SelectionService;
   hooks: IHooks;
-  cloneDragPortal: TPortalCreateImageCloneDrag;
+  startDragClone: (args: {
+    node: Konva.Node;
+    selection: Array<Konva.Group | Konva.Shape>;
+  }) => boolean;
+  applyElement: (element: TElement) => void;
   updateImageNodeFromElementPortal: TPortalUpdateImageNodeFromElement;
   filterSelection: (selection: Konva.Node[]) => Konva.Node[];
   safeStopDrag: (node: Konva.Node) => void;
   toElement: (node: Konva.Image) => TElement;
-  createThrottledPatch: (node: Konva.Image) => (element: TElement) => void;
+  createThrottledPatch: () => (element: TElement) => void;
 };
 
 export type TArgsSetupImageListeners = {
@@ -54,7 +56,7 @@ export function txSetupImageListeners(
     });
   };
 
-  const throttledPatch = portal.createThrottledPatch(args.node);
+  const throttledPatch = portal.createThrottledPatch();
 
   args.node.off("pointerclick pointerdown dragstart pointerdblclick dragmove dragend");
 
@@ -82,7 +84,10 @@ export function txSetupImageListeners(
     if (event.type === "dragstart" && event.evt.altKey) {
       isCloneDrag = true;
       portal.safeStopDrag(args.node);
-      txCreateImageCloneDrag(portal.cloneDragPortal, { node: args.node });
+      portal.startDragClone({
+        node: args.node,
+        selection: portal.selection.selection,
+      });
     }
   });
 
@@ -167,7 +172,6 @@ export function txSetupImageListeners(
     const nextElement = portal.toElement(args.node);
     const beforeElement = originalElement ? structuredClone(originalElement) : null;
     const afterElement = structuredClone(nextElement);
-    portal.crdt.patch({ elements: [afterElement], groups: [] });
 
     const selected = portal.filterSelection(portal.selection.selection);
     const passengers = selected.filter((selectedNode) => selectedNode !== args.node);
@@ -179,10 +183,17 @@ export function txSetupImageListeners(
         return;
       }
 
-      const elements = [structuredClone(element)];
-      passengerAfterElements.set(passenger.id(), elements);
-      portal.crdt.patch({ elements, groups: [] });
+      passengerAfterElements.set(passenger.id(), [structuredClone(element)]);
     });
+
+    const dragBuilder = portal.crdt.build();
+    dragBuilder.patchElement(afterElement.id, afterElement);
+    passengerAfterElements.forEach((elements) => {
+      elements.forEach((element) => {
+        dragBuilder.patchElement(element.id, element);
+      });
+    });
+    const dragCommitResult = dragBuilder.commit();
 
     const capturedStartPositions = new Map(multiDragStartPositions);
     const capturedPassengerOriginals = new Map(passengerOriginalElements);
@@ -202,7 +213,6 @@ export function txSetupImageListeners(
       label: "drag-image",
       undo() {
         applyElement(beforeElement);
-        portal.crdt.patch({ elements: [beforeElement], groups: [] });
         passengers.forEach((passenger) => {
           const startPos = capturedStartPositions.get(passenger.id());
           if (startPos) {
@@ -210,23 +220,29 @@ export function txSetupImageListeners(
           }
 
           const originalEls = capturedPassengerOriginals.get(passenger.id());
-          if (originalEls && originalEls.length > 0) {
-            portal.crdt.patch({ elements: originalEls, groups: [] });
+          if (!originalEls || originalEls.length === 0) {
+            return;
           }
+
+          originalEls.forEach((element) => {
+            portal.applyElement(element);
+          });
         });
+        dragCommitResult.rollback();
       },
       redo() {
         applyElement(afterElement);
-        portal.crdt.patch({ elements: [afterElement], groups: [] });
         passengers.forEach((passenger) => {
           const afterEls = passengerAfterElements.get(passenger.id());
           if (!afterEls || afterEls.length === 0) {
             return;
           }
 
-          portal.editor.updateShapeFromTElement(afterEls[0]);
-          portal.crdt.patch({ elements: afterEls, groups: [] });
+          afterEls.forEach((element) => {
+            portal.applyElement(element);
+          });
         });
+        portal.crdt.applyOps({ ops: dragCommitResult.redoOps });
       },
     });
   });

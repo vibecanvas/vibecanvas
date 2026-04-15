@@ -199,7 +199,7 @@ export function buildRuntime(config: IRuntimeConfig) {
     // createShape2dPlugin(),
     createPenPlugin(),
     createTextPlugin(),
-    // createImagePlugin(),
+    createImagePlugin(),
     createGroupPlugin(),
     createSceneHydratorPlugin(),
     createVisualDebugPlugin(),

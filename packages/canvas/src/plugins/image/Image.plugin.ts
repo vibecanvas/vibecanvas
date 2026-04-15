@@ -6,20 +6,21 @@ import Konva from "konva";
 import type { TCloneImage, TDeleteImage, TUploadImage } from "../../runtime";
 import { getImageDimensions, getImageSource, getSupportedImageFormat, parseDataUrl } from "../../utils/image";
 import type { ContextMenuService } from "../../services/context-menu/ContextMenuService";
+import type { CanvasRegistryService } from "../../services/canvas-registry/CanvasRegistryService";
 import type { CrdtService } from "../../services/crdt/CrdtService";
-import type { EditorService } from "../../services/editor/EditorService";
+import type { EditorServiceV2 } from "../../services/editor/EditorServiceV2";
 import type { HistoryService } from "../../services/history/HistoryService";
 import type { RenderOrderService } from "../../services/render-order/RenderOrderService";
 import type { SceneService } from "../../services/scene/SceneService";
 import type { SelectionService } from "../../services/selection/SelectionService";
 import type { IHooks } from "../../runtime";
-import { fxGetCanvasParentGroupId } from "../../core/fx.canvas-node-semantics";
+import { fxGetCanvasAncestorGroups, fxGetCanvasParentGroupId } from "../../core/fx.canvas-node-semantics";
 import { fxFilterSelection } from "../../core/fx.filter-selection";
 import { fnGetNodeZIndex } from "../../core/fn.get-node-z-index";
 import { fnGetWorldPosition } from "../../core/fn.world-position";
 import { txSetNodeZIndex } from "../../core/tx.set-node-z-index";
 import { fxToImageElement } from "./fn.to-image-element";
-import { txCloneBackendFileForElement } from "./tx.clone-backend-file-for-element";
+import { txCreateImageCloneDrag } from "./tx.create-image-clone-drag";
 import { txInsertImage } from "./tx.insert-image";
 import { txSetupImageListeners } from "./tx.setup-image-listeners";
 import { txUpdateImageNodeFromElement } from "./tx.update-image-node-from-element";
@@ -94,7 +95,7 @@ function getViewportWorldSize(render: SceneService) {
   };
 }
 
-function shouldIgnoreClipboardEvent(editor: EditorService, event: ClipboardEvent) {
+function shouldIgnoreClipboardEvent(editor: EditorServiceV2, event: ClipboardEvent) {
   if (editor.editingTextId !== null) {
     return true;
   }
@@ -171,7 +172,7 @@ function updateImageNodeFromElement(render: SceneService, node: Konva.Image, ele
   });
 }
 
-function toElement(render: SceneService, editor: EditorService, node: Konva.Image): TElement {
+function toElement(render: SceneService, editor: EditorServiceV2, node: Konva.Image): TElement {
   const worldPosition = fnGetWorldPosition({
     absolutePosition: node.absolutePosition(),
     parentTransform: node.getLayer()?.getAbsoluteTransform() ?? null,
@@ -235,7 +236,7 @@ function safeStopDrag(node: Konva.Node) {
   }
 }
 
-function filterSelection(render: SceneService, editor: EditorService, selection: Konva.Node[]) {
+function filterSelection(render: SceneService, editor: EditorServiceV2, selection: Konva.Node[]) {
   return fxFilterSelection({
     Konva,
   }, {
@@ -251,9 +252,10 @@ function filterSelection(render: SceneService, editor: EditorService, selection:
  * Supports picker, paste, drop, drag, and serialization hooks.
  */
 export function createImagePlugin(): IPlugin<{
+  canvasRegistry: CanvasRegistryService;
   contextMenu: ContextMenuService;
   crdt: CrdtService;
-  editor: EditorService;
+  editor2: EditorServiceV2;
   history: HistoryService;
   scene: SceneService;
   renderOrder: RenderOrderService;
@@ -264,9 +266,10 @@ export function createImagePlugin(): IPlugin<{
   return {
     name: "image",
     apply(ctx) {
+      const canvasRegistry = ctx.services.require("canvasRegistry");
       const contextMenu = ctx.services.require("contextMenu");
       const crdt = ctx.services.require("crdt");
-      const editor = ctx.services.require("editor");
+      const editor = ctx.services.require("editor2");
       const history = ctx.services.require("history");
       const render = ctx.services.require("scene");
       const renderOrder = ctx.services.require("renderOrder");
@@ -296,6 +299,21 @@ export function createImagePlugin(): IPlugin<{
         updateImageNodeFromElementPortal,
       };
 
+      const applyElement = (element: TElement) => {
+        const didUpdate = canvasRegistry.updateElement(element);
+        if (!didUpdate) {
+          return;
+        }
+
+        const node = render.staticForegroundLayer.findOne((candidate: Konva.Node) => {
+          return candidate.id() === element.id;
+        });
+        fxGetCanvasAncestorGroups({}, { editor, node }).forEach((group) => {
+          group.fire("transform");
+        });
+        render.staticForegroundLayer.batchDraw();
+      };
+
       const setupNode = (node: Konva.Image) => {
         txSetupImageListeners({
           crdt,
@@ -304,32 +322,43 @@ export function createImagePlugin(): IPlugin<{
           render,
           selection,
           hooks: ctx.hooks,
-          cloneDragPortal: {
-            cloneBackendFileForElementPortal,
-            crdt,
-            history,
-            render,
-            renderOrder,
-            selection,
-            createPreviewClone: (sourceNode) => createPreviewClone(render, sourceNode),
-            createImageNode: (element) => createImageNode(render, element),
-            setupNode,
-            toElement: (imageNode) => toElement(render, editor, imageNode),
-            now: () => Date.now(),
-          },
+          startDragClone: (args) => editor.startDragClone(args),
+          applyElement,
           updateImageNodeFromElementPortal,
           filterSelection: (nodes) => filterSelection(render, editor, nodes),
           safeStopDrag,
           toElement: (imageNode) => toElement(render, editor, imageNode),
           createThrottledPatch: () => {
             return throttle((element: TElement) => {
-              crdt.patch({ elements: [element], groups: [] });
+              if (crdt.doc().elements[element.id] === undefined) {
+                return;
+              }
+
+              const builder = crdt.build();
+              builder.patchElement(element.id, "x", element.x);
+              builder.patchElement(element.id, "y", element.y);
+              builder.patchElement(element.id, "updatedAt", element.updatedAt);
+              builder.commit();
             }, 100);
           },
         }, {
           node,
         });
         return node;
+      };
+
+      const cloneDragPortal = {
+        cloneBackendFileForElementPortal,
+        crdt,
+        history,
+        render,
+        renderOrder,
+        selection,
+        createPreviewClone: (sourceNode: Konva.Image) => createPreviewClone(render, sourceNode),
+        createImageNode: (element: TElement) => createImageNode(render, element),
+        setupNode,
+        toElement: (imageNode: Konva.Image) => toElement(render, editor, imageNode),
+        now: () => Date.now(),
       };
 
       const openFilePicker = () => {
@@ -374,7 +403,7 @@ export function createImagePlugin(): IPlugin<{
         }];
       });
 
-      editor.registerTool({
+      editor.registerTool(ctx, {
         id: "image",
         label: "Image",
         icon: ImageIcon,
@@ -384,58 +413,58 @@ export function createImagePlugin(): IPlugin<{
         onSelect: openFilePicker,
       });
 
-      editor.registerToElement("image", (node) => {
-        if (!(node instanceof Konva.Image)) {
-          return null;
-        }
+      const unregisterImageElement = canvasRegistry.registerElement({
+        id: "image",
+        matchesElement: (element) => element.data.type === "image",
+        matchesNode: (node) => node instanceof Konva.Image,
+        toElement: (node) => {
+          if (!(node instanceof Konva.Image)) {
+            return null;
+          }
 
-        return toElement(render, editor, node);
-      });
+          return toElement(render, editor, node);
+        },
+        createNode: (element) => {
+          if (element.data.type !== "image") {
+            return null;
+          }
 
-      editor.registerCreateShapeFromTElement("image", (element) => {
-        if (element.data.type !== "image") {
-          return null;
-        }
+          return createImageNode(render, element);
+        },
+        attachListeners: (node) => {
+          if (!(node instanceof Konva.Image)) {
+            return false;
+          }
 
-        return setupNode(createImageNode(render, element));
-      });
+          setupNode(node);
+          return true;
+        },
+        updateElement: (element) => {
+          if (element.data.type !== "image") {
+            return false;
+          }
 
-      editor.registerSetupExistingShape("image", (node) => {
-        if (!(node instanceof Konva.Image)) {
-          return false;
-        }
+          const node = render.staticForegroundLayer.findOne((candidate: Konva.Node) => {
+            return candidate instanceof Konva.Image && candidate.id() === element.id;
+          });
+          if (!(node instanceof Konva.Image)) {
+            return false;
+          }
 
-        setupNode(node);
-        return true;
-      });
+          updateImageNodeFromElement(render, node, element);
+          return true;
+        },
+        createDragClone: ({ node }) => {
+          if (!(node instanceof Konva.Image)) {
+            return false;
+          }
 
-      editor.registerCloneElement("image", ({ sourceElement, clonedElement }) => {
-        if (sourceElement.data.type !== "image" || clonedElement.data.type !== "image") {
-          return false;
-        }
-
-        txCloneBackendFileForElement(cloneBackendFileForElementPortal, {
-          element: clonedElement,
-          errorTitle: "Failed to clone grouped image file",
-          now: Date.now(),
-        });
-        return true;
-      });
-
-      editor.registerUpdateShapeFromTElement("image", (element) => {
-        if (element.data.type !== "image") {
-          return false;
-        }
-
-        const node = render.staticForegroundLayer.findOne((candidate: Konva.Node) => {
-          return candidate instanceof Konva.Image && candidate.id() === element.id;
-        });
-        if (!(node instanceof Konva.Image)) {
-          return false;
-        }
-
-        updateImageNodeFromElement(render, node, element);
-        return true;
+          txCreateImageCloneDrag(cloneDragPortal, { node });
+          return true;
+        },
+        getTransformOptions: () => ({
+          keepRatio: true,
+        }),
       });
 
       ctx.hooks.init.tap(() => {
@@ -535,12 +564,8 @@ export function createImagePlugin(): IPlugin<{
 
       ctx.hooks.destroy.tap(() => {
         contextMenu.unregisterProvider("image");
+        unregisterImageElement();
         editor.unregisterTool("image");
-        editor.unregisterToElement("image");
-        editor.unregisterCreateShapeFromTElement("image");
-        editor.unregisterSetupExistingShape("image");
-        editor.unregisterCloneElement("image");
-        editor.unregisterUpdateShapeFromTElement("image");
       });
     },
   };

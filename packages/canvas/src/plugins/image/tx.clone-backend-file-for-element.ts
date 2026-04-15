@@ -58,7 +58,9 @@ export function txCloneBackendFileForElement(
         });
       }
 
-      portal.crdt.patch({ elements: [nextElement], groups: [] });
+      const builder = portal.crdt.build();
+      builder.patchElement(nextElement.id, nextElement);
+      builder.commit();
     })
     .catch((error: unknown) => {
       portal.notification?.showError(
