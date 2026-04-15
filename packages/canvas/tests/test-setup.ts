@@ -5,7 +5,7 @@ import type { DocHandle } from "@automerge/automerge-repo";
 import type { TCanvasDoc } from "@vibecanvas/service-automerge/types/canvas-doc.types";
 import { createRoot } from "solid-js";
 import { vi } from "vitest";
-import type { IPlugin, IPluginContext } from "../src/plugins";
+import type { IPlugin, IPluginContext, IServiceMap } from "@vibecanvas/runtime";
 
 type TLegacyCanvasService = {
   initialized: Promise<void>;
@@ -119,7 +119,7 @@ export function createMockDocHandle(overrides?: Partial<TCanvasDoc>): DocHandle<
     __emitChange: emitChange,
   };
 
-  return docHandle as DocHandle<TCanvasDoc>;
+  return docHandle as unknown as DocHandle<TCanvasDoc>;
 }
 
 export function createTestContainer(args?: { width?: number; height?: number }) {
@@ -135,13 +135,23 @@ export function createTestContainer(args?: { width?: number; height?: number }) 
   return container;
 }
 
+type TLegacyAppCapabilities = {
+  uploadImage?: unknown;
+  cloneImage?: unknown;
+  deleteImage?: unknown;
+  notification?: unknown;
+  terminal?: unknown;
+  filetree?: unknown;
+  file?: unknown;
+};
+
 export async function createCanvasTestHarness(args: {
   plugins: IPlugin[];
-  initializeScene?: (context: IPluginContext) => void;
+  initializeScene?: (context: IPluginContext<IServiceMap, object, object>) => void;
   docHandle?: DocHandle<TCanvasDoc>;
   width?: number;
   height?: number;
-  appCapabilities?: Pick<IPluginContext["capabilities"], "uploadImage" | "cloneImage" | "deleteImage" | "notification" | "terminal" | "filetree" | "file">;
+  appCapabilities?: TLegacyAppCapabilities;
 }): Promise<TCanvasTestHarness> {
   ensureResizeObserver();
   ensureRangeGeometryMocks();
@@ -162,7 +172,7 @@ export async function createCanvasTestHarness(args: {
       container: HTMLDivElement,
       docHandle: DocHandle<TCanvasDoc>,
       plugins: IPlugin[],
-      appCapabilities?: Pick<IPluginContext["capabilities"], "uploadImage" | "cloneImage" | "deleteImage" | "notification" | "terminal" | "filetree" | "file">,
+      appCapabilities?: TLegacyAppCapabilities,
     ) => TLegacyCanvasService;
   };
 
@@ -176,8 +186,9 @@ export async function createCanvasTestHarness(args: {
     [
       ...args.plugins,
       {
+        name: "test-initialize-scene",
         apply(context) {
-          args.initializeScene?.(context);
+          args.initializeScene?.(context as IPluginContext<IServiceMap, object, object>);
         },
       },
     ],
