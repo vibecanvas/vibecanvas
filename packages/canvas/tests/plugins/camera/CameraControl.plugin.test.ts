@@ -1,11 +1,11 @@
 import Konva from "konva";
 import { describe, expect, test } from "vitest";
-import { CanvasMode } from "../../../src/services/selection/enum";
+import { CanvasMode } from "../../../src/services/selection/CONSTANTS";
 import { createNewCanvasHarness, flushCanvasEffects } from "../../new-test-setup";
 
 async function createHandHarness() {
   const harness = await createNewCanvasHarness();
-  const editor = harness.runtime.services.require("editor");
+  const editor = harness.runtime.services.require("editor2");
   const selection = harness.runtime.services.require("selection");
   const camera = harness.runtime.services.require("camera");
 

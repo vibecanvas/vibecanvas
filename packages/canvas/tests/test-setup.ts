@@ -6,10 +6,14 @@ import type { TCanvasDoc } from "@vibecanvas/service-automerge/types/canvas-doc.
 import { createRoot } from "solid-js";
 import { vi } from "vitest";
 import type { IPlugin, IPluginContext } from "../src/plugins";
-import { CanvasService } from "../src/services/canvas/Canvas.service";
+
+type TLegacyCanvasService = {
+  initialized: Promise<void>;
+  destroy(): void;
+};
 
 type TCanvasTestHarness = {
-  service: CanvasService;
+  service: TLegacyCanvasService;
   stage: Konva.Stage;
   staticBackgroundLayer: Konva.Layer;
   staticForegroundLayer: Konva.Layer;
@@ -146,26 +150,41 @@ export async function createCanvasTestHarness(args: {
   const docHandle = args.docHandle ?? createMockDocHandle();
 
   let disposeRoot: (() => void) | undefined;
-  let service: CanvasService | undefined;
+  let service: TLegacyCanvasService | undefined;
 
   createRoot((dispose) => {
     disposeRoot = dispose;
-    service = new CanvasService(
-      container,
-      docHandle,
-      [
-        ...args.plugins,
-        {
-          apply(context) {
-            args.initializeScene?.(context);
-          },
-        },
-      ],
-      args.appCapabilities,
-    );
   });
 
-  await service!.initialized;
+  const legacyCanvasServicePath = "../src/services/canvas/Canvas.service";
+  const legacyModule = await import(/* @vite-ignore */ legacyCanvasServicePath).catch(() => null) as null | {
+    CanvasService: new (
+      container: HTMLDivElement,
+      docHandle: DocHandle<TCanvasDoc>,
+      plugins: IPlugin[],
+      appCapabilities?: Pick<IPluginContext["capabilities"], "uploadImage" | "cloneImage" | "deleteImage" | "notification" | "terminal" | "filetree" | "file">,
+    ) => TLegacyCanvasService;
+  };
+
+  if (!legacyModule) {
+    throw new Error("Legacy CanvasService is not available in this rewrite-aware test harness");
+  }
+
+  service = new legacyModule.CanvasService(
+    container,
+    docHandle,
+    [
+      ...args.plugins,
+      {
+        apply(context) {
+          args.initializeScene?.(context);
+        },
+      },
+    ],
+    args.appCapabilities,
+  );
+
+  await service.initialized;
 
   const stage = (window as typeof window & { stage?: Konva.Stage }).stage ?? null;
   if (!stage) {

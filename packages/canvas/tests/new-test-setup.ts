@@ -1,6 +1,7 @@
 import Konva from "konva";
 import type { DocHandle } from "@automerge/automerge-repo";
 import type { TCanvasDoc } from "@vibecanvas/service-automerge/types/canvas-doc.types";
+import { ThemeService } from "@vibecanvas/service-theme";
 import { buildRuntime } from "../src/runtime";
 import { createMockDocHandle, createTestContainer, ensureRangeGeometryMocks, ensureResizeObserver, flushCanvasEffects } from "./test-setup";
 
@@ -39,6 +40,7 @@ export async function createNewCanvasHarness(args?: {
     docHandle,
     onToggleSidebar: () => {},
     env: { DEV: true },
+    themeService: new ThemeService(),
     image: args?.image,
     notification: args?.notification,
   });

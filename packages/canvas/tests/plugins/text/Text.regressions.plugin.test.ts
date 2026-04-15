@@ -53,7 +53,7 @@ function firePointerUp(harness: Awaited<ReturnType<typeof createNewCanvasHarness
 }
 
 function addHydratedTextNode(harness: Awaited<ReturnType<typeof createNewCanvasHarness>>, element?: TElement) {
-  const editor = harness.runtime.services.require("editor");
+  const editor = harness.runtime.services.require("editor2");
   const node = editor.createShapeFromTElement(element ?? createTextElement());
   if (!(node instanceof Konva.Text)) {
     throw new Error("Expected text node");
@@ -82,7 +82,7 @@ async function openEdit(node: Konva.Text) {
 describe("new Text plugin regressions", () => {
   test("Escape on a newly created empty text removes the node", async () => {
     const harness = await createNewCanvasHarness();
-    const editor = harness.runtime.services.require("editor");
+    const editor = harness.runtime.services.require("editor2");
 
     editor.setActiveTool("text");
     await flushCanvasEffects();
