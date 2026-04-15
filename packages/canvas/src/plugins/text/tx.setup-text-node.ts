@@ -19,6 +19,7 @@ export type TPortalSetupTextNode = {
   serializeNode: (args: { node: Konva.Text; createdAt: number; updatedAt: number }) => TElement;
   setupNode: (node: Konva.Text) => Konva.Text;
   theme: ThemeService;
+  createThrottledPatch: (callback: (element: TElement) => void) => (element: TElement) => void;
 };
 
 export type TArgsSetupTextNode = {
@@ -39,6 +40,9 @@ function stopDragSafely(node: Konva.Node) {
 export function txSetupTextNode(portal: TPortalSetupTextNode, args: TArgsSetupTextNode) {
   let beforeDragElement: TElement | null = null;
   let isCloneDrag = false;
+  const throttledPatch = portal.createThrottledPatch((element) => {
+    portal.crdt.patch({ elements: [element], groups: [] });
+  });
 
   args.node.on("pointerclick", (event) => {
     portal.hooks.elementPointerClick.call(event);
@@ -94,6 +98,19 @@ export function txSetupTextNode(portal: TPortalSetupTextNode, args: TArgsSetupTe
 
     const now = Date.now();
     beforeDragElement = portal.serializeNode({ node: args.node, createdAt: now, updatedAt: now });
+  });
+
+  args.node.on("dragmove", () => {
+    if (isCloneDrag) {
+      return;
+    }
+
+    const now = Date.now();
+    throttledPatch(portal.serializeNode({
+      node: args.node,
+      createdAt: beforeDragElement?.createdAt ?? now,
+      updatedAt: now,
+    }));
   });
 
   args.node.on("dragend", () => {

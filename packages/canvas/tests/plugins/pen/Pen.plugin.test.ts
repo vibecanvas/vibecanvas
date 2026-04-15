@@ -143,6 +143,28 @@ function altDragPen(node: Konva.Path, args: { dx: number; dy: number }) {
   });
 }
 
+function simulateTransformerRotate(transformer: Konva.Transformer, node: Konva.Path, args: { rotation: number }) {
+  const originalGetActiveAnchor = transformer.getActiveAnchor.bind(transformer);
+  transformer.getActiveAnchor = () => "rotater";
+  transformer.fire("transformstart", {
+    target: node,
+    currentTarget: transformer,
+    evt: new MouseEvent("transformstart", { bubbles: true }),
+  });
+  node.rotation(args.rotation);
+  node.fire("transform", {
+    target: node,
+    currentTarget: node,
+    evt: new MouseEvent("transform", { bubbles: true }),
+  });
+  transformer.fire("transformend", {
+    target: node,
+    currentTarget: transformer,
+    evt: new MouseEvent("transformend", { bubbles: true }),
+  });
+  transformer.getActiveAnchor = originalGetActiveAnchor;
+}
+
 describe("new Pen plugin", () => {
   test("Escape cancels an in-progress pen preview", async () => {
     const harness = await createNewCanvasHarness();
@@ -473,6 +495,38 @@ describe("new Pen plugin", () => {
 
     expect(node.fill()).toBe("#22c55e");
     expect(editor.toElement(node)?.style.backgroundColor).toBe("@green/500");
+
+    await harness.destroy();
+  });
+
+  test("shared transformer rotate persists pen rotation and undo restores original values", async () => {
+    const element = createPenElement();
+    const docHandle = createMockDocHandle({
+      elements: {
+        [element.id]: structuredClone(element),
+      },
+    });
+
+    const harness = await createNewCanvasHarness({ docHandle });
+    const history = harness.runtime.services.require("history");
+    const selection = harness.runtime.services.require("selection");
+    const node = harness.staticForegroundLayer.findOne<Konva.Path>(`#${element.id}`)!;
+    const transformer = harness.dynamicLayer.find((candidate: Konva.Node) => candidate instanceof Konva.Transformer)[0] as Konva.Transformer;
+
+    selection.setSelection([node]);
+    selection.setFocusedNode(node);
+    await flushCanvasEffects();
+
+    simulateTransformerRotate(transformer, node, { rotation: 28 });
+    await flushCanvasEffects();
+
+    expect(docHandle.doc().elements[element.id]?.rotation).toBeCloseTo(28, 6);
+    expect(node.rotation()).toBeCloseTo(28, 6);
+
+    history.undo();
+    await flushCanvasEffects();
+    expect(docHandle.doc().elements[element.id]?.rotation).toBeCloseTo(0, 6);
+    expect(node.rotation()).toBeCloseTo(0, 6);
 
     await harness.destroy();
   });

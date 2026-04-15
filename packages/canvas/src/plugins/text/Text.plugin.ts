@@ -1,5 +1,6 @@
 import type { IPlugin } from "@vibecanvas/runtime";
 import { layoutWithLines, prepareWithSegments } from "@chenglou/pretext";
+import { throttle } from "@solid-primitives/scheduled";
 import { resolveThemeColor, type ThemeService } from "@vibecanvas/service-theme";
 import Type from "lucide-static/icons/type.svg?raw";
 import type { TElement, TTextData } from "@vibecanvas/service-automerge/types/canvas-doc.types";
@@ -20,11 +21,13 @@ import { txEnterEditMode } from "./tx.enter-edit-mode";
 import { txSetupTextNode } from "./tx.setup-text-node";
 import { txUpdateTextNodeFromElement } from "./tx.update-text-node-from-element";
 import { txDeleteSelection } from "../select/tx.delete-selection";
+import { txFinalizeOwnedTransform } from "../transform/tx.finalize-owned-transform";
 
 const FREE_TEXT_NAME = "free-text";
 const ATTACHED_TEXT_NAME = "attached-text";
 const TEXT_USES_THEME_COLOR_ATTR = "vcUsesThemeTextColor";
 const ELEMENT_STYLE_ATTR = "vcElementStyle";
+const TRANSFORM_BEFORE_ELEMENT_ATTR = "vcTransformBeforeElement";
 const TEXT_TRANSFORM_ANCHORS: TCanvasTransformAnchor[] = [
   "top-left",
   "top-right",
@@ -177,11 +180,17 @@ export function createTextPlugin(): IPlugin<{
           serializeNode: ({ node, createdAt, updatedAt }) => fxSerializeTextNode(canvasRegistry, { node, createdAt, updatedAt }),
           setupNode,
           theme,
+          createThrottledPatch: (callback) => throttle(callback, 100),
         }, {
           freeTextName: FREE_TEXT_NAME,
           node,
         });
         return node;
+      };
+
+      const applyElement = (element: TElement) => {
+        canvasRegistry.updateElement(element);
+        scene.staticForegroundLayer.batchDraw();
       };
 
       const unregisterTextElement = canvasRegistry.registerElement({
@@ -258,6 +267,67 @@ export function createTextPlugin(): IPlugin<{
           txApplyTextTransform({ node });
           return {
             cancel: false,
+            crdt: false,
+          };
+        },
+        afterResize: ({ node, element }) => {
+          if (!(node instanceof Konva.Text) || element.data.type !== "text" || element.data.containerId !== null) {
+            return;
+          }
+
+          txApplyTextTransform({ node });
+          return {
+            cancel: txFinalizeOwnedTransform({
+              crdt,
+              history,
+              applyElement,
+              serializeAfterElement: (candidateNode, beforeElement) => {
+                if (!(candidateNode instanceof Konva.Text)) {
+                  return null;
+                }
+
+                const now = Date.now();
+                return fxSerializeTextNode(canvasRegistry, {
+                  node: candidateNode,
+                  createdAt: beforeElement?.createdAt ?? now,
+                  updatedAt: now,
+                });
+              },
+            }, {
+              node,
+              label: "transform-text",
+              beforeAttr: TRANSFORM_BEFORE_ELEMENT_ATTR,
+            }),
+            crdt: false,
+          };
+        },
+        afterRotate: ({ node, element }) => {
+          if (!(node instanceof Konva.Text) || element.data.type !== "text" || element.data.containerId !== null) {
+            return;
+          }
+
+          return {
+            cancel: txFinalizeOwnedTransform({
+              crdt,
+              history,
+              applyElement,
+              serializeAfterElement: (candidateNode, beforeElement) => {
+                if (!(candidateNode instanceof Konva.Text)) {
+                  return null;
+                }
+
+                const now = Date.now();
+                return fxSerializeTextNode(canvasRegistry, {
+                  node: candidateNode,
+                  createdAt: beforeElement?.createdAt ?? now,
+                  updatedAt: now,
+                });
+              },
+            }, {
+              node,
+              label: "rotate-text",
+              beforeAttr: TRANSFORM_BEFORE_ELEMENT_ATTR,
+            }),
             crdt: false,
           };
         },

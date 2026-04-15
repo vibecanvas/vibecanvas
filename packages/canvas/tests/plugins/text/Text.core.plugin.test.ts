@@ -60,6 +60,16 @@ function simulateTransformerResize(transformer: Konva.Transformer, node: Konva.T
   transformer.fire("transformend", { target: node, currentTarget: transformer, evt: {} as Event });
 }
 
+function simulateTransformerRotate(transformer: Konva.Transformer, node: Konva.Text, args: { rotation: number }) {
+  const originalGetActiveAnchor = transformer.getActiveAnchor.bind(transformer);
+  transformer.getActiveAnchor = () => "rotater";
+  transformer.fire("transformstart", { target: node, currentTarget: transformer, evt: {} as Event });
+  node.rotation(args.rotation);
+  node.fire("transform", { target: node, currentTarget: node, evt: {} as Event });
+  transformer.fire("transformend", { target: node, currentTarget: transformer, evt: {} as Event });
+  transformer.getActiveAnchor = originalGetActiveAnchor;
+}
+
 describe("new Text plugin core", () => {
   test("createShapeFromTElement hydrates a Konva.Text and editor.toElement serializes it back", async () => {
     const harness = await createNewCanvasHarness();
@@ -250,6 +260,35 @@ describe("new Text plugin core", () => {
     expect(node.fontSize()).toBeCloseTo(originalFontSize, 1);
     expect(node.width()).toBeCloseTo(originalWidth, 1);
     expect(node.height()).toBeCloseTo(originalHeight, 1);
+
+    await harness.destroy();
+  });
+
+  test("transform rotate persists text rotation and undo restores original values", async () => {
+    const harness = await createNewCanvasHarness();
+    const history = harness.runtime.services.require("history");
+    const selection = harness.runtime.services.require("selection");
+
+    const node = addHydratedTextNode(harness, createTextElement({
+      id: "rotate-text-1",
+      x: 150,
+      y: 150,
+      rotation: 0,
+    }));
+
+    selection.setSelection([node]);
+    await flushCanvasEffects();
+
+    const transformer = harness.dynamicLayer.findOne<Konva.Transformer>("Transformer");
+    expect(transformer).toBeTruthy();
+
+    simulateTransformerRotate(transformer!, node, { rotation: 32 });
+    await flushCanvasEffects();
+
+    expect(node.rotation()).toBeCloseTo(32, 1);
+    history.undo();
+    await flushCanvasEffects();
+    expect(node.rotation()).toBeCloseTo(0, 1);
 
     await harness.destroy();
   });
