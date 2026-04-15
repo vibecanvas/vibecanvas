@@ -3,11 +3,10 @@ import type { TElement, TGroup } from "@vibecanvas/service-automerge/types/canva
 import { SyncHook } from "@vibecanvas/tapable";
 import type Konva from "konva";
 import type { KonvaEventObject, Node, NodeConfig } from "konva/lib/Node";
-import type { Shape } from "konva/lib/Shape";
 import type { IHooks } from "src/runtime";
-import type { SceneService } from "../scene/SceneService";
 import type { CanvasRegistryService } from "../canvas-registry/CanvasRegistryService";
 import type { CrdtService } from "../crdt/CrdtService";
+import type { SceneService } from "../scene/SceneService";
 import type { SelectionService } from "../selection/SelectionService";
 
 /**
@@ -125,13 +124,6 @@ export class EditorServiceV2 implements IService<TEditorServiceHooks> {
   };
 
   private readonly tools = new Map<string, TEditorTool>();
-  private readonly toElementRegistry = new Map<string, TEditorToElement>();
-  private readonly toGroupRegistry = new Map<string, TEditorToGroup>();
-  private readonly createGroupFromTGroupRegistry = new Map<string, TEditorCreateGroupFromTGroup>();
-  private readonly createShapeFromTElementRegistry = new Map<string, TEditorCreateShapeFromTElement>();
-  private readonly setupExistingShapeRegistry = new Map<string, TEditorSetupExistingShape>();
-  private readonly updateShapeFromTElementRegistry = new Map<string, TEditorUpdateShapeFromTElement>();
-  private readonly cloneElementRegistry = new Map<string, TEditorCloneElement>();
 
   activeToolId = "select";
   editingTextId: string | null = null;

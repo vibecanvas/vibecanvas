@@ -5,7 +5,7 @@ import type { Group } from "konva/lib/Group";
 import type { Shape, ShapeConfig } from "konva/lib/Shape";
 import type { TElement } from "@vibecanvas/service-automerge/types/canvas-doc.types";
 import { throttle } from "@solid-primitives/scheduled";
-import type { CanvasRegistryService } from "../../services/canvas-registry/CanvasRegistryService";
+import type { CanvasRegistryService, TCanvasTransformAnchor } from "../../services";
 import type { CrdtService } from "../../services/crdt/CrdtService";
 import type { EditorServiceV2 } from "../../services/editor/EditorServiceV2";
 import type { HistoryService } from "../../services/history/HistoryService";
@@ -16,14 +16,14 @@ import { fxIsCanvasGroupNode } from "../../core/fx.canvas-node-semantics";
 import { fxFilterSelection } from "../../core/fx.filter-selection";
 import { fxIsShape1dNode } from "../shape1d/fx.node";
 
-const GROUP_ANCHORS = [
+const GROUP_ANCHORS: TCanvasTransformAnchor[] = [
   "top-left",
   "top-right",
   "bottom-left",
   "bottom-right",
-] as const;
+];
 
-const DEFAULT_ANCHORS = [
+const DEFAULT_ANCHORS: TCanvasTransformAnchor[] = [
   "top-left",
   "top-center",
   "top-right",
@@ -32,10 +32,11 @@ const DEFAULT_ANCHORS = [
   "bottom-left",
   "bottom-center",
   "bottom-right",
-] as const;
+];
 
 const TRANSFORM_DRAG_PROXY_NAME = "transform-drag-proxy";
 const INTERACTION_OVERLAY_ATTR = "vcInteractionOverlay";
+const MOVE_PATCH_INTERVAL_MS = 1000 / 30;
 
 type TTransformDragProxyState = {
   node: Shape<ShapeConfig>;
@@ -46,6 +47,10 @@ type TTransformDragProxyState = {
   throttledPatch: (element: TElement) => void;
 };
 
+/**
+ * Expands a runtime selection into nodes that can round-trip through the canvas registry.
+ * Element-groups are treated as serializable roots, while structural groups recurse into children.
+ */
 function collectSerializableNodes(
   canvasRegistry: CanvasRegistryService,
   render: SceneService,
@@ -64,6 +69,10 @@ function collectSerializableNodes(
   });
 }
 
+/**
+ * Serializes the current runtime nodes into persisted canvas elements.
+ * Used for transform snapshots and history capture.
+ */
 function serializeSelection(canvasRegistry: CanvasRegistryService, render: SceneService, nodes: Konva.Node[]) {
   const serializableNodes = collectSerializableNodes(canvasRegistry, render, nodes);
   return serializableNodes
@@ -71,12 +80,19 @@ function serializeSelection(canvasRegistry: CanvasRegistryService, render: Scene
     .filter((element): element is TElement => element !== null);
 }
 
+/**
+ * Replays persisted elements back onto the existing runtime scene.
+ */
 function applyElements(canvasRegistry: CanvasRegistryService, elements: TElement[]) {
   elements.forEach((element) => {
     canvasRegistry.updateElement(element);
   });
 }
 
+/**
+ * Clears transient Konva transform state on structural groups after a transform commit.
+ * Persisted children carry the real geometry, so group container transforms must be reset.
+ */
 function normalizeSelectedGroupTransforms(render: SceneService, nodes: Konva.Node[]) {
   void render;
   nodes.forEach((node) => {
@@ -90,6 +106,9 @@ function normalizeSelectedGroupTransforms(render: SceneService, nodes: Konva.Nod
   });
 }
 
+/**
+ * Re-emits transform on selected structural groups so plugins can refresh derived visuals.
+ */
 function refreshSelectedGroups(canvasRegistry: CanvasRegistryService, selection: SelectionService) {
   selection.selection.forEach((node) => {
     if (fxIsCanvasGroupNode({}, { editor: canvasRegistry, node })) {
@@ -98,6 +117,10 @@ function refreshSelectedGroups(canvasRegistry: CanvasRegistryService, selection:
   });
 }
 
+/**
+ * Resolves transformer UI options for the active selection.
+ * Defaults handle common multi-select and text/1d/group cases, then registry overrides apply.
+ */
 function getSelectionTransformOptions(args: {
   Konva: typeof Konva;
   canvasRegistry: CanvasRegistryService;
@@ -110,7 +133,7 @@ function getSelectionTransformOptions(args: {
   const hasShape1dOnly = args.selection.length > 0 && args.selection.every((node) => fxIsShape1dNode({ Shape: args.Konva.Shape }, { node }));
 
   const defaultUseCornerAnchors = isSingleGroupSelection || hasTextOnly || hasShape1dOnly || isMultiSelection;
-  let enabledAnchors: string[] = defaultUseCornerAnchors ? [...GROUP_ANCHORS] : [...DEFAULT_ANCHORS];
+  let enabledAnchors: TCanvasTransformAnchor[] = defaultUseCornerAnchors ? [...GROUP_ANCHORS] : [...DEFAULT_ANCHORS];
   let keepRatio = defaultUseCornerAnchors;
   let flipEnabled = true;
 
@@ -146,48 +169,126 @@ function getSelectionTransformOptions(args: {
   };
 }
 
-function txApplySelectionTransformHooks(args: {
+/**
+ * Returns transformer-local pointer position from the dynamic layer.
+ */
+function getTransformerPointer(scene: SceneService) {
+  return scene.dynamicLayer.getRelativePointerPosition();
+}
+
+/**
+ * Narrows Konva transformer anchor names into the typed registry anchor union.
+ */
+function isTypedAnchor(anchor: string | null): anchor is TCanvasTransformAnchor {
+  return anchor === "top-left"
+    || anchor === "top-center"
+    || anchor === "top-right"
+    || anchor === "middle-left"
+    || anchor === "middle-right"
+    || anchor === "bottom-left"
+    || anchor === "bottom-center"
+    || anchor === "bottom-right";
+}
+
+/**
+ * Dispatches live resize callbacks to registry element definitions for the current selection.
+ */
+function fnMergeTransformHookResult(
+  current: { cancel: boolean; crdt: boolean },
+  next: { cancel: boolean; crdt: boolean } | void,
+) {
+  if (!next) {
+    return current;
+  }
+
+  return {
+    cancel: current.cancel || next.cancel,
+    crdt: current.crdt || next.crdt,
+  };
+}
+
+/**
+ * Dispatches transform callbacks for one selection across all matching registry definitions.
+ * Defaults remain owned by this plugin; registry callbacks are only optional overrides.
+ */
+function txDispatchSelectionTransformHooks<TArgs extends { node: Konva.Node; element: TElement; selection: Array<Group | Shape<ShapeConfig>> }>(args: {
   canvasRegistry: CanvasRegistryService;
   selection: Array<Group | Shape<ShapeConfig>>;
+  createArgs: (node: Group | Shape<ShapeConfig>, element: TElement) => TArgs;
+  getHook: (definition: ReturnType<CanvasRegistryService["getMatchingElementDefinitionsByNode"]>[number]) => ((args: TArgs) => { cancel: boolean; crdt: boolean } | void) | undefined;
 }) {
   let result = { cancel: false, crdt: false };
 
   for (const node of args.selection) {
-    const nextResult = args.canvasRegistry.onTransform({
-      node,
-      selection: args.selection,
-    });
+    const element = args.canvasRegistry.toElement(node);
+    if (!element) {
+      continue;
+    }
 
-    result = {
-      cancel: result.cancel || nextResult.cancel,
-      crdt: result.crdt || nextResult.crdt,
-    };
+    const hookArgs = args.createArgs(node, element);
+    const definitions = args.canvasRegistry.getMatchingElementDefinitionsByNode(node);
+    for (const definition of definitions) {
+      result = fnMergeTransformHookResult(result, args.getHook(definition)?.(hookArgs));
+    }
   }
 
   return result;
 }
 
-function txFinalizeSelectionTransform(args: {
+/**
+ * Dispatches resize-finalization callbacks after the interactive transformer gesture ends.
+ */
+function txApplySelectionResizeHooks(args: {
   canvasRegistry: CanvasRegistryService;
+  scene: SceneService;
   selection: Array<Group | Shape<ShapeConfig>>;
+  anchors: TCanvasTransformAnchor[];
 }) {
-  let result = { cancel: false, crdt: false };
+  const pointer = getTransformerPointer(args.scene);
 
-  for (const node of args.selection) {
-    const nextResult = args.canvasRegistry.afterTransform({
+  return txDispatchSelectionTransformHooks({
+    canvasRegistry: args.canvasRegistry,
+    selection: args.selection,
+    createArgs: (node, element) => ({
       node,
+      element,
+      pointer,
+      anchors: args.anchors,
       selection: args.selection,
-    });
-
-    result = {
-      cancel: result.cancel || nextResult.cancel,
-      crdt: result.crdt || nextResult.crdt,
-    };
-  }
-
-  return result;
+    }),
+    getHook: (definition) => definition.onResize,
+  });
 }
 
+/**
+ * Dispatches resize-finalization callbacks after the interactive transformer gesture ends.
+ */
+function txFinalizeSelectionResize(args: {
+  canvasRegistry: CanvasRegistryService;
+  scene: SceneService;
+  selection: Array<Group | Shape<ShapeConfig>>;
+  anchors: TCanvasTransformAnchor[];
+}) {
+  const pointer = getTransformerPointer(args.scene);
+
+  return txDispatchSelectionTransformHooks({
+    canvasRegistry: args.canvasRegistry,
+    selection: args.selection,
+    createArgs: (node, element) => ({
+      node,
+      element,
+      pointer,
+      anchors: args.anchors,
+      selection: args.selection,
+    }),
+    getHook: (definition) => definition.afterResize,
+  });
+}
+
+/**
+ * Returns true when the selected node should be moved through the invisible drag proxy.
+ * Today this is used for pen and shape1d nodes that benefit from a larger drag hit target.
+ */
 function isProxyDragCandidate(args: {
   Konva: typeof Konva;
   scene: SceneService;
@@ -212,6 +313,10 @@ function isProxyDragCandidate(args: {
   return element?.data.type === "pen";
 }
 
+/**
+ * Resolves the one selected node eligible for drag-proxy movement.
+ * Proxy drag is only enabled for a single filtered selection in select mode.
+ */
 function getProxyDragTarget(args: {
   scene: SceneService;
   canvasRegistry: CanvasRegistryService;
@@ -249,10 +354,16 @@ function getProxyDragTarget(args: {
     : null;
 }
 
+/**
+ * Produces the history label for drag-proxy move operations.
+ */
 function getProxyDragLabel(element: TElement) {
   return element.data.type === "pen" ? "drag-pen" : "drag-shape1d";
 }
 
+/**
+ * Computes proxy rectangle bounds in layer space from the target node's world transform.
+ */
 function getProxyBounds(render: SceneService, node: Shape<ShapeConfig>) {
   const localRect = node.getClientRect({ relativeTo: node });
   const nodeTransform = node.getAbsoluteTransform();
@@ -271,6 +382,9 @@ function getProxyBounds(render: SceneService, node: Shape<ShapeConfig>) {
   };
 }
 
+/**
+ * Applies current theme colors to the shared Konva transformer instance.
+ */
 function syncTransformerTheme(theme: ThemeService, transformer: Konva.Transformer) {
   const activeTheme = theme.getTheme();
   transformer.borderStroke(activeTheme.colors.canvasSelectionStroke);
@@ -280,6 +394,9 @@ function syncTransformerTheme(theme: ThemeService, transformer: Konva.Transforme
   transformer.anchorSize(8);
 }
 
+/**
+ * Syncs transformer nodes and UI options from current editor/selection state.
+ */
 function syncTransformer(args: {
   Konva: typeof Konva;
   scene: SceneService;
@@ -313,9 +430,18 @@ function syncTransformer(args: {
 }
 
 /**
- * Owns shared transformer UI for current selection.
- * Also adds a drag proxy for single pen/shape1d selections.
- * Proxy sits behind selected node, so direct stroke clicks still work.
+ * Owns shared transform UX for existing scene nodes.
+ *
+ * Responsibilities:
+ * - keep one shared Konva.Transformer in sync with filtered selection
+ * - provide a drag proxy for single pen/shape1d selections
+ * - route semantic move/resize callbacks through CanvasRegistryService
+ * - persist final transform state and history snapshots through CRDT + HistoryService
+ *
+ * Design notes:
+ * - generic movement belongs here, not in element plugins
+ * - element plugins only opt into special move/resize/rotate behavior via registry callbacks
+ * - drag proxy stays behind the visual node so direct pointer targeting still works
  */
 export function createTransformPlugin(): IPlugin<{
   canvasRegistry: CanvasRegistryService;
@@ -433,10 +559,9 @@ export function createTransformPlugin(): IPlugin<{
             dragProxy.stopDrag();
             dragProxy.absolutePosition(dragProxy.absolutePosition());
             if (target) {
-              target.fire("dragstart", {
-                target,
-                currentTarget: target,
-                evt: new MouseEvent("dragstart", { bubbles: true, altKey: true }),
+              canvasRegistry.createDragClone({
+                node: target,
+                selection: selection.selection,
               });
             }
             refreshDragProxy();
@@ -464,7 +589,7 @@ export function createTransformPlugin(): IPlugin<{
             nodeStartPosition: { ...target.absolutePosition() },
             throttledPatch: throttle((element: TElement) => {
               crdt.patch({ elements: [element], groups: [] });
-            }, 100),
+            }, MOVE_PATCH_INTERVAL_MS),
           };
         });
 
@@ -473,17 +598,39 @@ export function createTransformPlugin(): IPlugin<{
             return;
           }
 
+          const state = dragProxyState;
           const currentProxyPosition = dragProxy.absolutePosition();
-          const dx = currentProxyPosition.x - dragProxyState.proxyStartPosition.x;
-          const dy = currentProxyPosition.y - dragProxyState.proxyStartPosition.y;
-          dragProxyState.node.absolutePosition({
-            x: dragProxyState.nodeStartPosition.x + dx,
-            y: dragProxyState.nodeStartPosition.y + dy,
+          const dx = currentProxyPosition.x - state.proxyStartPosition.x;
+          const dy = currentProxyPosition.y - state.proxyStartPosition.y;
+          state.node.absolutePosition({
+            x: state.nodeStartPosition.x + dx,
+            y: state.nodeStartPosition.y + dy,
           });
 
-          const element = canvasRegistry.toElement(dragProxyState.node);
+          const element = canvasRegistry.toElement(state.node);
           if (element) {
-            dragProxyState.throttledPatch(element);
+            console.log("[transform:onMove]", {
+              nodeId: state.node.id(),
+              elementId: element.id,
+              pointer: render.dynamicLayer.getRelativePointerPosition(),
+            });
+
+            txDispatchSelectionTransformHooks({
+              canvasRegistry,
+              selection: selection.selection,
+              createArgs: () => ({
+                node: state.node,
+                element,
+                pointer: render.dynamicLayer.getRelativePointerPosition(),
+                selection: selection.selection,
+              }),
+              getHook: (definition) => definition.onMove,
+            });
+
+            const nextElement = canvasRegistry.toElement(state.node);
+            if (nextElement) {
+              state.throttledPatch(nextElement);
+            }
           }
           render.staticForegroundLayer.batchDraw();
         });
@@ -502,7 +649,20 @@ export function createTransformPlugin(): IPlugin<{
             return;
           }
 
-          crdt.patch({ elements: [afterElement], groups: [] });
+          const afterMoveResult = txDispatchSelectionTransformHooks({
+            canvasRegistry,
+            selection: selection.selection,
+            createArgs: () => ({
+              node: state.node,
+              element: afterElement,
+              pointer: render.dynamicLayer.getRelativePointerPosition(),
+              selection: selection.selection,
+            }),
+            getHook: (definition) => definition.afterMove,
+          });
+          if (afterMoveResult.crdt) {
+            crdt.patch({ elements: [afterElement], groups: [] });
+          }
           refreshDragProxy();
 
           const didMove = state.beforeElement.x !== afterElement.x || state.beforeElement.y !== afterElement.y;
@@ -541,9 +701,13 @@ export function createTransformPlugin(): IPlugin<{
             return;
           }
 
-          txApplySelectionTransformHooks({
+          const activeAnchor = transformer.getActiveAnchor();
+          const anchors = isTypedAnchor(activeAnchor) ? [activeAnchor] : [];
+          txApplySelectionResizeHooks({
             canvasRegistry,
+            scene: render,
             selection: transformer.getNodes() as Array<Group | Shape<ShapeConfig>>,
+            anchors,
           });
           transformer.forceUpdate();
           render.dynamicLayer.batchDraw();
@@ -556,9 +720,13 @@ export function createTransformPlugin(): IPlugin<{
           }
 
           const nodes = transformer.getNodes();
-          txFinalizeSelectionTransform({
+          const activeAnchor = transformer.getActiveAnchor();
+          const anchors = isTypedAnchor(activeAnchor) ? [activeAnchor] : [];
+          txFinalizeSelectionResize({
             canvasRegistry,
+            scene: render,
             selection: nodes as Array<Group | Shape<ShapeConfig>>,
+            anchors,
           });
 
           const afterElements = serializeSelection(canvasRegistry, render, nodes);

@@ -232,11 +232,11 @@ describe("CanvasRegistryService", () => {
           keepRatio: true,
         };
       },
-      onTransform: ({ node: candidateNode }) => {
+      onResize: ({ node: candidateNode }) => {
         calls.push(`on-base:${candidateNode.id()}`);
         return { cancel: false, crdt: true };
       },
-      afterTransform: ({ node: candidateNode }) => {
+      afterResize: ({ node: candidateNode }) => {
         calls.push(`after-base:${candidateNode.id()}`);
         return { cancel: false, crdt: false };
       },
@@ -253,11 +253,11 @@ describe("CanvasRegistryService", () => {
           keepRatio: false,
         };
       },
-      onTransform: ({ node: candidateNode }) => {
+      onResize: ({ node: candidateNode }) => {
         calls.push(`on-modifier:${candidateNode.id()}`);
         return { cancel: true, crdt: false };
       },
-      afterTransform: ({ node: candidateNode }) => {
+      afterResize: ({ node: candidateNode }) => {
         calls.push(`after-modifier:${candidateNode.id()}`);
         return { cancel: true, crdt: true };
       },
@@ -268,8 +268,33 @@ describe("CanvasRegistryService", () => {
       keepRatio: false,
       flipEnabled: true,
     });
-    expect(service.onTransform({ node, selection })).toEqual({ cancel: true, crdt: true });
-    expect(service.afterTransform({ node, selection })).toEqual({ cancel: true, crdt: true });
+    const resizeArgs = { node, element, pointer: null, anchors: ["top-left"] as Array<"top-left">, selection };
+    const definitions = service.getMatchingElementDefinitionsByNode(node);
+    const onResizeResult = definitions.reduce((result, definition) => {
+      const next = definition.onResize?.(resizeArgs);
+      if (!next) {
+        return result;
+      }
+
+      return {
+        cancel: result.cancel || next.cancel,
+        crdt: result.crdt || next.crdt,
+      };
+    }, { cancel: false, crdt: false });
+    const afterResizeResult = definitions.reduce((result, definition) => {
+      const next = definition.afterResize?.(resizeArgs);
+      if (!next) {
+        return result;
+      }
+
+      return {
+        cancel: result.cancel || next.cancel,
+        crdt: result.crdt || next.crdt,
+      };
+    }, { cancel: false, crdt: false });
+
+    expect(onResizeResult).toEqual({ cancel: true, crdt: true });
+    expect(afterResizeResult).toEqual({ cancel: true, crdt: true });
     expect(calls).toEqual([
       "options-base:shape-3:shape-3:1",
       "options-modifier:shape-3",
@@ -286,7 +311,6 @@ describe("CanvasRegistryService", () => {
     const selection = [node] as Array<Konva.Group | Konva.Shape>;
 
     expect(service.getTransformOptions({ node, selection })).toEqual({});
-    expect(service.onTransform({ node, selection })).toEqual({ cancel: false, crdt: false });
-    expect(service.afterTransform({ node, selection })).toEqual({ cancel: false, crdt: false });
+    expect(service.getMatchingElementDefinitionsByNode(node)).toEqual([]);
   });
 });

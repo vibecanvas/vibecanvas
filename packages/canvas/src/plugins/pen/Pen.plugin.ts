@@ -5,27 +5,23 @@ import Pencil from "lucide-static/icons/pencil.svg?raw";
 import { resolveThemeColor, type ThemeService } from "@vibecanvas/service-theme";
 import { PEN_STROKE_WIDTHS } from "../../components/SelectionStyleMenu/types";
 import { getStroke } from "perfect-freehand";
-import { throttle } from "@solid-primitives/scheduled";
-import type { IHooks } from "../../runtime";
-import type { CanvasRegistryService } from "../../services";
+import type { IHooks, TElementPointerEvent } from "../../runtime";
+import type { CanvasRegistryService, TCanvasTransformAnchor } from "../../services";
 import type { CrdtService } from "../../services/crdt/CrdtService";
-import type { HistoryService } from "../../services/history/HistoryService";
 import type { RenderOrderService } from "../../services/render-order/RenderOrderService";
 import type { SceneService } from "../../services/scene/SceneService";
 import type { SelectionService } from "../../services/selection/SelectionService";
-import { fxFilterSelection } from "../../core/fx.filter-selection";
-import { fxGetWorldPositionFromNode } from "../../core/fx.node-space";
 import { fxPenPathToElement } from "./fx.path";
 import { fxCreatePenDataFromStrokePoints } from "./fn.math";
 import { EditorServiceV2, type TEditorToolCanvasPoint } from "src/services/editor/EditorServiceV2";
 import { DEFAULT_FILL, DEFAULT_OPACITY, DEFAULT_STROKE_WIDTH } from "./CONSTANTS";
 import { fxCreatePenNode } from "./fx.create-node";
-import { txCreatePenCloneDrag, txCreatePenPreviewClone, txFinalizePenPreviewClone } from "./tx.clone";
-import { txSafeStopPenDrag, txSetupPenShapeListeners } from "./tx.listeners";
+import { txCreatePenCloneDrag } from "./tx.clone";
 import { txUpdatePenPathFromElement } from "./tx.path";
 
 const DRAFT_POINTS_ATTR = "vcDraftStrokePoints";
-const PEN_TRANSFORM_ANCHORS = [
+const PEN_NODE_SETUP_ATTR = "vcPenNodeSetup";
+const PEN_TRANSFORM_ANCHORS: TCanvasTransformAnchor[] = [
   "top-left",
   "top-right",
   "bottom-left",
@@ -158,6 +154,37 @@ function txUpdatePenDraft(args: {
   });
 }
 
+function txSetupPenSelectionNode(args: {
+  hooks: IHooks;
+  node: Konva.Node;
+}) {
+  if (!(args.node instanceof Konva.Path)) {
+    return false;
+  }
+
+  if (args.node.getAttr(PEN_NODE_SETUP_ATTR) === true) {
+    args.node.off("pointerdown pointerdblclick");
+  }
+
+  args.node.setAttr(PEN_NODE_SETUP_ATTR, true);
+
+  args.node.on("pointerdown", (event) => {
+    const didHandle = args.hooks.elementPointerDown.call(event as TElementPointerEvent);
+    if (didHandle) {
+      event.cancelBubble = true;
+    }
+  });
+
+  args.node.on("pointerdblclick", (event) => {
+    const didHandle = args.hooks.elementPointerDoubleClick.call(event as TElementPointerEvent);
+    if (didHandle) {
+      event.cancelBubble = true;
+    }
+  });
+
+  return true;
+}
+
 function createCreateId(render: SceneService) {
   let fallbackId = 0;
 
@@ -226,7 +253,6 @@ function txCommitPenTransform(args: {
 export function createPenPlugin(): IPlugin<{
   crdt: CrdtService;
   editor2: EditorServiceV2;
-  history: HistoryService;
   renderOrder: RenderOrderService;
   scene: SceneService;
   selection: SelectionService;
@@ -238,7 +264,6 @@ export function createPenPlugin(): IPlugin<{
     apply(ctx) {
       const crdt = ctx.services.require("crdt");
       const editor = ctx.services.require("editor2");
-      const history = ctx.services.require("history");
       const render = ctx.services.require("scene");
       const renderOrder = ctx.services.require("renderOrder");
       const selection = ctx.services.require("selection");
@@ -257,80 +282,7 @@ export function createPenPlugin(): IPlugin<{
       };
 
       const setupNode = (node: Konva.Path) => {
-        txSetupPenShapeListeners({
-          crdt,
-          editor,
-          updateElement: (element) => canvasRegistry.updateElement(element),
-          history,
-          render,
-          selection,
-          hooks: ctx.hooks,
-          now,
-          Group: Konva.Group,
-          Shape: Konva.Shape,
-          Path: Konva.Path,
-          getWorldPosition: (sourceNode) => fxGetWorldPositionFromNode({}, { node: sourceNode }),
-          createThrottledPatch: (callback) => throttle(callback, 100),
-          createPenCloneDrag: (sourceNode) => {
-            return txCreatePenCloneDrag({
-              Path: Konva.Path,
-              crdt,
-              render,
-              renderOrder,
-              selection,
-              theme,
-              createId,
-              now,
-              getStroke,
-              resolveThemeColor,
-              setupNode,
-              toElement,
-            }, { node: sourceNode });
-          },
-          createPenPreviewClone: (sourceNode) => {
-            return txCreatePenPreviewClone({
-              Path: Konva.Path,
-              crdt,
-              render,
-              renderOrder,
-              selection,
-              theme,
-              createId,
-              now,
-              getStroke,
-              resolveThemeColor,
-              setupNode,
-              toElement,
-            }, { node: sourceNode });
-          },
-          finalizePenPreviewClone: (previewNode) => {
-            return txFinalizePenPreviewClone({
-              Path: Konva.Path,
-              crdt,
-              render,
-              renderOrder,
-              selection,
-              theme,
-              createId,
-              now,
-              getStroke,
-              resolveThemeColor,
-              setupNode,
-              toElement,
-            }, { previewClone: previewNode });
-          },
-          filterSelection: (nodes) => {
-            return fxFilterSelection({ Konva }, {
-              editor,
-              selection: nodes.filter((node): node is Konva.Group | Konva.Shape => {
-                return node instanceof Konva.Group || node instanceof Konva.Shape;
-              }),
-            });
-          },
-          safeStopDrag: (sourceNode) => txSafeStopPenDrag({}, { node: sourceNode }),
-          toElement,
-        }, { node });
-
+        txSetupPenSelectionNode({ hooks: ctx.hooks, node });
         node.setDraggable(true);
         node.listening(true);
         node.visible(true);
@@ -351,6 +303,27 @@ export function createPenPlugin(): IPlugin<{
           setupNode(node);
           return true;
         },
+        createDragClone: ({ node }) => {
+          if (!(node instanceof Konva.Path)) {
+            return false;
+          }
+
+          txCreatePenCloneDrag({
+            Path: Konva.Path,
+            crdt,
+            render,
+            renderOrder,
+            selection,
+            theme,
+            createId,
+            now,
+            getStroke,
+            resolveThemeColor,
+            setupNode,
+            toElement,
+          }, { node });
+          return true;
+        },
         getSelectionStyleMenu: () => ({
           sections: {
             showStrokeColorPicker: true,
@@ -369,14 +342,14 @@ export function createPenPlugin(): IPlugin<{
           keepRatio: true,
           flipEnabled: false,
         }),
-        onTransform: ({ node }) => {
+        onResize: ({ node }) => {
           txKeepPenTransformRatio({ node });
           return {
             cancel: false,
             crdt: false,
           };
         },
-        afterTransform: ({ node }) => ({
+        afterResize: ({ node }) => ({
           cancel: false,
           crdt: txCommitPenTransform({
             canvasRegistry,

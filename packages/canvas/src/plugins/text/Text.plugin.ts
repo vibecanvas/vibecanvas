@@ -10,8 +10,7 @@ import type { EditorServiceV2 } from "../../services/editor/EditorServiceV2";
 import type { HistoryService } from "../../services/history/HistoryService";
 import type { RenderOrderService } from "../../services/render-order/RenderOrderService";
 import type { SceneService } from "../../services/scene/SceneService";
-import type { SelectionService } from "../../services/selection/SelectionService";
-import type { CanvasRegistryService } from "../../services/canvas-registry/CanvasRegistryService";
+import type { TCanvasTransformAnchor, SelectionService, CanvasRegistryService } from "../../services";
 import { CanvasMode } from "../../services/selection/CONSTANTS";
 import { fnGetNearestFontSizePreset } from "../../core/fn.text-style";
 import type { IHooks } from "../../runtime";
@@ -26,7 +25,7 @@ const FREE_TEXT_NAME = "free-text";
 const ATTACHED_TEXT_NAME = "attached-text";
 const TEXT_USES_THEME_COLOR_ATTR = "vcUsesThemeTextColor";
 const ELEMENT_STYLE_ATTR = "vcElementStyle";
-const TEXT_TRANSFORM_ANCHORS = [
+const TEXT_TRANSFORM_ANCHORS: TCanvasTransformAnchor[] = [
   "top-left",
   "top-right",
   "bottom-left",
@@ -235,7 +234,7 @@ export function createTextPlugin(): IPlugin<{
           values: {
             strokeColor: activeTheme?.getTheme().colors.canvasText ?? theme.getTheme().colors.canvasText,
             opacity: 1,
-            fontFamily: "Arial",
+            fontFamily: "Arial, sans-serif",
             fontSizePreset: fnGetNearestFontSizePreset(16),
             textAlign: "left",
             verticalAlign: "top",
@@ -251,7 +250,7 @@ export function createTextPlugin(): IPlugin<{
             keepRatio: true,
           };
         },
-        onTransform: ({ node, element }) => {
+        onResize: ({ node, element }) => {
           if (element.data.type !== "text" || element.data.containerId !== null) {
             return;
           }

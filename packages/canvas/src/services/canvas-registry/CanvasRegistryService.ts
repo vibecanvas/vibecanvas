@@ -13,10 +13,42 @@ export type TCanvasRegistryTransformHookResult = {
   crdt: boolean;
 };
 
+export type TCanvasTransformAnchor =
+  | "top-left"
+  | "top-center"
+  | "top-right"
+  | "middle-left"
+  | "middle-right"
+  | "bottom-left"
+  | "bottom-center"
+  | "bottom-right";
+
 export type TCanvasRegistryTransformOptions = {
-  enabledAnchors?: string[];
+  enabledAnchors?: TCanvasTransformAnchor[];
   keepRatio?: boolean;
   flipEnabled?: boolean;
+};
+
+export type TCanvasRegistryMoveArgs = {
+  node: Konva.Node;
+  element: TElement;
+  pointer: { x: number; y: number } | null;
+  selection: Array<Konva.Group | Konva.Shape>;
+};
+
+export type TCanvasRegistryRotateArgs = {
+  node: Konva.Node;
+  element: TElement;
+  rotation: number;
+  selection: Array<Konva.Group | Konva.Shape>;
+};
+
+export type TCanvasRegistryResizeArgs = {
+  node: Konva.Node;
+  element: TElement;
+  pointer: { x: number; y: number } | null;
+  anchors: TCanvasTransformAnchor[];
+  selection: Array<Konva.Group | Konva.Shape>;
 };
 
 export type TCanvasRegistrySelectionStyleSections = {
@@ -114,6 +146,14 @@ export interface TCanvasRegistryElementDefinition {
    */
   updateElement?: (element: TElement) => boolean | void;
   /**
+   * Optional alt-drag clone behavior for this element definition.
+   * Returns true when the definition handled clone-drag startup.
+   */
+  createDragClone?: (args: {
+    node: Konva.Node;
+    selection: Array<Konva.Group | Konva.Shape>;
+  }) => boolean | void;
+  /**
    * Optional selection-style menu config for this element definition.
    * Used for active-tool defaults and for combining style controls across selections.
    */
@@ -128,22 +168,32 @@ export interface TCanvasRegistryElementDefinition {
     selection: Array<Konva.Group | Konva.Shape>;
   }) => TCanvasRegistryTransformOptions | void;
   /**
-   * Called on every transform event.
-   * Publishes the transform event to the CRDT if `crdt` is true.
+   * Called while one selected node is moved.
+   * Publishes the move event to the CRDT if `crdt` is true.
    */
-  onTransform?: (args: {
-    node: Konva.Node;
-    element: TElement;
-    selection: Array<Konva.Group | Konva.Shape>;
-  }) => TCanvasRegistryTransformHookResult | void;
+  onMove?: (args: TCanvasRegistryMoveArgs) => TCanvasRegistryTransformHookResult | void;
   /**
-   * Called after the transform event has been handled.
+   * Called after move handling completes.
    */
-  afterTransform?: (args: {
-    node: Konva.Node;
-    element: TElement;
-    selection: Array<Konva.Group | Konva.Shape>;
-  }) => TCanvasRegistryTransformHookResult | void;
+  afterMove?: (args: TCanvasRegistryMoveArgs) => TCanvasRegistryTransformHookResult | void;
+  /**
+   * Called while one selected node is rotated.
+   * Publishes the rotate event to the CRDT if `crdt` is true.
+   */
+  onRotate?: (args: TCanvasRegistryRotateArgs) => TCanvasRegistryTransformHookResult | void;
+  /**
+   * Called after rotate handling completes.
+   */
+  afterRotate?: (args: TCanvasRegistryRotateArgs) => TCanvasRegistryTransformHookResult | void;
+  /**
+   * Called while one selected node is resized.
+   * Publishes the resize event to the CRDT if `crdt` is true.
+   */
+  onResize?: (args: TCanvasRegistryResizeArgs) => TCanvasRegistryTransformHookResult | void;
+  /**
+   * Called after resize handling completes.
+   */
+  afterResize?: (args: TCanvasRegistryResizeArgs) => TCanvasRegistryTransformHookResult | void;
 }
 
 export type TCanvasRegistryGroupDefinition = {
@@ -508,6 +558,30 @@ export class CanvasRegistryService implements IService<TCanvasRegistryServiceHoo
   }
 
   /**
+   * Starts clone-drag behavior for an existing runtime element.
+   * Runs matching definition handlers in priority order until one handles it.
+   */
+  createDragClone(args: {
+    node: Konva.Node;
+    selection: Array<Konva.Group | Konva.Shape>;
+  }) {
+    const definitions = this.getMatchingElementDefinitionsByNode(args.node);
+    if (definitions.length === 0) {
+      return false;
+    }
+
+    let didHandle = false;
+    for (const definition of definitions) {
+      const result = definition.createDragClone?.(args);
+      if (result !== undefined) {
+        didHandle = Boolean(result) || didHandle;
+      }
+    }
+
+    return didHandle;
+  }
+
+  /**
    * Replays one persisted element onto the runtime scene.
    * Runs all matching element update handlers in priority order.
    */
@@ -559,65 +633,4 @@ export class CanvasRegistryService implements IService<TCanvasRegistryServiceHoo
     return options;
   }
 
-  onTransform(args: {
-    node: Konva.Node;
-    selection: Array<Konva.Group | Konva.Shape>;
-  }) {
-    const element = this.toElement(args.node);
-    if (!element) {
-      return { cancel: false, crdt: false } satisfies TCanvasRegistryTransformHookResult;
-    }
-
-    const definitions = this.getMatchingElementDefinitionsByNode(args.node);
-    let result: TCanvasRegistryTransformHookResult = { cancel: false, crdt: false };
-
-    for (const definition of definitions) {
-      const nextResult = definition.onTransform?.({
-        node: args.node,
-        element,
-        selection: args.selection,
-      });
-      if (!nextResult) {
-        continue;
-      }
-
-      result = {
-        cancel: result.cancel || nextResult.cancel,
-        crdt: result.crdt || nextResult.crdt,
-      };
-    }
-
-    return result;
-  }
-
-  afterTransform(args: {
-    node: Konva.Node;
-    selection: Array<Konva.Group | Konva.Shape>;
-  }) {
-    const element = this.toElement(args.node);
-    if (!element) {
-      return { cancel: false, crdt: false } satisfies TCanvasRegistryTransformHookResult;
-    }
-
-    const definitions = this.getMatchingElementDefinitionsByNode(args.node);
-    let result: TCanvasRegistryTransformHookResult = { cancel: false, crdt: false };
-
-    for (const definition of definitions) {
-      const nextResult = definition.afterTransform?.({
-        node: args.node,
-        element,
-        selection: args.selection,
-      });
-      if (!nextResult) {
-        continue;
-      }
-
-      result = {
-        cancel: result.cancel || nextResult.cancel,
-        crdt: result.crdt || nextResult.crdt,
-      };
-    }
-
-    return result;
-  }
 }
