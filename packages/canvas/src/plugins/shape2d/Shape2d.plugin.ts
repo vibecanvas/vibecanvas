@@ -80,31 +80,37 @@ function getFocusedShape2dTextHost(canvasRegistry: CanvasRegistryService, select
   return isShape2dTextHostNode(candidate) ? candidate : null;
 }
 
-const DEFAULT_SHAPE2D_FILL_COLOR = "red";
+const DEFAULT_SHAPE2D_FILL_COLOR_TOKEN = "@gray/300";
 const DEFAULT_SHAPE2D_STROKE_WIDTH = 0;
 const DEFAULT_SHAPE2D_OPACITY = 1;
 
-function getSelectionStyleMenuConfig() {
+export function fxGetShape2dToolDefaults() {
   return {
-    sections: {
-      showFillPicker: true,
-      showStrokeColorPicker: true,
-      showStrokeWidthPicker: true,
-      showOpacityPicker: true,
-    },
-    values: {
-      fillColor: DEFAULT_SHAPE2D_FILL_COLOR,
-      strokeWidth: DEFAULT_SHAPE2D_STROKE_WIDTH,
-      opacity: DEFAULT_SHAPE2D_OPACITY,
-    },
+    fillColor: DEFAULT_SHAPE2D_FILL_COLOR_TOKEN,
+    strokeWidth: DEFAULT_SHAPE2D_STROKE_WIDTH,
+    opacity: DEFAULT_SHAPE2D_OPACITY,
   };
 }
 
-function fxApplyRememberedShape2dToolStyle(args: {
+export function fxApplyRememberedShape2dToolStyle(args: {
   element: TElement;
   rememberedStyle: ReturnType<EditorService["getToolSelectionStyleValues"]>;
 }) {
+  const defaults = fxGetShape2dToolDefaults();
   const nextElement = structuredClone(args.element);
+
+  if (typeof nextElement.style.backgroundColor !== "string") {
+    nextElement.style.backgroundColor = defaults.fillColor;
+  }
+
+  if (typeof nextElement.style.strokeWidth !== "number") {
+    nextElement.style.strokeWidth = defaults.strokeWidth;
+  }
+
+  if (typeof nextElement.style.opacity !== "number") {
+    nextElement.style.opacity = defaults.opacity;
+  }
+
   const rememberedFillColor = args.rememberedStyle.fillColor;
   if (typeof rememberedFillColor === "string") {
     nextElement.style.backgroundColor = rememberedFillColor;
@@ -126,6 +132,25 @@ function fxApplyRememberedShape2dToolStyle(args: {
   }
 
   return nextElement;
+}
+
+function getSelectionStyleMenuConfig(theme?: ThemeService) {
+  void theme;
+  const defaults = fxGetShape2dToolDefaults();
+
+  return {
+    sections: {
+      showFillPicker: true,
+      showStrokeColorPicker: true,
+      showStrokeWidthPicker: true,
+      showOpacityPicker: true,
+    },
+    values: {
+      fillColor: defaults.fillColor,
+      strokeWidth: defaults.strokeWidth,
+      opacity: defaults.opacity,
+    },
+  };
 }
 
 export function createShape2dPlugin(): IPlugin<{
@@ -424,7 +449,7 @@ export function createShape2dPlugin(): IPlugin<{
 
             return createNode(element);
           },
-          getSelectionStyleMenu: () => getSelectionStyleMenuConfig(),
+          getSelectionStyleMenu: ({ theme: activeTheme }) => getSelectionStyleMenuConfig(activeTheme),
         });
       };
 
@@ -643,11 +668,6 @@ export function createShape2dPlugin(): IPlugin<{
             updatedAt: timestamp,
             parentGroupId: null,
             zIndex: "",
-            style: {
-              backgroundColor: DEFAULT_SHAPE2D_FILL_COLOR,
-              strokeWidth: DEFAULT_SHAPE2D_STROKE_WIDTH,
-              opacity: DEFAULT_SHAPE2D_OPACITY,
-            },
           }),
           rememberedStyle: editor.getToolSelectionStyleValues(editor.activeToolId),
         });

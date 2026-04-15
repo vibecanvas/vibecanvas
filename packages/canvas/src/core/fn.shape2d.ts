@@ -15,7 +15,6 @@ export type TShape2dBounds = {
 };
 
 const DEFAULT_STYLE: TElementStyle = {
-  backgroundColor: "red",
   opacity: 1,
   strokeWidth: 0,
 };
