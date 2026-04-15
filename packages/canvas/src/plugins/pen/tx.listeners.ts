@@ -256,7 +256,7 @@ export function txSetupPenShapeListeners(portal: TPortalTxSetupPenShapeListeners
       return;
     }
 
-    throttledPatch(penNodeToPositionPatch(portal, args.node));
+    // throttledPatch(penNodeToPositionPatch(portal, args.node));
 
     const selected = portal.filterSelection(portal.selection.selection);
     if (selected.length <= 1) {

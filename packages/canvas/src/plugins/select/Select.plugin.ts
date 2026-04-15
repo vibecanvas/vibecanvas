@@ -2,6 +2,7 @@ import type { IPlugin } from "@vibecanvas/runtime";
 import type { ThemeService } from "@vibecanvas/service-theme";
 import Konva from "konva";
 import type { Node } from "konva/lib/Node";
+import type { ContextMenuService } from "../../services/context-menu/ContextMenuService";
 import type { CrdtService } from "../../services/crdt/CrdtService";
 import type { EditorServiceV2 } from "../../services/editor/EditorServiceV2";
 import type { HistoryService } from "../../services/history/HistoryService";
@@ -78,6 +79,7 @@ function txHandleStagePointerDown(args: {
  * Uses SelectionService as the shared runtime state.
  */
 export function createSelectPlugin(): IPlugin<{
+  contextMenu: ContextMenuService;
   crdt: CrdtService;
   editor2: EditorServiceV2;
   history: HistoryService;
@@ -89,6 +91,7 @@ export function createSelectPlugin(): IPlugin<{
   return {
     name: "select",
     apply(ctx) {
+      const contextMenu = ctx.services.require("contextMenu");
       const crdt = ctx.services.require("crdt");
       const editor = ctx.services.require("editor2");
       const history = ctx.services.require("history");
@@ -117,6 +120,22 @@ export function createSelectPlugin(): IPlugin<{
       theme.hooks.change.tap(() => {
         syncSelectionRectangleTheme();
         render.dynamicLayer.batchDraw();
+      });
+
+      contextMenu.registerProvider("delete-selection", ({ scope, activeSelection }) => {
+        if (scope === "canvas" || activeSelection.length === 0) {
+          return [];
+        }
+
+        return [{
+          id: "delete-selection",
+          label: "Delete",
+          priority: 300,
+          onSelect: () => {
+            selection.setSelection(activeSelection);
+            txDeleteSelection({ crdt, editor, history, render, renderOrder, selection }, {});
+          },
+        }];
       });
 
       ctx.hooks.elementPointerDown.tap((event) => {
@@ -211,6 +230,10 @@ export function createSelectPlugin(): IPlugin<{
         event.preventDefault();
         event.stopPropagation();
         txDeleteSelection({ crdt, editor, history, render, renderOrder, selection }, {});
+      });
+
+      ctx.hooks.destroy.tap(() => {
+        contextMenu.unregisterProvider("delete-selection");
       });
     },
   };

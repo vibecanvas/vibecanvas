@@ -109,7 +109,7 @@ Use the leaf files for execution history and local context.
 
 ## A dditions
 - [x]: [A1] - file: support common CodeMirror languages
-- [ ]: [A2] - add inline text support to diamond and ellipse
+- [x]: [A2] - add inline text support to diamond and ellipse
 - [ ]: [A3] - copy paste elements/groups
 - [x]: [A4](a/A4.md) - terminal: use PartySocket for resilient PTY connection
 - [x]: [A5](a/A5.md) - canvas CLI: explicit --db path override
@@ -138,6 +138,7 @@ Use the leaf files for execution history and local context.
 - [x]: [A30](a/A30.md) - theme: remove Tailwind from @vibecanvas/canvas and ship package CSS
 - [x]: [A31](a/A31.md) - theme: remove Tailwind from frontend and stop scanning canvas sources
 - [ ]: [A32](a/A32.md) - hosted components: sandboxed Arrow runtime + per-component official packages
+- [ ]: [A33] - deeplink to canvas object
 
 ## S ubtractions
 - [ ]: [S1](s/S1.md) - double bun run dev -> find new port
