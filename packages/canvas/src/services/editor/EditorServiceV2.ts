@@ -356,7 +356,9 @@ export class EditorServiceV2 implements IService<TEditorServiceHooks> {
     element.id = crypto.randomUUID()
     previewNode.moveTo(this.sceneService.staticForegroundLayer);
     this.canvasRegistry.attachListeners(previewNode);
-    this.crdt.patch({ elements: [element], groups: [] });
+    const builder = this.crdt.build();
+    builder.patchElement(element.id, element);
+    builder.commit();
     this.selection.setSelection([previewNode]);
     this.selection.setFocusedNode(previewNode);
     this.clearPreviewState();

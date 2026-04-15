@@ -139,6 +139,7 @@ Use the leaf files for execution history and local context.
 - [x]: [A31](a/A31.md) - theme: remove Tailwind from frontend and stop scanning canvas sources
 - [ ]: [A32](a/A32.md) - hosted components: sandboxed Arrow runtime + per-component official packages
 - [ ]: [A33] - deeplink to canvas object
+- [ ]: [A34](a/A34.md) - canvas: scene hydrator incremental reconcile instead of full reload on change
 
 ## S ubtractions
 - [ ]: [S1](s/S1.md) - double bun run dev -> find new port
@@ -153,7 +154,7 @@ Use the leaf files for execution history and local context.
 - [x]: [S12](s/S12.md) - refactor: konvajs
 - [x]: [S13](s/S13.md) - canvas plugins: folder-per-plugin refactor plan
 - [x]: [S14](s/S14.md) - canvas: keep recorder plugin in development only
-- [ ]: [S15] - inline text support -> fix position (use pretext lib?)
+- [x]: [S15] - inline text support -> fix position (use pretext lib?)
 - [x]: [S16](s/S16.md) - canvas: fix broken TypeScript typings in packages/canvas
 - [x]: [S17](s/S17.md) - extract apps/server into apps/cli + shared packages
 - [x]: [S18](s/S18.md) - cli server: migrate http file/static/spa serving from apps/server
@@ -169,13 +170,13 @@ Use the leaf files for execution history and local context.
 - [x]: [S28](s/S28.md) - use runtime package in canvas, like cli does
 - [x]: [S29](s/S29.md) - canvas: add debug config via localstorage for each plugin and service
 - [x]: [S30](s/S30.md) - canvas: remove remaining Tailwind-style classes from component TSX
-- [~]: [S31](s/S31.md) - frontend: remove remaining Tailwind-pattern source from app UI
-- [ ]: [S31] - how to deal with /Users/omarezzat/Workspace/vibecanvas/vibecanvas/packages/canvas/src/core/pretext.ts
-- [ ]: [S32] - show stylemenu already in create mode when tool like rect,pen is pressed. ux -> user knows where to draw
-- [ ]: [S33] - canvas architecture: rename SceneService -> SceneService and split EditorService so editor keeps only edit/transform state while scene registries/mapping move to SceneService
+- [x]: [S31](s/S31.md) - frontend: remove remaining Tailwind-pattern source from app UI
+- [x]: [S31] - how to deal with /Users/omarezzat/Workspace/vibecanvas/vibecanvas/packages/canvas/src/core/pretext.ts
+- [~]: [S32] - show stylemenu already in create mode when tool like rect,pen is pressed. ux -> user knows where to draw
+- [x]: [S33] - canvas architecture: rename SceneService -> SceneService and split EditorService so editor keeps only edit/transform state while scene registries/mapping move to SceneService
 - [x]: [S34] - test canvas/core if all fn fx file function are correct
 - [x]: [S35](s/S35.md) - canvas/core: align fn fx tx file boundaries, injected portals, and callers
-- [ ]: [S36](s/S36.md) - transform ownership: plugin only renders/dispatches; element plugins own drag + crdt
+- [x]: [S36](s/S36.md) - transform ownership: plugin only renders/dispatches; element plugins own drag + crdt
 
 ## E xplorations
 - [ ]: [E1](e/E1.md) - Tauri Research

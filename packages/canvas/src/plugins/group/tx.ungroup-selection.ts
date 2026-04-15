@@ -73,8 +73,17 @@ export function txUngroupSelection(
   });
 
   group.destroy();
-  portal.crdt.patch({ elements: elementPatches, groups: nestedGroupPatches });
-  portal.crdt.deleteById({ groupIds: [group.id()] });
+  const commitResult = (() => {
+    const builder = portal.crdt.build();
+    elementPatches.forEach((element) => {
+      builder.patchElement(element.id, element);
+    });
+    nestedGroupPatches.forEach((nestedGroup) => {
+      builder.patchGroup(nestedGroup.id, nestedGroup);
+    });
+    builder.deleteGroup(group.id());
+    return builder.commit();
+  })();
   portal.selection.setSelection(children);
   portal.selection.setFocusedNode(children.at(-1) ?? null);
   portal.render.staticForegroundLayer.batchDraw();
@@ -106,13 +115,12 @@ export function txUngroupSelection(
       recreated.setAttr("width", bounds.width);
       recreated.setAttr("height", bounds.height);
 
-      const undoElementPatches: TElement[] = [];
-      const undoGroupPatches: TGroup[] = [fxToGroupPatch({
+      fxToGroupPatch({
         canvasRegistry: portal.canvasRegistry,
         group: recreated,
         getNodeZIndex: portal.getNodeZIndex,
         fallbackCreatedAt: portal.now(),
-      })];
+      });
 
       currentNodes.forEach((node) => {
         const absolutePosition = node.getAbsolutePosition();
@@ -121,24 +129,17 @@ export function txUngroupSelection(
 
         const kind = fxGetCanvasNodeKind({}, { editor: portal.canvasRegistry, node });
         if (kind === "group") {
-          const patch = portal.canvasRegistry.toGroup(node);
-          if (patch) {
-            undoGroupPatches.push(patch);
-          }
           return;
         }
 
         if (kind !== null) {
-          const element = portal.canvasRegistry.toElement(node);
-          if (element) {
-            undoElementPatches.push(element);
-          }
+          portal.canvasRegistry.toElement(node);
         }
       });
 
-      portal.crdt.patch({ elements: undoElementPatches, groups: undoGroupPatches });
       portal.selection.setSelection([recreated]);
       portal.selection.setFocusedNode(recreated);
+      commitResult.rollback();
       portal.render.staticForegroundLayer.batchDraw();
     },
     redo() {
@@ -155,8 +156,6 @@ export function txUngroupSelection(
       }
 
       const redoParent = redoParentNode as Konva.Group | Konva.Layer;
-      const redoElementPatches: TElement[] = [];
-      const redoGroupPatches: TGroup[] = [];
 
       redoChildren.forEach((child) => {
         const absolutePosition = child.getAbsolutePosition();
@@ -165,26 +164,18 @@ export function txUngroupSelection(
 
         const kind = fxGetCanvasNodeKind({}, { editor: portal.canvasRegistry, node: child });
         if (kind === "group") {
-          const patch = portal.canvasRegistry.toGroup(child);
-          if (patch) {
-            redoGroupPatches.push(patch);
-          }
           return;
         }
 
         if (kind !== null) {
-          const element = portal.canvasRegistry.toElement(child);
-          if (element) {
-            redoElementPatches.push(element);
-          }
+          portal.canvasRegistry.toElement(child);
         }
       });
 
       currentGroup.destroy();
-      portal.crdt.patch({ elements: redoElementPatches, groups: redoGroupPatches });
-      portal.crdt.deleteById({ groupIds: [groupPatch.id] });
       portal.selection.setSelection(redoChildren);
       portal.selection.setFocusedNode(redoChildren.at(-1) ?? null);
+      portal.crdt.applyOps({ ops: commitResult.redoOps });
       portal.render.staticForegroundLayer.batchDraw();
     },
   });

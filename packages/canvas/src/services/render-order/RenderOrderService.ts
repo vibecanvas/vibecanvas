@@ -383,7 +383,17 @@ export class RenderOrderService implements IService<Record<string, never>> {
     });
 
     if (elementPatches.length > 0 || groupPatches.length > 0) {
-      this.crdt.patch({ elements: elementPatches, groups: groupPatches });
+      const builder = this.crdt.build();
+
+      elementPatches.forEach((element) => {
+        builder.patchElement(element.id, "zIndex", element.zIndex);
+      });
+
+      groupPatches.forEach((group) => {
+        builder.patchGroup(group.id, "zIndex", group.zIndex);
+      });
+
+      builder.commit();
     }
 
     this.syncDomOrder?.();

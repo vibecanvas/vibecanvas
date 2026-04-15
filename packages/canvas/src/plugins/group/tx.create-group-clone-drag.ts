@@ -138,7 +138,14 @@ export function txCreateGroupCloneDrag(
       elements,
     });
 
-    portal.crdt.patch({ elements, groups });
+    const builder = portal.crdt.build();
+    elements.forEach((element) => {
+      builder.patchElement(element.id, element);
+    });
+    groups.forEach((group) => {
+      builder.patchGroup(group.id, group);
+    });
+    builder.commit();
     portal.selection.setSelection([previewClone]);
     portal.selection.setFocusedNode(previewClone);
     portal.render.dynamicLayer.batchDraw();

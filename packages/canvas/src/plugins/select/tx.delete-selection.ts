@@ -261,7 +261,14 @@ function restoreDeleteSnapshot(portal: TPortalDeleteSelection, snapshot: TDelete
     parent.add(node);
   });
 
-  portal.crdt.patch({ groups: snapshot.groups, elements: snapshot.elements });
+  const builder = portal.crdt.build();
+  snapshot.groups.forEach((group) => {
+    builder.patchGroup(group.id, group);
+  });
+  snapshot.elements.forEach((element) => {
+    builder.patchElement(element.id, element);
+  });
+  builder.commit();
   sortSceneTopDown(portal, portal.render.staticForegroundLayer);
 
   const restoredRoots = snapshot.rootIds
@@ -297,10 +304,16 @@ function deleteSelectionInternal(portal: TPortalDeleteSelection, args: TArgsDele
     node.destroy();
   });
 
-  portal.crdt.deleteById({
-    elementIds: snapshot.elementIds,
-    groupIds: snapshot.groupIds,
-  });
+  const commitResult = (() => {
+    const builder = portal.crdt.build();
+    snapshot.elementIds.forEach((id) => {
+      builder.deleteElement(id);
+    });
+    snapshot.groupIds.forEach((id) => {
+      builder.deleteGroup(id);
+    });
+    return builder.commit();
+  })();
   portal.selection.clear();
   portal.render.stage.batchDraw();
 
@@ -312,6 +325,7 @@ function deleteSelectionInternal(portal: TPortalDeleteSelection, args: TArgsDele
     label: "delete-selection",
     undo: () => {
       restoreDeleteSnapshot(portal, snapshot);
+      commitResult.rollback();
     },
     redo: () => {
       const redoRoots = snapshot.rootIds

@@ -62,17 +62,96 @@ export class CrdtService implements IService<TCrdtServiceHooks>, IStartableServi
   }
 
   build(): TCrdtBuilder {
-    return fxCreateCrdtBuilder({
+    const builder = fxCreateCrdtBuilder({
       docHandle: this.docHandle,
-      clone: <T>(value: T): T => structuredClone(value),
+      clone: <T>(value: T): T => JSON.parse(JSON.stringify(value)) as T,
     }, {});
+
+    const wrappedBuilder: TCrdtBuilder = {
+      patchElement: ((id: string, keyOrValue: unknown, nestedOrValue?: unknown, maybeValue?: unknown) => {
+        if (maybeValue !== undefined) {
+          builder.patchElement(id, keyOrValue as never, nestedOrValue as never, maybeValue as never);
+          return wrappedBuilder;
+        }
+
+        if (nestedOrValue !== undefined) {
+          builder.patchElement(id, keyOrValue as never, nestedOrValue as never);
+          return wrappedBuilder;
+        }
+
+        builder.patchElement(id, keyOrValue as never);
+        return wrappedBuilder;
+      }) as TCrdtBuilder["patchElement"],
+      patchGroup: ((id: string, keyOrValue: unknown, nestedOrValue?: unknown, maybeValue?: unknown) => {
+        if (maybeValue !== undefined) {
+          builder.patchGroup(id, keyOrValue as never, nestedOrValue as never, maybeValue as never);
+          return wrappedBuilder;
+        }
+
+        if (nestedOrValue !== undefined) {
+          builder.patchGroup(id, keyOrValue as never, nestedOrValue as never);
+          return wrappedBuilder;
+        }
+
+        builder.patchGroup(id, keyOrValue as never);
+        return wrappedBuilder;
+      }) as TCrdtBuilder["patchGroup"],
+      deleteElement: ((id: string, key?: never, nestedKey?: never) => {
+        if (nestedKey !== undefined) {
+          builder.deleteElement(id, key, nestedKey);
+          return wrappedBuilder;
+        }
+
+        if (key !== undefined) {
+          builder.deleteElement(id, key);
+          return wrappedBuilder;
+        }
+
+        builder.deleteElement(id);
+        return wrappedBuilder;
+      }) as TCrdtBuilder["deleteElement"],
+      deleteGroup: ((id: string, key?: never, nestedKey?: never) => {
+        if (nestedKey !== undefined) {
+          builder.deleteGroup(id, key, nestedKey);
+          return wrappedBuilder;
+        }
+
+        if (key !== undefined) {
+          builder.deleteGroup(id, key);
+          return wrappedBuilder;
+        }
+
+        builder.deleteGroup(id);
+        return wrappedBuilder;
+      }) as TCrdtBuilder["deleteGroup"],
+      commit: () => {
+        let commitResult: ReturnType<typeof builder.commit> | null = null;
+
+        this.#runLocalChange(() => {
+          commitResult = builder.commit();
+        });
+
+        if (commitResult === null) {
+          throw new Error("CRDT builder commit failed to produce a result");
+        }
+
+        return {
+          ...commitResult,
+          rollback: () => {
+            this.applyOps({ ops: commitResult.undoOps });
+          },
+        };
+      },
+    };
+
+    return wrappedBuilder;
   }
 
   applyOps(args: { ops: TCrdtRecordedOp[] }) {
     this.#runLocalChange(() => {
       txApplyCrdtOps({
         docHandle: this.docHandle,
-        clone: <T>(value: T): T => structuredClone(value),
+        clone: <T>(value: T): T => JSON.parse(JSON.stringify(value)) as T,
       }, args);
     });
   }
@@ -88,9 +167,7 @@ export class CrdtService implements IService<TCrdtServiceHooks>, IStartableServi
       builder.patchGroup(group.id, group);
     }
 
-    this.#runLocalChange(() => {
-      builder.commit();
-    });
+    builder.commit();
   }
 
   deleteById(args: { elementIds?: string[]; groupIds?: string[] }) {
@@ -104,9 +181,7 @@ export class CrdtService implements IService<TCrdtServiceHooks>, IStartableServi
       builder.deleteGroup(id);
     }
 
-    this.#runLocalChange(() => {
-      builder.commit();
-    });
+    builder.commit();
   }
 
   consumePendingLocalChangeEvent() {
@@ -123,8 +198,9 @@ export class CrdtService implements IService<TCrdtServiceHooks>, IStartableServi
 
     try {
       callback();
-    } finally {
+    } catch (error) {
       this.#pendingLocalChangeEvents = Math.max(0, this.#pendingLocalChangeEvents - 1);
+      throw error;
     }
   }
 

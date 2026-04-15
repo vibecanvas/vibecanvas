@@ -306,7 +306,9 @@ export function txEnterEditMode(portal: TPortalEnterEditMode, args: TArgsEnterEd
       }
       args.node.destroy();
       portal.scene.staticForegroundLayer.batchDraw();
-      portal.crdt.deleteById({ elementIds: [args.node.id()] });
+      const builder = portal.crdt.build();
+      builder.deleteElement(args.node.id());
+      builder.commit();
       if (attachedHostNode) {
         portal.selection.setSelection([attachedHostNode]);
         portal.selection.setFocusedNode(attachedHostNode);
@@ -322,7 +324,9 @@ export function txEnterEditMode(portal: TPortalEnterEditMode, args: TArgsEnterEd
       }
       args.node.destroy();
       portal.scene.staticForegroundLayer.batchDraw();
-      portal.crdt.deleteById({ elementIds: [args.node.id()] });
+      const builder = portal.crdt.build();
+      builder.deleteElement(args.node.id());
+      builder.commit();
       portal.selection.clear();
       return;
     }
@@ -386,7 +390,13 @@ export function txEnterEditMode(portal: TPortalEnterEditMode, args: TArgsEnterEd
       updatedAt: nextNow,
     });
     const patchElements = [nextHostElement, nextElement].filter((element): element is TElement => element !== null);
-    portal.crdt.patch({ elements: patchElements, groups: [] });
+    const commitResult = (() => {
+      const builder = portal.crdt.build();
+      patchElements.forEach((element) => {
+        builder.patchElement(element.id, element);
+      });
+      return builder.commit();
+    })();
 
     const selectedNode = findCurrentTextNode(portal, args.node.id()) ?? args.node;
     portal.selection.setSelection([selectedNode]);
@@ -411,7 +421,7 @@ export function txEnterEditMode(portal: TPortalEnterEditMode, args: TArgsEnterEd
         }
         txUpdateTextNodeFromElement({ Konva: portal.Konva, scene: portal.scene, theme: portal.theme }, { element: undoElement, freeTextName: args.freeTextName });
         portal.scene.staticForegroundLayer.batchDraw();
-        portal.crdt.patch({ elements: [undoHostElement, undoElement].filter((element): element is TElement => element !== null), groups: [] });
+        commitResult.rollback();
       },
       redo: () => {
         if (redoHostElement) {
@@ -419,7 +429,7 @@ export function txEnterEditMode(portal: TPortalEnterEditMode, args: TArgsEnterEd
         }
         txUpdateTextNodeFromElement({ Konva: portal.Konva, scene: portal.scene, theme: portal.theme }, { element: redoElement, freeTextName: args.freeTextName });
         portal.scene.staticForegroundLayer.batchDraw();
-        portal.crdt.patch({ elements: [redoHostElement, redoElement].filter((element): element is TElement => element !== null), groups: [] });
+        portal.crdt.applyOps({ ops: commitResult.redoOps });
       },
     });
   };

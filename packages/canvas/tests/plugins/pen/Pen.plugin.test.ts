@@ -1,6 +1,6 @@
 import Konva from "konva";
 import type { TElement, TPenData } from "@vibecanvas/service-automerge/types/canvas-doc.types";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test, vi } from "vitest";
 import { fxCreatePenDataFromStrokePoints, type TStrokePoint } from "../../../src/plugins/pen/fn.math";
 import { THEME_ID_DARK } from "@vibecanvas/service-theme";
 import { createMockDocHandle, createNewCanvasHarness, flushCanvasEffects } from "../../new-test-setup";
@@ -387,6 +387,73 @@ describe("new Pen plugin", () => {
 
     expect(history.canUndo()).toBe(true);
 
+    await harness.destroy();
+  });
+
+  test("selected pen keeps transform drag proxy attached after scene reload and can still drag", async () => {
+    const element = createPenElement();
+    const docHandle = createMockDocHandle({
+      elements: {
+        [element.id]: structuredClone(element),
+      },
+    }) as ReturnType<typeof createMockDocHandle> & { __emitChange: () => void };
+
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const harness = await createNewCanvasHarness({ docHandle });
+    const selection = harness.runtime.services.require("selection");
+    const history = harness.runtime.services.require("history");
+    const originalNode = harness.staticForegroundLayer.findOne<Konva.Path>(`#${element.id}`)!;
+
+    selection.setSelection([originalNode]);
+    selection.setFocusedNode(originalNode);
+    await flushCanvasEffects();
+
+    expect(getTransformDragProxy(harness).getParent()).toBe(harness.staticForegroundLayer);
+
+    docHandle.change((doc) => {
+      doc.elements[element.id] = {
+        ...doc.elements[element.id]!,
+        updatedAt: doc.elements[element.id]!.updatedAt + 1,
+      };
+    });
+    docHandle.__emitChange();
+    await flushCanvasEffects();
+
+    const hydratedNode = harness.staticForegroundLayer.findOne<Konva.Path>(`#${element.id}`)!;
+    expect(hydratedNode).toBeTruthy();
+    expect(selection.selection[0]).toBe(hydratedNode);
+
+    const proxy = getTransformDragProxy(harness);
+    expect(proxy.getParent()).toBe(harness.staticForegroundLayer);
+    expect(proxy.visible()).toBe(true);
+
+    const before = { ...hydratedNode.absolutePosition() };
+    proxy.fire("dragstart", {
+      target: proxy,
+      currentTarget: proxy,
+      evt: new MouseEvent("dragstart", { bubbles: true }),
+    });
+    proxy.setAbsolutePosition({ x: proxy.absolutePosition().x + 28, y: proxy.absolutePosition().y + 14 });
+    proxy.fire("dragmove", {
+      target: proxy,
+      currentTarget: proxy,
+      evt: new MouseEvent("dragmove", { bubbles: true }),
+    });
+    proxy.fire("dragend", {
+      target: proxy,
+      currentTarget: proxy,
+      evt: new MouseEvent("dragend", { bubbles: true }),
+    });
+    await flushCanvasEffects();
+
+    expect(hydratedNode.absolutePosition().x).toBeCloseTo(before.x + 28, 6);
+    expect(hydratedNode.absolutePosition().y).toBeCloseTo(before.y + 14, 6);
+    expect(docHandle.doc().elements[element.id]?.x).toBeCloseTo(before.x + 28, 6);
+    expect(docHandle.doc().elements[element.id]?.y).toBeCloseTo(before.y + 14, 6);
+    expect(history.canUndo()).toBe(true);
+    expect(warnSpy).not.toHaveBeenCalledWith(expect.stringContaining("Node has no parent. zIndex parameter is ignored."));
+
+    warnSpy.mockRestore();
     await harness.destroy();
   });
 

@@ -152,7 +152,14 @@ export function txApplySelectionStyleChange(
 
   fnApplyElements(portal.canvasRegistry, dedupedAfterElements);
   portal.txRefreshEditingShape1d();
-  portal.crdt.patch({ elements: dedupedAfterElements, groups: [] });
+
+  const commitResult = (() => {
+    const builder = portal.crdt.build();
+    dedupedAfterElements.forEach((element) => {
+      builder.patchElement(element.id, element);
+    });
+    return builder.commit();
+  })();
 
   portal.history.record({
     label: `selection-style-${args.property}`,
@@ -162,12 +169,12 @@ export function txApplySelectionStyleChange(
         .filter((element): element is TElement => Boolean(element));
       fnApplyElements(portal.canvasRegistry, revert);
       portal.txRefreshEditingShape1d();
-      portal.crdt.patch({ elements: revert, groups: [] });
+      commitResult.rollback();
     },
     redo: () => {
       fnApplyElements(portal.canvasRegistry, dedupedAfterElements);
       portal.txRefreshEditingShape1d();
-      portal.crdt.patch({ elements: dedupedAfterElements, groups: [] });
+      portal.crdt.applyOps({ ops: commitResult.redoOps });
     },
   });
 }

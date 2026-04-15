@@ -238,7 +238,11 @@ function loadCanvas(crdt: CrdtService, canvasRegistry: CanvasRegistryService, sc
   loadGroupsTopDown({ groups, canvasRegistry, scene });
   const invalidElementIds = loadElementsTopDown({ elements, canvasRegistry, scene });
   if (invalidElementIds.length > 0) {
-    crdt.deleteById({ elementIds: invalidElementIds });
+    const builder = crdt.build();
+    invalidElementIds.forEach((id) => {
+      builder.deleteElement(id);
+    });
+    builder.commit();
   }
   sortSceneTopDown(scene, canvasRegistry, scene.staticForegroundLayer);
   keepAttachedTextAboveHosts(scene, canvasRegistry, scene.staticForegroundLayer);

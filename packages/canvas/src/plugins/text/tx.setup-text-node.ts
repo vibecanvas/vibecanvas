@@ -41,7 +41,11 @@ export function txSetupTextNode(portal: TPortalSetupTextNode, args: TArgsSetupTe
   let beforeDragElement: TElement | null = null;
   let isCloneDrag = false;
   const throttledPatch = portal.createThrottledPatch((element) => {
-    portal.crdt.patch({ elements: [element], groups: [] });
+    const builder = portal.crdt.build();
+    builder.patchElement(element.id, "x", element.x);
+    builder.patchElement(element.id, "y", element.y);
+    builder.patchElement(element.id, "updatedAt", element.updatedAt);
+    builder.commit();
   });
 
   args.node.on("pointerclick", (event) => {
@@ -85,7 +89,9 @@ export function txSetupTextNode(portal: TPortalSetupTextNode, args: TArgsSetupTe
           createdAt: now,
           updatedAt: now,
         });
-        portal.crdt.patch({ elements: [clonedElement], groups: [] });
+        const createBuilder = portal.crdt.build();
+        createBuilder.patchElement(clonedElement.id, clonedElement);
+        createBuilder.commit();
         portal.selection.setSelection([cloned]);
         portal.selection.setFocusedNode(cloned);
         portal.render.dynamicLayer.batchDraw();
@@ -125,7 +131,9 @@ export function txSetupTextNode(portal: TPortalSetupTextNode, args: TArgsSetupTe
       createdAt: beforeDragElement?.createdAt ?? now,
       updatedAt: now,
     });
-    portal.crdt.patch({ elements: [afterDragElement], groups: [] });
+    const dragBuilder = portal.crdt.build();
+    dragBuilder.patchElement(afterDragElement.id, afterDragElement);
+    const dragCommitResult = dragBuilder.commit();
 
     if (!beforeDragElement) {
       return;
@@ -146,12 +154,12 @@ export function txSetupTextNode(portal: TPortalSetupTextNode, args: TArgsSetupTe
       undo: () => {
         txUpdateTextNodeFromElement({ Konva: portal.Konva, scene: portal.render, theme: portal.theme }, { element: undoElement, freeTextName: args.freeTextName });
         portal.render.staticForegroundLayer.batchDraw();
-        portal.crdt.patch({ elements: [undoElement], groups: [] });
+        dragCommitResult.rollback();
       },
       redo: () => {
         txUpdateTextNodeFromElement({ Konva: portal.Konva, scene: portal.render, theme: portal.theme }, { element: redoElement, freeTextName: args.freeTextName });
         portal.render.staticForegroundLayer.batchDraw();
-        portal.crdt.patch({ elements: [redoElement], groups: [] });
+        portal.crdt.applyOps({ ops: dragCommitResult.redoOps });
       },
     });
   });

@@ -296,6 +296,18 @@ export function createTransformPlugin(): IPlugin<{
         render.staticForegroundLayer.batchDraw();
       };
 
+      const txEnsureDragProxyAttached = () => {
+        if (!dragProxy) {
+          return null;
+        }
+
+        if (dragProxy.getParent() !== render.staticForegroundLayer) {
+          render.staticForegroundLayer.add(dragProxy);
+        }
+
+        return dragProxy;
+      };
+
       const refreshDragProxy = () => {
         if (!dragProxy || dragProxyState) {
           return;
@@ -312,17 +324,22 @@ export function createTransformPlugin(): IPlugin<{
           return;
         }
 
+        const attachedDragProxy = txEnsureDragProxyAttached();
+        if (!attachedDragProxy) {
+          return;
+        }
+
         const bounds = fxGetProxyBounds({ render }, { node: target });
-        dragProxy.position(bounds.position);
-        dragProxy.rotation(bounds.rotation);
-        dragProxy.scale({ x: 1, y: 1 });
-        dragProxy.size({ width: bounds.width, height: bounds.height });
-        dragProxy.visible(true);
-        dragProxy.listening(true);
-        dragProxy.draggable(true);
+        attachedDragProxy.position(bounds.position);
+        attachedDragProxy.rotation(bounds.rotation);
+        attachedDragProxy.scale({ x: 1, y: 1 });
+        attachedDragProxy.size({ width: bounds.width, height: bounds.height });
+        attachedDragProxy.visible(true);
+        attachedDragProxy.listening(true);
+        attachedDragProxy.draggable(true);
         const targetIndex = target.zIndex();
-        const proxyIndex = dragProxy.zIndex();
-        dragProxy.zIndex(proxyIndex < targetIndex ? Math.max(0, targetIndex - 1) : targetIndex);
+        const proxyIndex = attachedDragProxy.zIndex();
+        attachedDragProxy.zIndex(proxyIndex < targetIndex ? Math.max(0, targetIndex - 1) : targetIndex);
         render.staticForegroundLayer.batchDraw();
       };
 
@@ -391,7 +408,11 @@ export function createTransformPlugin(): IPlugin<{
             proxyStartPosition: { ...dragProxy.absolutePosition() },
             nodeStartPosition: { ...target.absolutePosition() },
             throttledPatch: throttle((element: TElement) => {
-              crdt.patch({ elements: [element], groups: [] });
+              const builder = crdt.build();
+              builder.patchElement(element.id, "x", element.x);
+              builder.patchElement(element.id, "y", element.y);
+              builder.patchElement(element.id, "updatedAt", element.updatedAt);
+              builder.commit();
             }, MOVE_PATCH_INTERVAL_MS),
           };
         });
@@ -468,7 +489,9 @@ export function createTransformPlugin(): IPlugin<{
             return;
           }
 
-          crdt.patch({ elements: [afterElement], groups: [] });
+          const moveBuilder = crdt.build();
+          moveBuilder.patchElement(afterElement.id, afterElement);
+          const moveCommitResult = moveBuilder.commit();
 
           const didMove = state.beforeElement.x !== afterElement.x || state.beforeElement.y !== afterElement.y;
           if (!didMove) {
@@ -481,12 +504,12 @@ export function createTransformPlugin(): IPlugin<{
             label: state.label,
             undo: () => {
               applyProxyDragElement(undoElement);
-              crdt.patch({ elements: [undoElement], groups: [] });
+              moveCommitResult.rollback();
               refreshDragProxy();
             },
             redo: () => {
               applyProxyDragElement(redoElement);
-              crdt.patch({ elements: [redoElement], groups: [] });
+              crdt.applyOps({ ops: moveCommitResult.redoOps });
               refreshDragProxy();
             },
           });
@@ -580,7 +603,11 @@ export function createTransformPlugin(): IPlugin<{
           refreshSelectedGroups(canvasRegistry, selection);
           refreshTransformer();
           refreshDragProxy();
-          crdt.patch({ elements: fallbackAfterElements, groups: [] });
+          const transformBuilder = crdt.build();
+          fallbackAfterElements.forEach((element) => {
+            transformBuilder.patchElement(element.id, element);
+          });
+          const transformCommitResult = transformBuilder.commit();
 
           if (fallbackBeforeElements.length === 0) {
             return;
@@ -596,14 +623,14 @@ export function createTransformPlugin(): IPlugin<{
               refreshSelectedGroups(canvasRegistry, selection);
               refreshTransformer();
               refreshDragProxy();
-              crdt.patch({ elements: undoElements, groups: [] });
+              transformCommitResult.rollback();
             },
             redo: () => {
               applyElements(canvasRegistry, redoElements);
               refreshSelectedGroups(canvasRegistry, selection);
               refreshTransformer();
               refreshDragProxy();
-              crdt.patch({ elements: redoElements, groups: [] });
+              crdt.applyOps({ ops: transformCommitResult.redoOps });
             },
           });
         });

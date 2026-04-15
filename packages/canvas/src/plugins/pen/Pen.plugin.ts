@@ -342,7 +342,11 @@ export function createPenPlugin(): IPlugin<{
         moveSessions.set(node.id(), {
           beforeElement: resolvedBeforeElement,
           throttledPatch: throttle((element: TElement) => {
-            crdt.patch({ elements: [element], groups: [] });
+            const builder = crdt.build();
+            builder.patchElement(element.id, "x", element.x);
+            builder.patchElement(element.id, "y", element.y);
+            builder.patchElement(element.id, "updatedAt", element.updatedAt);
+            builder.commit();
           }, MOVE_PATCH_INTERVAL_MS),
         });
       };
@@ -379,7 +383,9 @@ export function createPenPlugin(): IPlugin<{
 
         const beforeElement = structuredClone(session.beforeElement);
         const afterElement = structuredClone(toElement(node));
-        crdt.patch({ elements: [afterElement], groups: [] });
+        const moveBuilder = crdt.build();
+        moveBuilder.patchElement(afterElement.id, afterElement);
+        const moveCommitResult = moveBuilder.commit();
 
         const didMove = beforeElement.x !== afterElement.x || beforeElement.y !== afterElement.y;
         if (!didMove) {
@@ -390,11 +396,11 @@ export function createPenPlugin(): IPlugin<{
           label: "drag-pen",
           undo: () => {
             applyElement(beforeElement);
-            crdt.patch({ elements: [beforeElement], groups: [] });
+            moveCommitResult.rollback();
           },
           redo: () => {
             applyElement(afterElement);
-            crdt.patch({ elements: [afterElement], groups: [] });
+            crdt.applyOps({ ops: moveCommitResult.redoOps });
           },
         });
 

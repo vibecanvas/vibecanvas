@@ -79,7 +79,9 @@ export function txFinalizePenPreviewClone(portal: TPortalTxFinalizePenPreviewClo
   });
 
   const element = portal.toElement(args.previewClone);
-  portal.crdt.patch({ elements: [element], groups: [] });
+  const builder = portal.crdt.build();
+  builder.patchElement(element.id, element);
+  builder.commit();
   portal.render.dynamicLayer.batchDraw();
   portal.render.staticForegroundLayer.batchDraw();
   return args.previewClone;

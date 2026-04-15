@@ -32,7 +32,9 @@ export function txFinalizeOwnedTransform(portal: TPortalTxFinalizeOwnedTransform
     return false;
   }
 
-  portal.crdt.patch({ elements: [afterElement], groups: [] });
+  const builder = portal.crdt.build();
+  builder.patchElement(afterElement.id, afterElement);
+  const commitResult = builder.commit();
 
   if (!beforeElement) {
     return true;
@@ -49,11 +51,11 @@ export function txFinalizeOwnedTransform(portal: TPortalTxFinalizeOwnedTransform
     label: args.label,
     undo: () => {
       portal.applyElement(undoElement);
-      portal.crdt.patch({ elements: [undoElement], groups: [] });
+      commitResult.rollback();
     },
     redo: () => {
       portal.applyElement(redoElement);
-      portal.crdt.patch({ elements: [redoElement], groups: [] });
+      portal.crdt.applyOps({ ops: commitResult.redoOps });
     },
   });
 

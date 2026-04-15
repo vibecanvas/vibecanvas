@@ -39,7 +39,11 @@ export function txSetupGroupNode(
   let beforeElements: TElement[] = [];
   let isCloneDrag = false;
   const throttledPatch = portal.createThrottledPatch((elements) => {
-    portal.crdt.patch({ elements, groups: [] });
+    const builder = portal.crdt.build();
+    elements.forEach((element) => {
+      builder.patchElement(element.id, element);
+    });
+    builder.commit();
   });
 
   args.group.off("pointerclick pointerdown dragstart pointerdblclick dragmove dragend transform");
@@ -133,7 +137,13 @@ export function txSetupGroupNode(
       Shape: portal.Shape,
       group: args.group,
     }).map((element) => structuredClone(element));
-    portal.crdt.patch({ elements: afterElements, groups: [] });
+    const dragCommitResult = (() => {
+      const builder = portal.crdt.build();
+      afterElements.forEach((element) => {
+        builder.patchElement(element.id, element);
+      });
+      return builder.commit();
+    })();
 
     if (beforeElements.length === 0 || afterElements.length === 0) {
       beforeElements = [];
@@ -163,13 +173,13 @@ export function txSetupGroupNode(
         undoElements.forEach((element) => {
           portal.canvasRegistry.updateElement(element);
         });
-        portal.crdt.patch({ elements: undoElements, groups: [] });
+        dragCommitResult.rollback();
       },
       redo() {
         redoElements.forEach((element) => {
           portal.canvasRegistry.updateElement(element);
         });
-        portal.crdt.patch({ elements: redoElements, groups: [] });
+        portal.crdt.applyOps({ ops: dragCommitResult.redoOps });
       },
     });
   });
