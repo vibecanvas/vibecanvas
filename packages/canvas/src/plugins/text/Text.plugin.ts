@@ -6,11 +6,12 @@ import type { TElement, TTextData } from "@vibecanvas/service-automerge/types/ca
 import Konva from "konva";
 import type { ContextMenuService } from "../../services/context-menu/ContextMenuService";
 import type { CrdtService } from "../../services/crdt/CrdtService";
-import type { EditorService } from "../../services/editor/EditorService";
+import type { EditorServiceV2 } from "../../services/editor/EditorServiceV2";
 import type { HistoryService } from "../../services/history/HistoryService";
 import type { RenderOrderService } from "../../services/render-order/RenderOrderService";
 import type { SceneService } from "../../services/scene/SceneService";
 import type { SelectionService } from "../../services/selection/SelectionService";
+import type { CanvasRegistryService } from "../../services/canvas-registry/CanvasRegistryService";
 import { CanvasMode } from "../../services/selection/CONSTANTS";
 import { fnGetNearestFontSizePreset } from "../../core/fn.text-style";
 import type { IHooks } from "../../runtime";
@@ -25,6 +26,12 @@ const FREE_TEXT_NAME = "free-text";
 const ATTACHED_TEXT_NAME = "attached-text";
 const TEXT_USES_THEME_COLOR_ATTR = "vcUsesThemeTextColor";
 const ELEMENT_STYLE_ATTR = "vcElementStyle";
+const TEXT_TRANSFORM_ANCHORS = [
+  "top-left",
+  "top-right",
+  "bottom-left",
+  "bottom-right",
+];
 
 function usesThemeTextColor(element: Pick<TElement, "style">) {
   return !element.style.strokeColor;
@@ -38,8 +45,7 @@ function applyTextThemeState(node: Konva.Text, element: Pick<TElement, "style">)
   node.setAttr(TEXT_USES_THEME_COLOR_ATTR, usesThemeTextColor(element));
 }
 
-function createTextNode(scene: SceneService, theme: ThemeService, element: TElement) {
-  void scene;
+function createTextNode(theme: ThemeService, element: TElement) {
   const data = element.data as TTextData;
 
   const isAttachedText = data.containerId !== null;
@@ -73,14 +79,48 @@ function createTextNode(scene: SceneService, theme: ThemeService, element: TElem
   return node;
 }
 
+function fxSerializeTextNode(canvasRegistry: CanvasRegistryService, args: {
+  node: Konva.Text;
+  createdAt: number;
+  updatedAt: number;
+}) {
+  return fxToElement({
+    editor: { toGroup: (node) => canvasRegistry.toGroup(node) },
+  }, {
+    node: args.node,
+    createdAt: args.createdAt,
+    updatedAt: args.updatedAt,
+  });
+}
+
+function txApplyTextTransform(args: {
+  node: Konva.Node;
+}) {
+  if (!(args.node instanceof Konva.Text)) {
+    return false;
+  }
+
+  const scaleX = args.node.scaleX();
+  const scaleY = args.node.scaleY();
+  args.node.setAttrs({
+    width: args.node.width() * scaleX,
+    height: args.node.height() * scaleY,
+    fontSize: Math.max(1, args.node.fontSize() * scaleX),
+    scaleX: 1,
+    scaleY: 1,
+  });
+  return true;
+}
+
 /**
  * Owns free-text create, edit, drag, and editor transform registries.
  * Attached-text and clone-drag parity can come later.
  */
 export function createTextPlugin(): IPlugin<{
+  canvasRegistry: CanvasRegistryService;
   contextMenu: ContextMenuService;
   crdt: CrdtService;
-  editor: EditorService;
+  editor2: EditorServiceV2;
   history: HistoryService;
   scene: SceneService;
   renderOrder: RenderOrderService;
@@ -90,9 +130,10 @@ export function createTextPlugin(): IPlugin<{
   return {
     name: "text",
     apply(ctx) {
+      const canvasRegistry = ctx.services.require("canvasRegistry");
       const contextMenu = ctx.services.require("contextMenu");
       const crdt = ctx.services.require("crdt");
-      const editor = ctx.services.require("editor");
+      const editor = ctx.services.require("editor2");
       const history = ctx.services.require("history");
       const scene = ctx.services.require("scene");
       const renderOrder = ctx.services.require("renderOrder");
@@ -108,7 +149,7 @@ export function createTextPlugin(): IPlugin<{
             return;
           }
 
-          const element = editor.toElement(candidate);
+          const element = canvasRegistry.toElement(candidate);
           if (!element || element.data.type !== "text") {
             return;
           }
@@ -126,23 +167,102 @@ export function createTextPlugin(): IPlugin<{
       };
 
       const setupNode = (node: Konva.Text) => {
-        txSetupTextNode(
-          {
-            Konva,
-            crdt,
-            crypto,
-            history,
-            editor,
-            hooks: ctx.hooks,
-            render: scene,
-            selection,
-            setupNode,
-            theme,
-          },
-          { freeTextName: FREE_TEXT_NAME, node },
-        );
+        txSetupTextNode({
+          Konva,
+          crdt,
+          crypto,
+          history,
+          hooks: ctx.hooks,
+          render: scene,
+          selection,
+          serializeNode: ({ node, createdAt, updatedAt }) => fxSerializeTextNode(canvasRegistry, { node, createdAt, updatedAt }),
+          setupNode,
+          theme,
+        }, {
+          freeTextName: FREE_TEXT_NAME,
+          node,
+        });
         return node;
       };
+
+      const unregisterTextElement = canvasRegistry.registerElement({
+        id: "text",
+        matchesElement: (element) => element.data.type === "text",
+        matchesNode: (node) => node instanceof Konva.Text,
+        toElement: (node) => {
+          if (!(node instanceof Konva.Text)) {
+            return null;
+          }
+
+          const now = Date.now();
+          return fxSerializeTextNode(canvasRegistry, {
+            node,
+            createdAt: now,
+            updatedAt: now,
+          });
+        },
+        createNode: (element) => {
+          if (element.data.type !== "text") {
+            return null;
+          }
+
+          return createTextNode(theme, element);
+        },
+        attachListeners: (node) => {
+          if (!(node instanceof Konva.Text)) {
+            return false;
+          }
+
+          setupNode(node);
+          return true;
+        },
+        updateElement: (element) => {
+          return txUpdateTextNodeFromElement({
+            Konva,
+            scene,
+            theme,
+          }, {
+            element,
+            freeTextName: FREE_TEXT_NAME,
+          });
+        },
+        getSelectionStyleMenu: ({ theme: activeTheme }) => ({
+          sections: {
+            showStrokeColorPicker: true,
+            showTextPickers: true,
+            showOpacityPicker: true,
+          },
+          values: {
+            strokeColor: activeTheme?.getTheme().colors.canvasText ?? theme.getTheme().colors.canvasText,
+            opacity: 1,
+            fontFamily: "Arial",
+            fontSizePreset: fnGetNearestFontSizePreset(16),
+            textAlign: "left",
+            verticalAlign: "top",
+          },
+        }),
+        getTransformOptions: ({ element }) => {
+          if (element.data.type !== "text" || element.data.containerId !== null) {
+            return;
+          }
+
+          return {
+            enabledAnchors: [...TEXT_TRANSFORM_ANCHORS],
+            keepRatio: true,
+          };
+        },
+        onTransform: ({ node, element }) => {
+          if (element.data.type !== "text" || element.data.containerId !== null) {
+            return;
+          }
+
+          txApplyTextTransform({ node });
+          return {
+            cancel: false,
+            crdt: false,
+          };
+        },
+      });
 
       contextMenu.registerProvider("text", ({ targetElement, activeSelection }) => {
         if (targetElement?.data.type !== "text") {
@@ -160,49 +280,14 @@ export function createTextPlugin(): IPlugin<{
         }];
       });
 
-      editor.registerTool({
-        id: "text",
-        label: "Text",
-        icon: Type,
-        shortcuts: ["t"],
-        priority: 50,
-        behavior: { type: "mode", mode: "click-create" },
-      });
-
-      editor.registerToElement("text", (node) => {
-        if (!(node instanceof Konva.Text)) {
-          return null;
-        }
-
-        const now = Date.now();
-        return fxToElement({ editor }, { node, createdAt: now, updatedAt: now });
-      });
-
-      editor.registerCreateShapeFromTElement("text", (element) => {
-        if (element.data.type !== "text") {
-          return null;
-        }
-
-        return setupNode(createTextNode(scene, theme, element));
-      });
-
-      editor.registerSetupExistingShape("text", (node) => {
-        if (!(node instanceof Konva.Text)) {
-          return false;
-        }
-
-        setupNode(node);
-        return true;
-      });
-
-      editor.registerUpdateShapeFromTElement("text", (element) => {
-        return txUpdateTextNodeFromElement({
-          Konva,
-          scene,
-          theme,
-        }, {
-          element,
-          freeTextName: FREE_TEXT_NAME,
+      ctx.hooks.init.tap(() => {
+        editor.registerTool(ctx, {
+          id: "text",
+          label: "Text",
+          icon: Type,
+          shortcuts: ["t"],
+          priority: 50,
+          behavior: { type: "mode", mode: "click-create" },
         });
       });
 
@@ -232,7 +317,10 @@ export function createTextPlugin(): IPlugin<{
           createdAt: now,
           updatedAt: now,
         });
-        const node = setupNode(createTextNode(scene, theme, element));
+        const node = canvasRegistry.createNodeFromElement(element);
+        if (!(node instanceof Konva.Text)) {
+          return;
+        }
 
         scene.staticForegroundLayer.add(node);
         renderOrder.assignOrderOnInsert({
@@ -245,10 +333,22 @@ export function createTextPlugin(): IPlugin<{
         selection.setFocusedNode(node);
         editor.setActiveTool("select");
 
-        txEnterEditMode(
-          { Konva, crdt, document, editor, history, scene, selection, theme, pretext: { layoutWithLines, prepareWithSegments } },
-          { freeTextName: FREE_TEXT_NAME, node, isNew: true },
-        );
+        txEnterEditMode({
+          Konva,
+          canvasRegistry,
+          crdt,
+          document,
+          editor,
+          history,
+          scene,
+          selection,
+          theme,
+          pretext: { layoutWithLines, prepareWithSegments },
+        }, {
+          freeTextName: FREE_TEXT_NAME,
+          node,
+          isNew: true,
+        });
       });
 
       ctx.hooks.elementPointerDoubleClick.tap((event) => {
@@ -260,20 +360,29 @@ export function createTextPlugin(): IPlugin<{
           return false;
         }
 
-        txEnterEditMode(
-          { Konva, crdt, document, editor, history, scene, selection, theme, pretext: { layoutWithLines, prepareWithSegments } },
-          { freeTextName: FREE_TEXT_NAME, node: event.currentTarget, isNew: false },
-        );
+        txEnterEditMode({
+          Konva,
+          canvasRegistry,
+          crdt,
+          document,
+          editor,
+          history,
+          scene,
+          selection,
+          theme,
+          pretext: { layoutWithLines, prepareWithSegments },
+        }, {
+          freeTextName: FREE_TEXT_NAME,
+          node: event.currentTarget,
+          isNew: false,
+        });
         return true;
       });
 
       ctx.hooks.destroy.tap(() => {
         contextMenu.unregisterProvider("text");
+        unregisterTextElement();
         editor.unregisterTool("text");
-        editor.unregisterToElement("text");
-        editor.unregisterCreateShapeFromTElement("text");
-        editor.unregisterSetupExistingShape("text");
-        editor.unregisterUpdateShapeFromTElement("text");
       });
     },
   };

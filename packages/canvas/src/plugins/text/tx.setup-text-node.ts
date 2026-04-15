@@ -1,10 +1,8 @@
-import { fxToElement } from "./fx.to-element";
 import { txUpdateTextNodeFromElement } from "./tx.update-text-node-from-element";
 import type { ThemeService } from "@vibecanvas/service-theme";
 import type { TElement } from "@vibecanvas/service-automerge/types/canvas-doc.types";
 import type { CrdtService } from "../../services/crdt/CrdtService";
 import type { HistoryService } from "../../services/history/HistoryService";
-import type { EditorService } from "../../services/editor/EditorService";
 import type { SceneService } from "../../services/scene/SceneService";
 import type { SelectionService } from "../../services/selection/SelectionService";
 import type { IHooks } from "../../runtime";
@@ -15,10 +13,10 @@ export type TPortalSetupTextNode = {
   crdt: CrdtService;
   crypto: typeof crypto;
   history: HistoryService;
-  editor: EditorService;
   hooks: IHooks;
   render: SceneService;
   selection: SelectionService;
+  serializeNode: (args: { node: Konva.Text; createdAt: number; updatedAt: number }) => TElement;
   setupNode: (node: Konva.Text) => Konva.Text;
   theme: ThemeService;
 };
@@ -60,18 +58,6 @@ export function txSetupTextNode(portal: TPortalSetupTextNode, args: TArgsSetupTe
     }
   });
 
-  args.node.on("transform", () => {
-    const scaleX = args.node.scaleX();
-    const scaleY = args.node.scaleY();
-    args.node.setAttrs({
-      width: args.node.width() * scaleX,
-      height: args.node.height() * scaleY,
-      fontSize: Math.max(1, args.node.fontSize() * scaleX),
-      scaleX: 1,
-      scaleY: 1,
-    });
-  });
-
   args.node.on("dragstart", (event) => {
     if (event.evt?.altKey) {
       isCloneDrag = true;
@@ -90,10 +76,11 @@ export function txSetupTextNode(portal: TPortalSetupTextNode, args: TArgsSetupTe
         previewClone.moveTo(portal.render.staticForegroundLayer);
         const cloned = portal.setupNode(previewClone);
         const now = Date.now();
-        const clonedElement = fxToElement(
-          { editor: portal.editor },
-          { node: cloned, createdAt: now, updatedAt: now },
-        );
+        const clonedElement = portal.serializeNode({
+          node: cloned,
+          createdAt: now,
+          updatedAt: now,
+        });
         portal.crdt.patch({ elements: [clonedElement], groups: [] });
         portal.selection.setSelection([cloned]);
         portal.selection.setFocusedNode(cloned);
@@ -106,7 +93,7 @@ export function txSetupTextNode(portal: TPortalSetupTextNode, args: TArgsSetupTe
     }
 
     const now = Date.now();
-    beforeDragElement = fxToElement({ editor: portal.editor }, { node: args.node, createdAt: now, updatedAt: now });
+    beforeDragElement = portal.serializeNode({ node: args.node, createdAt: now, updatedAt: now });
   });
 
   args.node.on("dragend", () => {
@@ -116,7 +103,11 @@ export function txSetupTextNode(portal: TPortalSetupTextNode, args: TArgsSetupTe
       return;
     }
     const now = Date.now();
-    const afterDragElement = fxToElement({ editor: portal.editor }, { node: args.node, createdAt: beforeDragElement?.createdAt ?? now, updatedAt: now });
+    const afterDragElement = portal.serializeNode({
+      node: args.node,
+      createdAt: beforeDragElement?.createdAt ?? now,
+      updatedAt: now,
+    });
     portal.crdt.patch({ elements: [afterDragElement], groups: [] });
 
     if (!beforeDragElement) {

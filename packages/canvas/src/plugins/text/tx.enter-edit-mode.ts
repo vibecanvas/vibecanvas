@@ -9,17 +9,23 @@ import { fxGetShapeTextHostBounds } from "../shape2d/fn.text-host-bounds";
 import type { layoutWithLines, prepareWithSegments } from "@chenglou/pretext";
 import type { ThemeService } from "@vibecanvas/service-theme";
 import type { CrdtService } from "../../services/crdt/CrdtService";
-import type { EditorService } from "../../services/editor/EditorService";
+import type { EditorServiceV2 } from "../../services/editor/EditorServiceV2";
 import type { HistoryService } from "../../services/history/HistoryService";
 import type { SceneService } from "../../services/scene/SceneService";
 import type { SelectionService } from "../../services/selection/SelectionService";
+import type { CanvasRegistryService } from "../../services/canvas-registry/CanvasRegistryService";
 import type Konva from "konva";
 
 export type TPortalEnterEditMode = {
   Konva: typeof Konva;
+  canvasRegistry?: Pick<CanvasRegistryService, "toElement" | "toGroup" | "updateElement">;
   crdt: CrdtService;
   document: Document;
-  editor: EditorService;
+  editor: Pick<EditorServiceV2, "setEditingTextId"> & {
+    toElement?: (node: Konva.Node) => TElement | null;
+    toGroup?: (node: Konva.Node) => unknown;
+    updateShapeFromTElement?: (element: TElement) => boolean;
+  };
   history: HistoryService;
   scene: SceneService;
   selection: SelectionService;
@@ -123,9 +129,33 @@ function suppressNextSelectionHandling(portal: TPortalEnterEditMode, args: { rea
   portal.selection.suppressSelectionHandling(120);
 }
 
+function fxSerializeTextNode(portal: TPortalEnterEditMode, args: {
+  node: Konva.Text;
+  createdAt: number;
+  updatedAt: number;
+}) {
+  const toGroup = (node: Konva.Node) => {
+    if (portal.canvasRegistry) {
+      return portal.canvasRegistry.toGroup(node);
+    }
+
+    return portal.editor.toGroup?.(node) ?? null;
+  };
+
+  return fxToElement({ editor: { toGroup } }, args);
+}
+
+function fxGetNodeElement(portal: TPortalEnterEditMode, args: { node: Konva.Node }) {
+  return portal.canvasRegistry?.toElement(args.node) ?? portal.editor.toElement?.(args.node) ?? null;
+}
+
+function applyRuntimeElement(portal: TPortalEnterEditMode, args: { element: TElement }) {
+  return portal.canvasRegistry?.updateElement(args.element) ?? portal.editor.updateShapeFromTElement?.(args.element) ?? false;
+}
+
 export function txEnterEditMode(portal: TPortalEnterEditMode, args: TArgsEnterEditMode) {
   const now = Date.now();
-  const originalElement = fxToElement({ editor: portal.editor }, { node: args.node, createdAt: now, updatedAt: now });
+  const originalElement = fxSerializeTextNode(portal, { node: args.node, createdAt: now, updatedAt: now });
   const originalText = args.node.text();
   const originalData = originalElement.data as TTextData;
   const isAttachedText = originalData.containerId !== null;
@@ -133,7 +163,7 @@ export function txEnterEditMode(portal: TPortalEnterEditMode, args: TArgsEnterEd
     ? findAttachedHostNode(portal, originalData.containerId)
     : null;
   const originalHostElement = attachedHostNode
-    ? portal.editor.toElement(attachedHostNode)
+    ? fxGetNodeElement(portal, { node: attachedHostNode })
     : null;
 
   portal.editor.setEditingTextId(args.node.id());
@@ -166,7 +196,7 @@ export function txEnterEditMode(portal: TPortalEnterEditMode, args: TArgsEnterEd
       : null;
 
     if (nextHostElement) {
-      portal.editor.updateShapeFromTElement(nextHostElement);
+      applyRuntimeElement(portal, { element: nextHostElement });
     }
 
     const hostBounds = attachedHostNode
@@ -272,7 +302,7 @@ export function txEnterEditMode(portal: TPortalEnterEditMode, args: TArgsEnterEd
 
     if (newText === "" && isAttachedText) {
       if (originalHostElement) {
-        portal.editor.updateShapeFromTElement(originalHostElement);
+        applyRuntimeElement(portal, { element: originalHostElement });
       }
       args.node.destroy();
       portal.scene.staticForegroundLayer.batchDraw();
@@ -288,7 +318,7 @@ export function txEnterEditMode(portal: TPortalEnterEditMode, args: TArgsEnterEd
 
     if (args.isNew && newText === "") {
       if (originalHostElement) {
-        portal.editor.updateShapeFromTElement(originalHostElement);
+        applyRuntimeElement(portal, { element: originalHostElement });
       }
       args.node.destroy();
       portal.scene.staticForegroundLayer.batchDraw();
@@ -310,7 +340,7 @@ export function txEnterEditMode(portal: TPortalEnterEditMode, args: TArgsEnterEd
           hostElement: structuredClone(originalHostElement),
           minHeight: worldHeight,
         });
-        portal.editor.updateShapeFromTElement(nextHostElement);
+        applyRuntimeElement(portal, { element: nextHostElement });
       } else {
         args.node.width(originalData.w);
         args.node.height(Math.max(originalData.h, worldHeight));
@@ -350,7 +380,11 @@ export function txEnterEditMode(portal: TPortalEnterEditMode, args: TArgsEnterEd
     portal.scene.staticForegroundLayer.batchDraw();
 
     const nextNow = Date.now();
-    const nextElement = fxToElement({ editor: portal.editor }, { node: args.node, createdAt: originalElement.createdAt, updatedAt: nextNow });
+    const nextElement = fxSerializeTextNode(portal, {
+      node: args.node,
+      createdAt: originalElement.createdAt,
+      updatedAt: nextNow,
+    });
     const patchElements = [nextHostElement, nextElement].filter((element): element is TElement => element !== null);
     portal.crdt.patch({ elements: patchElements, groups: [] });
 
@@ -373,7 +407,7 @@ export function txEnterEditMode(portal: TPortalEnterEditMode, args: TArgsEnterEd
       label: "edit-text",
       undo: () => {
         if (undoHostElement) {
-          portal.editor.updateShapeFromTElement(undoHostElement);
+          applyRuntimeElement(portal, { element: undoHostElement });
         }
         txUpdateTextNodeFromElement({ Konva: portal.Konva, scene: portal.scene, theme: portal.theme }, { element: undoElement, freeTextName: args.freeTextName });
         portal.scene.staticForegroundLayer.batchDraw();
@@ -381,7 +415,7 @@ export function txEnterEditMode(portal: TPortalEnterEditMode, args: TArgsEnterEd
       },
       redo: () => {
         if (redoHostElement) {
-          portal.editor.updateShapeFromTElement(redoHostElement);
+          applyRuntimeElement(portal, { element: redoHostElement });
         }
         txUpdateTextNodeFromElement({ Konva: portal.Konva, scene: portal.scene, theme: portal.theme }, { element: redoElement, freeTextName: args.freeTextName });
         portal.scene.staticForegroundLayer.batchDraw();
@@ -395,7 +429,7 @@ export function txEnterEditMode(portal: TPortalEnterEditMode, args: TArgsEnterEd
     cleanup();
 
     if (originalHostElement) {
-      portal.editor.updateShapeFromTElement(originalHostElement);
+      applyRuntimeElement(portal, { element: originalHostElement });
     }
 
     if (args.isNew) {
