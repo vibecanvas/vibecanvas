@@ -72,16 +72,17 @@ export function txFinalizePenPreviewClone(portal: TPortalTxFinalizePenPreviewClo
   args.previewClone.setDraggable(true);
   args.previewClone.listening(true);
   args.previewClone.visible(true);
-  portal.renderOrder.assignOrderOnInsert({
-    parent: portal.render.staticForegroundLayer,
-    nodes: [args.previewClone],
-    position: "front",
-  });
 
   const element = portal.toElement(args.previewClone);
   const builder = portal.crdt.build();
   builder.patchElement(element.id, element);
   builder.commit();
+
+  portal.renderOrder.assignOrderOnInsert({
+    parent: portal.render.staticForegroundLayer,
+    nodes: [args.previewClone],
+    position: "front",
+  });
   portal.render.dynamicLayer.batchDraw();
   portal.render.staticForegroundLayer.batchDraw();
   return args.previewClone;
