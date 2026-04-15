@@ -136,6 +136,34 @@ describe("new Text plugin editing", () => {
     await harness.destroy();
   });
 
+  test("Escape saves free text edits without double-cleanup errors", async () => {
+    const docHandle = createMockDocHandle();
+    const harness = await createNewCanvasHarness({ docHandle });
+
+    const node = addHydratedTextNode(harness, createTextElement({
+      id: "escape-save-text-1",
+      data: {
+        ...createTextElement().data,
+        text: "original",
+      },
+    }));
+    await openEdit(node);
+
+    const textarea = harness.stage.container().querySelector("textarea") as HTMLTextAreaElement;
+    textarea.value = "saved on escape";
+
+    expect(() => {
+      textarea.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true, cancelable: true }));
+    }).not.toThrow();
+    await flushCanvasEffects();
+
+    expect(harness.stage.container().querySelector("textarea")).toBeNull();
+    expect(node.text()).toBe("saved on escape");
+    expect((docHandle.doc().elements["escape-save-text-1"].data as TTextData).text).toBe("saved on escape");
+
+    await harness.destroy();
+  });
+
   test("leading and trailing whitespace is preserved", async () => {
     const harness = await createNewCanvasHarness();
 

@@ -153,7 +153,7 @@ function applyRuntimeElement(portal: TPortalEnterEditMode, args: { element: TEle
   return portal.canvasRegistry?.updateElement(args.element) ?? portal.editor.updateShapeFromTElement?.(args.element) ?? false;
 }
 
-function txSyncTextareaColor(portal: TPortalEnterEditMode, args: {
+function fxSyncTextareaColor(portal: TPortalEnterEditMode, args: {
   element: Pick<TElement, "style">;
   textarea: HTMLTextAreaElement;
 }) {
@@ -286,17 +286,26 @@ export function txEnterEditMode(portal: TPortalEnterEditMode, args: TArgsEnterEd
     boxSizing: "border-box",
     zIndex: "9999",
   });
-  txSyncTextareaColor(portal, { element: originalElement, textarea });
+  fxSyncTextareaColor(portal, { element: originalElement, textarea });
   const offThemeChange = portal.theme.hooks.change.tap(() => {
-    txSyncTextareaColor(portal, { element: originalElement, textarea });
+    fxSyncTextareaColor(portal, { element: originalElement, textarea });
   });
 
+  let didCleanup = false;
   const cleanup = () => {
+    if (didCleanup) {
+      return;
+    }
+
+    didCleanup = true;
     offThemeChange();
     textarea.removeEventListener("input", autoGrow);
+    textarea.removeEventListener("blur", commit);
     textarea.removeEventListener("keydown", onKeyDown);
     textarea.removeEventListener("keyup", stopKeyPropagation);
-    textarea.remove();
+    if (textarea.parentNode) {
+      textarea.remove();
+    }
     portal.editor.setEditingTextId(null);
   };
 
@@ -476,12 +485,7 @@ export function txEnterEditMode(portal: TPortalEnterEditMode, args: TArgsEnterEd
 
     if (event.key === "Escape") {
       event.preventDefault();
-      if (isAttachedText) {
-        textarea.blur();
-        return;
-      }
-
-      cancel();
+      textarea.blur();
       return;
     }
 

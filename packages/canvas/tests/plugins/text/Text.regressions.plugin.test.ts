@@ -104,18 +104,20 @@ describe("new Text plugin regressions", () => {
     await harness.destroy();
   });
 
-  test("Escape on existing text cancels edit and keeps original content", async () => {
-    const harness = await createNewCanvasHarness();
+  test("Escape on existing text saves the latest content", async () => {
+    const docHandle = createMockDocHandle();
+    const harness = await createNewCanvasHarness({ docHandle });
     const node = addHydratedTextNode(harness, createTextElement({ id: "escape-existing", data: { ...createTextElement().data, text: "original" } }));
 
     await openEdit(node);
     const textarea = harness.stage.container().querySelector("textarea") as HTMLTextAreaElement;
-    textarea.value = "changed but canceled";
+    textarea.value = "saved on escape";
     textarea.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
     await flushCanvasEffects();
 
     expect(harness.stage.container().querySelector("textarea")).toBeNull();
-    expect(node.text()).toBe("original");
+    expect(node.text()).toBe("saved on escape");
+    expect((docHandle.doc().elements["escape-existing"].data as TElement["data"] & { text: string }).text).toBe("saved on escape");
 
     await harness.destroy();
   });
