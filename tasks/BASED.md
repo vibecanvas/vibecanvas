@@ -140,6 +140,7 @@ Use the leaf files for execution history and local context.
 - [ ]: [A32](a/A32.md) - hosted components: sandboxed Arrow runtime + per-component official packages
 - [ ]: [A33] - deeplink to canvas object
 - [ ]: [A34](a/A34.md) - canvas: scene hydrator incremental reconcile instead of full reload on change
+- [ ]: [A35] - multiselect => clone drag
 
 ## S ubtractions
 - [ ]: [S1](s/S1.md) - double bun run dev -> find new port
@@ -194,7 +195,7 @@ Use the leaf files for execution history and local context.
 - [ ]: [E17](e/E17.md) - automerge authority: optimistic local writes with server validation/reject path
 - [ ]: [E18] - replace iframe with bun.webview??
 - [ ]: [E19](e/E19.md) - canvas performance longterm: worker automerge + incremental notifications
-- [ ]: [E20](e/E20.md) - improvement crdt updates
+- [x]: [E20](e/E20.md) - improvement crdt updates
 
 ## D irections
 - [x]: [D1] - AI can edit the canvas directly

@@ -8,11 +8,10 @@ import { render as renderSolid } from "solid-js/web";
 import { CanvasRecorder } from "../../components/CanvasRecorder";
 import {
   fxCanExportRecording,
-  fxCreateDeleteCrdtOp,
   fxCreateDragStep,
   fxCreateEmptyRecording,
   fxCreateKeyStep,
-  fxCreatePatchCrdtOp,
+  fxCreateOpsCrdtOp,
   fxCreatePointerMoveStep,
   fxCreatePointerStep,
   fxCreateStartedRecording,
@@ -27,8 +26,7 @@ type TRecorderState = {
   reducedEvents: boolean;
   pointerPressed: boolean;
   recordingData: TRecording;
-  restoreCrdtPatch: (() => void) | null;
-  restoreCrdtDelete: (() => void) | null;
+  restoreCrdtWrite: (() => void) | null;
   restoreNodeFire: (() => void) | null;
   open: Accessor<boolean>;
   setOpen: Setter<boolean>;
@@ -58,8 +56,7 @@ function createRecorderState(): TRecorderState {
     reducedEvents: REDUCED_EVENTS,
     pointerPressed: false,
     recordingData: fxCreateEmptyRecording({ reducedEvents: REDUCED_EVENTS }),
-    restoreCrdtPatch: null,
-    restoreCrdtDelete: null,
+    restoreCrdtWrite: null,
     restoreNodeFire: null,
     open,
     setOpen,
@@ -277,37 +274,18 @@ function setupHookCapture(args: { state: TRecorderState; render: SceneService; h
 }
 
 function setupCrdtCapture(args: { state: TRecorderState; crdt: CrdtService }) {
-  const originalPatch = args.crdt.patch.bind(args.crdt);
-  const originalDeleteById = args.crdt.deleteById.bind(args.crdt);
-
-  args.crdt.patch = ((payload) => {
-    if (args.state.recording) {
-      txPushCrdtOp(
-        args.state,
-        fxCreatePatchCrdtOp({
-          patch: payload as { elements: Array<Record<string, unknown>>; groups: Array<Record<string, unknown>> },
-        }),
-      );
+  args.state.restoreCrdtWrite = args.crdt.hooks.write.tap((ops) => {
+    if (!args.state.recording) {
+      return;
     }
 
-    originalPatch(payload);
-  }) as typeof args.crdt.patch;
-
-  args.crdt.deleteById = ((payload) => {
-    if (args.state.recording) {
-      txPushCrdtOp(args.state, fxCreateDeleteCrdtOp({ deleteById: payload }));
-    }
-
-    originalDeleteById(payload);
-  }) as typeof args.crdt.deleteById;
-
-  args.state.restoreCrdtPatch = () => {
-    args.crdt.patch = originalPatch;
-  };
-
-  args.state.restoreCrdtDelete = () => {
-    args.crdt.deleteById = originalDeleteById;
-  };
+    txPushCrdtOp(
+      args.state,
+      fxCreateOpsCrdtOp({
+        ops: ops as Array<Record<string, unknown>>,
+      }),
+    );
+  });
 }
 
 /**
@@ -367,11 +345,9 @@ export function createRecorderPlugin(): IPlugin<{
       setupCrdtCapture({ state, crdt });
 
       ctx.hooks.destroy.tap(() => {
-        state.restoreCrdtPatch?.();
-        state.restoreCrdtDelete?.();
+        state.restoreCrdtWrite?.();
         state.restoreNodeFire?.();
-        state.restoreCrdtPatch = null;
-        state.restoreCrdtDelete = null;
+        state.restoreCrdtWrite = null;
         state.restoreNodeFire = null;
         state.panelMount?.dispose();
         state.panelMount = null;

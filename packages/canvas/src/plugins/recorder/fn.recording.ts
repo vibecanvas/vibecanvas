@@ -133,18 +133,11 @@ export function fxCreateDragStep(args: {
   };
 }
 
-export function fxCreatePatchCrdtOp(args: {
-  patch: { elements: Array<Record<string, unknown>>; groups: Array<Record<string, unknown>> };
+export function fxCreateOpsCrdtOp(args: {
+  ops: Array<Record<string, unknown>>;
 }): TCrdtOp {
   return {
-    type: "patch",
-    payload: fxCloneValue({ value: args.patch }),
-  };
-}
-
-export function fxCreateDeleteCrdtOp(args: { deleteById: { elementIds?: string[]; groupIds?: string[] } }): TCrdtOp {
-  return {
-    type: "delete",
-    payload: fxCloneValue({ value: args.deleteById }),
+    type: "ops",
+    payload: fxCloneValue({ value: args.ops }),
   };
 }

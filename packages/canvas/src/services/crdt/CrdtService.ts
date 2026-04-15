@@ -1,6 +1,6 @@
 import type { DocHandle, DocHandleChangePayload, DocHandleDeletePayload, DocHandleEphemeralMessagePayload } from "@automerge/automerge-repo";
 import type { IService, IStartableService, IStoppableService } from "@vibecanvas/runtime";
-import type { TCanvasDoc, TElement, TGroup } from "@vibecanvas/service-automerge/types/canvas-doc.types";
+import type { TCanvasDoc } from "@vibecanvas/service-automerge/types/canvas-doc.types";
 import { SyncHook } from "@vibecanvas/tapable";
 import { fxCreateCrdtBuilder, type TCrdtBuilder, type TCrdtRecordedOp } from "./fxBuilder";
 import { txApplyCrdtOps } from "./tx.apply-ops";
@@ -11,6 +11,7 @@ export type TCrdtServiceArgs = {
 
 export interface TCrdtServiceHooks {
   change: SyncHook<[]>;
+  write: SyncHook<[TCrdtRecordedOp[]]>;
 }
 
 export class CrdtService implements IService<TCrdtServiceHooks>, IStartableService, IStoppableService {
@@ -18,6 +19,7 @@ export class CrdtService implements IService<TCrdtServiceHooks>, IStartableServi
   readonly docHandle: DocHandle<TCanvasDoc>;
   readonly hooks: TCrdtServiceHooks = {
     change: new SyncHook(),
+    write: new SyncHook(),
   };
 
   started = false;
@@ -135,6 +137,8 @@ export class CrdtService implements IService<TCrdtServiceHooks>, IStartableServi
           throw new Error("CRDT builder commit failed to produce a result");
         }
 
+        this.hooks.write.call(commitResult.redoOps);
+
         return {
           ...commitResult,
           rollback: () => {
@@ -154,34 +158,7 @@ export class CrdtService implements IService<TCrdtServiceHooks>, IStartableServi
         clone: <T>(value: T): T => JSON.parse(JSON.stringify(value)) as T,
       }, args);
     });
-  }
-
-  patch(data: { elements: TElement[]; groups: TGroup[] }) {
-    const builder = this.build();
-
-    for (const element of data.elements) {
-      builder.patchElement(element.id, element);
-    }
-
-    for (const group of data.groups) {
-      builder.patchGroup(group.id, group);
-    }
-
-    builder.commit();
-  }
-
-  deleteById(args: { elementIds?: string[]; groupIds?: string[] }) {
-    const builder = this.build();
-
-    for (const id of args.elementIds ?? []) {
-      builder.deleteElement(id);
-    }
-
-    for (const id of args.groupIds ?? []) {
-      builder.deleteGroup(id);
-    }
-
-    builder.commit();
+    this.hooks.write.call(args.ops);
   }
 
   consumePendingLocalChangeEvent() {

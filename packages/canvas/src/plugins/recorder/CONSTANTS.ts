@@ -49,15 +49,10 @@ export type TStep =
     modifiers: TModifiers;
   };
 
-export type TCrdtOp =
-  | {
-    type: "patch";
-    payload: { elements: Array<Record<string, unknown>>; groups: Array<Record<string, unknown>> };
-  }
-  | {
-    type: "delete";
-    payload: { elementIds?: string[]; groupIds?: string[] };
-  };
+export type TCrdtOp = {
+  type: "ops";
+  payload: Array<Record<string, unknown>>;
+};
 
 export type TRecording = {
   name: string;
