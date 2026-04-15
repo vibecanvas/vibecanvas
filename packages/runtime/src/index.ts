@@ -6,6 +6,7 @@ export type {
   IPluginContext,
   IService,
   IServiceMap,
+  IServiceRegistration,
   IServiceRegistry,
   IStartableService,
   IStoppableService,

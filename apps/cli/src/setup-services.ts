@@ -31,7 +31,7 @@ function isCanvasSchemaOnlyRequest(config: ICliConfig): boolean {
 function setupServices(config: ICliConfig) {
   const services = createServiceRegistry();
   const eventPublisher = new EventPublisherService();
-  services.provide('eventPublisher', eventPublisher);
+  services.provide('eventPublisher', 10, eventPublisher);
 
   const shouldSetupStatefulServices = !config.helpRequested
     && !config.versionRequested
@@ -50,12 +50,12 @@ function setupServices(config: ICliConfig) {
   const filesystemService = new FilesystemServiceNode(eventPublisher);
   const ptyService = new PtyServiceBunPty();
 
-  services.provide('db', dbService);
-  services.provide('filesystem', filesystemService);
-  services.provide('pty', ptyService);
+  services.provide('db', 20, dbService);
+  services.provide('filesystem', 30, filesystemService);
+  services.provide('pty', 40, ptyService);
 
   const automergeService = new AutomergeService(dbService.sqlite as Database);
-  services.provide('automerge', automergeService);
+  services.provide('automerge', 50, automergeService);
 
   return { services, automergeService, dbService, eventPublisher, filesystemService, ptyService };
 }

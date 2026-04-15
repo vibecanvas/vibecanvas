@@ -131,7 +131,7 @@ This makes plugin authoring much nicer.
 
 ```ts
 type ICliPlugin<TRequired = {}> = IPlugin<TRequired, ICliHooks>
-type ICliPluginContext<TRequired = {}> = IPluginContext<TRequired, ICliHooks>
+type IClIPluginContext<TRequired = {}> = IPluginContext<TRequired, ICliHooks>
 ```
 
 ### 3. Extend `IServiceMap` with declaration merging

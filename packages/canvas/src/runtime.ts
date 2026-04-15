@@ -16,7 +16,7 @@ import {
 import {
   CameraService, ContextMenuService, CrdtService, EditorService, HistoryService,
   LoggingService, RenderOrderService, SceneService, SelectionService,
-  CanvasRegistryService
+  CanvasRegistryService, WidgetManagerService,
 } from "./services";
 import { ThemeService } from "@vibecanvas/service-theme";
 
@@ -36,7 +36,7 @@ export type TDeleteImage = (args: {
 }) => Promise<{ ok: true }>;
 
 
-interface IRuntimeConfig {
+export interface IRuntimeConfig {
   container: HTMLDivElement;
   docHandle: DocHandle<TCanvasDoc>;
   onToggleSidebar: () => void;
@@ -112,6 +112,7 @@ declare module "@vibecanvas/runtime" {
     selection: SelectionService;
     theme: ThemeService;
     canvasRegistry: CanvasRegistryService;
+    widgetManager: WidgetManagerService;
   }
 }
 
@@ -143,10 +144,7 @@ function createServices(config: {
   themeService: ThemeService;
 }): IServiceRegistry {
   const services = createServiceRegistry();
-  const scene = new SceneService({
-    container: config.container,
-    docHandle: config.docHandle,
-  });
+  const scene = new SceneService({ container: config.container, });
   const camera = new CameraService({ scene });
   const canvasRegistry = new CanvasRegistryService();
   const contextMenu = new ContextMenuService();
@@ -155,6 +153,13 @@ function createServices(config: {
   const crdt = new CrdtService({ docHandle: config.docHandle });
   const logging = new LoggingService();
   const editor = new EditorService(scene, canvasRegistry, crdt, selection);
+  const widgetManager = new WidgetManagerService({
+    crdtService: crdt,
+    contextMenuService: contextMenu,
+    loggingService: logging,
+    editorService: editor,
+  });
+
   const renderOrder = new RenderOrderService({
     crdt,
     history,
@@ -162,18 +167,18 @@ function createServices(config: {
     canvasRegistry,
   });
 
-  services.provide("canvasRegistry", canvasRegistry);
-  services.provide("editor", editor);
-  services.provide("camera", camera);
-  services.provide("contextMenu", contextMenu);
-  services.provide("crdt", crdt);
-  services.provide("editor", editor);
-  services.provide("history", history);
-  services.provide("logging", logging);
-  services.provide("scene", scene);
-  services.provide("renderOrder", renderOrder);
-  services.provide("selection", selection);
-  services.provide("theme", config.themeService);
+  services.provide("scene", 10, scene);
+  services.provide("camera", 20, camera);
+  services.provide("canvasRegistry", 30, canvasRegistry);
+  services.provide("contextMenu", 40, contextMenu);
+  services.provide("history", 50, history);
+  services.provide("selection", 60, selection);
+  services.provide("crdt", 70, crdt);
+  services.provide("logging", 80, logging);
+  services.provide("editor", 90, editor);
+  services.provide("renderOrder", 100, renderOrder);
+  services.provide("theme", 110, config.themeService);
+  services.provide("widgetManager", 120, widgetManager);
 
   return services;
 }
@@ -211,17 +216,11 @@ export function buildRuntime(config: IRuntimeConfig) {
     plugins,
     services: createServices(config),
     boot: async ({ services, hooks }) => {
-      services.require("scene").start();
-      services.require("crdt").start();
-      services.require("camera").start();
       hooks.init.call();
       await hooks.initAsync.promise();
     },
     shutdown: async ({ services, hooks }) => {
       hooks.destroy.call();
-      services.require("camera").stop();
-      services.require("crdt").stop();
-      services.require("scene").stop();
     },
   })
 }
