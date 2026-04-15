@@ -15,10 +15,9 @@ import {
 } from "./plugins";
 import {
   CameraService, ContextMenuService, CrdtService, EditorService, HistoryService,
-  LoggingService, RenderOrderService, SceneService, SelectionService, WidgetService,
+  LoggingService, RenderOrderService, SceneService, SelectionService,
   CanvasRegistryService
 } from "./services";
-import { EditorServiceV2 } from "./services/editor/EditorServiceV2";
 import { ThemeService } from "@vibecanvas/service-theme";
 
 
@@ -106,14 +105,12 @@ declare module "@vibecanvas/runtime" {
     contextMenu: ContextMenuService;
     crdt: CrdtService;
     editor: EditorService;
-    editor2: EditorServiceV2;
     history: HistoryService;
     logging: LoggingService;
     scene: SceneService;
     renderOrder: RenderOrderService;
     selection: SelectionService;
     theme: ThemeService;
-    widget: WidgetService;
     canvasRegistry: CanvasRegistryService;
   }
 }
@@ -153,13 +150,11 @@ function createServices(config: {
   const camera = new CameraService({ scene });
   const canvasRegistry = new CanvasRegistryService();
   const contextMenu = new ContextMenuService();
-  const editor = new EditorService();
   const history = new HistoryService();
   const selection = new SelectionService();
-  const widget = new WidgetService(editor);
   const crdt = new CrdtService({ docHandle: config.docHandle });
   const logging = new LoggingService();
-  const editor2 = new EditorServiceV2(scene, canvasRegistry, crdt, selection);
+  const editor = new EditorService(scene, canvasRegistry, crdt, selection);
   const renderOrder = new RenderOrderService({
     crdt,
     history,
@@ -168,7 +163,7 @@ function createServices(config: {
   });
 
   services.provide("canvasRegistry", canvasRegistry);
-  services.provide("editor2", editor2);
+  services.provide("editor", editor);
   services.provide("camera", camera);
   services.provide("contextMenu", contextMenu);
   services.provide("crdt", crdt);
@@ -179,7 +174,6 @@ function createServices(config: {
   services.provide("renderOrder", renderOrder);
   services.provide("selection", selection);
   services.provide("theme", config.themeService);
-  services.provide("widget", widget);
 
   return services;
 }

@@ -1,27 +1,8 @@
 import type { IPlugin } from "@vibecanvas/runtime";
-import icon from "lucide-static/icons/pickaxe.svg?raw";
-import { html } from "@arrow-js/core";
-import { render as renderArrowView } from "@arrow-js/framework";
-import { sandbox as createArrowSandbox } from "@arrow-js/sandbox";
-import { HOSTED_COMPONENT_TOOL_ID } from "./old/CONSTANTS";
-import type { CameraService, CrdtService, EditorService, RenderOrderService, SceneService, SelectionService, WidgetService } from "../../services";
+import type { CameraService, CrdtService, EditorService, RenderOrderService, SceneService, SelectionService } from "../../services";
 import type { IHooks } from "../../runtime";
-import { txSetupHostedComponent } from "./old/tx.setup";
-import { setupExampleTool } from "./example-tool";
 
-function createCreateId(render: SceneService) {
-  let fallbackId = 0;
-
-  return () => {
-    const cryptoApi = render.container.ownerDocument.defaultView?.crypto;
-    if (cryptoApi?.randomUUID) {
-      return cryptoApi.randomUUID();
-    }
-
-    fallbackId += 1;
-    return `${HOSTED_COMPONENT_TOOL_ID}-${Date.now()}-${fallbackId}`;
-  };
-}
+const HOSTED_COMPONENT_PLUGIN_ID = "hosted-component";
 
 export function createHostedComponentPlugin(): IPlugin<{
   camera: CameraService;
@@ -30,10 +11,9 @@ export function createHostedComponentPlugin(): IPlugin<{
   renderOrder: RenderOrderService;
   editor: EditorService;
   selection: SelectionService;
-  widget: WidgetService;
 }, IHooks> {
   return {
-    name: HOSTED_COMPONENT_TOOL_ID,
+    name: HOSTED_COMPONENT_PLUGIN_ID,
     apply(ctx) {
       const render = ctx.services.require("scene");
       const camera = ctx.services.require("camera");
@@ -41,29 +21,13 @@ export function createHostedComponentPlugin(): IPlugin<{
       const editor = ctx.services.require("editor");
       const renderOrder = ctx.services.require("renderOrder");
       const selection = ctx.services.require("selection");
-      const widget = ctx.services.require("widget");
 
-      ctx.hooks.init.tap(() => {
-        setupExampleTool(widget)
-      })
-
-      // txSetupHostedComponent({
-      //   camera: ctx.services.require("camera"),
-      //   crdt: ctx.services.require("crdt"),
-      //   editor: ctx.services.require("editor"),
-      //   hooks: ctx.hooks,
-      //   icon,
-      //   now: () => Date.now(),
-      //   createId: createCreateId(render),
-      //   render,
-      //   arrow: {
-      //     html,
-      //     render: renderArrowView,
-      //     sandbox: createArrowSandbox,
-      //   },
-      //   renderOrder: ctx.services.require("renderOrder"),
-      //   selection: ctx.services.require("selection"),
-      // }, {});
+      void render;
+      void camera;
+      void crdt;
+      void editor;
+      void renderOrder;
+      void selection;
     },
   };
 }

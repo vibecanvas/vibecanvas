@@ -9,7 +9,7 @@ import { fxGetShapeTextHostBounds } from "../shape2d/fn.text-host-bounds";
 import type { layoutWithLines, prepareWithSegments } from "@chenglou/pretext";
 import type { ThemeService } from "@vibecanvas/service-theme";
 import type { CrdtService } from "../../services/crdt/CrdtService";
-import type { EditorServiceV2 } from "../../services/editor/EditorServiceV2";
+import type { EditorService } from "../../services/editor/EditorService";
 import type { HistoryService } from "../../services/history/HistoryService";
 import type { SceneService } from "../../services/scene/SceneService";
 import type { SelectionService } from "../../services/selection/SelectionService";
@@ -21,7 +21,7 @@ export type TPortalEnterEditMode = {
   canvasRegistry?: Pick<CanvasRegistryService, "toElement" | "toGroup" | "updateElement">;
   crdt: CrdtService;
   document: Document;
-  editor: Pick<EditorServiceV2, "setEditingTextId"> & {
+  editor: Pick<EditorService, "setEditingTextId"> & {
     toElement?: (node: Konva.Node) => TElement | null;
     toGroup?: (node: Konva.Node) => unknown;
     updateShapeFromTElement?: (element: TElement) => boolean;

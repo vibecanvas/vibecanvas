@@ -1,5 +1,6 @@
 import type { ThemeService } from "@vibecanvas/service-theme";
 import type { TElement } from "@vibecanvas/service-automerge/types/canvas-doc.types";
+import type Konva from "konva";
 import type * as Solid from "solid-js";
 import type * as SolidWeb from "solid-js/web";
 import type { SelectionStyleMenu as TSelectionStyleMenuComponent } from "../../components/SelectionStyleMenu";
@@ -16,7 +17,7 @@ import {
 } from "../../core/fn.selection-style-menu";
 import type { CanvasRegistryService, TCanvasRegistrySelectionStyleConfig } from "../../services/canvas-registry/CanvasRegistryService";
 import type { CrdtService } from "../../services/crdt/CrdtService";
-import type { EditorServiceV2 } from "../../services/editor/EditorServiceV2";
+import type { EditorService } from "../../services/editor/EditorService";
 import type { HistoryService } from "../../services/history/HistoryService";
 import type { SceneService } from "../../services/scene/SceneService";
 import type { SelectionService } from "../../services/selection/SelectionService";
@@ -32,8 +33,10 @@ import type {
 
 const OPACITY_COMMIT_DEBOUNCE_MS = 120;
 
+type TSelectionStyleMenuTimer = number | ReturnType<typeof globalThis.setTimeout>;
+
 type TPortalMountSelectionStyleMenu = {
-  Konva: typeof import("konva");
+  Konva: typeof Konva;
   SelectionStyleMenu: typeof TSelectionStyleMenuComponent;
   createComponent: typeof Solid.createComponent;
   createMemo: typeof Solid.createMemo;
@@ -43,11 +46,11 @@ type TPortalMountSelectionStyleMenu = {
   txApplySelectionStyleChangeRuntime: typeof TTxApplySelectionStyleChangeRuntime;
   txCommitSelectionStyleChange: typeof TTxCommitSelectionStyleChange;
   txCreateSelectionStyleChangePlan: typeof TTxCreateSelectionStyleChangePlan;
-  setTimeout: typeof setTimeout;
-  clearTimeout: typeof clearTimeout;
+  setTimeout: (handler: () => void, timeout?: number) => TSelectionStyleMenuTimer;
+  clearTimeout: (timer: TSelectionStyleMenuTimer | null) => void;
   canvasRegistry: CanvasRegistryService;
   crdt: CrdtService;
-  editor: EditorServiceV2;
+  editor: EditorService;
   history: HistoryService;
   scene: SceneService;
   selection: SelectionService;
@@ -89,8 +92,8 @@ export function fxMountSelectionStyleMenu(portal: TPortalMountSelectionStyleMenu
   });
   portal.scene.stage.container().appendChild(mountElement);
 
-  const findAttachedTextNodeByContainerId = (containerId: string) => {
-    const node = portal.scene.staticForegroundLayer.findOne((candidate: InstanceType<typeof portal.Konva.Node>) => {
+  const findAttachedTextNodeByContainerId = (containerId: string): Konva.Text | null => {
+    const node = portal.scene.staticForegroundLayer.findOne((candidate: Konva.Node) => {
       return candidate instanceof portal.Konva.Text && candidate.getAttr("vcContainerId") === containerId;
     });
 
@@ -120,7 +123,7 @@ export function fxMountSelectionStyleMenu(portal: TPortalMountSelectionStyleMenu
   };
 
   let pendingOpacityCommitPlan: TSelectionStyleChangePlan | null = null;
-  let pendingOpacityCommitTimer: ReturnType<TPortalMountSelectionStyleMenu["setTimeout"]> | null = null;
+  let pendingOpacityCommitTimer: TSelectionStyleMenuTimer | null = null;
 
   const clearPendingOpacityCommit = () => {
     if (pendingOpacityCommitTimer !== null) {

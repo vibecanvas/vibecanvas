@@ -4,7 +4,7 @@ import Konva from "konva";
 import { fxIsCanvasGroupNode } from "../../core/fx.canvas-node-semantics";
 import type { CanvasRegistryService } from "../../services/canvas-registry/CanvasRegistryService";
 import type { CrdtService } from "../../services/crdt/CrdtService";
-import type { EditorServiceV2 } from "../../services/editor/EditorServiceV2";
+import type { EditorService } from "../../services/editor/EditorService";
 import type { SceneService } from "../../services/scene/SceneService";
 import type { SelectionService } from "../../services/selection/SelectionService";
 import type { IHooks } from "../../runtime";
@@ -40,7 +40,7 @@ function compareByPersistedOrder(left: { id: string; zIndex?: string }, right: {
   return left.id.localeCompare(right.id);
 }
 
-function captureSceneState(selection: SelectionService, editor: EditorServiceV2): TSceneStateSnapshot {
+function captureSceneState(selection: SelectionService, editor: EditorService): TSceneStateSnapshot {
   return {
     selectionIds: selection.selection.map((node) => node.id()),
     focusedId: selection.focusedId,
@@ -65,7 +65,7 @@ function findSceneNodeById(scene: SceneService, id: string | null): TSceneNode |
   return node;
 }
 
-function restoreSceneState(scene: SceneService, selection: SelectionService, editor: EditorServiceV2, snapshot: TSceneStateSnapshot) {
+function restoreSceneState(scene: SceneService, selection: SelectionService, editor: EditorService, snapshot: TSceneStateSnapshot) {
   const nextSelection = snapshot.selectionIds
     .map((id) => findSceneNodeById(scene, id))
     .filter((node): node is TSceneNode => node !== null);
@@ -254,7 +254,7 @@ function loadCanvas(crdt: CrdtService, canvasRegistry: CanvasRegistryService, sc
  */
 export function createSceneHydratorPlugin(): IPlugin<{
   crdt: CrdtService;
-  editor2: EditorServiceV2;
+  editor: EditorService;
   scene: SceneService;
   selection: SelectionService;
   canvasRegistry: CanvasRegistryService;
@@ -263,7 +263,7 @@ export function createSceneHydratorPlugin(): IPlugin<{
     name: "scene-hydrator",
     apply(ctx) {
       const crdt = ctx.services.require("crdt");
-      const editor = ctx.services.require("editor2");
+      const editor = ctx.services.require("editor");
       const scene = ctx.services.require("scene");
       const selection = ctx.services.require("selection");
       const canvasRegistry = ctx.services.require("canvasRegistry");

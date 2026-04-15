@@ -8,7 +8,7 @@ import type { SceneService } from "../../services/scene/SceneService";
 import type { SelectionService } from "../../services/selection/SelectionService";
 import type { IHooks } from "../../runtime";
 import { CanvasMode } from "../../services/selection/CONSTANTS";
-import type { EditorServiceV2, TEditorTool } from "src/services/editor/EditorServiceV2";
+import type { EditorService, TEditorTool } from "src/services/editor/EditorService";
 
 function getModeFromTool(tool: TEditorTool | undefined) {
   if (!tool) {
@@ -55,7 +55,7 @@ function txSyncCursor(render: SceneService, selection: SelectionService) {
   }
 }
 
-function txSelectTool(editor: EditorServiceV2, toolId: string) {
+function txSelectTool(editor: EditorService, toolId: string) {
   const tool = editor.getTool(toolId);
   if (!tool) {
     return false;
@@ -70,7 +70,7 @@ function txSelectTool(editor: EditorServiceV2, toolId: string) {
   return true;
 }
 
-function fnGetShortcutToolId(editor: EditorServiceV2, event: KeyboardEvent) {
+function fnGetShortcutToolId(editor: EditorService, event: KeyboardEvent) {
   if (event.altKey) {
     return null;
   }
@@ -95,7 +95,7 @@ function fnGetShortcutToolId(editor: EditorServiceV2, event: KeyboardEvent) {
 
 function mountToolbar(args: {
   scene: SceneService;
-  editor: EditorServiceV2;
+  editor: EditorService;
   onToolSelect: (toolId: string) => void;
 }) {
   const mountElement = document.createElement("div");
@@ -123,7 +123,7 @@ function mountToolbar(args: {
  * Toolbar should stay dumb and only reflect registered tool state.
  */
 export function createToolbarPlugin(): IPlugin<{
-  editor2: EditorServiceV2;
+  editor: EditorService;
   scene: SceneService;
   selection: SelectionService;
 }, IHooks> {
@@ -133,7 +133,7 @@ export function createToolbarPlugin(): IPlugin<{
   return {
     name: "toolbar",
     apply(ctx) {
-      const editor = ctx.services.require("editor2");
+      const editor = ctx.services.require("editor");
       const scene = ctx.services.require("scene");
       const selection = ctx.services.require("selection");
 

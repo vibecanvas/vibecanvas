@@ -7,17 +7,19 @@ import type { ThemeService } from "@vibecanvas/service-theme";
 import { txApplySelectionStyleChange, txApplySelectionStyleChangeRuntime, txCommitSelectionStyleChange, txCreateSelectionStyleChangePlan } from "../../core/tx.apply-selection-style-change";
 import type { CanvasRegistryService } from "../../services/canvas-registry/CanvasRegistryService";
 import type { CrdtService } from "../../services/crdt/CrdtService";
-import type { EditorServiceV2 } from "../../services/editor/EditorServiceV2";
+import type { EditorService } from "../../services/editor/EditorService";
 import type { HistoryService } from "../../services/history/HistoryService";
 import type { SceneService } from "../../services/scene/SceneService";
 import type { SelectionService } from "../../services/selection/SelectionService";
 import type { IHooks } from "../../runtime";
 import { fxMountSelectionStyleMenu } from "./fx.mount-selection-style-menu";
 
+type TSelectionStyleMenuTimer = number | ReturnType<typeof globalThis.setTimeout>;
+
 export function createSelectionStyleMenuPlugin(): IPlugin<{
   canvasRegistry: CanvasRegistryService;
   crdt: CrdtService;
-  editor2: EditorServiceV2;
+  editor: EditorService;
   history: HistoryService;
   scene: SceneService;
   selection: SelectionService;
@@ -30,13 +32,36 @@ export function createSelectionStyleMenuPlugin(): IPlugin<{
     apply(ctx) {
       const canvasRegistry = ctx.services.require("canvasRegistry");
       const crdt = ctx.services.require("crdt");
-      const editor = ctx.services.require("editor2");
+      const editor = ctx.services.require("editor");
       const history = ctx.services.require("history");
       const scene = ctx.services.require("scene");
       const selection = ctx.services.require("selection");
       const theme = ctx.services.require("theme");
 
       ctx.hooks.init.tap(() => {
+        const setSelectionStyleMenuTimeout = (handler: () => void, timeout?: number): TSelectionStyleMenuTimer => {
+          const view = scene.container.ownerDocument.defaultView;
+          if (view) {
+            return view.setTimeout(handler, timeout);
+          }
+
+          return globalThis.setTimeout(handler, timeout);
+        };
+
+        const clearSelectionStyleMenuTimeout = (timer: TSelectionStyleMenuTimer | null) => {
+          if (timer === null) {
+            return;
+          }
+
+          const view = scene.container.ownerDocument.defaultView;
+          if (view && typeof timer === "number") {
+            view.clearTimeout(timer);
+            return;
+          }
+
+          globalThis.clearTimeout(timer);
+        };
+
         menuMount = fxMountSelectionStyleMenu({
           Konva,
           SelectionStyleMenu,
@@ -48,23 +73,8 @@ export function createSelectionStyleMenuPlugin(): IPlugin<{
           txApplySelectionStyleChangeRuntime,
           txCommitSelectionStyleChange,
           txCreateSelectionStyleChangePlan,
-          setTimeout: (handler, timeout, ...rest) => {
-            const view = scene.container.ownerDocument.defaultView;
-            if (view) {
-              return view.setTimeout(handler, timeout, ...rest);
-            }
-
-            return globalThis.setTimeout(handler, timeout, ...rest);
-          },
-          clearTimeout: (timer) => {
-            const view = scene.container.ownerDocument.defaultView;
-            if (view) {
-              view.clearTimeout(timer);
-              return;
-            }
-
-            globalThis.clearTimeout(timer);
-          },
+          setTimeout: setSelectionStyleMenuTimeout,
+          clearTimeout: clearSelectionStyleMenuTimeout,
           canvasRegistry,
           crdt,
           editor,

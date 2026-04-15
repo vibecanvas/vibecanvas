@@ -1,7 +1,13 @@
-import type { TElement, TGroup } from "@vibecanvas/service-automerge/types/canvas-doc.types";
 import type { IService } from "@vibecanvas/runtime";
+import type { TElement, TGroup } from "@vibecanvas/service-automerge/types/canvas-doc.types";
 import { SyncHook } from "@vibecanvas/tapable";
 import type Konva from "konva";
+import type { KonvaEventObject, Node, NodeConfig } from "konva/lib/Node";
+import type { IHooks } from "src/runtime";
+import type { CanvasRegistryService, TCanvasRegistrySelectionStyleValues } from "../canvas-registry/CanvasRegistryService";
+import type { CrdtService } from "../crdt/CrdtService";
+import type { SceneService } from "../scene/SceneService";
+import type { SelectionService } from "../selection/SelectionService";
 
 /**
  * Runtime mode for a registered editor tool.
@@ -15,6 +21,31 @@ export type TEditorToolMode = "select" | "hand" | "draw-create" | "click-create"
  */
 export type TEditorToolShortcut = string;
 export type TEditorToolIcon = string;
+export type TEditorToolPointerEvent = KonvaEventObject<PointerEvent, Node<NodeConfig>>;
+export type TEditorToolCanvasPoint = {
+  x: number;
+  y: number;
+  pressure: number;
+};
+
+export type TEditorToolDrawCreateStartDraftArgs = {
+  event: TEditorToolPointerEvent;
+  point: TEditorToolCanvasPoint;
+};
+
+export type TEditorToolDrawCreateUpdateDraftArgs = {
+  draft: unknown;
+  event: TEditorToolPointerEvent;
+  point: TEditorToolCanvasPoint;
+  origin: TEditorToolCanvasPoint;
+  shiftKey: boolean;
+  now: number;
+};
+
+export type TEditorToolDrawCreateBehavior = {
+  startDraft: (args: TEditorToolDrawCreateStartDraftArgs) => Konva.Shape;
+  updateDraft: (previewNode: Konva.Shape, args: TEditorToolDrawCreateUpdateDraftArgs) => unknown;
+};
 
 /**
  * Tool metadata registered by feature plugins.
@@ -33,6 +64,7 @@ export type TEditorTool = {
     | { type: "mode"; mode: TEditorToolMode }
     | { type: "action" }
     | { type: "modal" };
+  drawCreate?: TEditorToolDrawCreateBehavior;
 };
 
 export type TEditorToElement = (node: Konva.Node) => TElement | null;
@@ -51,17 +83,29 @@ export type TEditorCloneElement = (args: { sourceElement: TElement; clonedElemen
 export interface TEditorServiceHooks {
   toolsChange: SyncHook<[]>;
   activeToolChange: SyncHook<[string]>;
+  toolSelectionStyleChange: SyncHook<[string]>;
   editingTextChange: SyncHook<[string | null]>;
   editingShape1dChange: SyncHook<[string | null]>;
-  previewNodeChange: SyncHook<[Konva.Node | null]>;
   transformerChange: SyncHook<[Konva.Transformer | null]>;
-  toElementRegistryChange: SyncHook<[]>;
-  toGroupRegistryChange: SyncHook<[]>;
-  createGroupFromTGroupRegistryChange: SyncHook<[]>;
-  createShapeFromTElementRegistryChange: SyncHook<[]>;
-  setupExistingShapeRegistryChange: SyncHook<[]>;
-  updateShapeFromTElementRegistryChange: SyncHook<[]>;
-  cloneElementRegistryChange: SyncHook<[]>;
+}
+
+function getCanvasPoint(scene: SceneService, event: TEditorToolPointerEvent): TEditorToolCanvasPoint | null {
+  const point = scene.dynamicLayer.getRelativePointerPosition();
+  if (!point) {
+    return null;
+  }
+
+  const pressure = typeof event.evt.pressure === "number"
+    && Number.isFinite(event.evt.pressure)
+    && event.evt.pressure > 0
+      ? event.evt.pressure
+      : 0.5;
+
+  return {
+    x: point.x,
+    y: point.y,
+    pressure,
+  };
 }
 
 /**
@@ -71,42 +115,106 @@ export interface TEditorServiceHooks {
  */
 export class EditorService implements IService<TEditorServiceHooks> {
   readonly name = "editor";
+
   readonly hooks: TEditorServiceHooks = {
     toolsChange: new SyncHook(),
     activeToolChange: new SyncHook(),
+    toolSelectionStyleChange: new SyncHook(),
     editingTextChange: new SyncHook(),
     editingShape1dChange: new SyncHook(),
-    previewNodeChange: new SyncHook(),
     transformerChange: new SyncHook(),
-    toElementRegistryChange: new SyncHook(),
-    toGroupRegistryChange: new SyncHook(),
-    createGroupFromTGroupRegistryChange: new SyncHook(),
-    createShapeFromTElementRegistryChange: new SyncHook(),
-    setupExistingShapeRegistryChange: new SyncHook(),
-    updateShapeFromTElementRegistryChange: new SyncHook(),
-    cloneElementRegistryChange: new SyncHook(),
   };
 
-  readonly tools = new Map<string, TEditorTool>();
-  readonly toElementRegistry = new Map<string, TEditorToElement>();
-  readonly toGroupRegistry = new Map<string, TEditorToGroup>();
-  readonly createGroupFromTGroupRegistry = new Map<string, TEditorCreateGroupFromTGroup>();
-  readonly createShapeFromTElementRegistry = new Map<string, TEditorCreateShapeFromTElement>();
-  readonly setupExistingShapeRegistry = new Map<string, TEditorSetupExistingShape>();
-  readonly updateShapeFromTElementRegistry = new Map<string, TEditorUpdateShapeFromTElement>();
-  readonly cloneElementRegistry = new Map<string, TEditorCloneElement>();
+  private readonly tools = new Map<string, TEditorTool>();
+  private readonly toolSelectionStyleValues = new Map<string, Partial<TCanvasRegistrySelectionStyleValues>>();
 
   activeToolId = "select";
   editingTextId: string | null = null;
   editingShape1dId: string | null = null;
-  previewNode: Konva.Node | null = null;
+  private previewNode: Konva.Shape | null = null;
+  private previewOrigin: TEditorToolCanvasPoint | null = null;
   transformer: Konva.Transformer | null = null;
 
+  constructor(
+    private sceneService: SceneService,
+    private canvasRegistry: CanvasRegistryService,
+    private crdt: CrdtService,
+    private selection: SelectionService,
+  ) { }
   /**
    * Adds or replaces a tool in the editor registry.
    */
-  registerTool(tool: TEditorTool) {
+  registerTool(portal: { hooks: IHooks }, tool: TEditorTool) {
     this.tools.set(tool.id, tool);
+
+    // setup create-draw
+    if (tool.behavior.type === "mode" && tool.behavior.mode === "draw-create" && tool.drawCreate) {
+      portal.hooks.pointerDown.tap((event) => {
+        if (this.activeToolId !== tool.id) {
+          return;
+        }
+
+        const point = getCanvasPoint(this.sceneService, event);
+        if (!point) {
+          return;
+        }
+
+        const preview = tool.drawCreate?.startDraft({ event, point });
+        this.previewOrigin = point;
+        if (preview) {
+          this.setPreviewNode(preview);
+        }
+      });
+
+      portal.hooks.pointerMove.tap((event) => {
+        if (this.activeToolId !== tool.id) {
+          return;
+        }
+
+        if (!this.previewNode || !this.previewOrigin) {
+          return;
+        }
+
+        const point = getCanvasPoint(this.sceneService, event as TEditorToolPointerEvent);
+        if (!point) {
+          return;
+        }
+
+        tool.drawCreate?.updateDraft(this.previewNode, {
+          draft: this.previewNode,
+          event: event as TEditorToolPointerEvent,
+          point,
+          origin: this.previewOrigin,
+          shiftKey: event.evt.shiftKey,
+          now: Date.now(),
+        });
+      });
+
+      portal.hooks.pointerUp.tap(() => {
+        if (this.activeToolId !== tool.id) {
+          return;
+        }
+
+        if (!this.previewNode) {
+          return;
+        }
+
+        this.commitPreview();
+      });
+
+      this.hooks.activeToolChange.tap((activeToolId) => {
+        if (activeToolId === tool.id) {
+          return;
+        }
+
+        if (!this.previewNode) {
+          return;
+        }
+
+        this.abortPreview();
+      });
+    }
+
     this.hooks.toolsChange.call();
   }
 
@@ -173,6 +281,51 @@ export class EditorService implements IService<TEditorServiceHooks> {
     return this.tools.get(this.activeToolId);
   }
 
+  getToolSelectionStyleValues(toolId: string) {
+    return structuredClone(this.toolSelectionStyleValues.get(toolId) ?? {});
+  }
+
+  setToolSelectionStyleValue<K extends keyof TCanvasRegistrySelectionStyleValues>(
+    toolId: string,
+    key: K,
+    value: TCanvasRegistrySelectionStyleValues[K],
+  ) {
+    const next = {
+      ...(this.toolSelectionStyleValues.get(toolId) ?? {}),
+      [key]: value,
+    } satisfies Partial<TCanvasRegistrySelectionStyleValues>;
+    this.toolSelectionStyleValues.set(toolId, next);
+    this.hooks.toolSelectionStyleChange.call(toolId);
+  }
+
+  /**
+   * Returns persisted element data for one runtime node.
+   */
+  toElement(node: Konva.Node) {
+    return this.canvasRegistry.toElement(node);
+  }
+
+  /**
+   * Returns persisted group data for one runtime node.
+   */
+  toGroup(node: Konva.Node) {
+    return this.canvasRegistry.toGroup(node);
+  }
+
+  /**
+   * Creates one runtime group node from persisted group data.
+   */
+  createGroupFromTGroup(group: TGroup) {
+    return this.canvasRegistry.createNodeFromGroup(group);
+  }
+
+  /**
+   * Creates one runtime shape or group node from persisted element data.
+   */
+  createShapeFromTElement(element: TElement) {
+    return this.canvasRegistry.createNodeFromElement(element);
+  }
+
   /**
    * Sets current editing text node id.
    */
@@ -198,15 +351,66 @@ export class EditorService implements IService<TEditorServiceHooks> {
   }
 
   /**
+   * Starts alt-drag clone behavior for one existing runtime node.
+   * Element-specific clone implementation stays in the canvas registry.
+   */
+  startDragClone(args: {
+    node: Konva.Node;
+    selection: Array<Konva.Group | Konva.Shape>;
+  }) {
+    return this.canvasRegistry.createDragClone(args);
+  }
+
+  private clearPreviewState() {
+    this.previewOrigin = null;
+    this.previewNode = null;
+  }
+
+  private abortPreview() {
+    this.previewNode?.destroy();
+    this.clearPreviewState();
+    this.sceneService.dynamicLayer.batchDraw();
+  }
+
+  private commitPreview() {
+    if (!this.previewNode) {
+      return;
+    }
+
+    const previewNode = this.previewNode;
+    const element = this.canvasRegistry.toElement(previewNode);
+    if (!element) {
+      this.abortPreview();
+      return;
+    }
+    element.id = crypto.randomUUID()
+    previewNode.moveTo(this.sceneService.staticForegroundLayer);
+    this.canvasRegistry.attachListeners(previewNode);
+    const builder = this.crdt.build();
+    builder.patchElement(element.id, element);
+    builder.commit();
+    this.selection.setSelection([previewNode]);
+    this.selection.setFocusedNode(previewNode);
+    this.clearPreviewState();
+    this.sceneService.dynamicLayer.batchDraw();
+    this.sceneService.staticForegroundLayer.batchDraw();
+  }
+
+  /**
    * Sets current preview node.
    */
-  setPreviewNode(node: Konva.Node | null) {
+  private setPreviewNode(node: Konva.Shape | null) {
     if (this.previewNode === node) {
       return;
     }
 
+    if (node === null) {
+      this.abortPreview();
+      return;
+    }
+
+    this.sceneService.dynamicLayer.add(node);
     this.previewNode = node;
-    this.hooks.previewNodeChange.call(node);
   }
 
   /**
@@ -221,244 +425,4 @@ export class EditorService implements IService<TEditorServiceHooks> {
     this.hooks.transformerChange.call(transformer);
   }
 
-  /**
-   * Registers one node -> element serializer.
-   * First serializer that returns a value wins.
-   */
-  registerToElement(id: string, toElement: TEditorToElement) {
-    this.toElementRegistry.set(id, toElement);
-    this.hooks.toElementRegistryChange.call();
-  }
-
-  /**
-   * Removes one node -> element serializer.
-   */
-  unregisterToElement(id: string) {
-    const didDelete = this.toElementRegistry.delete(id);
-    if (!didDelete) {
-      return;
-    }
-
-    this.hooks.toElementRegistryChange.call();
-  }
-
-  /**
-   * Converts a node into a canvas element through registered serializers.
-   */
-  toElement(node: Konva.Node) {
-    for (const toElement of this.toElementRegistry.values()) {
-      const element = toElement(node);
-      if (element) {
-        return element;
-      }
-    }
-
-    return null;
-  }
-
-  /**
-   * Registers one node -> group serializer.
-   * First serializer that returns a value wins.
-   */
-  registerToGroup(id: string, toGroup: TEditorToGroup) {
-    this.toGroupRegistry.set(id, toGroup);
-    this.hooks.toGroupRegistryChange.call();
-  }
-
-  /**
-   * Removes one node -> group serializer.
-   */
-  unregisterToGroup(id: string) {
-    const didDelete = this.toGroupRegistry.delete(id);
-    if (!didDelete) {
-      return;
-    }
-
-    this.hooks.toGroupRegistryChange.call();
-  }
-
-  /**
-   * Converts a node into a canvas group through registered serializers.
-   */
-  toGroup(node: Konva.Node) {
-    for (const toGroup of this.toGroupRegistry.values()) {
-      const group = toGroup(node);
-      if (group) {
-        return group;
-      }
-    }
-
-    return null;
-  }
-
-  /**
-   * Registers one group -> node creator.
-   * First creator that returns a node wins.
-   */
-  registerCreateGroupFromTGroup(id: string, createGroupFromTGroup: TEditorCreateGroupFromTGroup) {
-    this.createGroupFromTGroupRegistry.set(id, createGroupFromTGroup);
-    this.hooks.createGroupFromTGroupRegistryChange.call();
-  }
-
-  /**
-   * Removes one group -> node creator.
-   */
-  unregisterCreateGroupFromTGroup(id: string) {
-    const didDelete = this.createGroupFromTGroupRegistry.delete(id);
-    if (!didDelete) {
-      return;
-    }
-
-    this.hooks.createGroupFromTGroupRegistryChange.call();
-  }
-
-  /**
-   * Creates one runtime group from a canvas group through registered creators.
-   */
-  createGroupFromTGroup(group: TGroup) {
-    for (const createGroupFromTGroup of this.createGroupFromTGroupRegistry.values()) {
-      const node = createGroupFromTGroup(group);
-      if (node) {
-        return node;
-      }
-    }
-
-    return null;
-  }
-
-  /**
-   * Registers one element -> node creator.
-   * First creator that returns a node wins.
-   */
-  registerCreateShapeFromTElement(id: string, createShapeFromTElement: TEditorCreateShapeFromTElement) {
-    this.createShapeFromTElementRegistry.set(id, createShapeFromTElement);
-    this.hooks.createShapeFromTElementRegistryChange.call();
-  }
-
-  /**
-   * Removes one element -> node creator.
-   */
-  unregisterCreateShapeFromTElement(id: string) {
-    const didDelete = this.createShapeFromTElementRegistry.delete(id);
-    if (!didDelete) {
-      return;
-    }
-
-    this.hooks.createShapeFromTElementRegistryChange.call();
-  }
-
-  /**
-   * Creates one runtime node from a canvas element through registered creators.
-   */
-  createShapeFromTElement(element: TElement) {
-    for (const createShapeFromTElement of this.createShapeFromTElementRegistry.values()) {
-      const node = createShapeFromTElement(element);
-      if (node) {
-        return node;
-      }
-    }
-
-    return null;
-  }
-
-  /**
-   * Registers one existing runtime shape setup hook.
-   * First setup that handles the node wins.
-   */
-  registerSetupExistingShape(id: string, setupExistingShape: TEditorSetupExistingShape) {
-    this.setupExistingShapeRegistry.set(id, setupExistingShape);
-    this.hooks.setupExistingShapeRegistryChange.call();
-  }
-
-  /**
-   * Removes one existing runtime shape setup hook.
-   */
-  unregisterSetupExistingShape(id: string) {
-    const didDelete = this.setupExistingShapeRegistry.delete(id);
-    if (!didDelete) {
-      return;
-    }
-
-    this.hooks.setupExistingShapeRegistryChange.call();
-  }
-
-  /**
-   * Applies registered setup hooks to one existing runtime shape.
-   */
-  setupExistingShape(node: Konva.Node) {
-    for (const setupExistingShape of this.setupExistingShapeRegistry.values()) {
-      if (setupExistingShape(node)) {
-        return true;
-      }
-    }
-
-    return false;
-  }
-
-  /**
-   * Registers one element -> node updater.
-   * First updater that handles the element wins.
-   */
-  registerUpdateShapeFromTElement(id: string, updateShapeFromTElement: TEditorUpdateShapeFromTElement) {
-    this.updateShapeFromTElementRegistry.set(id, updateShapeFromTElement);
-    this.hooks.updateShapeFromTElementRegistryChange.call();
-  }
-
-  /**
-   * Removes one element -> node updater.
-   */
-  unregisterUpdateShapeFromTElement(id: string) {
-    const didDelete = this.updateShapeFromTElementRegistry.delete(id);
-    if (!didDelete) {
-      return;
-    }
-
-    this.hooks.updateShapeFromTElementRegistryChange.call();
-  }
-
-  /**
-   * Applies an element onto an existing runtime node through registered updaters.
-   */
-  updateShapeFromTElement(element: TElement) {
-    for (const updateShapeFromTElement of this.updateShapeFromTElementRegistry.values()) {
-      if (updateShapeFromTElement(element)) {
-        return true;
-      }
-    }
-
-    return false;
-  }
-
-  /**
-   * Registers one clone hook for element-specific clone follow-up work.
-   */
-  registerCloneElement(id: string, cloneElement: TEditorCloneElement) {
-    this.cloneElementRegistry.set(id, cloneElement);
-    this.hooks.cloneElementRegistryChange.call();
-  }
-
-  /**
-   * Removes one clone hook.
-   */
-  unregisterCloneElement(id: string) {
-    const didDelete = this.cloneElementRegistry.delete(id);
-    if (!didDelete) {
-      return;
-    }
-
-    this.hooks.cloneElementRegistryChange.call();
-  }
-
-  /**
-   * Runs registered clone hooks until one handles the cloned element.
-   */
-  cloneElement(args: { sourceElement: TElement; clonedElement: TElement }) {
-    for (const cloneElement of this.cloneElementRegistry.values()) {
-      if (cloneElement(args)) {
-        return true;
-      }
-    }
-
-    return false;
-  }
 }

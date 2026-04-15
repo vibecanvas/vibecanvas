@@ -1,7 +1,7 @@
 import type { TElement } from "@vibecanvas/service-automerge/types/canvas-doc.types";
 import type Konva from "konva";
 import type { CrdtService } from "../../services/crdt/CrdtService";
-import type { EditorServiceV2 } from "../../services/editor/EditorServiceV2";
+import type { EditorService } from "../../services/editor/EditorService";
 import type { HistoryService } from "../../services/history/HistoryService";
 import type { SceneService } from "../../services/scene/SceneService";
 import type { SelectionService } from "../../services/selection/SelectionService";
@@ -12,7 +12,7 @@ import type { TPortalUpdateImageNodeFromElement } from "./tx.update-image-node-f
 
 export type TPortalSetupImageListeners = {
   crdt: CrdtService;
-  editor: EditorServiceV2;
+  editor: EditorService;
   history: HistoryService;
   render: SceneService;
   selection: SelectionService;

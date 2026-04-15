@@ -7,7 +7,7 @@ import type { TElement } from "@vibecanvas/service-automerge/types/canvas-doc.ty
 import { throttle } from "@solid-primitives/scheduled";
 import type { CanvasRegistryService, TCanvasTransformAnchor } from "../../services";
 import type { CrdtService } from "../../services/crdt/CrdtService";
-import type { EditorServiceV2 } from "../../services/editor/EditorServiceV2";
+import type { EditorService } from "../../services/editor/EditorService";
 import type { HistoryService } from "../../services/history/HistoryService";
 import type { SceneService } from "../../services/scene/SceneService";
 import type { SelectionService } from "../../services/selection/SelectionService";
@@ -248,7 +248,7 @@ function syncTransformerTheme(theme: ThemeService, transformer: Konva.Transforme
 export function createTransformPlugin(): IPlugin<{
   canvasRegistry: CanvasRegistryService;
   crdt: CrdtService;
-  editor2: EditorServiceV2;
+  editor: EditorService;
   history: HistoryService;
   scene: SceneService;
   selection: SelectionService;
@@ -264,7 +264,7 @@ export function createTransformPlugin(): IPlugin<{
     apply(ctx) {
       const canvasRegistry = ctx.services.require("canvasRegistry");
       const crdt = ctx.services.require("crdt");
-      const editor = ctx.services.require("editor2");
+      const editor = ctx.services.require("editor");
       const history = ctx.services.require("history");
       const render = ctx.services.require("scene");
       const selection = ctx.services.require("selection");

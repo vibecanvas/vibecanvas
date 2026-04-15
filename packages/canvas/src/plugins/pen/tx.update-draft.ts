@@ -2,7 +2,7 @@ import type { ThemeService, TThemeDefinition } from "@vibecanvas/service-theme";
 import type Konva from "konva";
 import type { StrokeOptions } from "perfect-freehand";
 import type { SceneService } from "../../services/scene/SceneService";
-import type { TEditorToolCanvasPoint } from "src/services/editor/EditorServiceV2";
+import type { TEditorToolCanvasPoint } from "src/services/editor/EditorService";
 import { fxCreatePenDraftElement } from "./fn.draft-element";
 import { txUpdatePenPathFromElement } from "./tx.path";
 

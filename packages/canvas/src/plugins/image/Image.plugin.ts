@@ -8,7 +8,7 @@ import { getImageDimensions, getImageSource, getSupportedImageFormat, parseDataU
 import type { ContextMenuService } from "../../services/context-menu/ContextMenuService";
 import type { CanvasRegistryService } from "../../services/canvas-registry/CanvasRegistryService";
 import type { CrdtService } from "../../services/crdt/CrdtService";
-import type { EditorServiceV2 } from "../../services/editor/EditorServiceV2";
+import type { EditorService } from "../../services/editor/EditorService";
 import type { HistoryService } from "../../services/history/HistoryService";
 import type { RenderOrderService } from "../../services/render-order/RenderOrderService";
 import type { SceneService } from "../../services/scene/SceneService";
@@ -95,7 +95,7 @@ function getViewportWorldSize(render: SceneService) {
   };
 }
 
-function shouldIgnoreClipboardEvent(editor: EditorServiceV2, event: ClipboardEvent) {
+function shouldIgnoreClipboardEvent(editor: EditorService, event: ClipboardEvent) {
   if (editor.editingTextId !== null) {
     return true;
   }
@@ -172,7 +172,7 @@ function updateImageNodeFromElement(render: SceneService, node: Konva.Image, ele
   });
 }
 
-function toElement(render: SceneService, editor: EditorServiceV2, node: Konva.Image): TElement {
+function toElement(render: SceneService, editor: EditorService, node: Konva.Image): TElement {
   const worldPosition = fnGetWorldPosition({
     absolutePosition: node.absolutePosition(),
     parentTransform: node.getLayer()?.getAbsoluteTransform() ?? null,
@@ -236,7 +236,7 @@ function safeStopDrag(node: Konva.Node) {
   }
 }
 
-function filterSelection(render: SceneService, editor: EditorServiceV2, selection: Konva.Node[]) {
+function filterSelection(render: SceneService, editor: EditorService, selection: Konva.Node[]) {
   return fxFilterSelection({
     Konva,
   }, {
@@ -255,7 +255,7 @@ export function createImagePlugin(): IPlugin<{
   canvasRegistry: CanvasRegistryService;
   contextMenu: ContextMenuService;
   crdt: CrdtService;
-  editor2: EditorServiceV2;
+  editor: EditorService;
   history: HistoryService;
   scene: SceneService;
   renderOrder: RenderOrderService;
@@ -269,7 +269,7 @@ export function createImagePlugin(): IPlugin<{
       const canvasRegistry = ctx.services.require("canvasRegistry");
       const contextMenu = ctx.services.require("contextMenu");
       const crdt = ctx.services.require("crdt");
-      const editor = ctx.services.require("editor2");
+      const editor = ctx.services.require("editor");
       const history = ctx.services.require("history");
       const render = ctx.services.require("scene");
       const renderOrder = ctx.services.require("renderOrder");

@@ -8,4 +8,3 @@ export * from "./logging/LoggingService";
 export * from "./scene/SceneService";
 export * from "./render-order/RenderOrderService";
 export * from "./selection/SelectionService";
-export * from "./widget/WidgetService";

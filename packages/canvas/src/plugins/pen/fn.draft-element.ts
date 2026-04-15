@@ -1,5 +1,5 @@
 import type { TElement } from "@vibecanvas/service-automerge/types/canvas-doc.types";
-import type { TEditorToolCanvasPoint } from "src/services/editor/EditorServiceV2";
+import type { TEditorToolCanvasPoint } from "src/services/editor/EditorService";
 import { fxCreatePenDataFromStrokePoints } from "./fn.math";
 
 export type TArgsCreatePenDraftElement = {

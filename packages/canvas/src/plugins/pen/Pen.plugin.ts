@@ -15,7 +15,7 @@ import type { SceneService } from "../../services/scene/SceneService";
 import type { SelectionService } from "../../services/selection/SelectionService";
 import { fxPenPathToElement } from "./fx.path";
 import { fxCreatePenDataFromStrokePoints } from "./fn.math";
-import { EditorServiceV2, type TEditorToolCanvasPoint } from "src/services/editor/EditorServiceV2";
+import { EditorService, type TEditorToolCanvasPoint } from "src/services/editor/EditorService";
 import { DEFAULT_OPACITY, DEFAULT_STROKE_WIDTH } from "./CONSTANTS";
 import { fxCreatePenNode } from "./fx.create-node";
 import { txCreatePenCloneDrag } from "./tx.clone";
@@ -298,7 +298,7 @@ function txCommitPenTransform(args: {
  */
 export function createPenPlugin(): IPlugin<{
   crdt: CrdtService;
-  editor2: EditorServiceV2;
+  editor: EditorService;
   history: HistoryService;
   renderOrder: RenderOrderService;
   scene: SceneService;
@@ -310,7 +310,7 @@ export function createPenPlugin(): IPlugin<{
     name: "pen",
     apply(ctx) {
       const crdt = ctx.services.require("crdt");
-      const editor = ctx.services.require("editor2");
+      const editor = ctx.services.require("editor");
       const history = ctx.services.require("history");
       const render = ctx.services.require("scene");
       const renderOrder = ctx.services.require("renderOrder");
