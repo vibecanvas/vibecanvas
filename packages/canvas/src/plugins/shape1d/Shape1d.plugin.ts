@@ -13,7 +13,7 @@ import type { CameraService } from "../../services/camera/CameraService";
 import type { CanvasRegistryService } from "../../services/canvas-registry/CanvasRegistryService";
 import type { ContextMenuService } from "../../services/context-menu/ContextMenuService";
 import type { CrdtService } from "../../services/crdt/CrdtService";
-import type { EditorServiceV2 } from "../../services/editor/EditorServiceV2";
+import type { EditorService } from "../../services/editor/EditorService";
 import type { HistoryService } from "../../services/history/HistoryService";
 import type { RenderOrderService } from "../../services/render-order/RenderOrderService";
 import type { SceneService } from "../../services/scene/SceneService";
@@ -22,6 +22,9 @@ import type { SelectionService } from "../../services/selection/SelectionService
 import { txDeleteSelection } from "../select/tx.delete-selection";
 import { txFinalizeOwnedTransform } from "../transform/tx.finalize-owned-transform";
 import {
+  DEFAULT_OPACITY,
+  DEFAULT_STROKE_COLOR_TOKEN,
+  DEFAULT_STROKE_WIDTH,
   EDIT_HANDLE_FILL,
   EDIT_HANDLE_RADIUS,
   EDIT_HANDLE_STROKE,
@@ -81,7 +84,7 @@ export function createShape1dPlugin(): IPlugin<{
   canvasRegistry: CanvasRegistryService;
   contextMenu: ContextMenuService;
   crdt: CrdtService;
-  editor2: EditorServiceV2;
+  editor: EditorService;
   history: HistoryService;
   scene: SceneService;
   renderOrder: RenderOrderService;
@@ -104,7 +107,7 @@ export function createShape1dPlugin(): IPlugin<{
       const canvasRegistry = ctx.services.require("canvasRegistry");
       const contextMenu = ctx.services.require("contextMenu");
       const crdt = ctx.services.require("crdt");
-      const editor = ctx.services.require("editor2");
+      const editor = ctx.services.require("editor");
       const history = ctx.services.require("history");
       const render = ctx.services.require("scene");
       const renderOrder = ctx.services.require("renderOrder");
@@ -796,9 +799,9 @@ export function createShape1dPlugin(): IPlugin<{
             showLineTypePicker: true,
           },
           values: {
-            strokeColor: "#0f172a",
-            strokeWidth: 4,
-            opacity: 0.92,
+            strokeColor: DEFAULT_STROKE_COLOR_TOKEN,
+            strokeWidth: DEFAULT_STROKE_WIDTH,
+            opacity: DEFAULT_OPACITY,
             lineType: "straight",
           },
           strokeWidthOptions: [...DEFAULT_STROKE_WIDTHS],
@@ -818,9 +821,9 @@ export function createShape1dPlugin(): IPlugin<{
             showEndCapPicker: true,
           },
           values: {
-            strokeColor: "#0f172a",
-            strokeWidth: 4,
-            opacity: 0.92,
+            strokeColor: DEFAULT_STROKE_COLOR_TOKEN,
+            strokeWidth: DEFAULT_STROKE_WIDTH,
+            opacity: DEFAULT_OPACITY,
             lineType: "straight",
             startCap: "none",
             endCap: "arrow",

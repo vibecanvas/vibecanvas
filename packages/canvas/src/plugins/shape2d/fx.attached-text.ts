@@ -4,7 +4,7 @@ import type { ThemeService } from "@vibecanvas/service-theme";
 import type Konva from "konva";
 import { fxGetCanvasParentGroupId, fxIsCanvasGroupNode } from "../../core/fx.canvas-node-semantics";
 import type { CrdtService } from "../../services/crdt/CrdtService";
-import type { EditorServiceV2 } from "../../services/editor/EditorServiceV2";
+import type { EditorService } from "../../services/editor/EditorService";
 import type { HistoryService } from "../../services/history/HistoryService";
 import type { RenderOrderService } from "../../services/render-order/RenderOrderService";
 import type { SceneService } from "../../services/scene/SceneService";
@@ -17,7 +17,7 @@ export type TPortalAttachedText = {
   Konva: typeof Konva;
   crdt: CrdtService;
   document: Document;
-  editor: Pick<EditorServiceV2, "createShapeFromTElement" | "editingTextId"> & {
+  editor: Pick<EditorService, "createShapeFromTElement" | "editingTextId"> & {
     toGroup(node: Konva.Node): unknown;
     toElement(node: Konva.Node): TElement | null;
   };

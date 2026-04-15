@@ -1,7 +1,7 @@
 import type { TElement } from "@vibecanvas/service-automerge/types/canvas-doc.types";
 import {
   DEFAULT_OPACITY,
-  DEFAULT_STROKE,
+  DEFAULT_STROKE_COLOR_TOKEN,
   DEFAULT_STROKE_WIDTH,
   type TPoint,
   type TShape1dData,
@@ -19,7 +19,7 @@ function fxGetShape1dStyleDefaults(args: {
   };
 }) {
   return {
-    strokeColor: args.rememberedStyle?.strokeColor ?? DEFAULT_STROKE,
+    strokeColor: args.rememberedStyle?.strokeColor ?? DEFAULT_STROKE_COLOR_TOKEN,
     strokeWidth: args.rememberedStyle?.strokeWidth ?? DEFAULT_STROKE_WIDTH,
     opacity: args.rememberedStyle?.opacity ?? DEFAULT_OPACITY,
     lineType: args.rememberedStyle?.lineType ?? "straight",

@@ -22,7 +22,7 @@ import type { IHooks } from "../../runtime";
 import type { CanvasRegistryService } from "../../services/canvas-registry/CanvasRegistryService";
 import type { ContextMenuService } from "../../services/context-menu/ContextMenuService";
 import type { CrdtService } from "../../services/crdt/CrdtService";
-import type { EditorServiceV2 } from "../../services/editor/EditorServiceV2";
+import type { EditorService } from "../../services/editor/EditorService";
 import type { HistoryService } from "../../services/history/HistoryService";
 import type { RenderOrderService } from "../../services/render-order/RenderOrderService";
 import type { SceneService } from "../../services/scene/SceneService";
@@ -80,6 +80,10 @@ function getFocusedShape2dTextHost(canvasRegistry: CanvasRegistryService, select
   return isShape2dTextHostNode(candidate) ? candidate : null;
 }
 
+const DEFAULT_SHAPE2D_FILL_COLOR = "red";
+const DEFAULT_SHAPE2D_STROKE_WIDTH = 0;
+const DEFAULT_SHAPE2D_OPACITY = 1;
+
 function getSelectionStyleMenuConfig() {
   return {
     sections: {
@@ -89,18 +93,46 @@ function getSelectionStyleMenuConfig() {
       showOpacityPicker: true,
     },
     values: {
-      fillColor: "red",
-      strokeWidth: 0,
-      opacity: 1,
+      fillColor: DEFAULT_SHAPE2D_FILL_COLOR,
+      strokeWidth: DEFAULT_SHAPE2D_STROKE_WIDTH,
+      opacity: DEFAULT_SHAPE2D_OPACITY,
     },
   };
+}
+
+function fxApplyRememberedShape2dToolStyle(args: {
+  element: TElement;
+  rememberedStyle: ReturnType<EditorService["getToolSelectionStyleValues"]>;
+}) {
+  const nextElement = structuredClone(args.element);
+  const rememberedFillColor = args.rememberedStyle.fillColor;
+  if (typeof rememberedFillColor === "string") {
+    nextElement.style.backgroundColor = rememberedFillColor;
+  }
+
+  const rememberedStrokeColor = args.rememberedStyle.strokeColor;
+  if (typeof rememberedStrokeColor === "string") {
+    nextElement.style.strokeColor = rememberedStrokeColor;
+  }
+
+  const rememberedStrokeWidth = args.rememberedStyle.strokeWidth;
+  if (typeof rememberedStrokeWidth === "number") {
+    nextElement.style.strokeWidth = rememberedStrokeWidth;
+  }
+
+  const rememberedOpacity = args.rememberedStyle.opacity;
+  if (typeof rememberedOpacity === "number") {
+    nextElement.style.opacity = rememberedOpacity;
+  }
+
+  return nextElement;
 }
 
 export function createShape2dPlugin(): IPlugin<{
   canvasRegistry: CanvasRegistryService;
   contextMenu: ContextMenuService;
   crdt: CrdtService;
-  editor2: EditorServiceV2;
+  editor: EditorService;
   history: HistoryService;
   scene: SceneService;
   renderOrder: RenderOrderService;
@@ -113,7 +145,7 @@ export function createShape2dPlugin(): IPlugin<{
       const canvasRegistry = ctx.services.require("canvasRegistry");
       const contextMenu = ctx.services.require("contextMenu");
       const crdt = ctx.services.require("crdt");
-      const editor = ctx.services.require("editor2");
+      const editor = ctx.services.require("editor");
       const history = ctx.services.require("history");
       const render = ctx.services.require("scene");
       const renderOrder = ctx.services.require("renderOrder");
@@ -598,19 +630,26 @@ export function createShape2dPlugin(): IPlugin<{
         }
 
         const timestamp = now();
-        const element = fnCreateShape2dElement({
-          id: createId(),
-          type: fnGetShape2dElementTypeFromTool(editor.activeToolId),
-          x: pointer.x,
-          y: pointer.y,
-          rotation: 0,
-          width: 0,
-          height: 0,
-          createdAt: timestamp,
-          updatedAt: timestamp,
-          parentGroupId: null,
-          zIndex: "",
-          style: editor.getToolSelectionStyleValues(editor.activeToolId),
+        const element = fxApplyRememberedShape2dToolStyle({
+          element: fnCreateShape2dElement({
+            id: createId(),
+            type: fnGetShape2dElementTypeFromTool(editor.activeToolId),
+            x: pointer.x,
+            y: pointer.y,
+            rotation: 0,
+            width: 0,
+            height: 0,
+            createdAt: timestamp,
+            updatedAt: timestamp,
+            parentGroupId: null,
+            zIndex: "",
+            style: {
+              backgroundColor: DEFAULT_SHAPE2D_FILL_COLOR,
+              strokeWidth: DEFAULT_SHAPE2D_STROKE_WIDTH,
+              opacity: DEFAULT_SHAPE2D_OPACITY,
+            },
+          }),
+          rememberedStyle: editor.getToolSelectionStyleValues(editor.activeToolId),
         });
         const node = createNode(element);
         if (!node) {

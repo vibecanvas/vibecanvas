@@ -17,6 +17,7 @@ export type THandleDragSnapshot = {
 
 export const ELEMENT_CREATED_AT_ATTR = "vcElementCreatedAt";
 export const DEFAULT_STROKE = "#0f172a";
+export const DEFAULT_STROKE_COLOR_TOKEN = "@gray/900";
 export const DEFAULT_OPACITY = 0.92;
 export const DEFAULT_STROKE_WIDTH = 4;
 export const MIN_HIT_STROKE_WIDTH = 16;
