@@ -1,14 +1,12 @@
 import type { TElement } from "@vibecanvas/service-automerge/types/canvas-doc.types";
 import type Konva from "konva";
 import type { CrdtService } from "../../services/crdt/CrdtService";
-import type { EditorService } from "../../services/editor/EditorService";
 import type { HistoryService } from "../../services/history/HistoryService";
 import type { SceneService } from "../../services/scene/SceneService";
 import type { SelectionService } from "../../services/selection/SelectionService";
 import type { IHooks, TElementPointerEvent } from "../../runtime";
 import { fxGetCanvasAncestorGroups, fxGetCanvasNodeKind, fxGetCanvasParentGroupId, fxIsCanvasGroupNode } from "../../core/fx.canvas-node-semantics";
 import { fxIsPenNode } from "./fx.path";
-import { fxSerializeSubtreeElements } from "../group/fn.serialize-subtree-elements";
 
 export type TPortalTxSafeStopPenDrag = {};
 export type TArgsTxSafeStopPenDrag = {
@@ -28,11 +26,18 @@ export function txSafeStopPenDrag(portal: TPortalTxSafeStopPenDrag, args: TArgsT
 
 type TThrottlePatch = (patch: Pick<TElement, "id" | "x" | "y" | "parentGroupId" | "updatedAt">) => void;
 
+export type TPenShapeListenersEditor = {
+  toElement(node: Konva.Node): TElement | null;
+  toGroup(node: Konva.Node): unknown;
+  updateShapeFromTElement?(element: TElement): boolean;
+};
+
 export type TPortalTxSetupPenShapeListeners = {
   Group: typeof Konva.Group;
   Shape: typeof Konva.Shape;
   crdt: CrdtService;
-  editor: EditorService;
+  editor: TPenShapeListenersEditor;
+  updateElement?: (element: TElement) => boolean;
   history: HistoryService;
   render: SceneService;
   selection: SelectionService;
@@ -77,7 +82,7 @@ function findSceneNodeById(portal: TPortalTxSetupPenShapeListeners, id: string) 
 }
 
 function applyElement(portal: TPortalTxSetupPenShapeListeners, element: TElement) {
-  const didUpdate = portal.editor.updateShapeFromTElement(element);
+  const didUpdate = portal.updateElement?.(element) ?? portal.editor.updateShapeFromTElement?.(element) ?? false;
   if (!didUpdate) {
     return;
   }
@@ -98,11 +103,11 @@ function serializeNodeElements(portal: TPortalTxSetupPenShapeListeners, node: Ko
   }
 
   if (kind === "group" && fxIsCanvasGroupNode({}, { editor: portal.editor, node })) {
-    return fxSerializeSubtreeElements({
-      editor: portal.editor,
-      Shape: portal.Shape,
-      group: node as Konva.Group,
-    }).map((element) => structuredClone(element));
+    return (node as Konva.Group)
+      .find((candidate: Konva.Node) => candidate instanceof portal.Shape)
+      .map((candidate) => portal.editor.toElement(candidate))
+      .filter((element): element is TElement => element !== null)
+      .map((element) => structuredClone(element));
   }
 
   return [] as TElement[];

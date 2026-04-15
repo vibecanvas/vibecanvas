@@ -13,7 +13,6 @@ import {
   createSelectionStyleMenuPlugin, createShape1dPlugin, createShape2dPlugin, createTextPlugin,
   createToolbarPlugin, createTransformPlugin, createVisualDebugPlugin, createHostedComponentPlugin
 } from "./plugins";
-import { createPenPlugin as createPenPluginV2 } from "./plugins/pen/Pen.pluginV2";
 import {
   CameraService, ContextMenuService, CrdtService, EditorService, HistoryService,
   LoggingService, RenderOrderService, SceneService, SelectionService, WidgetService,
@@ -198,8 +197,7 @@ export function buildRuntime(config: IRuntimeConfig) {
     createTransformPlugin(),
     // createShape1dPlugin(),
     // createShape2dPlugin(),
-    createPenPluginV2(),
-    // createPenPlugin(),
+    createPenPlugin(),
     createTextPlugin(),
     // createImagePlugin(),
     createGroupPlugin(),
