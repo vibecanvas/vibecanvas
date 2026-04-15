@@ -1,7 +1,10 @@
-import type { TElement, TGroup } from "@vibecanvas/service-automerge/types/canvas-doc.types";
+import type { TElement, TGroup, TTextData } from "@vibecanvas/service-automerge/types/canvas-doc.types";
 import type { IService } from "@vibecanvas/runtime";
 import { SyncHook } from "@vibecanvas/tapable";
+import type { ThemeService } from "@vibecanvas/service-theme";
 import type Konva from "konva";
+import type { TCapStyle, TFontFamily, TLineType, TStrokeWidthOption } from "../../components/SelectionStyleMenu/types";
+import type { TFontSizePreset } from "../../core/fn.text-style";
 
 export type TCanvasNodeType = TElement["data"]["type"] | "group";
 
@@ -14,6 +17,43 @@ export type TCanvasRegistryTransformOptions = {
   enabledAnchors?: string[];
   keepRatio?: boolean;
   flipEnabled?: boolean;
+};
+
+export type TCanvasRegistrySelectionStyleSections = {
+  showFillPicker: boolean;
+  showStrokeColorPicker: boolean;
+  showStrokeWidthPicker: boolean;
+  showTextPickers: boolean;
+  showOpacityPicker: boolean;
+  showLineTypePicker: boolean;
+  showStartCapPicker: boolean;
+  showEndCapPicker: boolean;
+};
+
+export type TCanvasRegistrySelectionStyleValues = {
+  fillColor?: string;
+  strokeColor?: string;
+  strokeWidth?: number;
+  opacity?: number;
+  fontFamily?: TFontFamily;
+  fontSizePreset?: TFontSizePreset;
+  textAlign?: TTextData["textAlign"];
+  verticalAlign?: TTextData["verticalAlign"];
+  lineType?: TLineType;
+  startCap?: TCapStyle;
+  endCap?: TCapStyle;
+};
+
+export type TCanvasRegistrySelectionStyleConfig = {
+  sections?: Partial<TCanvasRegistrySelectionStyleSections>;
+  values?: Partial<TCanvasRegistrySelectionStyleValues>;
+  strokeWidthOptions?: TStrokeWidthOption[];
+};
+
+export type TCanvasRegistrySelectionStyleArgs = {
+  theme?: ThemeService;
+  element?: TElement;
+  node?: Konva.Node;
 };
 
 export interface TCanvasRegistryElementDefinition {
@@ -73,6 +113,11 @@ export interface TCanvasRegistryElementDefinition {
    * Use this to apply persisted element state back onto an existing runtime node.
    */
   updateElement?: (element: TElement) => boolean | void;
+  /**
+   * Optional selection-style menu config for this element definition.
+   * Used for active-tool defaults and for combining style controls across selections.
+   */
+  getSelectionStyleMenu?: (args: TCanvasRegistrySelectionStyleArgs) => TCanvasRegistrySelectionStyleConfig | null | void;
   /**
    * Optional transformer UI behavior for this node type.
    * Runs in priority order and later definitions may override earlier fields.
@@ -145,6 +190,51 @@ function fnSortByPriority<T extends { priority?: number; id: string }>(entries: 
 
     return left.id.localeCompare(right.id);
   });
+}
+
+function fnMergeSelectionStyleMenuConfigs(
+  configs: Array<TCanvasRegistrySelectionStyleConfig | null | undefined>,
+) {
+  let didResolveConfig = false;
+  let sections: Partial<TCanvasRegistrySelectionStyleSections> | undefined;
+  let values: Partial<TCanvasRegistrySelectionStyleValues> | undefined;
+  let strokeWidthOptions: TStrokeWidthOption[] | undefined;
+
+  configs.forEach((config) => {
+    if (!config) {
+      return;
+    }
+
+    didResolveConfig = true;
+
+    if (config.sections) {
+      sections = {
+        ...(sections ?? {}),
+        ...config.sections,
+      };
+    }
+
+    if (config.values) {
+      values = {
+        ...(values ?? {}),
+        ...config.values,
+      };
+    }
+
+    if (config.strokeWidthOptions) {
+      strokeWidthOptions = config.strokeWidthOptions;
+    }
+  });
+
+  if (!didResolveConfig) {
+    return null;
+  }
+
+  return {
+    sections,
+    values,
+    strokeWidthOptions,
+  } satisfies TCanvasRegistrySelectionStyleConfig;
 }
 
 /**
@@ -292,6 +382,56 @@ export class CanvasRegistryService implements IService<TCanvasRegistryServiceHoo
 
     const element = this.toElement(node);
     return element?.data.type ?? null;
+  }
+
+  /**
+   * Resolves merged selection-style menu config for one persisted element.
+   */
+  getSelectionStyleMenuConfigByElement(args: {
+    element: TElement;
+    theme?: ThemeService;
+  }) {
+    return fnMergeSelectionStyleMenuConfigs(this.getMatchingElementDefinitionsByElement(args.element).map((definition) => {
+      return definition.getSelectionStyleMenu?.({
+        element: args.element,
+        theme: args.theme,
+      }) ?? null;
+    }));
+  }
+
+  /**
+   * Resolves merged selection-style menu config for one runtime node.
+   */
+  getSelectionStyleMenuConfigByNode(args: {
+    node: Konva.Node;
+    theme?: ThemeService;
+  }) {
+    const element = this.toElement(args.node);
+    if (!element) {
+      return null;
+    }
+
+    return this.getSelectionStyleMenuConfigByElement({
+      element,
+      theme: args.theme,
+    });
+  }
+
+  /**
+   * Resolves selection-style menu config for one registry definition id.
+   * Useful for active-tool defaults when no element instance exists yet.
+   */
+  getSelectionStyleMenuConfigById(args: {
+    id: string;
+    theme?: ThemeService;
+  }) {
+    return fnMergeSelectionStyleMenuConfigs(this.getElements()
+      .filter((definition) => definition.id === args.id)
+      .map((definition) => {
+        return definition.getSelectionStyleMenu?.({
+          theme: args.theme,
+        }) ?? null;
+      }));
   }
 
   /**

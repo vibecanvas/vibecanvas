@@ -1,13 +1,10 @@
 import type { TElement } from "@vibecanvas/service-automerge/types/canvas-doc.types";
 import type { TSelectionStyleMenuSections, TSelectionStyleMenuValues } from "../components/SelectionStyleMenu";
 import type { TCapStyle, TFontFamily, TLineType, TStrokeWidthOption } from "../components/SelectionStyleMenu/types";
+import type { TCanvasRegistrySelectionStyleConfig } from "../services/canvas-registry/CanvasRegistryService";
 import { fnGetNearestFontSizePreset, type TFontSizePreset } from "./fn.text-style";
 
-const SHAPE_TYPES = new Set(["rect", "ellipse", "diamond"]);
-const PEN_TYPES = new Set(["pen"]);
-const TEXT_TYPES = new Set(["text"]);
 const LINE_TYPES = new Set(["line", "arrow"]);
-const UNSUPPORTED_TYPES = new Set(["filetree", "terminal", "file", "image"]);
 
 export type TSelectionStyleProperty =
   | "fill"
@@ -22,22 +19,87 @@ export type TSelectionStyleProperty =
   | "startCap"
   | "endCap";
 
-export function fnHasSelectionStylePropertySupport(element: TElement, property: TSelectionStyleProperty) {
-  const type = element.data.type;
-
-  if (property === "fill") return SHAPE_TYPES.has(type);
-  if (property === "stroke") return SHAPE_TYPES.has(type) || PEN_TYPES.has(type) || TEXT_TYPES.has(type) || LINE_TYPES.has(type);
-  if (property === "strokeWidth") return SHAPE_TYPES.has(type) || PEN_TYPES.has(type) || LINE_TYPES.has(type);
-  if (property === "opacity") return !UNSUPPORTED_TYPES.has(type);
-  if (property === "fontFamily" || property === "fontSizePreset" || property === "textAlign" || property === "verticalAlign") return TEXT_TYPES.has(type);
-  if (property === "lineType") return LINE_TYPES.has(type);
-  if (property === "startCap") return type === "arrow";
-  if (property === "endCap") return type === "arrow";
-
-  return false;
+function getEmptySections(): TSelectionStyleMenuSections {
+  return {
+    showFillPicker: false,
+    showStrokeColorPicker: false,
+    showStrokeWidthPicker: false,
+    showTextPickers: false,
+    showOpacityPicker: false,
+    showLineTypePicker: false,
+    showStartCapPicker: false,
+    showEndCapPicker: false,
+  };
 }
 
-export function fnGetSelectionStyleStrokeColorKey(element: TElement): "strokeColor" | "backgroundColor" {
+function getSectionKeyForProperty(property: TSelectionStyleProperty): keyof TSelectionStyleMenuSections {
+  switch (property) {
+    case "fill":
+      return "showFillPicker";
+    case "stroke":
+      return "showStrokeColorPicker";
+    case "strokeWidth":
+      return "showStrokeWidthPicker";
+    case "opacity":
+      return "showOpacityPicker";
+    case "fontFamily":
+    case "fontSizePreset":
+    case "textAlign":
+    case "verticalAlign":
+      return "showTextPickers";
+    case "lineType":
+      return "showLineTypePicker";
+    case "startCap":
+      return "showStartCapPicker";
+    case "endCap":
+      return "showEndCapPicker";
+    default:
+      return "showFillPicker";
+  }
+}
+
+function getMergedSections(configs: TCanvasRegistrySelectionStyleConfig[]) {
+  return configs.reduce((sections, config) => {
+    const next = config.sections;
+    if (!next) {
+      return sections;
+    }
+
+    return {
+      showFillPicker: sections.showFillPicker || next.showFillPicker === true,
+      showStrokeColorPicker: sections.showStrokeColorPicker || next.showStrokeColorPicker === true,
+      showStrokeWidthPicker: sections.showStrokeWidthPicker || next.showStrokeWidthPicker === true,
+      showTextPickers: sections.showTextPickers || next.showTextPickers === true,
+      showOpacityPicker: sections.showOpacityPicker || next.showOpacityPicker === true,
+      showLineTypePicker: sections.showLineTypePicker || next.showLineTypePicker === true,
+      showStartCapPicker: sections.showStartCapPicker || next.showStartCapPicker === true,
+      showEndCapPicker: sections.showEndCapPicker || next.showEndCapPicker === true,
+    } satisfies TSelectionStyleMenuSections;
+  }, getEmptySections());
+}
+
+function getMergedValues(configs: TCanvasRegistrySelectionStyleConfig[]) {
+  return configs.reduce((values, config) => {
+    if (!config.values) {
+      return values;
+    }
+
+    return {
+      ...values,
+      ...config.values,
+    };
+  }, {} as TSelectionStyleMenuValues);
+}
+
+export function fxHasSelectionStylePropertySupport(args: {
+  config: TCanvasRegistrySelectionStyleConfig | null | undefined;
+  property: TSelectionStyleProperty;
+}) {
+  const sectionKey = getSectionKeyForProperty(args.property);
+  return args.config?.sections?.[sectionKey] === true;
+}
+
+export function fxGetSelectionStyleStrokeColorKey(element: TElement): "strokeColor" | "backgroundColor" {
   if ((element.data.type === "pen" || LINE_TYPES.has(element.data.type))
     && typeof element.style.strokeColor !== "string"
     && typeof element.style.backgroundColor === "string") {
@@ -47,81 +109,76 @@ export function fnGetSelectionStyleStrokeColorKey(element: TElement): "strokeCol
   return "strokeColor";
 }
 
-export function fnIsUnsupportedSelectionStyleElement(element: TElement) {
-  return UNSUPPORTED_TYPES.has(element.data.type);
-}
-
-export function fnGetSelectionStyleMenuSections(args: {
-  elements: TElement[];
-  textElements: TElement[];
+export function fxGetSelectionStyleMenuSections(args: {
+  configs: TCanvasRegistrySelectionStyleConfig[];
 }): TSelectionStyleMenuSections {
-  if (args.elements.length === 0) {
-    return {
-      showFillPicker: false,
-      showStrokeColorPicker: false,
-      showStrokeWidthPicker: false,
-      showTextPickers: false,
-      showOpacityPicker: false,
-      showLineTypePicker: false,
-      showStartCapPicker: false,
-      showEndCapPicker: false,
-    };
-  }
-
-  return {
-    showFillPicker: args.elements.some((element) => fnHasSelectionStylePropertySupport(element, "fill")),
-    showStrokeColorPicker: args.elements.some((element) => fnHasSelectionStylePropertySupport(element, "stroke")),
-    showStrokeWidthPicker: args.elements.some((element) => fnHasSelectionStylePropertySupport(element, "strokeWidth")),
-    showTextPickers: args.textElements.length > 0,
-    showOpacityPicker: args.elements.some((element) => fnHasSelectionStylePropertySupport(element, "opacity")),
-    showLineTypePicker: args.elements.some((element) => fnHasSelectionStylePropertySupport(element, "lineType")),
-    showStartCapPicker: args.elements.some((element) => fnHasSelectionStylePropertySupport(element, "startCap")),
-    showEndCapPicker: args.elements.some((element) => fnHasSelectionStylePropertySupport(element, "endCap")),
-  };
+  return getMergedSections(args.configs);
 }
 
-export function fnGetSelectionStyleStrokeWidthOptions(elements: TElement[]): TStrokeWidthOption[] {
-  const widthElements = elements.filter((element) => fnHasSelectionStylePropertySupport(element, "strokeWidth"));
-  if (widthElements.length > 0 && widthElements.every((element) => element.data.type === "pen")) {
-    return [
-      { name: "Thin", value: 3 },
-      { name: "Medium", value: 7 },
-      { name: "Thick", value: 12 },
-    ];
+export function fxGetSelectionStyleStrokeWidthOptions(args: {
+  configs: TCanvasRegistrySelectionStyleConfig[];
+}): TStrokeWidthOption[] | undefined {
+  const options = args.configs.flatMap((config) => config.strokeWidthOptions ?? []);
+  if (options.length === 0) {
+    return undefined;
   }
 
-  return [
-    { name: "Thin", value: 1 },
-    { name: "Medium", value: 2 },
-    { name: "Thick", value: 4 },
-  ];
+  const deduped = new Map<number, TStrokeWidthOption>();
+  options.forEach((option) => {
+    if (!deduped.has(option.value)) {
+      deduped.set(option.value, option);
+    }
+  });
+
+  return [...deduped.values()];
 }
 
-export function fnGetSelectionStyleMenuValues(args: {
+export function fxGetSelectionStyleMenuValues(args: {
   elements: TElement[];
   textElements: TElement[];
+  configs: TCanvasRegistrySelectionStyleConfig[];
 }): TSelectionStyleMenuValues {
-  const fill = args.elements.find((element) => fnHasSelectionStylePropertySupport(element, "fill"));
-  const stroke = args.elements.find((element) => fnHasSelectionStylePropertySupport(element, "stroke"));
-  const width = args.elements.find((element) => fnHasSelectionStylePropertySupport(element, "strokeWidth"));
-  const opacity = args.elements.find((element) => fnHasSelectionStylePropertySupport(element, "opacity"));
+  const sections = getMergedSections(args.configs);
+  const defaults = getMergedValues(args.configs);
+  const fill = args.elements.find((element) => typeof element.style.backgroundColor === "string");
+  const stroke = args.elements.find((element) => {
+    return typeof element.style.strokeColor === "string" || typeof element.style.backgroundColor === "string";
+  });
+  const width = args.elements.find((element) => typeof element.style.strokeWidth === "number");
+  const opacity = args.elements.find((element) => typeof element.style.opacity === "number");
   const text = args.textElements[0];
-  const line = args.elements.find((element) => fnHasSelectionStylePropertySupport(element, "lineType"));
+  const line = args.elements.find((element) => {
+    return element.data.type === "line" || element.data.type === "arrow";
+  });
   const arrow = args.elements.find((element) => element.data.type === "arrow");
 
   return {
-    fillColor: fill?.style.backgroundColor,
-    strokeColor: stroke?.style.strokeColor ?? stroke?.style.backgroundColor,
-    strokeWidth: width?.style.strokeWidth,
-    opacity: opacity?.style.opacity,
-    fontFamily: text?.data.type === "text" ? text.data.fontFamily as TFontFamily : undefined,
-    fontSizePreset: text?.data.type === "text"
-      ? (text.data.fontSizePreset ?? fnGetNearestFontSizePreset(text.data.fontSize)) as TFontSizePreset
+    fillColor: sections.showFillPicker ? (fill?.style.backgroundColor ?? defaults.fillColor) : undefined,
+    strokeColor: sections.showStrokeColorPicker ? (stroke?.style.strokeColor ?? stroke?.style.backgroundColor ?? defaults.strokeColor) : undefined,
+    strokeWidth: sections.showStrokeWidthPicker ? (width?.style.strokeWidth ?? defaults.strokeWidth) : undefined,
+    opacity: sections.showOpacityPicker ? (opacity?.style.opacity ?? defaults.opacity) : undefined,
+    fontFamily: sections.showTextPickers
+      ? (text?.data.type === "text" ? text.data.fontFamily as TFontFamily : defaults.fontFamily)
       : undefined,
-    textAlign: text?.data.type === "text" ? text.data.textAlign : undefined,
-    verticalAlign: text?.data.type === "text" ? text.data.verticalAlign : undefined,
-    lineType: line?.data.type === "line" || line?.data.type === "arrow" ? line.data.lineType as TLineType : undefined,
-    startCap: arrow?.data.type === "arrow" ? arrow.data.startCap as TCapStyle : undefined,
-    endCap: arrow?.data.type === "arrow" ? arrow.data.endCap as TCapStyle : undefined,
+    fontSizePreset: sections.showTextPickers
+      ? (text?.data.type === "text"
+        ? (text.data.fontSizePreset ?? fnGetNearestFontSizePreset(text.data.fontSize)) as TFontSizePreset
+        : defaults.fontSizePreset)
+      : undefined,
+    textAlign: sections.showTextPickers
+      ? (text?.data.type === "text" ? text.data.textAlign : defaults.textAlign)
+      : undefined,
+    verticalAlign: sections.showTextPickers
+      ? (text?.data.type === "text" ? text.data.verticalAlign : defaults.verticalAlign)
+      : undefined,
+    lineType: sections.showLineTypePicker
+      ? (line?.data.type === "line" || line?.data.type === "arrow" ? line.data.lineType as TLineType : defaults.lineType)
+      : undefined,
+    startCap: sections.showStartCapPicker
+      ? (arrow?.data.type === "arrow" ? arrow.data.startCap as TCapStyle : defaults.startCap)
+      : undefined,
+    endCap: sections.showEndCapPicker
+      ? (arrow?.data.type === "arrow" ? arrow.data.endCap as TCapStyle : defaults.endCap)
+      : undefined,
   };
 }

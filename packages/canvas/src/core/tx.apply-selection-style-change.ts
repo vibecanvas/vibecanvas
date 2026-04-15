@@ -2,8 +2,8 @@ import type Konva from "konva";
 import { fxResolveSelectionStyleElements } from "./fx.resolve-selection-style-elements";
 import { fxResolveSelectionStyleTextElements } from "./fx.resolve-selection-style-text-elements";
 import {
-  fnGetSelectionStyleStrokeColorKey,
-  fnHasSelectionStylePropertySupport,
+  fxGetSelectionStyleStrokeColorKey,
+  fxHasSelectionStylePropertySupport,
   type TSelectionStyleProperty,
 } from "./fn.selection-style-menu";
 import {
@@ -15,13 +15,18 @@ import type { CrdtService } from "../services/crdt/CrdtService";
 import type { HistoryService } from "../services/history/HistoryService";
 import type { SceneService } from "../services/scene/SceneService";
 import type { SelectionService } from "../services/selection/SelectionService";
+import type { TCanvasRegistrySelectionStyleConfig } from "../services/canvas-registry/CanvasRegistryService";
 
 export type TApplySelectionStyleChangeEditor = {
   toElement(node: Konva.Node): TElement | null;
+  toGroup(node: Konva.Node): unknown;
 };
 
 export type TApplySelectionStyleChangeCanvasRegistry = {
   updateElement(element: TElement): boolean;
+  getSelectionStyleMenuConfigByElement(args: {
+    element: TElement;
+  }): TCanvasRegistrySelectionStyleConfig | null;
 };
 
 export type TPortalApplySelectionStyleChange = {
@@ -55,6 +60,19 @@ function fnIsTextStyleProperty(property: TSelectionStyleProperty) {
     || property === "verticalAlign";
 }
 
+function fnIsDataStyleProperty(property: TSelectionStyleProperty): property is Extract<
+  TSelectionStyleProperty,
+  "fontFamily" | "fontSizePreset" | "textAlign" | "verticalAlign" | "lineType" | "startCap" | "endCap"
+> {
+  return property === "fontFamily"
+    || property === "fontSizePreset"
+    || property === "textAlign"
+    || property === "verticalAlign"
+    || property === "lineType"
+    || property === "startCap"
+    || property === "endCap";
+}
+
 export function txApplySelectionStyleChange(
   portal: TPortalApplySelectionStyleChange,
   args: TArgsApplySelectionStyleChange,
@@ -76,7 +94,8 @@ export function txApplySelectionStyleChange(
   const beforeElements = targetElements.map((element) => structuredClone(element));
   const supplementalBeforeElements = new Map<string, TElement>();
   const afterElements = targetElements.flatMap((element) => {
-    if (!fnHasSelectionStylePropertySupport(element, args.property)) {
+    const config = portal.canvasRegistry.getSelectionStyleMenuConfigByElement({ element });
+    if (!fxHasSelectionStylePropertySupport({ config, property: args.property })) {
       return [];
     }
 
@@ -86,7 +105,7 @@ export function txApplySelectionStyleChange(
 
     if (args.property === "stroke" && typeof args.value === "string") {
       if (element.data.type === "pen" || element.data.type === "line" || element.data.type === "arrow") {
-        const colorKey = fnGetSelectionStyleStrokeColorKey(element);
+        const colorKey = fxGetSelectionStyleStrokeColorKey(element);
         return [fxCloneElementWithSelectionStyle({ now: portal.now }, { element, style: { [colorKey]: args.value } })];
       }
 
@@ -94,7 +113,10 @@ export function txApplySelectionStyleChange(
       if (element.data.type === "rect") {
         const attachedTextNode = portal.fxFindAttachedTextNodeByContainerId(element.id);
         const attachedTextElement = attachedTextNode ? portal.editor.toElement(attachedTextNode) : null;
-        if (attachedTextElement?.data.type === "text") {
+        const attachedTextConfig = attachedTextElement
+          ? portal.canvasRegistry.getSelectionStyleMenuConfigByElement({ element: attachedTextElement })
+          : null;
+        if (attachedTextElement?.data.type === "text" && fxHasSelectionStylePropertySupport({ config: attachedTextConfig, property: args.property })) {
           supplementalBeforeElements.set(attachedTextElement.id, structuredClone(attachedTextElement));
           patches.push(fxCloneElementWithSelectionStyle({ now: portal.now }, { element: attachedTextElement, style: { strokeColor: args.value } }));
         }
@@ -110,7 +132,7 @@ export function txApplySelectionStyleChange(
       return [fxCloneElementWithSelectionStyle({ now: portal.now }, { element, style: { opacity: args.value } })];
     }
 
-    if (typeof args.value === "string") {
+    if (typeof args.value === "string" && fnIsDataStyleProperty(args.property)) {
       const patch = fxCreateSelectionStyleDataPatch({ now: portal.now }, { element, property: args.property, value: args.value });
       return patch ? [patch] : [];
     }

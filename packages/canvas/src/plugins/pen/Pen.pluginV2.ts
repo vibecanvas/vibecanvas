@@ -3,6 +3,7 @@ import type { TElement } from "@vibecanvas/service-automerge/types/canvas-doc.ty
 import Konva from "konva";
 import Pencil from "lucide-static/icons/pencil.svg?raw";
 import { resolveThemeColor, type ThemeService } from "@vibecanvas/service-theme";
+import { PEN_STROKE_WIDTHS } from "../../components/SelectionStyleMenu/types";
 import { getStroke } from "perfect-freehand";
 import type { IHooks, TElementPointerEvent } from "../../runtime";
 import type { CanvasRegistryService } from "../../services";
@@ -10,6 +11,7 @@ import type { SceneService } from "../../services/scene/SceneService";
 import { fxPenPathToElement } from "./fx.path";
 import { fxCreatePenDataFromStrokePoints } from "./fn.math";
 import { EditorServiceV2, type TEditorToolCanvasPoint } from "src/services/editor/EditorServiceV2";
+import { DEFAULT_FILL, DEFAULT_OPACITY, DEFAULT_STROKE_WIDTH } from "./CONSTANTS";
 import { fxCreatePenNode } from "./fx.create-node";
 import { txUpdatePenPathFromElement } from "./tx.path";
 
@@ -45,7 +47,9 @@ function fxCreatePenElementFromDraft(args: {
     updatedAt: args.now,
     data: penData,
     style: {
-      backgroundColor: "black",
+      backgroundColor: DEFAULT_FILL,
+      opacity: DEFAULT_OPACITY,
+      strokeWidth: DEFAULT_STROKE_WIDTH,
     },
   };
 }
@@ -250,6 +254,19 @@ export function createPenPlugin(): IPlugin<{
         toElement: (node) => fxToPenElement(canvasRegistry, now, node),
         createNode: (element) => fxCreatePenRuntimeNode(theme, element),
         attachListeners: (node) => txSetupPenNode({ hooks: ctx.hooks, node }),
+        getSelectionStyleMenu: () => ({
+          sections: {
+            showStrokeColorPicker: true,
+            showStrokeWidthPicker: true,
+            showOpacityPicker: true,
+          },
+          values: {
+            strokeColor: DEFAULT_FILL,
+            strokeWidth: DEFAULT_STROKE_WIDTH,
+            opacity: DEFAULT_OPACITY,
+          },
+          strokeWidthOptions: [...PEN_STROKE_WIDTHS],
+        }),
         getTransformOptions: () => ({
           enabledAnchors: [...PEN_TRANSFORM_ANCHORS],
           keepRatio: true,

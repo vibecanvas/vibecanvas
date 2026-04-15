@@ -1,7 +1,6 @@
 import type Konva from "konva";
 import type { TElement } from "@vibecanvas/service-automerge/types/canvas-doc.types";
 import { fxFilterSelection } from "./fx.filter-selection";
-import { fnIsUnsupportedSelectionStyleElement } from "./fn.selection-style-menu";
 import type { TCanvasSemanticsEditor } from "./fx.canvas-node-semantics";
 import type { SceneService } from "../services/scene/SceneService";
 import type { SelectionService } from "../services/selection/SelectionService";
@@ -62,7 +61,6 @@ function collectSelectionStyleElements(args: {
   return shapeNodes
     .map((node) => args.editor.toElement(node))
     .filter((element): element is TElement => Boolean(element))
-    .filter((element) => !fnIsUnsupportedSelectionStyleElement(element))
     .filter((element) => {
       if (seenElementIds.has(element.id)) {
         return false;

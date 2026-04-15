@@ -1,20 +1,21 @@
 import type { IPlugin } from "@vibecanvas/runtime";
+import type { TElement } from "@vibecanvas/service-automerge/types/canvas-doc.types";
 import Konva from "konva";
 import { createComponent, createMemo, createSignal } from "solid-js";
 import { render as renderSolid } from "solid-js/web";
 import { SelectionStyleMenu } from "../../components/SelectionStyleMenu";
 import type { ThemeService } from "@vibecanvas/service-theme";
 import type { TCapStyle, TFontFamily, TLineType } from "../../components/SelectionStyleMenu/types";
-import { fxResolveFocusedSelectionStyleElements } from "../../core/fx.resolve-selection-style-elements";
+import { fxResolveSelectionStyleElements } from "../../core/fx.resolve-selection-style-elements";
 import { fxResolveSelectionStyleTextElements } from "../../core/fx.resolve-selection-style-text-elements";
 import {
-  fnGetSelectionStyleMenuSections,
-  fnGetSelectionStyleMenuValues,
-  fnGetSelectionStyleStrokeWidthOptions,
+  fxGetSelectionStyleMenuSections,
+  fxGetSelectionStyleMenuValues,
+  fxGetSelectionStyleStrokeWidthOptions,
   type TSelectionStyleProperty,
 } from "../../core/fn.selection-style-menu";
 import { txApplySelectionStyleChange } from "../../core/tx.apply-selection-style-change";
-import type { CanvasRegistryService } from "../../services/canvas-registry/CanvasRegistryService";
+import type { CanvasRegistryService, TCanvasRegistrySelectionStyleConfig } from "../../services/canvas-registry/CanvasRegistryService";
 import type { CrdtService } from "../../services/crdt/CrdtService";
 import type { EditorServiceV2 } from "../../services/editor/EditorServiceV2";
 import type { HistoryService } from "../../services/history/HistoryService";
@@ -55,6 +56,7 @@ function mountSelectionStyleMenu(args: {
   };
 
   args.selection.hooks.change.tap(syncVersion);
+  args.editor.hooks.activeToolChange.tap(syncVersion);
   args.editor.hooks.editingTextChange.tap(syncVersion);
   args.editor.hooks.editingShape1dChange.tap(syncVersion);
   args.canvasRegistry.hooks.elementsChange.tap(syncVersion);
@@ -62,42 +64,95 @@ function mountSelectionStyleMenu(args: {
   args.theme.hooks.change.tap(syncVersion);
 
   const disposeRender = renderSolid(() => {
-    const focusedId = createMemo(() => {
+    const selectedElements = createMemo(() => {
       version();
-      return args.selection.focusedId;
-    });
-    const elements = createMemo(() => {
-      return fxResolveFocusedSelectionStyleElements({
+      return fxResolveSelectionStyleElements({
         Konva,
         editor: args.editor,
         scene: args.scene,
-      }, {
-        focusedId: focusedId(),
-      });
+        selection: args.selection,
+      }, {});
     });
+
+    const selectedEntries = createMemo(() => {
+      version();
+
+      const entries: Array<{ element: TElement; config: TCanvasRegistrySelectionStyleConfig }> = [];
+      selectedElements().forEach((element) => {
+        const config = args.canvasRegistry.getSelectionStyleMenuConfigByElement({
+          element,
+          theme: args.theme,
+        });
+        if (!config) {
+          return;
+        }
+
+        entries.push({ element, config });
+      });
+
+      return entries;
+    });
+
+    const elements = createMemo(() => {
+      return selectedEntries().map((entry) => entry.element);
+    });
+
     const textElements = createMemo(() => {
       version();
+
       return fxResolveSelectionStyleTextElements({
         editor: args.editor,
         fxFindAttachedTextNodeByContainerId,
       }, {
         elements: elements(),
+      }).filter((element) => {
+        return args.canvasRegistry.getSelectionStyleMenuConfigByElement({
+          element,
+          theme: args.theme,
+        }) !== null;
       });
     });
+
+    const activeToolConfig = createMemo(() => {
+      version();
+
+      const activeTool = args.editor.getActiveTool();
+      if (!activeTool || activeTool.behavior.type !== "mode") {
+        return null;
+      }
+
+      if (activeTool.behavior.mode === "hand" || activeTool.behavior.mode === "select") {
+        return null;
+      }
+
+      return args.canvasRegistry.getSelectionStyleMenuConfigById({
+        id: activeTool.id,
+        theme: args.theme,
+      });
+    });
+
+    const configs = createMemo(() => {
+      const entries = selectedEntries();
+      if (entries.length > 0) {
+        return entries.map((entry) => entry.config);
+      }
+
+      const toolConfig = activeToolConfig();
+      return toolConfig ? [toolConfig] : [];
+    });
+
     const sections = createMemo(() => {
-      return fnGetSelectionStyleMenuSections({
-        elements: elements(),
-        textElements: textElements(),
+      return fxGetSelectionStyleMenuSections({
+        configs: configs(),
       });
     });
+
     const visible = createMemo(() => {
+      version();
+
       const textareaMounted = args.scene.stage.container().querySelector("textarea") !== null;
       const isEditingTextActive = args.editor.editingTextId !== null && textareaMounted;
       if (isEditingTextActive) {
-        return false;
-      }
-
-      if (focusedId() === null) {
         return false;
       }
 
@@ -111,15 +166,21 @@ function mountSelectionStyleMenu(args: {
         || next.showStartCapPicker
         || next.showEndCapPicker;
     });
+
     const values = createMemo(() => {
-      return fnGetSelectionStyleMenuValues({
+      return fxGetSelectionStyleMenuValues({
         elements: elements(),
         textElements: textElements(),
+        configs: configs(),
       });
     });
+
     const strokeWidthOptions = createMemo(() => {
-      return fnGetSelectionStyleStrokeWidthOptions(elements());
+      return fxGetSelectionStyleStrokeWidthOptions({
+        configs: configs(),
+      });
     });
+
     const colorPalette = createMemo(() => {
       version();
       return args.theme.getThemeColorPickerPalette();
@@ -152,7 +213,7 @@ function mountSelectionStyleMenu(args: {
       visible,
       sections,
       values,
-      strokeWidthOptions,
+      strokeWidthOptions: () => strokeWidthOptions() ?? [],
       colorPalette,
       onFillChange: (color) => applyStyle("fill", color),
       onStrokeChange: (color) => applyStyle("stroke", color),
