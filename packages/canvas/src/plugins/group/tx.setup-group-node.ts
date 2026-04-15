@@ -1,5 +1,6 @@
 import type { TElement } from "@vibecanvas/service-automerge/types/canvas-doc.types";
 import type Konva from "konva";
+import type { TCrdtBuilder, TCrdtRecordedOp } from "../../services/crdt/fxBuilder";
 import type { CanvasRegistryService } from "../../services/canvas-registry/CanvasRegistryService";
 import type { CrdtService } from "../../services/crdt/CrdtService";
 import type { HistoryService } from "../../services/history/HistoryService";
@@ -52,6 +53,27 @@ function fxCountGroupPenPoints(elements: TElement[]) {
 function fxRecordGroupOpKinds(counts: Record<string, number>, kinds: string[]) {
   kinds.forEach((kind) => {
     counts[kind] = (counts[kind] ?? 0) + 1;
+  });
+}
+
+function fxQueueGroupMovePatches(args: {
+  builder: TCrdtBuilder;
+  elements: TElement[];
+}) {
+  args.elements.forEach((element) => {
+    args.builder.patchElement(element.id, "x", element.x);
+    args.builder.patchElement(element.id, "y", element.y);
+    args.builder.patchElement(element.id, "updatedAt", element.updatedAt);
+  });
+}
+
+function fxGetGroupMoveOpKinds(ops: TCrdtRecordedOp[]) {
+  return ops.map((op) => {
+    if (op.kind !== "set-entity-path") {
+      return op.kind;
+    }
+
+    return `${op.kind}:${op.path.join(".")}`;
   });
 }
 
@@ -137,10 +159,25 @@ export function txSetupGroupNode(
   const throttledPatch = portal.createThrottledPatch((elements) => {
     const commitStartedAt = dragMetrics ? portal.now() : 0;
     const builder = portal.crdt.build();
-    elements.forEach((element) => {
-      builder.patchElement(element.id, element);
+    fxQueueGroupMovePatches({
+      builder,
+      elements,
     });
     const commitResult = builder.commit();
+
+    if (dragMetrics && fxIsGroupLoggingEnabled(2)) {
+      portal.logging.log({
+        ...GROUP_LOG_TARGET,
+        level: 2,
+        event: "group-drag-move-commit",
+        payload: {
+          groupId: args.group.id(),
+          elementCount: elements.length,
+          elementTypes: fxCollectGroupElementTypes(elements),
+          opKinds: fxGetGroupMoveOpKinds(commitResult.redoOps),
+        },
+      });
+    }
 
     if (!dragMetrics) {
       return;
@@ -148,7 +185,7 @@ export function txSetupGroupNode(
 
     dragMetrics.moveCommitCount += 1;
     dragMetrics.moveCommitMs += portal.now() - commitStartedAt;
-    fxRecordGroupOpKinds(dragMetrics.moveCommitKinds, commitResult.redoOps.map((op) => op.kind));
+    fxRecordGroupOpKinds(dragMetrics.moveCommitKinds, fxGetGroupMoveOpKinds(commitResult.redoOps));
   });
 
   args.group.off("pointerclick pointerdown dragstart pointerdblclick dragmove dragend transform");
@@ -298,15 +335,30 @@ export function txSetupGroupNode(
     const finalCommitStartedAt = dragMetrics ? portal.now() : 0;
     const dragCommitResult = (() => {
       const builder = portal.crdt.build();
-      afterElements.forEach((element) => {
-        builder.patchElement(element.id, element);
+      fxQueueGroupMovePatches({
+        builder,
+        elements: afterElements,
       });
       return builder.commit();
     })();
 
+    if (dragMetrics && fxIsGroupLoggingEnabled(2)) {
+      portal.logging.log({
+        ...GROUP_LOG_TARGET,
+        level: 2,
+        event: "group-drag-final-commit",
+        payload: {
+          groupId: args.group.id(),
+          elementCount: afterElements.length,
+          elementTypes: fxCollectGroupElementTypes(afterElements),
+          opKinds: fxGetGroupMoveOpKinds(dragCommitResult.redoOps),
+        },
+      });
+    }
+
     if (dragMetrics) {
       dragMetrics.finalCommitMs += portal.now() - finalCommitStartedAt;
-      fxRecordGroupOpKinds(dragMetrics.finalCommitKinds, dragCommitResult.redoOps.map((op) => op.kind));
+      fxRecordGroupOpKinds(dragMetrics.finalCommitKinds, fxGetGroupMoveOpKinds(dragCommitResult.redoOps));
     }
 
     if (beforeElements.length === 0 || afterElements.length === 0) {
