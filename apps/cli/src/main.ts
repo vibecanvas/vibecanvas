@@ -1,5 +1,4 @@
 #!/usr/bin/env bun
-import type { IService, IStoppableService } from '@vibecanvas/runtime';
 import { createRuntime } from '@vibecanvas/runtime';
 import { buildCliConfig } from './build-config';
 import type { ICliConfig } from './config';
@@ -14,10 +13,6 @@ import { createPtyPlugin } from './plugins/pty/PtyPlugin';
 import { createServerPlugin } from './plugins/server/ServerPlugin';
 import { setupServices } from './setup-services';
 import { setupSignals } from './setup-signals';
-
-function isStoppableService(service: IService): service is IService & IStoppableService {
-  return 'stop' in service && typeof service.stop === 'function';
-}
 
 
 
@@ -57,11 +52,6 @@ const runtime = createRuntime<any, ICliConfig>({
   boot: bootCliRuntime,
   shutdown: async (ctx) => {
     await shutdownCliRuntime(ctx);
-    for (const service of services.getStore().values()) {
-      if (isStoppableService(service)) {
-        await service.stop();
-      }
-    }
   },
 });
 

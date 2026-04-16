@@ -2,11 +2,21 @@ import type { IPlugin } from "@vibecanvas/runtime";
 import type { CameraService } from "../../services/camera/CameraService";
 import type { SceneService } from "../../services/scene/SceneService";
 import type { IHooks } from "../../runtime";
+import { fxReadCameraStateFromLocalStorage } from "./fx.read-camera-state-from-localstorage";
 import { fxGetHandLayerStyle } from "./fn.get-hand-layer-style";
 import { fxGetPointerDelta } from "./fn.get-pointer-delta";
 import { txSyncHandLayer } from "./tx.sync-hand-layer";
+import { txWriteCameraStateToLocalStorage } from "./tx.write-camera-state-to-localstorage";
 
 const ZOOM_STEP = 1.03;
+
+function getDefaultStorage(): Storage | null {
+  try {
+    return globalThis.localStorage ?? null;
+  } catch {
+    return null;
+  }
+}
 
 /**
  * Owns camera pan and zoom input behavior.
@@ -21,6 +31,7 @@ export function createCameraControlPlugin(): IPlugin<{
   let activePointerId: number | null = null;
   let lastPointer: { x: number; y: number } | null = null;
   let activeTool = "select";
+  let offCameraChange: (() => boolean) | null = null;
 
   function isHandTool() {
     return activeTool === "hand";
@@ -70,6 +81,23 @@ export function createCameraControlPlugin(): IPlugin<{
     apply(ctx) {
       const camera = ctx.services.require("camera");
       const render = ctx.services.require("scene");
+      const storage = getDefaultStorage();
+      const restoredViewport = fxReadCameraStateFromLocalStorage({ storage }, { canvasId: ctx.config.canvasId });
+
+      if (restoredViewport) {
+        camera.setViewport(restoredViewport, { emitChange: false });
+      }
+
+      offCameraChange = camera.hooks.change.tap(() => {
+        txWriteCameraStateToLocalStorage({ storage }, {
+          canvasId: ctx.config.canvasId,
+          viewport: {
+            x: camera.x,
+            y: camera.y,
+            zoom: camera.zoom,
+          },
+        });
+      });
 
       ctx.hooks.init.tap(() => {
         handLayer = document.createElement("div");
@@ -176,6 +204,11 @@ export function createCameraControlPlugin(): IPlugin<{
 
         event.evt.preventDefault();
         camera.pan(event.evt.deltaX, event.evt.deltaY);
+      });
+
+      ctx.hooks.destroy.tap(() => {
+        offCameraChange?.();
+        offCameraChange = null;
       });
     },
   };

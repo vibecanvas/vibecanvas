@@ -57,6 +57,7 @@ export function Canvas(props: CanvasPageProps) {
       runtime = null;
     }
     runtime = buildRuntime({
+      canvasId: props.canvas.id,
       container: containerRef,
       docHandle: nextHandle,
       onToggleSidebar: props.store.onToggleSidebar,

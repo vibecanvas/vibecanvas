@@ -6,6 +6,12 @@ export type TCameraServiceArgs = {
   scene: SceneService;
 };
 
+export type TCameraViewport = {
+  x: number;
+  y: number;
+  zoom: number;
+};
+
 /**
  * Holds canvas camera state and camera operations.
  * Wraps the current camera implementation behind a service.
@@ -43,11 +49,7 @@ export class CameraService implements IService<TCameraServiceHooks>, IStartableS
       return;
     }
 
-    this.x = 0;
-    this.y = 0;
-    this.zoom = 1;
-    this.#updatePosition({ x: this.x, y: this.y });
-    this.#updateZoom(this.zoom);
+    this.setViewport({ x: 0, y: 0, zoom: 1 }, { emitChange: false, force: true });
     this.started = true;
   }
 
@@ -63,10 +65,7 @@ export class CameraService implements IService<TCameraServiceHooks>, IStartableS
     const nextX = this.x - deltaX;
     const nextY = this.y - deltaY;
 
-    this.x = nextX;
-    this.y = nextY;
-    this.#updatePosition({ x: nextX, y: nextY });
-    this.hooks.change.call();
+    this.setViewport({ x: nextX, y: nextY, zoom: this.zoom });
   }
 
   zoomAtScreenPoint(scale: number, screenPoint: { x: number; y: number }) {
@@ -78,11 +77,28 @@ export class CameraService implements IService<TCameraServiceHooks>, IStartableS
     const nextX = screenPoint.x - worldPoint.x * nextZoom;
     const nextY = screenPoint.y - worldPoint.y * nextZoom;
 
+    this.setViewport({ x: nextX, y: nextY, zoom: nextZoom });
+  }
+
+  setViewport(viewport: TCameraViewport, options?: { emitChange?: boolean; force?: boolean }) {
+    const nextZoom = clampZoom(viewport.zoom);
+    const shouldUpdatePosition = options?.force === true || this.x !== viewport.x || this.y !== viewport.y;
+    const shouldUpdateZoom = options?.force === true || this.zoom !== nextZoom;
+
+    this.x = viewport.x;
+    this.y = viewport.y;
     this.zoom = nextZoom;
-    this.x = nextX;
-    this.y = nextY;
-    this.#updatePosition({ x: nextX, y: nextY });
-    this.#updateZoom(nextZoom);
+    if (shouldUpdatePosition) {
+      this.#updatePosition({ x: viewport.x, y: viewport.y });
+    }
+    if (shouldUpdateZoom) {
+      this.#updateZoom(nextZoom);
+    }
+
+    if (options?.emitChange === false) {
+      return;
+    }
+
     this.hooks.change.call();
   }
 

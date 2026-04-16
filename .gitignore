@@ -26,6 +26,8 @@ Thumbs.db
 
 # Tmp
 .tmp*
+tmp/
+tmp./
 
 # Logs
 *.log

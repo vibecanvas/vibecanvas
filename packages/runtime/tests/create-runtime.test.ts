@@ -145,4 +145,59 @@ describe('createRuntime', () => {
 
     expect(calls).toEqual(['shutdown']);
   });
+
+  test('runs shutdown callback before stopping services', async () => {
+    const services = createServiceRegistry();
+    const calls: string[] = [];
+
+    services.provide('custom' as never, 10, {
+      name: 'custom-service',
+      async stop() {
+        calls.push('stop');
+      },
+    } as never);
+
+    const runtime = createRuntime({
+      plugins: [],
+      hooks: {},
+      config: {},
+      services,
+      shutdown: async () => {
+        calls.push('shutdown');
+      },
+    });
+
+    await runtime.boot();
+    await runtime.shutdown();
+
+    expect(calls).toEqual(['shutdown', 'stop']);
+  });
+
+  test('still stops services if shutdown callback throws', async () => {
+    const services = createServiceRegistry();
+    const calls: string[] = [];
+
+    services.provide('custom' as never, 10, {
+      name: 'custom-service',
+      async stop() {
+        calls.push('stop');
+      },
+    } as never);
+
+    const runtime = createRuntime({
+      plugins: [],
+      hooks: {},
+      config: {},
+      services,
+      shutdown: async () => {
+        calls.push('shutdown');
+        throw new Error('shutdown failed');
+      },
+    });
+
+    await runtime.boot();
+    await expect(runtime.shutdown()).rejects.toThrow('shutdown failed');
+
+    expect(calls).toEqual(['shutdown', 'stop']);
+  });
 });

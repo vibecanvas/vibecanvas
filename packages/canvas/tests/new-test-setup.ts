@@ -16,6 +16,7 @@ export type TNewCanvasHarness = {
 };
 
 export async function createNewCanvasHarness(args?: {
+  canvasId?: string;
   docHandle?: DocHandle<TCanvasDoc>;
   width?: number;
   height?: number;
@@ -36,6 +37,7 @@ export async function createNewCanvasHarness(args?: {
   const container = createTestContainer({ width: args?.width, height: args?.height }) as HTMLDivElement;
   const docHandle = args?.docHandle ?? createMockDocHandle();
   const runtime = buildRuntime({
+    canvasId: args?.canvasId ?? "test-canvas",
     container,
     docHandle,
     onToggleSidebar: () => {},

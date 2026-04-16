@@ -37,6 +37,7 @@ export type TDeleteImage = (args: {
 
 
 export interface IRuntimeConfig {
+  canvasId: string;
   container: HTMLDivElement;
   docHandle: DocHandle<TCanvasDoc>;
   onToggleSidebar: () => void;
