@@ -1,34 +1,5 @@
 # Canvas Package Guide (`@vibecanvas/canvas`)
 
-## Status
-
-Migration is done.
-
-Treat the current runtime under `packages/canvas/src/` as the source of truth:
-- `src/runtime.ts`
-- `src/services/*`
-- `src/plugins/*`
-- `src/components/Canvas.tsx`
-
-Do **not** write guidance that talks about an old runtime vs new runtime split.
-That was true during migration, but it is outdated now.
-
-Also note:
-- some test folders still use `tests/new-services` and `tests/new-plugins` in their names
-- those names are historical
-- they are testing the current runtime, not a separate future runtime
-
-## Ignore for now
-
-These areas are WIP and should not drive package architecture decisions yet:
-- `packages/canvas/src/services/widget`
-- `packages/canvas/src/plugins/hosted-component`
-
-You may read them if a task explicitly targets them, but otherwise:
-- do not document them as stable architecture
-- do not use them as patterns for new work
-- do not assume they represent the preferred extension path
-
 ## What this package is
 
 `@vibecanvas/canvas` is a Konva-based collaborative canvas runtime with:
@@ -496,3 +467,7 @@ And specifically:
 - do not reintroduce old migration language into docs
 - do not describe `src/services/widget` as stable
 - do not describe `src/plugins/hosted-component` as stable
+
+#IMPORTANT
+Always read `./ARCHITECTURE.md`
+Always read `./FILES.md`
