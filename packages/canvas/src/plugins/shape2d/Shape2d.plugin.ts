@@ -19,6 +19,7 @@ import {
 } from "../../core/fn.shape2d";
 import { txSetNodeZIndex } from "../../core/tx.set-node-z-index";
 import type { IHooks } from "../../runtime";
+import type { CameraService } from "../../services/camera/CameraService";
 import type { CanvasRegistryService } from "../../services/canvas-registry/CanvasRegistryService";
 import type { ContextMenuService } from "../../services/context-menu/ContextMenuService";
 import type { CrdtService } from "../../services/crdt/CrdtService";
@@ -159,6 +160,7 @@ function getSelectionStyleMenuConfig(theme?: ThemeService) {
 }
 
 export function createShape2dPlugin(): IPlugin<{
+  camera: CameraService;
   canvasRegistry: CanvasRegistryService;
   contextMenu: ContextMenuService;
   crdt: CrdtService;
@@ -172,6 +174,7 @@ export function createShape2dPlugin(): IPlugin<{
   return {
     name: "shape2d",
     apply(ctx) {
+      const camera = ctx.services.require("camera");
       const canvasRegistry = ctx.services.require("canvasRegistry");
       const contextMenu = ctx.services.require("contextMenu");
       const crdt = ctx.services.require("crdt");
@@ -200,6 +203,7 @@ export function createShape2dPlugin(): IPlugin<{
         enterEditMode: (args: { freeTextName: string; node: Konva.Text; isNew: boolean }) => {
           return txEnterEditMode({
             Konva,
+            camera,
             canvasRegistry,
             crdt,
             document: render.container.ownerDocument,

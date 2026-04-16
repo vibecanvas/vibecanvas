@@ -5,6 +5,7 @@ import { resolveThemeColor, type ThemeService } from "@vibecanvas/service-theme"
 import Type from "lucide-static/icons/type.svg?raw";
 import type { TElement, TTextData } from "@vibecanvas/service-automerge/types/canvas-doc.types";
 import Konva from "konva";
+import type { CameraService } from "../../services/camera/CameraService";
 import type { ContextMenuService } from "../../services/context-menu/ContextMenuService";
 import type { CrdtService } from "../../services/crdt/CrdtService";
 import type { EditorService } from "../../services/editor/EditorService";
@@ -165,6 +166,7 @@ function txApplyTextTransform(args: {
  * Attached-text behavior stays separate from free-text interactions.
  */
 export function createTextPlugin(): IPlugin<{
+  camera: CameraService;
   canvasRegistry: CanvasRegistryService;
   contextMenu: ContextMenuService;
   crdt: CrdtService;
@@ -178,6 +180,7 @@ export function createTextPlugin(): IPlugin<{
   return {
     name: "text",
     apply(ctx) {
+      const camera = ctx.services.require("camera");
       const canvasRegistry = ctx.services.require("canvasRegistry");
       const contextMenu = ctx.services.require("contextMenu");
       const crdt = ctx.services.require("crdt");
@@ -492,6 +495,7 @@ export function createTextPlugin(): IPlugin<{
 
         txEnterEditMode({
           Konva,
+          camera,
           canvasRegistry,
           crdt,
           document,
@@ -519,6 +523,7 @@ export function createTextPlugin(): IPlugin<{
 
         txEnterEditMode({
           Konva,
+          camera,
           canvasRegistry,
           crdt,
           document,

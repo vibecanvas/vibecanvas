@@ -9,6 +9,7 @@ import type { TElement, TTextData } from "@vibecanvas/service-automerge/types/ca
 import { fxGetShapeTextHostBounds } from "../shape2d/fn.text-host-bounds";
 import type { layoutWithLines, prepareWithSegments } from "@chenglou/pretext";
 import type { ThemeService } from "@vibecanvas/service-theme";
+import type { CameraService } from "../../services/camera/CameraService";
 import type { CrdtService } from "../../services/crdt/CrdtService";
 import type { EditorService } from "../../services/editor/EditorService";
 import type { HistoryService } from "../../services/history/HistoryService";
@@ -19,6 +20,7 @@ import type Konva from "konva";
 
 export type TPortalEnterEditMode = {
   Konva: typeof Konva;
+  camera: Pick<CameraService, "hooks">;
   canvasRegistry?: Pick<CanvasRegistryService, "toElement" | "toGroup" | "updateElement">;
   crdt: CrdtService;
   document: Document;
@@ -228,6 +230,7 @@ export function txEnterEditMode(portal: TPortalEnterEditMode, args: TArgsEnterEd
     const absolutePosition = args.node.getAbsolutePosition();
     const absoluteScale = args.node.getAbsoluteScale();
     const absoluteRotation = args.node.getAbsoluteRotation();
+    const scaledFontSize = args.node.fontSize() * absoluteScale.x;
     const scaledWidth = Math.max(args.node.width() * absoluteScale.x, 4);
     const scaledHeight = Math.max(args.node.height() * absoluteScale.y, initialScaledFontSize);
     const contentHeight = measured.height * absoluteScale.y;
@@ -236,6 +239,7 @@ export function txEnterEditMode(portal: TPortalEnterEditMode, args: TArgsEnterEd
 
     textarea.style.top = `${absolutePosition.y}px`;
     textarea.style.left = `${absolutePosition.x}px`;
+    textarea.style.fontSize = `${scaledFontSize}px`;
     textarea.style.width = `${scaledWidth}px`;
     textarea.style.height = `${scaledHeight}px`;
     textarea.style.minHeight = `${scaledHeight}px`;
@@ -254,9 +258,17 @@ export function txEnterEditMode(portal: TPortalEnterEditMode, args: TArgsEnterEd
       return;
     }
 
+    const absolutePosition = args.node.getAbsolutePosition();
     const absoluteScale = args.node.getAbsoluteScale();
+    const absoluteRotation = args.node.getAbsoluteRotation();
     const scaledFontSize = args.node.fontSize() * absoluteScale.x;
     const scaledWidth = Math.max(args.node.width() * absoluteScale.x, 4);
+
+    textarea.style.top = `${absolutePosition.y}px`;
+    textarea.style.left = `${absolutePosition.x}px`;
+    textarea.style.fontSize = `${scaledFontSize}px`;
+    textarea.style.minHeight = `${scaledFontSize}px`;
+    textarea.style.transform = `rotate(${absoluteRotation}deg)`;
     textarea.style.width = "auto";
     textarea.style.width = `${Math.max(textarea.scrollWidth, scaledWidth)}px`;
     textarea.style.height = "auto";
@@ -291,6 +303,9 @@ export function txEnterEditMode(portal: TPortalEnterEditMode, args: TArgsEnterEd
   const offThemeChange = portal.theme.hooks.change.tap(() => {
     fxSyncTextareaColor(portal, { element: originalElement, textarea });
   });
+  const offCameraChange = portal.camera.hooks.change.tap(() => {
+    autoGrow();
+  });
 
   let didCleanup = false;
   const cleanup = () => {
@@ -300,6 +315,7 @@ export function txEnterEditMode(portal: TPortalEnterEditMode, args: TArgsEnterEd
 
     didCleanup = true;
     offThemeChange();
+    offCameraChange();
     textarea.removeEventListener("input", autoGrow);
     textarea.removeEventListener("blur", commit);
     textarea.removeEventListener("keydown", onKeyDown);
