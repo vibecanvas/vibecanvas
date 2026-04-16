@@ -147,6 +147,7 @@ Never put detailed plan in this file
 - [x]: [A34](a/A34.md) - canvas: scene hydrator incremental reconcile instead of full reload on change
 - [ ]: [A35] - multiselect => clone drag
 - [x]: [A36](a/A36.md) - theme: centralize canvas style ownership in ThemeService
+- [ ]: [A37] - shape1d binding -> must safe them to TElementData
 
 ## S ubtractions
 - [ ]: [S1](s/S1.md) - double bun run dev -> find new port
@@ -185,6 +186,7 @@ Never put detailed plan in this file
 - [x]: [S35](s/S35.md) - canvas/core: align fn fx tx file boundaries, injected portals, and callers
 - [x]: [S36](s/S36.md) - transform ownership: plugin only renders/dispatches; element plugins own drag + crdt
 - [ ]: [S37](s/S37.md) - Refactor canvas service/plugin --> simplification written by hand
+- [ ]: [S38] - make fn,fx,tx files extension also lint script
 
 ## E xplorations
 - [ ]: [E1](e/E1.md) - Tauri Research

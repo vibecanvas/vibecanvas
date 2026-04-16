@@ -1,3 +1,4 @@
+import type { TElementData } from '@vibecanvas/service-automerge/types/canvas-doc.types'
 import type { ThemeService } from '@vibecanvas/service-theme'
 import type Konva from 'konva'
 import type { TEditorToolDrawCreateStartDraftArgs, TEditorToolDrawCreateUpdateDraftArgs } from '../editor/EditorService'
@@ -7,6 +8,8 @@ import {
   WIDGET_HOST_CLOSE_BUTTON_ID,
   WIDGET_HOST_DIVIDER_HEIGHT,
   WIDGET_HOST_DIVIDER_ID,
+  WIDGET_HOST_ELEMENT_DATA_ATTR,
+  WIDGET_HOST_ELEMENT_STYLE_ATTR,
   WIDGET_HOST_HEADER_HEIGHT,
   WIDGET_HOST_HEADER_ID,
   WIDGET_HOST_MAXIMIZE_BUTTON_ID,
@@ -206,6 +209,17 @@ export function fxDrawHost(portal: TPortalCreateHost, args: TArgsCreateHost) {
   group.add(minimizeButton)
   group.add(maximizeButton)
   group.add(border)
+
+  const elementData: TElementData = {
+    type: 'custom',
+    expanded: false,
+    h: WIDGET_HOST_HEADER_HEIGHT,
+    w: WIDGET_HOST_MIN_WIDTH,
+    payload: {}
+  }
+
+  group.setAttr(WIDGET_HOST_ELEMENT_DATA_ATTR, elementData)
+  group.setAttr(WIDGET_HOST_ELEMENT_STYLE_ATTR, {}) // style is fixed. no need for customization
 
   return group
 }

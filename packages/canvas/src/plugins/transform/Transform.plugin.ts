@@ -518,7 +518,6 @@ export function createTransformPlugin(): IPlugin<{
         transformer = new Konva.Transformer();
         syncTransformerTheme(theme, transformer);
         render.dynamicLayer.add(transformer);
-        editor.setTransformer(transformer);
 
         transformer.on("transformstart", () => {
           const nodes = transformer?.getNodes() ?? [];
@@ -688,7 +687,6 @@ export function createTransformPlugin(): IPlugin<{
       });
 
       ctx.hooks.destroy.tap(() => {
-        editor.setTransformer(null);
         dragProxyState = null;
         dragProxy?.destroy();
         dragProxy = null;
