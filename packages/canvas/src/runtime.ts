@@ -159,6 +159,8 @@ function createServices(config: {
     contextMenuService: contextMenu,
     loggingService: logging,
     editorService: editor,
+    themeService: config.themeService,
+    canvasRegistryService: canvasRegistry,
   });
 
   const renderOrder = new RenderOrderService({

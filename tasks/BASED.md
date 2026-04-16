@@ -109,7 +109,8 @@ Never put detailed plan in this file
 - [x]: [B22] - style color pallet breaks layout
 - [x]: [B23] - bug: pan/zoom on textedit -> text box moves with 
 - [ ]: [B24] - bug: handtool not working -> drag
-- [ ]: [B25] - onload -> camera can't move for first 4 sec (perf problem)
+- [ ]: [B25](b/B25.md) - onload -> camera can't move for first 4 sec (perf problem)
+- [ ]: [B26] - investigate if cli respect zIndex - check tmp/script
 
 ## A dditions
 - [x]: [A1] - file: support common CodeMirror languages

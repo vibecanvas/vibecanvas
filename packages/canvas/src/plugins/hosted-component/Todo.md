@@ -1,4 +1,3 @@
-check syncGrid
 ---SERVICE: WIDGET MANAGER---
 store widget
 

@@ -1,9 +1,6 @@
 import type { ThemeService } from "@vibecanvas/service-theme";
 import type { SyncHook } from "@vibecanvas/tapable";
-import type { ContextMenuService } from "../context-menu/ContextMenuService";
-import type { CrdtService } from "../crdt/CrdtService";
-import type { EditorService, TEditorTool } from "../editor/EditorService";
-import type { LoggingService } from "../logging/LoggingService";
+import type { CanvasRegistryService, ContextMenuService, CrdtService, EditorService, LoggingService, TEditorTool } from "..";
 
 
 export interface IWidgetManagerServiceHooks {
@@ -16,6 +13,7 @@ export interface IWidgetManagerServiceProps {
   loggingService: LoggingService;
   editorService: EditorService;
   themeService: ThemeService;
+  canvasRegistryService: CanvasRegistryService;
 }
 
 export interface IWidgetConfig {

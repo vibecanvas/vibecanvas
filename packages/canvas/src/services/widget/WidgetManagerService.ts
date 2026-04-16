@@ -2,7 +2,7 @@ import type { IService, IStartableService } from "@vibecanvas/runtime";
 import type { IServiceContext } from "@vibecanvas/runtime/interface.js";
 import type { ThemeService } from "@vibecanvas/service-theme";
 import Konva from "konva";
-import type { ContextMenuService, CrdtService, EditorService, LoggingService } from "..";
+import type { CanvasRegistryService, ContextMenuService, CrdtService, EditorService, LoggingService } from "..";
 import type { IHooks, IRuntimeConfig } from "../../runtime";
 import { fxRegisterWidgetTool } from "./fx.register-tool";
 import type { IWidgetConfig, IWidgetManagerServiceHooks, IWidgetManagerServiceProps } from "./interface";
@@ -15,6 +15,7 @@ export class WidgetManagerService implements IService<IWidgetManagerServiceHooks
   private loggingService: LoggingService;
   private editorService: EditorService;
   private themeService: ThemeService;
+  private canvasRegistry: CanvasRegistryService;
   private readonly runtimeHooks!: IHooks;
 
 
@@ -24,6 +25,7 @@ export class WidgetManagerService implements IService<IWidgetManagerServiceHooks
     this.loggingService = props.loggingService;
     this.editorService = props.editorService;
     this.themeService = props.themeService;
+    this.canvasRegistry = props.canvasRegistryService;
     console.log('WidgetManagerService constructor', props)
   }
 
@@ -41,6 +43,17 @@ export class WidgetManagerService implements IService<IWidgetManagerServiceHooks
         themeService: this.themeService
       }, { widgetConfig: wConfig })
     }
+
+    this.canvasRegistry.registerElement({
+
+      id: wConfig.id,
+
+      createNode: (element) => {
+        console.log('WidgetManagerService createNode', element)
+        // element.data.type
+        return null
+      }
+    })
 
   }
 
