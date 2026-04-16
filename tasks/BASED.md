@@ -187,6 +187,7 @@ Never put detailed plan in this file
 - [x]: [S36](s/S36.md) - transform ownership: plugin only renders/dispatches; element plugins own drag + crdt
 - [ ]: [S37](s/S37.md) - Refactor canvas service/plugin --> simplification written by hand
 - [ ]: [S38] - make fn,fx,tx files extension also lint script
+- [ ]: [S39] - add TGroup and TElement types for canvas (human leaf file)
 
 ## E xplorations
 - [ ]: [E1](e/E1.md) - Tauri Research

@@ -207,6 +207,9 @@ Legend
 
 - [ ]: [CameraService.ts](src/services/camera/CameraService.ts)
 - [ ]: [CanvasRegistryService.ts](src/services/canvas-registry/CanvasRegistryService.ts)
+- [c]: [types.ts](src/services/canvas-registry/types.ts)
+- [c]: [fn-merge-selection-style-menu-configs.ts](src/services/canvas-registry/fn-merge-selection-style-menu-configs.ts)
+- [c]: [fn.sort-by-priority.ts](src/services/canvas-registry/fn.sort-by-priority.ts)
 - [ ]: [ContextMenuService.ts](src/services/context-menu/ContextMenuService.ts)
 - [ ]: [CrdtService.ts](src/services/crdt/CrdtService.ts)
 - [ ]: [fxBuilder.ts](src/services/crdt/fxBuilder.ts)
