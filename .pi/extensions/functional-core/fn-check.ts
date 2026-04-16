@@ -22,11 +22,13 @@ type TDeclKind = "function" | "type" | "class" | "value";
 const FN_FILE_RE = /^fn\..+\.ts$/;
 const FN_TEST_FILE_RE = /^fn\..+\.test\.ts$/;
 const ALLOWED_RUNTIME_IMPORT_RE = /^(fn|fx|tx)\..+$/;
+const ALLOWED_CONSTANT_LIKE_IMPORT_NAME_RE = /^[A-Z0-9_]+$/;
 const FN_CHECK_RULES = [
   "ignore fn.*.test.ts files",
   "exported functions must start with fx",
-  "imports must be type-only unless imported module leaf starts with fn., fx., or tx., or is exactly CONSTANTS",
+  "imports must be type-only unless imported module leaf starts with fn., fx., or tx., is exactly CONSTANTS, or the imported runtime binding name is UPPER_CASE / underscore style",
   "CONSTANTS.ts imports are allowed for shared local constants",
+  "UPPER_CASE runtime value imports like THEME_STROKE_WIDTH_VALUE_MAP are allowed from any module",
   "no direct use of runtime globals like window, fetch, Bun, process, console, globalThis",
   "do not export classes or other runtime values; only functions and types",
 ] as const;
@@ -56,6 +58,10 @@ function isAllowedConstantsImport(modulePath: string): boolean {
 
 function isAllowedRuntimeImport(modulePath: string): boolean {
   return ALLOWED_RUNTIME_IMPORT_RE.test(getModuleLeaf(modulePath));
+}
+
+function isAllowedConstantLikeImportName(name: string): boolean {
+  return ALLOWED_CONSTANT_LIKE_IMPORT_NAME_RE.test(name.trim());
 }
 
 function getLineNumber(content: string, index: number): number {
@@ -258,17 +264,24 @@ function validateImports(content: string): string[] {
     const hasNamespaceImport = /\*\s+as\s+[A-Za-z_$][\w$]*/.test(clause);
 
     if (hasDefaultImport) {
-      errors.push(`line ${line}: runtime default import from \"${modulePath}\" not allowed in fn.*.ts`);
+      const defaultImportName = beforeNamed.split(/\s+/).find(Boolean) ?? "";
+      if (!isAllowedConstantLikeImportName(defaultImportName)) {
+        errors.push(`line ${line}: runtime default import from \"${modulePath}\" not allowed in fn.*.ts`);
+      }
     }
 
     if (hasNamespaceImport) {
-      errors.push(`line ${line}: runtime namespace import from \"${modulePath}\" not allowed in fn.*.ts`);
+      const namespaceImportName = clause.match(/\*\s+as\s+([A-Za-z_$][\w$]*)/)?.[1] ?? "";
+      if (!isAllowedConstantLikeImportName(namespaceImportName)) {
+        errors.push(`line ${line}: runtime namespace import from \"${modulePath}\" not allowed in fn.*.ts`);
+      }
     }
 
     if (namedMatch) {
       for (const specifier of splitNamedSpecifiers(namedMatch[1] ?? "")) {
         if (specifier.startsWith("type ")) continue;
         const importedName = specifier.split(/\s+as\s+/i).at(-1) ?? specifier;
+        if (isAllowedConstantLikeImportName(importedName)) continue;
         errors.push(
           `line ${line}: runtime import \"${importedName.trim()}\" from \"${modulePath}\" not allowed in fn.*.ts`,
         );
@@ -476,7 +489,7 @@ export default function fnCheckExtension(pi: ExtensionAPI) {
       if (ctx.hasUI) {
         ctx.ui.notify(buildError, "warning");
       }
-      return block(buildError);
+      return { block: true, reason: buildError };
     }
 
     if (typeof nextContent !== "string") {

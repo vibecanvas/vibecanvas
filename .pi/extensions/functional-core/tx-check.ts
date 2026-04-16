@@ -22,11 +22,13 @@ type TDeclKind = "function" | "type" | "class" | "value";
 const TX_FILE_RE = /^tx\..+\.ts$/;
 const TX_TEST_FILE_RE = /^tx\..+\.test\.ts$/;
 const ALLOWED_RUNTIME_IMPORT_RE = /^(fn|fx|tx)\..+$/;
+const ALLOWED_CONSTANT_LIKE_IMPORT_NAME_RE = /^[A-Z0-9_]+$/;
 const TX_CHECK_RULES = [
   "ignore tx.*.test.ts files",
   "exported functions must start with tx",
-  "imports must be type-only unless imported module leaf starts with fn., fx., or tx., or is exactly CONSTANTS",
+  "imports must be type-only unless imported module leaf starts with fn., fx., or tx., is exactly CONSTANTS, or the imported runtime binding name is UPPER_CASE / underscore style",
   "CONSTANTS.ts imports are allowed for shared local constants",
+  "UPPER_CASE runtime value imports like THEME_STROKE_WIDTH_VALUE_MAP are allowed from any module",
   "no direct use of runtime globals like window, fetch, Bun, process, console, globalThis",
   "do not export classes or other runtime values; only functions and types",
   "every tx* function must have exactly 2 params",
@@ -63,6 +65,10 @@ function isAllowedConstantsImport(modulePath: string): boolean {
 
 function isAllowedRuntimeImport(modulePath: string): boolean {
   return ALLOWED_RUNTIME_IMPORT_RE.test(getModuleLeaf(modulePath));
+}
+
+function isAllowedConstantLikeImportName(name: string): boolean {
+  return ALLOWED_CONSTANT_LIKE_IMPORT_NAME_RE.test(name.trim());
 }
 
 function getLineNumber(content: string, index: number): number {
@@ -265,17 +271,24 @@ function validateImports(content: string): string[] {
     const hasNamespaceImport = /\*\s+as\s+[A-Za-z_$][\w$]*/.test(clause);
 
     if (hasDefaultImport) {
-      errors.push(`line ${line}: runtime default import from \"${modulePath}\" not allowed in tx.*.ts`);
+      const defaultImportName = beforeNamed.split(/\s+/).find(Boolean) ?? "";
+      if (!isAllowedConstantLikeImportName(defaultImportName)) {
+        errors.push(`line ${line}: runtime default import from \"${modulePath}\" not allowed in tx.*.ts`);
+      }
     }
 
     if (hasNamespaceImport) {
-      errors.push(`line ${line}: runtime namespace import from \"${modulePath}\" not allowed in tx.*.ts`);
+      const namespaceImportName = clause.match(/\*\s+as\s+([A-Za-z_$][\w$]*)/)?.[1] ?? "";
+      if (!isAllowedConstantLikeImportName(namespaceImportName)) {
+        errors.push(`line ${line}: runtime namespace import from \"${modulePath}\" not allowed in tx.*.ts`);
+      }
     }
 
     if (namedMatch) {
       for (const specifier of splitNamedSpecifiers(namedMatch[1] ?? "")) {
         if (specifier.startsWith("type ")) continue;
         const importedName = specifier.split(/\s+as\s+/i).at(-1) ?? specifier;
+        if (isAllowedConstantLikeImportName(importedName)) continue;
         errors.push(
           `line ${line}: runtime import \"${importedName.trim()}\" from \"${modulePath}\" not allowed in tx.*.ts`,
         );
@@ -447,7 +460,7 @@ function validateTxFunctionParams(content: string): string[] {
   const clean = maskCommentsAndStrings(content);
   const signatures: Array<{ name: string; params: string; line: number }> = [];
 
-  for (const match of clean.matchAll(/(^|\n)\s*(?:export\s+)?(?:async\s+)?function\s+(tx[A-Za-z_$][\w$]*)\s*\(([^)]*)\)/g)) {
+  for (const match of clean.matchAll(/(^|\n)\s*export\s+(?:default\s+)?(?:async\s+)?function\s+(tx[A-Za-z_$][\w$]*)\s*\(([^)]*)\)/g)) {
     signatures.push({
       name: match[2] ?? "",
       params: match[3] ?? "",
@@ -455,7 +468,7 @@ function validateTxFunctionParams(content: string): string[] {
     });
   }
 
-  for (const match of clean.matchAll(/(^|\n)\s*(?:export\s+)?(?:const|let|var)\s+(tx[A-Za-z_$][\w$]*)\s*=\s*(?:async\s*)?(?:function\s*)?\(([^)]*)\)\s*=>?/g)) {
+  for (const match of clean.matchAll(/(^|\n)\s*export\s+(?:const|let|var)\s+(tx[A-Za-z_$][\w$]*)\s*=\s*(?:async\s*)?(?:function\s*)?\(([^)]*)\)\s*=>?/g)) {
     signatures.push({
       name: match[2] ?? "",
       params: match[3] ?? "",
@@ -568,7 +581,7 @@ export default function txCheckExtension(pi: ExtensionAPI) {
       if (ctx.hasUI) {
         ctx.ui.notify(buildError, "warning");
       }
-      return block(buildError);
+      return { block: true, reason: buildError };
     }
 
     if (typeof nextContent !== "string") {

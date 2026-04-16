@@ -22,11 +22,13 @@ type TDeclKind = "function" | "type" | "class" | "value";
 const FX_FILE_RE = /^fx\..+\.ts$/;
 const FX_TEST_FILE_RE = /^fx\..+\.test\.ts$/;
 const ALLOWED_RUNTIME_IMPORT_RE = /^(fn|fx)\..+$/;
+const ALLOWED_CONSTANT_LIKE_IMPORT_NAME_RE = /^[A-Z0-9_]+$/;
 const FX_CHECK_RULES = [
   "ignore fx.*.test.ts files",
   "exported functions must start with fx",
-  "imports must be type-only unless imported module leaf starts with fn., fx., or is exactly CONSTANTS",
+  "imports must be type-only unless imported module leaf starts with fn., fx., is exactly CONSTANTS, or the imported runtime binding name is UPPER_CASE / underscore style",
   "CONSTANTS.ts imports are allowed for shared local constants",
+  "UPPER_CASE runtime value imports like THEME_STROKE_WIDTH_VALUE_MAP are allowed from any module",
   "no direct use of runtime globals like window, fetch, Bun, process, console, globalThis",
   "do not export classes or other runtime values; only functions and types",
   "every fx* function must have exactly 2 params",
@@ -62,6 +64,10 @@ function isAllowedConstantsImport(modulePath: string): boolean {
 
 function isAllowedRuntimeImport(modulePath: string): boolean {
   return ALLOWED_RUNTIME_IMPORT_RE.test(getModuleLeaf(modulePath));
+}
+
+function isAllowedConstantLikeImportName(name: string): boolean {
+  return ALLOWED_CONSTANT_LIKE_IMPORT_NAME_RE.test(name.trim());
 }
 
 function getLineNumber(content: string, index: number): number {
@@ -243,6 +249,28 @@ function splitNamedSpecifiers(text: string): string[] {
     .filter(Boolean);
 }
 
+function getImportAdvice(modulePath: string): string {
+  if (modulePath === "solid-js" || modulePath.startsWith("solid-js/")) {
+    return " Consider moving this UI/orchestration code out of fx.*.ts, or rename/split the file so the runtime UI layer is not inside fx.*.";
+  }
+
+  if (
+    modulePath === "fs" ||
+    modulePath === "path" ||
+    modulePath.startsWith("node:fs") ||
+    modulePath.startsWith("node:path") ||
+    modulePath.includes("drizzle-orm")
+  ) {
+    return " Consider moving this to tx.*.ts or another shell/orchestration layer; fx.*.ts should avoid runtime fs/path/db migration imports.";
+  }
+
+  if (getModuleLeaf(modulePath).startsWith("tx.")) {
+    return " fx.*.ts should avoid runtime tx.* imports; consider splitting read/write responsibilities or moving orchestration into tx.*.ts.";
+  }
+
+  return "";
+}
+
 function validateImports(content: string): string[] {
   const errors: string[] = [];
   const clean = maskComments(content);
@@ -253,6 +281,7 @@ function validateImports(content: string): string[] {
     const modulePath = match[4] ?? "";
     const start = (match.index ?? 0) + (match[1]?.length ?? 0);
     const line = getLineNumber(clean, start);
+    const advice = getImportAdvice(modulePath);
 
     if (!clause || clause.startsWith("type ")) continue;
     if (isAllowedRuntimeImport(modulePath)) continue;
@@ -264,19 +293,26 @@ function validateImports(content: string): string[] {
     const hasNamespaceImport = /\*\s+as\s+[A-Za-z_$][\w$]*/.test(clause);
 
     if (hasDefaultImport) {
-      errors.push(`line ${line}: runtime default import from \"${modulePath}\" not allowed in fx.*.ts`);
+      const defaultImportName = beforeNamed.split(/\s+/).find(Boolean) ?? "";
+      if (!isAllowedConstantLikeImportName(defaultImportName)) {
+        errors.push(`line ${line}: runtime default import from \"${modulePath}\" not allowed in fx.*.ts.${advice}`);
+      }
     }
 
     if (hasNamespaceImport) {
-      errors.push(`line ${line}: runtime namespace import from \"${modulePath}\" not allowed in fx.*.ts`);
+      const namespaceImportName = clause.match(/\*\s+as\s+([A-Za-z_$][\w$]*)/)?.[1] ?? "";
+      if (!isAllowedConstantLikeImportName(namespaceImportName)) {
+        errors.push(`line ${line}: runtime namespace import from \"${modulePath}\" not allowed in fx.*.ts.${advice}`);
+      }
     }
 
     if (namedMatch) {
       for (const specifier of splitNamedSpecifiers(namedMatch[1] ?? "")) {
         if (specifier.startsWith("type ")) continue;
         const importedName = specifier.split(/\s+as\s+/i).at(-1) ?? specifier;
+        if (isAllowedConstantLikeImportName(importedName)) continue;
         errors.push(
-          `line ${line}: runtime import \"${importedName.trim()}\" from \"${modulePath}\" not allowed in fx.*.ts`,
+          `line ${line}: runtime import \"${importedName.trim()}\" from \"${modulePath}\" not allowed in fx.*.ts.${advice}`,
         );
       }
     }
@@ -446,7 +482,7 @@ function validateFxFunctionParams(content: string): string[] {
   const clean = maskCommentsAndStrings(content);
   const signatures: Array<{ name: string; params: string; line: number }> = [];
 
-  for (const match of clean.matchAll(/(^|\n)\s*(?:export\s+)?(?:async\s+)?function\s+(fx[A-Za-z_$][\w$]*)\s*\(([^)]*)\)/g)) {
+  for (const match of clean.matchAll(/(^|\n)\s*export\s+(?:default\s+)?(?:async\s+)?function\s+(fx[A-Za-z_$][\w$]*)\s*\(([^)]*)\)/g)) {
     signatures.push({
       name: match[2] ?? "",
       params: match[3] ?? "",
@@ -454,7 +490,7 @@ function validateFxFunctionParams(content: string): string[] {
     });
   }
 
-  for (const match of clean.matchAll(/(^|\n)\s*(?:export\s+)?(?:const|let|var)\s+(fx[A-Za-z_$][\w$]*)\s*=\s*(?:async\s*)?(?:function\s*)?\(([^)]*)\)\s*=>?/g)) {
+  for (const match of clean.matchAll(/(^|\n)\s*export\s+(?:const|let|var)\s+(fx[A-Za-z_$][\w$]*)\s*=\s*(?:async\s*)?(?:function\s*)?\(([^)]*)\)\s*=>?/g)) {
     signatures.push({
       name: match[2] ?? "",
       params: match[3] ?? "",
@@ -567,7 +603,7 @@ export default function fxCheckExtension(pi: ExtensionAPI) {
       if (ctx.hasUI) {
         ctx.ui.notify(buildError, "warning");
       }
-      return block(buildError);
+      return { block: true, reason: buildError };
     }
 
     if (typeof nextContent !== "string") {
