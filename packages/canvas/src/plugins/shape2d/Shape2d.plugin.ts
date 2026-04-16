@@ -437,7 +437,7 @@ export function createShape2dPlugin(): IPlugin<{
         shortcuts: string[];
         priority: number;
       }) => {
-        editor.registerTool(ctx, {
+        editor.registerTool({
           id: args.id,
           label: args.label,
           icon: args.icon,

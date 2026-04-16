@@ -407,7 +407,7 @@ export function createImagePlugin(): IPlugin<{
         }];
       });
 
-      editor.registerTool(ctx, {
+      editor.registerTool({
         id: "image",
         label: "Image",
         icon: ImageIcon,

@@ -430,7 +430,7 @@ export function createTextPlugin(): IPlugin<{
       });
 
       ctx.hooks.init.tap(() => {
-        editor.registerTool(ctx, {
+        editor.registerTool({
           id: "text",
           label: "Text",
           icon: Type,

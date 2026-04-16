@@ -850,7 +850,7 @@ export function createShape1dPlugin(): IPlugin<{
       });
 
       ctx.hooks.init.tap(() => {
-        editor.registerTool(ctx, {
+        editor.registerTool({
           id: "arrow",
           label: "Arrow",
           icon: ArrowRight,
@@ -858,7 +858,7 @@ export function createShape1dPlugin(): IPlugin<{
           priority: 50,
           behavior: { type: "mode", mode: "draw-create" },
         });
-        editor.registerTool(ctx, {
+        editor.registerTool({
           id: "line",
           label: "Line",
           icon: Minus,

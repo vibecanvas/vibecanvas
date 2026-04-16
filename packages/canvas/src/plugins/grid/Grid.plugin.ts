@@ -1,11 +1,11 @@
 import type { IPlugin } from "@vibecanvas/runtime";
 import type { ThemeService } from "@vibecanvas/service-theme";
-import Grid2x2 from "lucide-static/icons/grid-2x2.svg?raw";
 import Konva from "konva";
+import Grid2x2 from "lucide-static/icons/grid-2x2.svg?raw";
+import type { IHooks } from "../../runtime";
 import type { CameraService } from "../../services/camera/CameraService";
 import type { EditorService } from "../../services/editor/EditorService";
 import type { SceneService } from "../../services/scene/SceneService";
-import type { IHooks } from "../../runtime";
 import { txDrawGrid } from "./tx.draw";
 
 export function createGridPlugin(): IPlugin<{
@@ -20,28 +20,11 @@ export function createGridPlugin(): IPlugin<{
     name: "grid",
     apply(ctx) {
       const editor = ctx.services.require("editor");
-
-      const syncGridTool = () => {
-        editor.registerTool(ctx, {
-          id: "grid",
-          label: "Grid",
-          icon: Grid2x2,
-          shortcuts: ["g"],
-          priority: 9000,
-          active: visible,
-          onSelect: () => {
-            ctx.hooks.gridVisible.call(!visible);
-          },
-          behavior: { type: "action" },
-        });
-      };
-
-      syncGridTool();
+      const scene = ctx.services.require("scene");
+      const camera = ctx.services.require("camera");
+      const theme = ctx.services.require("theme");
 
       ctx.hooks.init.tap(() => {
-        const scene = ctx.services.require("scene");
-        const camera = ctx.services.require("camera");
-        const theme = ctx.services.require("theme");
         const gridShape = new Konva.Shape({
           listening: false,
           sceneFunc: (shapeContext: Konva.Context) => {
@@ -65,26 +48,38 @@ export function createGridPlugin(): IPlugin<{
           },
         });
 
+        editor.registerTool({
+          id: "grid",
+          label: "Grid",
+          icon: Grid2x2,
+          shortcuts: ["g"],
+          priority: 9000,
+          active: visible,
+          onSelect: () => {
+            ctx.hooks.gridVisible.call(!visible);
+          },
+          behavior: { type: "action" },
+        });
+
         scene.staticBackgroundLayer.add(gridShape);
         scene.staticBackgroundLayer.batchDraw();
+      });
 
-        camera.hooks.change.tap(() => {
-          scene.staticBackgroundLayer.batchDraw();
-        });
+      camera.hooks.change.tap(() => {
+        scene.staticBackgroundLayer.batchDraw();
+      });
 
-        theme.hooks.change.tap(() => {
-          scene.staticBackgroundLayer.batchDraw();
-        });
+      theme.hooks.change.tap(() => {
+        scene.staticBackgroundLayer.batchDraw();
+      });
 
-        scene.hooks.resize.tap(() => {
-          scene.staticBackgroundLayer.batchDraw();
-        });
+      scene.hooks.resize.tap(() => {
+        scene.staticBackgroundLayer.batchDraw();
+      });
 
-        ctx.hooks.gridVisible.tap((value) => {
-          visible = value;
-          syncGridTool();
-          scene.staticBackgroundLayer.batchDraw();
-        });
+      ctx.hooks.gridVisible.tap((value) => {
+        visible = value;
+        scene.staticBackgroundLayer.batchDraw();
       });
 
       ctx.hooks.destroy.tap(() => {

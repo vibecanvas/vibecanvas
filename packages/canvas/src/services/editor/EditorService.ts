@@ -1,13 +1,14 @@
-import type { IService } from "@vibecanvas/runtime";
+import type { IService, IStartableService } from "@vibecanvas/runtime";
 import type { TElement, TGroup } from "@vibecanvas/service-automerge/types/canvas-doc.types";
 import { SyncHook } from "@vibecanvas/tapable";
 import type Konva from "konva";
 import type { KonvaEventObject, Node, NodeConfig } from "konva/lib/Node";
-import type { IHooks } from "src/runtime";
+import type { IHooks, IRuntimeConfig } from "src/runtime";
 import type { CanvasRegistryService } from "../canvas-registry/CanvasRegistryService";
 import type { CrdtService } from "../crdt/CrdtService";
 import type { SceneService } from "../scene/SceneService";
 import type { SelectionService } from "../selection/SelectionService";
+import { IServiceContext } from "@vibecanvas/runtime/interface.js";
 
 /**
  * Runtime mode for a registered editor tool.
@@ -112,7 +113,7 @@ function getCanvasPoint(scene: SceneService, event: TEditorToolPointerEvent): TE
  * Also owns tool registry, current active tool,
  * transform refs, and node<->element registries.
  */
-export class EditorService implements IService<TEditorServiceHooks> {
+export class EditorService implements IService<TEditorServiceHooks>, IStartableService {
   readonly name = "editor";
 
   readonly hooks: TEditorServiceHooks = {
@@ -124,6 +125,7 @@ export class EditorService implements IService<TEditorServiceHooks> {
   };
 
   private readonly tools = new Map<string, TEditorTool>();
+  private readonly runtimeHooks!: IHooks;
 
   activeToolId = "select";
   editingTextId: string | null = null;
@@ -138,15 +140,20 @@ export class EditorService implements IService<TEditorServiceHooks> {
     private crdt: CrdtService,
     private selection: SelectionService,
   ) { }
+
+  start(ctx: IServiceContext<IHooks, IRuntimeConfig>): void | Promise<void> {
+    // @ts-expect-error this is safe, start runs before any use
+    this.runtimeHooks = ctx.hooks;
+  }
   /**
    * Adds or replaces a tool in the editor registry.
    */
-  registerTool(portal: { hooks: IHooks }, tool: TEditorTool) {
+  registerTool(tool: TEditorTool) {
     this.tools.set(tool.id, tool);
 
     // setup create-draw
     if (tool.behavior.type === "mode" && tool.behavior.mode === "draw-create" && tool.drawCreate) {
-      portal.hooks.pointerDown.tap((event) => {
+      this.runtimeHooks.pointerDown.tap((event) => {
         if (this.activeToolId !== tool.id) {
           return;
         }
@@ -163,7 +170,7 @@ export class EditorService implements IService<TEditorServiceHooks> {
         }
       });
 
-      portal.hooks.pointerMove.tap((event) => {
+      this.runtimeHooks.pointerMove.tap((event) => {
         if (this.activeToolId !== tool.id) {
           return;
         }
@@ -187,7 +194,7 @@ export class EditorService implements IService<TEditorServiceHooks> {
         });
       });
 
-      portal.hooks.pointerUp.tap(() => {
+      this.runtimeHooks.pointerUp.tap(() => {
         if (this.activeToolId !== tool.id) {
           return;
         }

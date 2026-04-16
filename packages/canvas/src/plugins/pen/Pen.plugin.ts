@@ -616,7 +616,7 @@ export function createPenPlugin(): IPlugin<{
       });
 
       ctx.hooks.init.tap(() => {
-        editor.registerTool(ctx, {
+        editor.registerTool({
           id: "pen",
           label: "Pen",
           icon: Pencil,
