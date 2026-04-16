@@ -7,7 +7,7 @@ import type { HistoryService } from "../../services/history/HistoryService";
 import type { LoggingService } from "../../services/logging/LoggingService";
 import type { SceneService } from "../../services/scene/SceneService";
 import type { SelectionService } from "../../services/selection/SelectionService";
-import type { IHooks, TElementPointerEvent } from "../../runtime";
+import type { IRuntimeHooks, TElementPointerEvent } from "../../runtime";
 import { fxSerializeSubtreeElements } from "./fn.serialize-subtree-elements";
 
 type TGroupDragMetrics = {
@@ -88,7 +88,7 @@ export type TPortalSetupGroupNode = {
   logging: LoggingService;
   render: SceneService;
   selection: SelectionService;
-  hooks: IHooks;
+  hooks: IRuntimeHooks;
   Shape: typeof Konva.Shape;
   refreshBoundaries: () => void;
   startCloneDrag: (group: Konva.Group) => void;

@@ -1,6 +1,6 @@
 import type { IPlugin } from "@vibecanvas/runtime";
 import type { HistoryService } from "../../services/history/HistoryService";
-import type { IHooks } from "../../runtime";
+import type { IRuntimeHooks } from "../../runtime";
 
 /**
  * Handles keyboard shortcuts for undo and redo.
@@ -8,7 +8,7 @@ import type { IHooks } from "../../runtime";
  */
 export function createHistoryControlPlugin(): IPlugin<{
   history: HistoryService;
-}, IHooks> {
+}, IRuntimeHooks> {
   return {
     name: "history-control",
     apply(ctx) {

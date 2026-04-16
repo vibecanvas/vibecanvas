@@ -11,7 +11,7 @@ import type { EditorService } from "../../services/editor/EditorService";
 import type { HistoryService } from "../../services/history/HistoryService";
 import type { SceneService } from "../../services/scene/SceneService";
 import type { SelectionService } from "../../services/selection/SelectionService";
-import type { IHooks } from "../../runtime";
+import type { IRuntimeHooks } from "../../runtime";
 import { fxIsCanvasGroupNode } from "../../core/fx.canvas-node-semantics";
 import { fxGetProxyDragTarget } from "./fx.proxy-drag-target";
 import { fxGetProxyBounds } from "./fx.proxy-bounds";
@@ -251,7 +251,7 @@ export function createTransformPlugin(): IPlugin<{
   scene: SceneService;
   selection: SelectionService;
   theme: ThemeService;
-}, IHooks> {
+}, IRuntimeHooks> {
   let transformer: Konva.Transformer | null = null;
   let dragProxy: Konva.Rect | null = null;
   let dragProxyState: TTransformDragProxyState | null = null;

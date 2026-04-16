@@ -9,7 +9,7 @@ import type { HistoryService } from "../../services/history/HistoryService";
 import type { RenderOrderService } from "../../services/render-order/RenderOrderService";
 import type { SceneService } from "../../services/scene/SceneService";
 import type { SelectionService } from "../../services/selection/SelectionService";
-import type { IHooks } from "../../runtime";
+import type { IRuntimeHooks } from "../../runtime";
 import { CanvasMode } from "../../services/selection/CONSTANTS";
 import { txDeleteSelection } from "./tx.delete-selection";
 import { txHandleElementPointerDoubleClick } from "./tx.handle-element-pointer-double-click";
@@ -87,7 +87,7 @@ export function createSelectPlugin(): IPlugin<{
   renderOrder: RenderOrderService;
   selection: SelectionService;
   theme: ThemeService;
-}, IHooks> {
+}, IRuntimeHooks> {
   return {
     name: "select",
     apply(ctx) {

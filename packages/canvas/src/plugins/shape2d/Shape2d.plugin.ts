@@ -18,7 +18,7 @@ import {
   type TShape2dToolId,
 } from "../../core/fn.shape2d";
 import { txSetNodeZIndex } from "../../core/tx.set-node-z-index";
-import type { IHooks } from "../../runtime";
+import type { IRuntimeHooks } from "../../runtime";
 import type { CameraService } from "../../services/camera/CameraService";
 import type { CanvasRegistryService } from "../../services/canvas-registry/CanvasRegistryService";
 import type { ContextMenuService } from "../../services/context-menu/ContextMenuService";
@@ -170,7 +170,7 @@ export function createShape2dPlugin(): IPlugin<{
   renderOrder: RenderOrderService;
   selection: SelectionService;
   theme: ThemeService;
-}, IHooks> {
+}, IRuntimeHooks> {
   return {
     name: "shape2d",
     apply(ctx) {

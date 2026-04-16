@@ -5,7 +5,7 @@ import type { CrdtService } from "../../services/crdt/CrdtService";
 import type { HistoryService } from "../../services/history/HistoryService";
 import type { SceneService } from "../../services/scene/SceneService";
 import type { SelectionService } from "../../services/selection/SelectionService";
-import type { IHooks, TElementPointerEvent } from "../../runtime";
+import type { IRuntimeHooks, TElementPointerEvent } from "../../runtime";
 import { fxGetCanvasAncestorGroups } from "../../core/fx.canvas-node-semantics";
 import { txUpdateImageNodeFromElement } from "./tx.update-image-node-from-element";
 import type { TPortalUpdateImageNodeFromElement } from "./tx.update-image-node-from-element";
@@ -16,7 +16,7 @@ export type TPortalSetupImageListeners = {
   history: HistoryService;
   render: SceneService;
   selection: SelectionService;
-  hooks: IHooks;
+  hooks: IRuntimeHooks;
   startDragClone: (args: {
     node: Konva.Node;
     selection: Array<Konva.Group | Konva.Shape>;

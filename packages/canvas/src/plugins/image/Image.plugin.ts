@@ -13,7 +13,7 @@ import type { HistoryService } from "../../services/history/HistoryService";
 import type { RenderOrderService } from "../../services/render-order/RenderOrderService";
 import type { SceneService } from "../../services/scene/SceneService";
 import type { SelectionService } from "../../services/selection/SelectionService";
-import type { IHooks } from "../../runtime";
+import type { IRuntimeHooks } from "../../runtime";
 import { fxGetCanvasAncestorGroups, fxGetCanvasParentGroupId } from "../../core/fx.canvas-node-semantics";
 import { fxFilterSelection } from "../../core/fx.filter-selection";
 import { fnGetNodeZIndex } from "../../core/fn.get-node-z-index";
@@ -266,7 +266,7 @@ export function createImagePlugin(): IPlugin<{
   scene: SceneService;
   renderOrder: RenderOrderService;
   selection: SelectionService;
-}, IHooks> {
+}, IRuntimeHooks> {
   let fileInput: HTMLInputElement | null = null;
 
   return {

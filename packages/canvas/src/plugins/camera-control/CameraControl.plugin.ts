@@ -1,7 +1,7 @@
 import type { IPlugin } from "@vibecanvas/runtime";
 import type { CameraService } from "../../services/camera/CameraService";
 import type { SceneService } from "../../services/scene/SceneService";
-import type { IHooks } from "../../runtime";
+import type { IRuntimeHooks } from "../../runtime";
 import { fxReadCameraStateFromLocalStorage } from "./fx.read-camera-state-from-localstorage";
 import { fxGetHandLayerStyle } from "./fn.get-hand-layer-style";
 import { fxGetPointerDelta } from "./fn.get-pointer-delta";
@@ -25,7 +25,7 @@ function getDefaultStorage(): Storage | null {
 export function createCameraControlPlugin(): IPlugin<{
   camera: CameraService;
   scene: SceneService;
-}, IHooks> {
+}, IRuntimeHooks> {
   let handLayer: HTMLDivElement | null = null;
   let isHandDragging = false;
   let activePointerId: number | null = null;

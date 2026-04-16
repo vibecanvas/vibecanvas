@@ -2,7 +2,7 @@ import type { IService, IStartableService } from "@vibecanvas/runtime";
 import type { IServiceContext } from "@vibecanvas/runtime/interface.js";
 import { SyncHook } from "@vibecanvas/tapable";
 import type Konva from "konva";
-import type { IHooks, IRuntimeConfig } from "src/runtime";
+import type { IRuntimeHooks, IRuntimeConfig } from "src/runtime";
 import type { CanvasRegistryService } from "../canvas-registry/CanvasRegistryService";
 import type { CrdtService } from "../crdt/CrdtService";
 import type { SceneService } from "../scene/SceneService";
@@ -25,7 +25,7 @@ export class EditorService implements IService<TEditorServiceHooks>, IStartableS
   };
 
   private readonly tools = new Map<string, TEditorTool>();
-  private readonly runtimeHooks!: IHooks;
+  private readonly runtimeHooks!: IRuntimeHooks;
 
   activeToolId = "select";
   editingTextId: string | null = null;
@@ -40,7 +40,7 @@ export class EditorService implements IService<TEditorServiceHooks>, IStartableS
     private selection: SelectionService,
   ) { }
 
-  start(ctx: IServiceContext<IHooks, IRuntimeConfig>): void | Promise<void> {
+  start(ctx: IServiceContext<IRuntimeHooks, IRuntimeConfig>): void | Promise<void> {
     // @ts-expect-error this is safe, start runs before any use
     this.runtimeHooks = ctx.hooks;
   }

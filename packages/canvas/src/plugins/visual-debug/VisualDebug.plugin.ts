@@ -1,7 +1,7 @@
 import type { IPlugin } from "@vibecanvas/runtime";
 import type { ThemeService } from "@vibecanvas/service-theme";
 import Konva from "konva";
-import type { IHooks } from "../../runtime";
+import type { IRuntimeHooks } from "../../runtime";
 import type { CameraService } from "../../services/camera/CameraService";
 import type { CanvasRegistryService } from "../../services/canvas-registry/CanvasRegistryService";
 import type { SceneService } from "../../services/scene/SceneService";
@@ -46,7 +46,7 @@ export function createVisualDebugPlugin(): IPlugin<{
   scene: SceneService;
   selection: SelectionService;
   theme: ThemeService;
-}, IHooks> {
+}, IRuntimeHooks> {
   return {
     name: "visual-debug",
     apply(ctx) {

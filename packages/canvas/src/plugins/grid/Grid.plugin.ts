@@ -2,7 +2,7 @@ import type { IPlugin } from "@vibecanvas/runtime";
 import type { ThemeService } from "@vibecanvas/service-theme";
 import Konva from "konva";
 import Grid2x2 from "lucide-static/icons/grid-2x2.svg?raw";
-import type { IHooks } from "../../runtime";
+import type { IRuntimeHooks } from "../../runtime";
 import type { CameraService } from "../../services/camera/CameraService";
 import type { EditorService } from "../../services/editor/EditorService";
 import type { SceneService } from "../../services/scene/SceneService";
@@ -13,7 +13,7 @@ export function createGridPlugin(): IPlugin<{
   editor: EditorService;
   scene: SceneService;
   theme: ThemeService;
-}, IHooks> {
+}, IRuntimeHooks> {
   let visible = true;
 
   return {

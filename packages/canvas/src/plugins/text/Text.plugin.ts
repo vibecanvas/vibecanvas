@@ -14,7 +14,7 @@ import type { RenderOrderService } from "../../services/render-order/RenderOrder
 import type { SceneService } from "../../services/scene/SceneService";
 import type { TCanvasTransformAnchor, SelectionService, CanvasRegistryService } from "../../services";
 import { CanvasMode } from "../../services/selection/CONSTANTS";
-import type { IHooks } from "../../runtime";
+import type { IRuntimeHooks } from "../../runtime";
 import { fxCreateTextElement } from "./fn.create-text-element";
 import { fxToElement } from "./fx.to-element";
 import { txCreateTextCloneDrag } from "./tx.create-text-clone-drag";
@@ -176,7 +176,7 @@ export function createTextPlugin(): IPlugin<{
   renderOrder: RenderOrderService;
   selection: SelectionService;
   theme: ThemeService;
-}, IHooks> {
+}, IRuntimeHooks> {
   return {
     name: "text",
     apply(ctx) {

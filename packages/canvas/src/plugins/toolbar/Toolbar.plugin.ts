@@ -6,7 +6,7 @@ import { render } from "solid-js/web";
 import { RuntimeToolbar } from "../../components/FloatingCanvasToolbar/RuntimeToolbar";
 import type { SceneService } from "../../services/scene/SceneService";
 import type { SelectionService } from "../../services/selection/SelectionService";
-import type { IHooks } from "../../runtime";
+import type { IRuntimeHooks } from "../../runtime";
 import { CanvasMode } from "../../services/selection/CONSTANTS";
 import type { EditorService, TEditorTool } from "src/services/editor/EditorService";
 
@@ -126,7 +126,7 @@ export function createToolbarPlugin(): IPlugin<{
   editor: EditorService;
   scene: SceneService;
   selection: SelectionService;
-}, IHooks> {
+}, IRuntimeHooks> {
   let toolbarMount: ReturnType<typeof mountToolbar> | null = null;
   let toolBeforeSpaceHold: string | null = null;
 

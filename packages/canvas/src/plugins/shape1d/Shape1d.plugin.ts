@@ -8,7 +8,7 @@ import { resolveThemeColor, type ThemeService } from "@vibecanvas/service-theme"
 import { DEFAULT_STROKE_WIDTHS } from "../../components/SelectionStyleMenu/types";
 import { txSetNodeZIndex } from "../../core/tx.set-node-z-index";
 import { fxFilterSelection } from "../../core/fx.filter-selection";
-import type { IHooks } from "../../runtime";
+import type { IRuntimeHooks } from "../../runtime";
 import type { CameraService } from "../../services/camera/CameraService";
 import type { CanvasRegistryService } from "../../services/canvas-registry/CanvasRegistryService";
 import type { ContextMenuService } from "../../services/context-menu/ContextMenuService";
@@ -91,7 +91,7 @@ export function createShape1dPlugin(): IPlugin<{
   renderOrder: RenderOrderService;
   selection: SelectionService;
   theme: ThemeService;
-}, IHooks> {
+}, IRuntimeHooks> {
   let previewShape: TShape1dNode | null = null;
   let draftElementId: string | null = null;
   let draftStartPoint: TPoint | null = null;

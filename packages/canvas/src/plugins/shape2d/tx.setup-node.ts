@@ -1,7 +1,7 @@
 import type { TElement } from "@vibecanvas/service-automerge/types/canvas-doc.types";
 import type Konva from "konva";
 import { fxGetCanvasAncestorGroups, fxGetCanvasNodeKind, fxIsCanvasGroupNode } from "../../core/fx.canvas-node-semantics";
-import type { IHooks, TElementPointerEvent } from "../../runtime";
+import type { IRuntimeHooks, TElementPointerEvent } from "../../runtime";
 import type { CanvasRegistryService } from "../../services/canvas-registry/CanvasRegistryService";
 import type { CrdtService } from "../../services/crdt/CrdtService";
 import type { HistoryService } from "../../services/history/HistoryService";
@@ -17,7 +17,7 @@ export type TPortalSetupShape2dNode = {
   history: HistoryService;
   render: SceneService;
   selection: SelectionService;
-  hooks: IHooks;
+  hooks: IRuntimeHooks;
   createCloneDrag: (node: Konva.Shape) => Konva.Shape | null;
   filterSelection: (selection: Konva.Node[]) => Konva.Node[];
   safeStopDrag: (node: Konva.Node) => void;

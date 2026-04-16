@@ -1,6 +1,6 @@
 import type { IPlugin } from "@vibecanvas/runtime";
 import type { CameraService, CrdtService, EditorService, RenderOrderService, SceneService, SelectionService } from "../../services";
-import type { IHooks } from "../../runtime";
+import type { IRuntimeHooks } from "../../runtime";
 
 const HOSTED_COMPONENT_PLUGIN_ID = "hosted-component";
 
@@ -11,7 +11,7 @@ export function createHostedComponentPlugin(): IPlugin<{
   renderOrder: RenderOrderService;
   editor: EditorService;
   selection: SelectionService;
-}, IHooks> {
+}, IRuntimeHooks> {
   return {
     name: HOSTED_COMPONENT_PLUGIN_ID,
     apply(ctx) {

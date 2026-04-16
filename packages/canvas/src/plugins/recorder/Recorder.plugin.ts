@@ -3,7 +3,7 @@ import { createComponent, createSignal, type Accessor, type Setter } from "solid
 import Konva from "konva";
 import type { CrdtService } from "../../services/crdt/CrdtService";
 import type { SceneService } from "../../services/scene/SceneService";
-import type { IHooks, TMouseEvent, TPointerEvent } from "../../runtime";
+import type { IRuntimeHooks, TMouseEvent, TPointerEvent } from "../../runtime";
 import { render as renderSolid } from "solid-js/web";
 import { CanvasRecorder } from "../../components/CanvasRecorder";
 import {
@@ -201,7 +201,7 @@ function txRecordDragEvent(state: TRecorderState, render: SceneService, eventNam
   );
 }
 
-function setupHookCapture(args: { state: TRecorderState; render: SceneService; hooks: IHooks }) {
+function setupHookCapture(args: { state: TRecorderState; render: SceneService; hooks: IRuntimeHooks }) {
   const originalFire = Konva.Node.prototype.fire;
   Konva.Node.prototype.fire = (function (this: Konva.Node, eventType: string, evt?: object, bubble?: boolean) {
     if (eventType === "dragstart" || eventType === "dragmove" || eventType === "dragend") {
@@ -295,7 +295,7 @@ function setupCrdtCapture(args: { state: TRecorderState; crdt: CrdtService }) {
 export function createRecorderPlugin(): IPlugin<{
   crdt: CrdtService;
   scene: SceneService;
-}, IHooks> {
+}, IRuntimeHooks> {
   const state = createRecorderState();
 
   return {

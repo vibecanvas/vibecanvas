@@ -3,13 +3,13 @@ import type { IServiceContext } from "@vibecanvas/runtime/interface.js";
 import type { ThemeService } from "@vibecanvas/service-theme";
 import Konva from "konva";
 import type { CanvasRegistryService, ContextMenuService, CrdtService, EditorService, LoggingService } from "..";
-import type { IHooks, IRuntimeConfig } from "../../runtime";
+import type { IRuntimeHooks, IRuntimeConfig } from "../../runtime";
 import { WIDGET_HOST_ELEMENT_DATA_ATTR } from "./CONSTANTS";
 import { fxRegisterWidgetTool } from "./fx.register-tool";
 import type { IWidgetConfig, IWidgetManagerServiceHooks, IWidgetManagerServiceProps } from "./interface";
 
 
-export class WidgetManagerService implements IService<IWidgetManagerServiceHooks>, IStartableService<IHooks, IRuntimeConfig> {
+export class WidgetManagerService implements IService<IWidgetManagerServiceHooks>, IStartableService<IRuntimeHooks, IRuntimeConfig> {
   readonly name = "widget-manager";
   private crdtService: CrdtService;
   private contextMenuService: ContextMenuService;
@@ -17,7 +17,7 @@ export class WidgetManagerService implements IService<IWidgetManagerServiceHooks
   private editorService: EditorService;
   private themeService: ThemeService;
   private canvasRegistry: CanvasRegistryService;
-  private readonly runtimeHooks!: IHooks;
+  private readonly runtimeHooks!: IRuntimeHooks;
 
 
   constructor(props: IWidgetManagerServiceProps) {
@@ -30,7 +30,7 @@ export class WidgetManagerService implements IService<IWidgetManagerServiceHooks
     console.log('WidgetManagerService constructor', props)
   }
 
-  start(ctx: IServiceContext<IHooks, IRuntimeConfig>): void | Promise<void> {
+  start(ctx: IServiceContext<IRuntimeHooks, IRuntimeConfig>): void | Promise<void> {
     // @ts-expect-error this is safe, start runs before any other method
     this.runtimeHooks = ctx.hooks;
     this.setupExampleWidget();

@@ -15,7 +15,7 @@ import type { RenderOrderService } from "../../services/render-order/RenderOrder
 import type { SceneService } from "../../services/scene/SceneService";
 import type { SelectionService } from "../../services/selection/SelectionService";
 import { CanvasMode } from "../../services/selection/CONSTANTS";
-import type { IHooks } from "../../runtime";
+import type { IRuntimeHooks } from "../../runtime";
 import { fxIsCanvasGroupNode } from "../../core/fx.canvas-node-semantics";
 import { txCreateGroupCloneDrag } from "./tx.create-group-clone-drag";
 import { fxIsSceneNode } from "./fn.scene-node";
@@ -79,7 +79,7 @@ export function createGroupPlugin(): IPlugin<{
   renderOrder: RenderOrderService;
   selection: SelectionService;
   theme: ThemeService;
-}, IHooks> {
+}, IRuntimeHooks> {
   return {
     name: "group",
     apply(ctx) {

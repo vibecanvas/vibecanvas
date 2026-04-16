@@ -71,7 +71,7 @@ export type TWheelEvent = Konva.KonvaEventObject<WheelEvent>;
 
 export type TElementPointerEvent = KonvaEventObject<PointerEvent, Shape<ShapeConfig> | Group>;
 
-export interface IHooks {
+export interface IRuntimeHooks {
   /**
    * Called at the initialization stage.
    */
@@ -117,7 +117,7 @@ declare module "@vibecanvas/runtime" {
   }
 }
 
-function createHooks(): IHooks {
+function createHooks(): IRuntimeHooks {
   return {
     init: new SyncHook(),
     initAsync: new AsyncParallelHook(),
@@ -187,7 +187,7 @@ function createServices(config: {
 }
 
 export function buildRuntime(config: IRuntimeConfig) {
-  const plugins: Array<import("@vibecanvas/runtime").IPlugin<any, IHooks, IRuntimeConfig>> = [
+  const plugins: Array<import("@vibecanvas/runtime").IPlugin<any, IRuntimeHooks, IRuntimeConfig>> = [
     createEventListenerPlugin(),
     createGridPlugin(),
     createToolbarPlugin(),
@@ -213,7 +213,7 @@ export function buildRuntime(config: IRuntimeConfig) {
     plugins.splice(5, 0, createRecorderPlugin());
   }
 
-  return createRuntime<IHooks, IRuntimeConfig>({
+  return createRuntime<IRuntimeHooks, IRuntimeConfig>({
     config,
     hooks: createHooks(),
     plugins,

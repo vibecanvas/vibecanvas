@@ -1,7 +1,7 @@
 import type { IPlugin } from "@vibecanvas/runtime";
 import Konva from "konva";
 import type { SceneService } from "../../services/scene/SceneService";
-import type { IHooks, TElementPointerEvent, TMouseEvent, TPointerEvent, TWheelEvent } from "../../runtime";
+import type { IRuntimeHooks, TElementPointerEvent, TMouseEvent, TPointerEvent, TWheelEvent } from "../../runtime";
 
 function isInsideHostedWidget(target: EventTarget | null) {
   return target instanceof HTMLElement && target.closest('[data-hosted-widget-root="true"]') !== null;
@@ -60,7 +60,7 @@ function getElementPointerEvent(event: TPointerEvent) {
  */
 export function createEventListenerPlugin(): IPlugin<{
   scene: SceneService;
-}, IHooks> {
+}, IRuntimeHooks> {
   return {
     name: "event-listener",
     apply(ctx) {

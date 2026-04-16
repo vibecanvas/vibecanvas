@@ -6,7 +6,7 @@ import type { HistoryService } from "../../services/history/HistoryService";
 import type { RenderOrderService } from "../../services/render-order/RenderOrderService";
 import type { SceneService } from "../../services/scene/SceneService";
 import type { SelectionService } from "../../services/selection/SelectionService";
-import type { IHooks, TElementPointerEvent } from "../../runtime";
+import type { IRuntimeHooks, TElementPointerEvent } from "../../runtime";
 import { fxGetCanvasAncestorGroups, fxGetCanvasNodeKind, fxIsCanvasGroupNode } from "../../core/fx.canvas-node-semantics";
 import { fxFilterSelection } from "../../core/fx.filter-selection";
 import { fxSerializeSubtreeElements } from "../group/fn.serialize-subtree-elements";
@@ -31,7 +31,7 @@ export function txSafeStopDrag(portal: TPortalTxSafeStopDrag, args: TArgsTxSafeS
 
 export type TPortalTxShape1dRuntime = TPortalTxRecordShape1dHistory & {
   Konva: typeof Konva;
-  hooks: IHooks;
+  hooks: IRuntimeHooks;
   theme: { getTheme(): string | TThemeDefinition };
   createId: () => string;
   now: () => number;

@@ -1,7 +1,7 @@
 import type { IPlugin } from "@vibecanvas/runtime";
 import type { ContextMenuService } from "../../services/context-menu/ContextMenuService";
 import type { RenderOrderService } from "../../services/render-order/RenderOrderService";
-import type { IHooks } from "../../runtime";
+import type { IRuntimeHooks } from "../../runtime";
 
 function hasSameParent(selection: Parameters<RenderOrderService["bringSelectionToFront"]>[0]) {
   return selection.length <= 1 || selection.every((node) => node.getParent() === selection[0]?.getParent());
@@ -10,7 +10,7 @@ function hasSameParent(selection: Parameters<RenderOrderService["bringSelectionT
 export function createRenderOrderPlugin(): IPlugin<{
   contextMenu: ContextMenuService;
   renderOrder: RenderOrderService;
-}, IHooks> {
+}, IRuntimeHooks> {
   return {
     name: "render-order",
     apply(ctx) {

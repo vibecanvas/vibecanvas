@@ -6,7 +6,7 @@ import { throttle } from "@solid-primitives/scheduled";
 import { resolveThemeColor, type ThemeService, type TThemeRememberedStyle } from "@vibecanvas/service-theme";
 import { PEN_STROKE_WIDTHS } from "../../components/SelectionStyleMenu/types";
 import { getStroke } from "perfect-freehand";
-import type { IHooks, TElementPointerEvent } from "../../runtime";
+import type { IRuntimeHooks, TElementPointerEvent } from "../../runtime";
 import type { CanvasRegistryService, TCanvasTransformAnchor } from "../../services";
 import type { CrdtService } from "../../services/crdt/CrdtService";
 import type { HistoryService } from "../../services/history/HistoryService";
@@ -172,7 +172,7 @@ function txUpdatePenDraft(args: {
 }
 
 function txSetupPenSelectionNode(args: {
-  hooks: IHooks;
+  hooks: IRuntimeHooks;
   node: Konva.Node;
 }) {
   if (!(args.node instanceof Konva.Path)) {
@@ -291,7 +291,7 @@ export function createPenPlugin(): IPlugin<{
   selection: SelectionService;
   theme: ThemeService;
   canvasRegistry: CanvasRegistryService;
-}, IHooks> {
+}, IRuntimeHooks> {
   return {
     name: "pen",
     apply(ctx) {

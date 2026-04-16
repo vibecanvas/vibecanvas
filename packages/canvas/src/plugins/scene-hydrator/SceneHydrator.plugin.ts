@@ -7,7 +7,7 @@ import type { CrdtService } from "../../services/crdt/CrdtService";
 import type { EditorService } from "../../services/editor/EditorService";
 import type { SceneService } from "../../services/scene/SceneService";
 import type { SelectionService } from "../../services/selection/SelectionService";
-import type { IHooks } from "../../runtime";
+import type { IRuntimeHooks } from "../../runtime";
 
 const ATTACHED_TEXT_NAME = "attached-text";
 
@@ -258,7 +258,7 @@ export function createSceneHydratorPlugin(): IPlugin<{
   scene: SceneService;
   selection: SelectionService;
   canvasRegistry: CanvasRegistryService;
-}, IHooks> {
+}, IRuntimeHooks> {
   return {
     name: "scene-hydrator",
     apply(ctx) {

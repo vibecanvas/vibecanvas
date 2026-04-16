@@ -8,7 +8,7 @@ import type { CanvasRegistryService } from "../../services/canvas-registry/Canva
 import type { ContextMenuService, TContextMenuNode, TContextMenuScope } from "../../services/context-menu/ContextMenuService";
 import type { SceneService } from "../../services/scene/SceneService";
 import type { SelectionService } from "../../services/selection/SelectionService";
-import type { IHooks } from "../../runtime";
+import type { IRuntimeHooks } from "../../runtime";
 
 function getSelectionPath(
   scene: SceneService,
@@ -203,7 +203,7 @@ export function createContextMenuPlugin(): IPlugin<{
   contextMenu: ContextMenuService;
   scene: SceneService;
   selection: SelectionService;
-}, IHooks> {
+}, IRuntimeHooks> {
   let menuMount: ReturnType<typeof mountContextMenu> | null = null;
 
   return {
