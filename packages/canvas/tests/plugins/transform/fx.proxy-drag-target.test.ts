@@ -56,7 +56,6 @@ describe("fxGetProxyDragTarget", () => {
     const result = fxGetProxyDragTarget({
       canvasRegistry,
       Konva,
-      scene: {} as never,
     }, {
       selection,
     });
@@ -80,7 +79,6 @@ describe("fxGetProxyDragTarget", () => {
     const result = fxGetProxyDragTarget({
       canvasRegistry,
       Konva,
-      scene: {} as never,
     }, {
       selection,
     });
@@ -96,10 +94,10 @@ describe("fxGetProxyDragTarget", () => {
 
     selection.mode = "draw_create" as typeof selection.mode;
     selection.setSelection([nodeA]);
-    expect(fxGetProxyDragTarget({ canvasRegistry, Konva, scene: {} as never }, { selection })).toBeNull();
+    expect(fxGetProxyDragTarget({ canvasRegistry, Konva }, { selection })).toBeNull();
 
     selection.mode = "select" as typeof selection.mode;
     selection.setSelection([nodeA, nodeB]);
-    expect(fxGetProxyDragTarget({ canvasRegistry, Konva, scene: {} as never }, { selection })).toBeNull();
+    expect(fxGetProxyDragTarget({ canvasRegistry, Konva }, { selection })).toBeNull();
   });
 });

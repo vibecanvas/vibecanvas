@@ -20,7 +20,7 @@ import { DEFAULT_OPACITY, DEFAULT_STROKE_WIDTH, DEFAULT_STROKE_WIDTH_TOKEN } fro
 import { fxCreatePenNode } from "./fx.create-node";
 import { txCreatePenCloneDrag } from "./tx.clone";
 import { txUpdatePenPathFromElement } from "./tx.path";
-import { txFinalizeOwnedTransform } from "../transform/tx.finalize-owned-transform";
+import { txFinalizeOwnedTransform } from "../../core/tx.finalize-owned-transform";
 
 const DEFAULT_PEN_COLOR_TOKEN = "@base/900";
 const DRAFT_POINTS_ATTR = "vcDraftStrokePoints";

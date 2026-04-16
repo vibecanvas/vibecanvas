@@ -1,23 +1,20 @@
 import type Konva from "konva";
 import type { Shape, ShapeConfig } from "konva/lib/Shape";
 import type { CanvasRegistryService } from "../../services";
-import type { SceneService } from "../../services/scene/SceneService";
 import type { SelectionService } from "../../services/selection/SelectionService";
 import { fxFilterSelection } from "../../core/fx.filter-selection";
 import { fxIsShape1dNode } from "../shape1d/fx.node";
 
-export type TPortalFxGetProxyDragTarget = {
+type TPortalFxGetProxyDragTarget = {
   canvasRegistry: CanvasRegistryService;
   Konva: typeof Konva;
-  scene: SceneService;
 };
 
-export type TArgsFxGetProxyDragTarget = {
+type TArgsFxGetProxyDragTarget = {
   selection: SelectionService;
 };
 
 export function fxGetProxyDragTarget(portal: TPortalFxGetProxyDragTarget, args: TArgsFxGetProxyDragTarget) {
-  void portal.scene;
   if (args.selection.mode !== "select") {
     return null;
   }

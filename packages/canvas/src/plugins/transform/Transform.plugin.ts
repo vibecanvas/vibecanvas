@@ -39,12 +39,11 @@ type TTransformDragProxyState = {
  */
 function collectSerializableNodes(
   canvasRegistry: CanvasRegistryService,
-  render: SceneService,
   nodes: Konva.Node[],
 ): Array<Group | Shape<ShapeConfig>> {
   return nodes.flatMap((node) => {
     if (node instanceof Konva.Group) {
-      return canvasRegistry.toElement(node) ? [node] : collectSerializableNodes(canvasRegistry, render, node.getChildren());
+      return canvasRegistry.toElement(node) ? [node] : collectSerializableNodes(canvasRegistry, node.getChildren());
     }
 
     if (node instanceof Konva.Shape) {
@@ -59,8 +58,8 @@ function collectSerializableNodes(
  * Serializes the current runtime nodes into persisted canvas elements.
  * Used for transform snapshots and history capture.
  */
-function serializeSelection(canvasRegistry: CanvasRegistryService, render: SceneService, nodes: Konva.Node[]) {
-  const serializableNodes = collectSerializableNodes(canvasRegistry, render, nodes);
+function serializeSelection(canvasRegistry: CanvasRegistryService, nodes: Konva.Node[]) {
+  const serializableNodes = collectSerializableNodes(canvasRegistry, nodes);
   return serializableNodes
     .map((node) => canvasRegistry.toElement(node))
     .filter((element): element is TElement => element !== null);
@@ -79,8 +78,7 @@ function applyElements(canvasRegistry: CanvasRegistryService, elements: TElement
  * Clears transient Konva transform state on structural groups after a transform commit.
  * Persisted children carry the real geometry, so group container transforms must be reset.
  */
-function normalizeSelectedGroupTransforms(render: SceneService, nodes: Konva.Node[]) {
-  void render;
+function normalizeSelectedGroupTransforms(nodes: Konva.Node[]) {
   nodes.forEach((node) => {
     if (!(node instanceof Konva.Group)) {
       return;
@@ -318,7 +316,7 @@ export function createTransformPlugin(): IPlugin<{
           return;
         }
 
-        const target = fxGetProxyDragTarget({ scene: render, canvasRegistry, Konva }, { selection });
+        const target = fxGetProxyDragTarget({ canvasRegistry, Konva }, { selection });
         if (!target) {
           hideDragProxy();
           return;
@@ -372,7 +370,7 @@ export function createTransformPlugin(): IPlugin<{
             return;
           }
 
-          const target = fxGetProxyDragTarget({ scene: render, canvasRegistry, Konva }, { selection });
+          const target = fxGetProxyDragTarget({ canvasRegistry, Konva }, { selection });
 
           if (event.evt?.altKey) {
             dragProxy.stopDrag();
@@ -521,7 +519,7 @@ export function createTransformPlugin(): IPlugin<{
 
         transformer.on("transformstart", () => {
           const nodes = transformer?.getNodes() ?? [];
-          beforeElements = serializeSelection(canvasRegistry, render, nodes);
+          beforeElements = serializeSelection(canvasRegistry, nodes);
           nodes.forEach((node) => {
             const beforeElement = canvasRegistry.toElement(node);
             if (!beforeElement) {
@@ -578,7 +576,7 @@ export function createTransformPlugin(): IPlugin<{
               anchors,
             });
 
-          const afterElements = serializeSelection(canvasRegistry, render, nodes);
+          const afterElements = serializeSelection(canvasRegistry, nodes);
           if (afterElements.length === 0) {
             return;
           }
@@ -597,7 +595,7 @@ export function createTransformPlugin(): IPlugin<{
             return;
           }
 
-          normalizeSelectedGroupTransforms(render, nodes);
+          normalizeSelectedGroupTransforms(nodes);
           applyElements(canvasRegistry, fallbackAfterElements);
           refreshSelectedGroups(canvasRegistry, selection);
           refreshTransformer();

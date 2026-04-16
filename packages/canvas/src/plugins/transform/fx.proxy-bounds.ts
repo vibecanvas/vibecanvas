@@ -1,11 +1,11 @@
 import type { Shape, ShapeConfig } from "konva/lib/Shape";
 import type { SceneService } from "../../services/scene/SceneService";
 
-export type TPortalFxGetProxyBounds = {
+type TPortalFxGetProxyBounds = {
   render: SceneService;
 };
 
-export type TArgsFxGetProxyBounds = {
+type TArgsFxGetProxyBounds = {
   node: Shape<ShapeConfig>;
 };
 

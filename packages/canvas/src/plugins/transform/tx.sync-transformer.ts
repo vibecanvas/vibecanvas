@@ -6,7 +6,7 @@ import type { SelectionService } from "../../services/selection/SelectionService
 import { fxFilterSelection } from "../../core/fx.filter-selection";
 import { fxGetSelectionTransformOptions } from "./fx.selection-transform-options";
 
-export type TPortalTxSyncTransformer = {
+type TPortalTxSyncTransformer = {
   canvasRegistry: CanvasRegistryService;
   editor: EditorService;
   Konva: typeof Konva;
@@ -15,7 +15,7 @@ export type TPortalTxSyncTransformer = {
   transformer: Konva.Transformer;
 };
 
-export type TArgsTxSyncTransformer = Record<string, never>;
+type TArgsTxSyncTransformer = Record<string, never>;
 
 export function txSyncTransformer(portal: TPortalTxSyncTransformer, args: TArgsTxSyncTransformer) {
   void args;

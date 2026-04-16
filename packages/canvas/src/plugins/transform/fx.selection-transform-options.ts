@@ -23,12 +23,12 @@ const DEFAULT_ANCHORS: TCanvasTransformAnchor[] = [
   "bottom-right",
 ];
 
-export type TPortalFxGetSelectionTransformOptions = {
+type TPortalFxGetSelectionTransformOptions = {
   canvasRegistry: CanvasRegistryService;
   Konva: typeof Konva;
 };
 
-export type TArgsFxGetSelectionTransformOptions = {
+type TArgsFxGetSelectionTransformOptions = {
   selection: Array<Group | Shape<ShapeConfig>>;
 };
 

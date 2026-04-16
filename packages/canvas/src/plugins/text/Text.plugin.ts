@@ -22,7 +22,7 @@ import { txEnterEditMode } from "./tx.enter-edit-mode";
 import { txSetupTextNode } from "./tx.setup-text-node";
 import { txUpdateTextNodeFromElement } from "./tx.update-text-node-from-element";
 import { txDeleteSelection } from "../select/tx.delete-selection";
-import { txFinalizeOwnedTransform } from "../transform/tx.finalize-owned-transform";
+import { txFinalizeOwnedTransform } from "../../core/tx.finalize-owned-transform";
 import {
   DEFAULT_TEXT_ALIGN,
   DEFAULT_TEXT_FONT_FAMILY,

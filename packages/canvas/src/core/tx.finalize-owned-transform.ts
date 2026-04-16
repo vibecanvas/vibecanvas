@@ -1,9 +1,9 @@
 import type Konva from "konva";
 import type { TElement } from "@vibecanvas/service-automerge/types/canvas-doc.types";
-import type { CrdtService } from "../../services/crdt/CrdtService";
-import type { HistoryService } from "../../services/history/HistoryService";
+import type { CrdtService } from "../services/crdt/CrdtService";
+import type { HistoryService } from "../services/history/HistoryService";
 
-export type TPortalTxFinalizeOwnedTransform = {
+type TPortalTxFinalizeOwnedTransform = {
   crdt: CrdtService;
   history: HistoryService;
   applyElement: (element: TElement) => void;
@@ -11,7 +11,7 @@ export type TPortalTxFinalizeOwnedTransform = {
   isMeaningfulChange?: (beforeElement: TElement, afterElement: TElement) => boolean;
 };
 
-export type TArgsTxFinalizeOwnedTransform = {
+type TArgsTxFinalizeOwnedTransform = {
   node: Konva.Node;
   label: string;
   beforeAttr: string;

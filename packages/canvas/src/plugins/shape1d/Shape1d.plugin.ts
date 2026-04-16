@@ -20,7 +20,7 @@ import type { SceneService } from "../../services/scene/SceneService";
 import { CanvasMode } from "../../services/selection/CONSTANTS";
 import type { SelectionService } from "../../services/selection/SelectionService";
 import { txDeleteSelection } from "../select/tx.delete-selection";
-import { txFinalizeOwnedTransform } from "../transform/tx.finalize-owned-transform";
+import { txFinalizeOwnedTransform } from "../../core/tx.finalize-owned-transform";
 import {
   DEFAULT_OPACITY,
   DEFAULT_STROKE_COLOR_TOKEN,

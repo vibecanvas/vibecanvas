@@ -4,11 +4,11 @@ import type { Shape, ShapeConfig } from "konva/lib/Shape";
 import type { TElement } from "@vibecanvas/service-automerge/types/canvas-doc.types";
 import type { CanvasRegistryService } from "../../services";
 
-export type TPortalTxDispatchSelectionTransformHooks = {
+type TPortalTxDispatchSelectionTransformHooks = {
   canvasRegistry: CanvasRegistryService;
 };
 
-export type TArgsTxDispatchSelectionTransformHooks<TArgs extends { node: Konva.Node; element: TElement; selection: Array<Group | Shape<ShapeConfig>> }> = {
+type TArgsTxDispatchSelectionTransformHooks<TArgs extends { node: Konva.Node; element: TElement; selection: Array<Group | Shape<ShapeConfig>> }> = {
   selection: Array<Group | Shape<ShapeConfig>>;
   createArgs: (node: Group | Shape<ShapeConfig>, element: TElement) => TArgs;
   getHook: (definition: ReturnType<CanvasRegistryService["getMatchingElementDefinitionsByNode"]>[number]) => ((args: TArgs) => { cancel: boolean; crdt: boolean } | void) | undefined;

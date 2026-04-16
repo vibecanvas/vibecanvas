@@ -96,6 +96,7 @@ Legend
 - [ ]: [fx.resolve-selection-style-text-elements.ts](src/core/fx.resolve-selection-style-text-elements.ts)
 - [ ]: [fx.selection-style-element-patch.ts](src/core/fx.selection-style-element-patch.ts)
 - [ ]: [tx.apply-selection-style-change.ts](src/core/tx.apply-selection-style-change.ts)
+- [ ]: [tx.finalize-owned-transform.ts](src/core/tx.finalize-owned-transform.ts)
 - [ ]: [tx.set-node-z-index.ts](src/core/tx.set-node-z-index.ts)
 
 ## plugins
@@ -199,7 +200,6 @@ Legend
 - [ ]: [fx.proxy-drag-target.ts](src/plugins/transform/fx.proxy-drag-target.ts)
 - [ ]: [fx.selection-transform-options.ts](src/plugins/transform/fx.selection-transform-options.ts)
 - [ ]: [tx.dispatch-selection-transform-hooks.ts](src/plugins/transform/tx.dispatch-selection-transform-hooks.ts)
-- [ ]: [tx.finalize-owned-transform.ts](src/plugins/transform/tx.finalize-owned-transform.ts)
 - [ ]: [tx.sync-transformer.ts](src/plugins/transform/tx.sync-transformer.ts)
 - [ ]: [VisualDebug.plugin.ts](src/plugins/visual-debug/VisualDebug.plugin.ts)
 
