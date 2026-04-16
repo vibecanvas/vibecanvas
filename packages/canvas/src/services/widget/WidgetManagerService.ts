@@ -3,7 +3,7 @@ import type { IServiceContext } from "@vibecanvas/runtime/interface.js";
 import type { ThemeService } from "@vibecanvas/service-theme";
 import Konva from "konva";
 import type { CanvasRegistryService, ContextMenuService, CrdtService, EditorService, LoggingService } from "..";
-import type { IRuntimeHooks, IRuntimeConfig } from "../../runtime";
+import type { IRuntimeConfig, IRuntimeHooks } from "../../types";
 import { WIDGET_HOST_ELEMENT_DATA_ATTR } from "./CONSTANTS";
 import { fxRegisterWidgetTool } from "./fx.register-tool";
 import type { IWidgetConfig, IWidgetManagerServiceHooks, IWidgetManagerServiceProps } from "./interface";

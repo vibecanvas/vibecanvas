@@ -3,6 +3,7 @@ import { SyncHook } from "@vibecanvas/tapable";
 import { CanvasMode } from "./CONSTANTS";
 import type { Group } from "konva/lib/Group";
 import type { Shape, ShapeConfig } from "konva/lib/Shape";
+import Konva from "konva";
 
 export interface TSelectionServiceHooks {
   change: SyncHook<[]>;
@@ -19,7 +20,7 @@ export class SelectionService implements IService<TSelectionServiceHooks> {
   };
 
   mode = CanvasMode.SELECT;
-  selection: Array<Group | Shape<ShapeConfig>> = [];
+  selection: Array<Konva.Node> = [];
   focusedId: string | null = null;
   private suppressSelectionHandlingUntil = 0;
 
@@ -32,7 +33,7 @@ export class SelectionService implements IService<TSelectionServiceHooks> {
     this.hooks.change.call();
   }
 
-  setSelection(selection: Array<Group | Shape<ShapeConfig>>) {
+  setSelection(selection: Array<Konva.Node>) {
     this.selection = selection;
     this.hooks.change.call();
   }
@@ -42,7 +43,7 @@ export class SelectionService implements IService<TSelectionServiceHooks> {
     this.hooks.change.call();
   }
 
-  setFocusedNode(node: Group | Shape<ShapeConfig> | null) {
+  setFocusedNode(node: Konva.Node | null) {
     this.setFocusedId(node?.id() ?? null);
   }
 

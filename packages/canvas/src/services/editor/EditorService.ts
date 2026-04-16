@@ -1,8 +1,8 @@
 import type { IService, IStartableService } from "@vibecanvas/runtime";
 import type { IServiceContext } from "@vibecanvas/runtime/interface.js";
 import { SyncHook } from "@vibecanvas/tapable";
-import type Konva from "konva";
-import type { IRuntimeHooks, IRuntimeConfig } from "src/runtime";
+import Konva from "konva";
+import type { IRuntimeConfig, IRuntimeHooks } from "../../types";
 import type { CanvasRegistryService } from "../canvas-registry/CanvasRegistryService";
 import type { CrdtService } from "../crdt/CrdtService";
 import type { SceneService } from "../scene/SceneService";
@@ -30,7 +30,7 @@ export class EditorService implements IService<TEditorServiceHooks>, IStartableS
   activeToolId = "select";
   editingTextId: string | null = null;
   editingShape1dId: string | null = null;
-  private previewNode: Konva.Shape | null = null;
+  private previewNode: Konva.Node | null = null;
   private previewOrigin: TEditorToolCanvasPoint | null = null;
 
   constructor(
@@ -246,7 +246,7 @@ export class EditorService implements IService<TEditorServiceHooks>, IStartableS
   /**
    * Sets current preview node.
    */
-  private setPreviewNode(node: Konva.Shape | null) {
+  private setPreviewNode(node: Konva.Node | null) {
     if (this.previewNode === node) {
       return;
     }
@@ -256,7 +256,9 @@ export class EditorService implements IService<TEditorServiceHooks>, IStartableS
       return;
     }
 
-    this.sceneService.dynamicLayer.add(node);
+    if (node instanceof Konva.Shape || node instanceof Konva.Group) {
+      this.sceneService.dynamicLayer.add(node);
+    }
     this.previewNode = node;
   }
 }

@@ -237,4 +237,5 @@ Legend
 - [ ]: [custom-events.ts](src/custom-events.ts)
 - [ ]: [index.ts](src/index.ts)
 - [ ]: [runtime.ts](src/runtime.ts)
+- [c]: [types.ts](src/types.ts)
 - [ ]: [image.ts](src/utils/image.ts)
