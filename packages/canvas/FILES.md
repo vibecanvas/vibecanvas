@@ -81,8 +81,10 @@ Legend
 
 ## core
 
+- [m]: [CONSTANTS.ts](src/core/CONSTANTS.ts)
 - [ ]: [fn.create-ordered-z-index.ts](src/core/fn.create-ordered-z-index.ts)
 - [ ]: [fn.get-node-z-index.ts](src/core/fn.get-node-z-index.ts)
+- [c]: [fn.image-utils.ts](src/core/fn.image-utils.ts)
 - [ ]: [fn.pretext.ts](src/core/fn.pretext.ts)
 - [ ]: [fn.selection-style-menu.ts](src/core/fn.selection-style-menu.ts)
 - [ ]: [fn.shape2d.ts](src/core/fn.shape2d.ts)
@@ -232,10 +234,8 @@ Legend
 
 ## other
 
-- [ ]: [automerge.ts](src/automerge.ts)
-- [ ]: [base.css](src/base.css)
-- [ ]: [custom-events.ts](src/custom-events.ts)
-- [ ]: [index.ts](src/index.ts)
-- [ ]: [runtime.ts](src/runtime.ts)
+- [m]: [automerge.ts](src/automerge.ts)
+- [s]: [base.css](src/base.css)
+- [m]: [index.ts](src/index.ts)
+- [c]: [runtime.ts](src/runtime.ts)
 - [c]: [types.ts](src/types.ts)
-- [ ]: [image.ts](src/utils/image.ts)

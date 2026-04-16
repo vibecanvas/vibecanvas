@@ -4,7 +4,13 @@ import type { TElement, TImageData } from "@vibecanvas/service-automerge/types/c
 import ImageIcon from "lucide-static/icons/image.svg?raw";
 import Konva from "konva";
 import type { TCloneImage, TDeleteImage, TUploadImage } from "../../runtime";
-import { getImageDimensions, getImageSource, getSupportedImageFormat, parseDataUrl } from "../../utils/image";
+import {
+  fxFileToDataUrl,
+  fxGetImageDimensions,
+  fxGetImageSource,
+  fxGetSupportedImageFormat,
+  fxParseDataUrl,
+} from "../../core/fn.image-utils";
 import type { ContextMenuService } from "../../services/context-menu/ContextMenuService";
 import type { CanvasRegistryService } from "../../services/canvas-registry/CanvasRegistryService";
 import type { CrdtService } from "../../services/crdt/CrdtService";
@@ -54,18 +60,9 @@ function getNotification(config: {
   return config.notification;
 }
 
-function fileToDataUrl(file: File): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(reader.result as string);
-    reader.onerror = () => reject(reader.error ?? new Error("Failed to read image file"));
-    reader.readAsDataURL(file);
-  });
-}
-
 function getFirstSupportedImageFile(files: Iterable<File> | ArrayLike<File> | null | undefined) {
   return Array.from(files ?? []).find((candidate) => {
-    return getSupportedImageFormat(candidate.type) !== null;
+    return fxGetSupportedImageFormat(candidate.type) !== null;
   });
 }
 
@@ -117,7 +114,7 @@ function syncNodeMetadata(node: Konva.Image, element: TElement) {
   node.setAttr(IMAGE_URL_ATTR, data.url);
   node.setAttr(IMAGE_BASE64_ATTR, data.base64);
   node.setAttr(IMAGE_CROP_ATTR, structuredClone(data.crop));
-  node.setAttr(IMAGE_SOURCE_ATTR, getImageSource({ url: data.url, base64: data.base64 }));
+  node.setAttr(IMAGE_SOURCE_ATTR, fxGetImageSource({ url: data.url, base64: data.base64 }));
   node.setAttr(ELEMENT_CREATED_AT_ATTR, element.createdAt);
 }
 
@@ -155,7 +152,7 @@ function createImageNode(render: SceneService, element: TElement) {
 
   syncNodeMetadata(node, element);
   setNodeZIndex(node, element.zIndex);
-  loadImageIntoNode(node, getImageSource({ url: data.url, base64: data.base64 }));
+  loadImageIntoNode(node, fxGetImageSource({ url: data.url, base64: data.base64 }));
   return node;
 }
 
@@ -163,7 +160,7 @@ function updateImageNodeFromElement(render: SceneService, node: Konva.Image, ele
   return txUpdateImageNodeFromElement({
     setNodeZIndex,
     syncNodeMetadata,
-    getImageSource,
+    getImageSource: fxGetImageSource,
     loadImageIntoNode,
     batchDraw: () => {
       render.staticForegroundLayer.batchDraw();
@@ -284,7 +281,7 @@ export function createImagePlugin(): IPlugin<{
       const updateImageNodeFromElementPortal = {
         setNodeZIndex,
         syncNodeMetadata,
-        getImageSource,
+        getImageSource: fxGetImageSource,
         loadImageIntoNode,
         batchDraw: () => {
           render.staticForegroundLayer.batchDraw();
@@ -382,9 +379,17 @@ export function createImagePlugin(): IPlugin<{
           notification: getNotification(ctx.config),
           createId: () => crypto.randomUUID(),
           now: () => Date.now(),
-          fileToDataUrl,
-          parseDataUrl,
-          getImageDimensions,
+          fileToDataUrl: (file) => fxFileToDataUrl({
+            createFileReader: () => new FileReader(),
+          }, {
+            file,
+          }),
+          parseDataUrl: fxParseDataUrl,
+          getImageDimensions: (source) => fxGetImageDimensions({
+            createImage: () => new window.Image(),
+          }, {
+            src: source,
+          }),
           getViewportCenter: () => getViewportCenter(render),
           getViewportWorldSize: () => getViewportWorldSize(render),
           createImageNode: (element) => createImageNode(render, element),

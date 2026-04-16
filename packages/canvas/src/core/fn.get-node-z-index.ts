@@ -1,6 +1,5 @@
 import type Konva from "konva";
-
-const VC_Z_INDEX_ATTR = "vcZIndex";
+import { VC_Z_INDEX_ATTR } from "./CONSTANTS";
 
 export type TArgsGetNodeZIndex = {
   node: Konva.Group | Konva.Shape;
