@@ -1,117 +1,19 @@
 import type { IService, IStartableService } from "@vibecanvas/runtime";
-import type { TElement, TGroup } from "@vibecanvas/service-automerge/types/canvas-doc.types";
+import type { IServiceContext } from "@vibecanvas/runtime/interface.js";
 import { SyncHook } from "@vibecanvas/tapable";
 import type Konva from "konva";
-import type { KonvaEventObject, Node, NodeConfig } from "konva/lib/Node";
 import type { IHooks, IRuntimeConfig } from "src/runtime";
 import type { CanvasRegistryService } from "../canvas-registry/CanvasRegistryService";
 import type { CrdtService } from "../crdt/CrdtService";
 import type { SceneService } from "../scene/SceneService";
 import type { SelectionService } from "../selection/SelectionService";
-import { IServiceContext } from "@vibecanvas/runtime/interface.js";
+import { fxGetCanvasPoint } from "./fx.get-canvas-point";
+import type { TEditorServiceHooks, TEditorTool, TEditorToolCanvasPoint, TEditorToolPointerEvent, } from "./types";
+export * from "./types";
 
 /**
- * Runtime mode for a registered editor tool.
- * Used to map tool choice into broad editor behavior.
- */
-export type TEditorToolMode = "select" | "hand" | "draw-create" | "click-create";
-
-/**
- * Keyboard shortcut description for a tool.
- * Examples: `5`, `r`, `ctrl+b`.
- */
-export type TEditorToolShortcut = string;
-export type TEditorToolIcon = string;
-export type TEditorToolPointerEvent = KonvaEventObject<PointerEvent, Node<NodeConfig>>;
-export type TEditorToolCanvasPoint = {
-  x: number;
-  y: number;
-  pressure: number;
-};
-
-export type TEditorToolDrawCreateStartDraftArgs = {
-  event: TEditorToolPointerEvent;
-  point: TEditorToolCanvasPoint;
-};
-
-export type TEditorToolDrawCreateUpdateDraftArgs = {
-  draft: unknown;
-  event: TEditorToolPointerEvent;
-  point: TEditorToolCanvasPoint;
-  origin: TEditorToolCanvasPoint;
-  shiftKey: boolean;
-  now: number;
-};
-
-export type TEditorToolDrawCreateBehavior = {
-  startDraft: (args: TEditorToolDrawCreateStartDraftArgs) => Konva.Shape;
-  updateDraft: (previewNode: Konva.Shape, args: TEditorToolDrawCreateUpdateDraftArgs) => unknown;
-};
-
-/**
- * Tool metadata registered by feature plugins.
- * Toolbar should render from this registry instead of hardcoded tool lists.
- */
-export type TEditorTool = {
-  id: string;
-  label: string;
-  icon?: TEditorToolIcon;
-  shortcuts?: TEditorToolShortcut[];
-  group?: string; // planned for dropdown
-  priority?: number;
-  active?: boolean;
-  onSelect?: () => void;
-  behavior:
-    | { type: "mode"; mode: TEditorToolMode }
-    | { type: "action" }
-    | { type: "modal" };
-  drawCreate?: TEditorToolDrawCreateBehavior;
-};
-
-export type TEditorToElement = (node: Konva.Node) => TElement | null;
-export type TEditorToGroup = (node: Konva.Node) => TGroup | null;
-export type TEditorCreateGroupFromTGroup = (group: TGroup) => Konva.Group | null;
-export type TEditorCreateShapeFromTElement = (element: TElement) => Konva.Group | Konva.Shape | null;
-export type TEditorSetupExistingShape = (node: Konva.Node) => boolean;
-export type TEditorUpdateShapeFromTElement = (element: TElement) => boolean;
-export type TEditorCloneElement = (args: { sourceElement: TElement; clonedElement: TElement }) => boolean;
-
-/**
- * Editor-local hook bag.
- * Used for tool registry, editing state, preview, transformer,
- * and node<->element registry changes.
- */
-export interface TEditorServiceHooks {
-  toolsChange: SyncHook<[]>;
-  activeToolChange: SyncHook<[string]>;
-  editingTextChange: SyncHook<[string | null]>;
-  editingShape1dChange: SyncHook<[string | null]>;
-  transformerChange: SyncHook<[Konva.Transformer | null]>;
-}
-
-function getCanvasPoint(scene: SceneService, event: TEditorToolPointerEvent): TEditorToolCanvasPoint | null {
-  const point = scene.dynamicLayer.getRelativePointerPosition();
-  if (!point) {
-    return null;
-  }
-
-  const pressure = typeof event.evt.pressure === "number"
-    && Number.isFinite(event.evt.pressure)
-    && event.evt.pressure > 0
-      ? event.evt.pressure
-      : 0.5;
-
-  return {
-    x: point.x,
-    y: point.y,
-    pressure,
-  };
-}
-
-/**
- * Holds editor-only transient state.
  * Also owns tool registry, current active tool,
- * transform refs, and node<->element registries.
+ * refs, and node<->element registries.
  */
 export class EditorService implements IService<TEditorServiceHooks>, IStartableService {
   readonly name = "editor";
@@ -121,7 +23,6 @@ export class EditorService implements IService<TEditorServiceHooks>, IStartableS
     activeToolChange: new SyncHook(),
     editingTextChange: new SyncHook(),
     editingShape1dChange: new SyncHook(),
-    transformerChange: new SyncHook(),
   };
 
   private readonly tools = new Map<string, TEditorTool>();
@@ -132,7 +33,6 @@ export class EditorService implements IService<TEditorServiceHooks>, IStartableS
   editingShape1dId: string | null = null;
   private previewNode: Konva.Shape | null = null;
   private previewOrigin: TEditorToolCanvasPoint | null = null;
-  transformer: Konva.Transformer | null = null;
 
   constructor(
     private sceneService: SceneService,
@@ -158,7 +58,7 @@ export class EditorService implements IService<TEditorServiceHooks>, IStartableS
           return;
         }
 
-        const point = getCanvasPoint(this.sceneService, event);
+        const point = fxGetCanvasPoint({ scene: this.sceneService }, { event });
         if (!point) {
           return;
         }
@@ -179,7 +79,7 @@ export class EditorService implements IService<TEditorServiceHooks>, IStartableS
           return;
         }
 
-        const point = getCanvasPoint(this.sceneService, event as TEditorToolPointerEvent);
+        const point = fxGetCanvasPoint({ scene: this.sceneService }, { event: event as TEditorToolPointerEvent });
         if (!point) {
           return;
         }
@@ -286,34 +186,6 @@ export class EditorService implements IService<TEditorServiceHooks>, IStartableS
   }
 
   /**
-   * Returns persisted element data for one runtime node.
-   */
-  toElement(node: Konva.Node) {
-    return this.canvasRegistry.toElement(node);
-  }
-
-  /**
-   * Returns persisted group data for one runtime node.
-   */
-  toGroup(node: Konva.Node) {
-    return this.canvasRegistry.toGroup(node);
-  }
-
-  /**
-   * Creates one runtime group node from persisted group data.
-   */
-  createGroupFromTGroup(group: TGroup) {
-    return this.canvasRegistry.createNodeFromGroup(group);
-  }
-
-  /**
-   * Creates one runtime shape or group node from persisted element data.
-   */
-  createShapeFromTElement(element: TElement) {
-    return this.canvasRegistry.createNodeFromElement(element);
-  }
-
-  /**
    * Sets current editing text node id.
    */
   setEditingTextId(id: string | null) {
@@ -335,17 +207,6 @@ export class EditorService implements IService<TEditorServiceHooks>, IStartableS
 
     this.editingShape1dId = id;
     this.hooks.editingShape1dChange.call(id);
-  }
-
-  /**
-   * Starts alt-drag clone behavior for one existing runtime node.
-   * Element-specific clone implementation stays in the canvas registry.
-   */
-  startDragClone(args: {
-    node: Konva.Node;
-    selection: Array<Konva.Group | Konva.Shape>;
-  }) {
-    return this.canvasRegistry.createDragClone(args);
   }
 
   private clearPreviewState() {
@@ -399,17 +260,4 @@ export class EditorService implements IService<TEditorServiceHooks>, IStartableS
     this.sceneService.dynamicLayer.add(node);
     this.previewNode = node;
   }
-
-  /**
-   * Sets shared transformer instance.
-   */
-  setTransformer(transformer: Konva.Transformer | null) {
-    if (this.transformer === transformer) {
-      return;
-    }
-
-    this.transformer = transformer;
-    this.hooks.transformerChange.call(transformer);
-  }
-
 }
