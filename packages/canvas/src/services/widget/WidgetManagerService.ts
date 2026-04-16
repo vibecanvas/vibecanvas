@@ -4,6 +4,7 @@ import type { ThemeService } from "@vibecanvas/service-theme";
 import Konva from "konva";
 import type { CanvasRegistryService, ContextMenuService, CrdtService, EditorService, LoggingService } from "..";
 import type { IHooks, IRuntimeConfig } from "../../runtime";
+import { WIDGET_HOST_ELEMENT_DATA_ATTR } from "./CONSTANTS";
 import { fxRegisterWidgetTool } from "./fx.register-tool";
 import type { IWidgetConfig, IWidgetManagerServiceHooks, IWidgetManagerServiceProps } from "./interface";
 
@@ -47,6 +48,8 @@ export class WidgetManagerService implements IService<IWidgetManagerServiceHooks
     this.canvasRegistry.registerElement({
 
       id: wConfig.id,
+      toElement: (node) => null,
+      matchesNode: (node) => node.getAttr(WIDGET_HOST_ELEMENT_DATA_ATTR)?.data?.type === 'custom',
       matchesElement: (element) => element.data.type === "widget" && element.data.kind === wConfig.id,
       createNode: (element) => {
         console.log('WidgetManagerService createNode', element)
