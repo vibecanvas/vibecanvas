@@ -376,7 +376,7 @@ export function createTransformPlugin(): IPlugin<{
             dragProxy.stopDrag();
             dragProxy.absolutePosition(dragProxy.absolutePosition());
             if (target) {
-              editor.startDragClone({
+              canvasRegistry.createDragClone({
                 node: target,
                 selection: selection.selection,
               });

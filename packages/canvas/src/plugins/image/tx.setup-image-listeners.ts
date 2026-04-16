@@ -1,7 +1,7 @@
 import type { TElement } from "@vibecanvas/service-automerge/types/canvas-doc.types";
 import type Konva from "konva";
+import type { CanvasRegistryService } from "../../services/canvas-registry/CanvasRegistryService";
 import type { CrdtService } from "../../services/crdt/CrdtService";
-import type { EditorService } from "../../services/editor/EditorService";
 import type { HistoryService } from "../../services/history/HistoryService";
 import type { SceneService } from "../../services/scene/SceneService";
 import type { SelectionService } from "../../services/selection/SelectionService";
@@ -11,8 +11,8 @@ import { txUpdateImageNodeFromElement } from "./tx.update-image-node-from-elemen
 import type { TPortalUpdateImageNodeFromElement } from "./tx.update-image-node-from-element";
 
 export type TPortalSetupImageListeners = {
+  canvasRegistry: Pick<CanvasRegistryService, "toElement" | "toGroup">;
   crdt: CrdtService;
-  editor: EditorService;
   history: HistoryService;
   render: SceneService;
   selection: SelectionService;
@@ -49,7 +49,7 @@ export function txSetupImageListeners(
     });
 
     fxGetCanvasAncestorGroups({}, {
-      editor: portal.editor,
+      editor: portal.canvasRegistry,
       node: args.node,
     }).forEach((group) => {
       group.fire("transform");
@@ -118,7 +118,7 @@ export function txSetupImageListeners(
         return;
       }
 
-      const element = portal.editor.toElement(selectedNode);
+      const element = portal.canvasRegistry.toElement(selectedNode);
       if (element) {
         passengerOriginalElements.set(selectedNode.id(), [structuredClone(element)]);
       }
@@ -178,7 +178,7 @@ export function txSetupImageListeners(
     const passengerAfterElements = new Map<string, TElement[]>();
 
     passengers.forEach((passenger) => {
-      const element = portal.editor.toElement(passenger);
+      const element = portal.canvasRegistry.toElement(passenger);
       if (!element) {
         return;
       }

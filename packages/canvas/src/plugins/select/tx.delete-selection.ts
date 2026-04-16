@@ -1,6 +1,7 @@
 import type { TElement, TGroup } from "@vibecanvas/service-automerge/types/canvas-doc.types";
 import type Konva from "konva";
 import type { Group } from "konva/lib/Group";
+import type { Layer } from "konva/lib/Layer";
 import type { Node } from "konva/lib/Node";
 import type { Shape, ShapeConfig } from "konva/lib/Shape";
 import type { CrdtService } from "../../services/crdt/CrdtService";
@@ -10,16 +11,19 @@ import type { SceneService } from "../../services/scene/SceneService";
 import type { SelectionService } from "../../services/selection/SelectionService";
 import { fxGetCanvasNodeKind, fxIsCanvasGroupNode } from "../../core/fx.canvas-node-semantics";
 
-export type TDeleteSelectionEditor = {
-  toElement(node: Konva.Node): TElement | null;
-  toGroup(node: Konva.Node): TGroup | null;
-  createGroupFromTGroup(group: TGroup): Konva.Group | null;
-  createShapeFromTElement(element: TElement): Konva.Group | Konva.Shape | null;
+export type TDeleteSelectionCanvasRegistry = {
+  toElement(node: Node): TElement | null;
+  toGroup(node: Node): TGroup | null;
+  createNodeFromGroup(group: TGroup): Group | null;
+  createNodeFromElement(element: TElement): Group | Shape<ShapeConfig> | null;
 };
 
 export type TPortalDeleteSelection = {
+  Group: typeof Konva.Group;
+  Shape: typeof Konva.Shape;
+  Layer: typeof Konva.Layer;
+  canvasRegistry: TDeleteSelectionCanvasRegistry;
   crdt: CrdtService;
-  editor: TDeleteSelectionEditor;
   history: HistoryService;
   render: SceneService;
   renderOrder: RenderOrderService;
@@ -46,14 +50,12 @@ type TCollectedDeleteData = {
   destroyNodes: TSceneNode[];
 };
 
-function isSceneNode(render: SceneService, node: Node | null | undefined): node is TSceneNode {
-  void render;
-  return Boolean(node) && (node instanceof Konva.Group || node instanceof Konva.Shape);
+function isSceneNode(portal: TPortalDeleteSelection, node: Node | null | undefined): node is TSceneNode {
+  return Boolean(node) && (node instanceof portal.Group || node instanceof portal.Shape);
 }
 
-function isSceneParent(render: SceneService, node: Node | null | undefined): node is Group | Konva.Layer {
-  void render;
-  return Boolean(node) && (node instanceof Konva.Group || node instanceof Konva.Layer);
+function isSceneParent(portal: TPortalDeleteSelection, node: Node | null | undefined): node is Group | Layer {
+  return Boolean(node) && (node instanceof portal.Group || node instanceof portal.Layer);
 }
 
 function isNodeDescendantOf(node: Node, ancestor: Node) {
@@ -82,23 +84,23 @@ function collapseSelectionToDeleteRoots(selection: TSceneNode[]) {
   });
 }
 
-function findSceneNodeById(render: SceneService, id: string | null) {
+function findSceneNodeById(portal: TPortalDeleteSelection, id: string | null) {
   if (!id) {
     return null;
   }
 
-  const node = render.staticForegroundLayer.findOne((candidate: Node) => {
-    return isSceneNode(render, candidate) && candidate.id() === id;
+  const node = portal.render.staticForegroundLayer.findOne((candidate: Node) => {
+    return isSceneNode(portal, candidate) && candidate.id() === id;
   });
 
-  return isSceneNode(render, node) ? node : null;
+  return isSceneNode(portal, node) ? node : null;
 }
 
-function sortSceneTopDown(portal: TPortalDeleteSelection, parent: Group | InstanceType<SceneService["Layer"]>) {
+function sortSceneTopDown(portal: TPortalDeleteSelection, parent: Group | Layer) {
   portal.renderOrder.sortChildren(parent);
 
-  parent.getChildren().forEach((child) => {
-    if (!fxIsCanvasGroupNode({}, { editor: portal.editor, node: child })) {
+  parent.getChildren().forEach((child: Node) => {
+    if (!fxIsCanvasGroupNode({}, { editor: portal.canvasRegistry, node: child })) {
       return;
     }
 
@@ -123,14 +125,14 @@ function collectDeleteSnapshot(portal: TPortalDeleteSelection, roots: TSceneNode
     visitedNodeIds.add(node.id());
     visitedNodes.push(node);
 
-    const kind = fxGetCanvasNodeKind({}, { editor: portal.editor, node });
+    const kind = fxGetCanvasNodeKind({}, { editor: portal.canvasRegistry, node });
     if (kind === "group") {
-      if (!fxIsCanvasGroupNode({}, { editor: portal.editor, node })) {
+      if (!fxIsCanvasGroupNode({}, { editor: portal.canvasRegistry, node })) {
         didFail = true;
         return;
       }
 
-      const group = portal.editor.toGroup(node);
+      const group = portal.canvasRegistry.toGroup(node);
       if (!group) {
         didFail = true;
         return;
@@ -142,7 +144,7 @@ function collectDeleteSnapshot(portal: TPortalDeleteSelection, roots: TSceneNode
       }
 
       (node as Group).getChildren().forEach((child: Node) => {
-        if (!isSceneNode(portal.render, child)) {
+        if (!isSceneNode(portal, child)) {
           return;
         }
 
@@ -152,7 +154,7 @@ function collectDeleteSnapshot(portal: TPortalDeleteSelection, roots: TSceneNode
     }
 
     if (kind === "element") {
-      const element = portal.editor.toElement(node);
+      const element = portal.canvasRegistry.toElement(node);
       if (!element) {
         didFail = true;
         return;
@@ -190,7 +192,7 @@ function collectDeleteSnapshot(portal: TPortalDeleteSelection, roots: TSceneNode
           return false;
         }
 
-        if (!fxIsCanvasGroupNode({}, { editor: portal.editor, node: candidate })) {
+        if (!fxIsCanvasGroupNode({}, { editor: portal.canvasRegistry, node: candidate })) {
           return false;
         }
 
@@ -215,23 +217,23 @@ function restoreDeleteSnapshot(portal: TPortalDeleteSelection, snapshot: TDelete
       }
 
       const parentNode = group.parentGroupId
-        ? findSceneNodeById(portal.render, group.parentGroupId)
+        ? findSceneNodeById(portal, group.parentGroupId)
         : portal.render.staticForegroundLayer;
 
       if (
         group.parentGroupId !== null
         && !createdGroups.has(group.parentGroupId)
-        && !fxIsCanvasGroupNode({}, { editor: portal.editor, node: parentNode })
+        && !fxIsCanvasGroupNode({}, { editor: portal.canvasRegistry, node: parentNode })
       ) {
         continue;
       }
 
-      const parent = isSceneParent(portal.render, parentNode) ? parentNode : null;
+      const parent = isSceneParent(portal, parentNode) ? parentNode : null;
       if (!parent) {
         continue;
       }
 
-      const groupNode = portal.editor.createGroupFromTGroup(group);
+      const groupNode = portal.canvasRegistry.createNodeFromGroup(group);
       if (!groupNode) {
         continue;
       }
@@ -246,14 +248,14 @@ function restoreDeleteSnapshot(portal: TPortalDeleteSelection, snapshot: TDelete
 
   snapshot.elements.forEach((element) => {
     const parentNode = element.parentGroupId
-      ? findSceneNodeById(portal.render, element.parentGroupId)
+      ? findSceneNodeById(portal, element.parentGroupId)
       : portal.render.staticForegroundLayer;
-    const parent = isSceneParent(portal.render, parentNode) ? parentNode : null;
+    const parent = isSceneParent(portal, parentNode) ? parentNode : null;
     if (!parent) {
       return;
     }
 
-    const node = portal.editor.createShapeFromTElement(element);
+    const node = portal.canvasRegistry.createNodeFromElement(element);
     if (!node) {
       return;
     }
@@ -272,7 +274,7 @@ function restoreDeleteSnapshot(portal: TPortalDeleteSelection, snapshot: TDelete
   sortSceneTopDown(portal, portal.render.staticForegroundLayer);
 
   const restoredRoots = snapshot.rootIds
-    .map((id) => findSceneNodeById(portal.render, id))
+    .map((id) => findSceneNodeById(portal, id))
     .filter((node): node is TSceneNode => node !== null);
 
   portal.selection.setSelection(restoredRoots);
@@ -282,7 +284,7 @@ function restoreDeleteSnapshot(portal: TPortalDeleteSelection, snapshot: TDelete
 
 function deleteSelectionInternal(portal: TPortalDeleteSelection, args: TArgsDeleteSelection) {
   const selection = (args.selection ?? portal.selection.selection)
-    .filter((node): node is TSceneNode => isSceneNode(portal.render, node));
+    .filter((node): node is TSceneNode => isSceneNode(portal, node));
   const roots = collapseSelectionToDeleteRoots(selection);
   if (roots.length === 0) {
     return false;
@@ -290,7 +292,7 @@ function deleteSelectionInternal(portal: TPortalDeleteSelection, args: TArgsDele
 
   const expandedRoots = collapseSelectionToDeleteRoots(roots.flatMap((root) => {
     return portal.renderOrder.getOrderBundle(root).filter((candidate): candidate is TSceneNode => {
-      return isSceneNode(portal.render, candidate);
+      return isSceneNode(portal, candidate);
     });
   }));
 
@@ -329,7 +331,7 @@ function deleteSelectionInternal(portal: TPortalDeleteSelection, args: TArgsDele
     },
     redo: () => {
       const redoRoots = snapshot.rootIds
-        .map((id) => findSceneNodeById(portal.render, id))
+        .map((id) => findSceneNodeById(portal, id))
         .filter((node): node is TSceneNode => node !== null);
       deleteSelectionInternal(portal, {
         recordHistory: false,

@@ -3,9 +3,9 @@ import type { TElement, TTextData } from "@vibecanvas/service-automerge/types/ca
 import type { ThemeService } from "@vibecanvas/service-theme";
 import type Konva from "konva";
 import { fxGetCanvasParentGroupId, fxIsCanvasGroupNode } from "../../core/fx.canvas-node-semantics";
+import type { CanvasRegistryService } from "../../services/canvas-registry/CanvasRegistryService";
 import type { CrdtService } from "../../services/crdt/CrdtService";
 import type { EditorService } from "../../services/editor/EditorService";
-import type { HistoryService } from "../../services/history/HistoryService";
 import type { RenderOrderService } from "../../services/render-order/RenderOrderService";
 import type { SceneService } from "../../services/scene/SceneService";
 import type { SelectionService } from "../../services/selection/SelectionService";
@@ -21,13 +21,10 @@ const ATTACHED_TEXT_NAME = "attached-text";
 
 export type TPortalAttachedText = {
   Konva: typeof Konva;
+  canvasRegistry: Pick<CanvasRegistryService, "createNodeFromElement" | "toElement" | "toGroup">;
   crdt: CrdtService;
   document: Document;
-  editor: Pick<EditorService, "createShapeFromTElement" | "editingTextId"> & {
-    toGroup(node: Konva.Node): unknown;
-    toElement(node: Konva.Node): TElement | null;
-  };
-  history: HistoryService;
+  editor: Pick<EditorService, "editingTextId">;
   scene: SceneService;
   renderOrder: RenderOrderService;
   selection: SelectionService;
@@ -88,7 +85,7 @@ function createAttachedTextElement(portal: TPortalAttachedText, shapeNode: Konva
     scaleY: 1,
     bindings: [],
     locked: false,
-    parentGroupId: fxGetCanvasParentGroupId({}, { editor: portal.editor, node: shapeNode }),
+    parentGroupId: fxGetCanvasParentGroupId({}, { editor: portal.canvasRegistry, node: shapeNode }),
     zIndex: "",
     createdAt: now,
     updatedAt: now,
@@ -113,14 +110,14 @@ function createAttachedTextElement(portal: TPortalAttachedText, shapeNode: Konva
 }
 
 function fxCreateAttachedTextNode(portal: TPortalAttachedText, args: TArgsGetAttachedTextNode) {
-  const node = portal.editor.createShapeFromTElement(createAttachedTextElement(portal, args.shapeNode));
+  const node = portal.canvasRegistry.createNodeFromElement(createAttachedTextElement(portal, args.shapeNode));
   if (!(node instanceof portal.Konva.Text)) {
     return null;
   }
 
   fxSyncAttachedTextNodeToShape(portal, { shapeNode: args.shapeNode, textNode: node });
   const parentNode = args.shapeNode.getParent();
-  const parent = parentNode instanceof portal.Konva.Layer || fxIsCanvasGroupNode({}, { editor: portal.editor, node: parentNode })
+  const parent = parentNode instanceof portal.Konva.Layer || fxIsCanvasGroupNode({}, { editor: portal.canvasRegistry, node: parentNode })
     ? parentNode
     : portal.scene.staticForegroundLayer;
   if (!(parent instanceof portal.Konva.Layer) && !(parent instanceof portal.Konva.Group)) {
@@ -173,7 +170,7 @@ export function fxPersistAttachedTextNode(portal: TPortalAttachedText, args: TAr
   args.textNode.draggable(false);
   args.textNode.listening(false);
   args.textNode.name(ATTACHED_TEXT_NAME);
-  const element = portal.editor.toElement(args.textNode);
+  const element = portal.canvasRegistry.toElement(args.textNode);
   if (!element || element.data.type !== "text") {
     return null;
   }

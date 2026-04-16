@@ -189,10 +189,10 @@ export function createShape2dPlugin(): IPlugin<{
 
       const createAttachedTextPortal = () => ({
         Konva,
+        canvasRegistry,
         crdt,
         document: render.container.ownerDocument,
         editor,
-        history,
         scene: render,
         renderOrder,
         selection,
@@ -486,7 +486,7 @@ export function createShape2dPlugin(): IPlugin<{
           priority: 300,
           onSelect: () => {
             selection.setSelection(activeSelection);
-            txDeleteSelection({ crdt, editor, history, render, renderOrder, selection }, {});
+            txDeleteSelection({ Group: Konva.Group, Shape: Konva.Shape, Layer: Konva.Layer, canvasRegistry, crdt, history, render, renderOrder, selection }, {});
           },
         }];
       });

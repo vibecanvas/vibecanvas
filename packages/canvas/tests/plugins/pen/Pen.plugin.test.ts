@@ -590,17 +590,17 @@ describe("new Pen plugin", () => {
 
     const harness = await createNewCanvasHarness({ docHandle });
     const theme = harness.runtime.services.require("theme");
-    const editor = harness.runtime.services.require("editor");
+    const canvasRegistry = harness.runtime.services.require("canvasRegistry");
     const node = harness.staticForegroundLayer.findOne<Konva.Path>(`#${element.id}`)!;
 
     expect(node.fill()).toBe("#22c55e");
-    expect(editor.toElement(node)?.style.backgroundColor).toBe("@green/500");
+    expect(canvasRegistry.toElement(node)?.style.backgroundColor).toBe("@green/500");
 
     theme.setTheme(THEME_ID_DARK);
     await flushCanvasEffects();
 
     expect(node.fill()).toBe("#16a34a");
-    expect(editor.toElement(node)?.style.backgroundColor).toBe("@green/500");
+    expect(canvasRegistry.toElement(node)?.style.backgroundColor).toBe("@green/500");
 
     await harness.destroy();
   });

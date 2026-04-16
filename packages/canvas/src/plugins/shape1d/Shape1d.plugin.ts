@@ -844,7 +844,7 @@ export function createShape1dPlugin(): IPlugin<{
           priority: 300,
           onSelect: () => {
             selection.setSelection(activeSelection);
-            txDeleteSelection({ crdt, editor, history, render, renderOrder, selection }, {});
+            txDeleteSelection({ Group: Konva.Group, Shape: Konva.Shape, Layer: Konva.Layer, canvasRegistry, crdt, history, render, renderOrder, selection }, {});
           },
         }];
       });

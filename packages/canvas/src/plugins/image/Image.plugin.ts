@@ -174,7 +174,7 @@ function updateImageNodeFromElement(render: SceneService, node: Konva.Image, ele
   });
 }
 
-function toElement(render: SceneService, editor: EditorService, node: Konva.Image): TElement {
+function toElement(render: SceneService, canvasRegistry: Pick<CanvasRegistryService, "toGroup">, node: Konva.Image): TElement {
   const worldPosition = fnGetWorldPosition({
     absolutePosition: node.absolutePosition(),
     parentTransform: node.getLayer()?.getAbsoluteTransform() ?? null,
@@ -183,7 +183,7 @@ function toElement(render: SceneService, editor: EditorService, node: Konva.Imag
   const layer = node.getLayer();
   const layerScaleX = layer?.scaleX() ?? 1;
   const layerScaleY = layer?.scaleY() ?? 1;
-  const parentGroupId = fxGetCanvasParentGroupId({}, { editor, node });
+  const parentGroupId = fxGetCanvasParentGroupId({}, { editor: canvasRegistry, node });
 
   const crop = structuredClone(node.getAttr(IMAGE_CROP_ATTR) ?? {
     x: 0,
@@ -240,11 +240,13 @@ function safeStopDrag(node: Konva.Node) {
   }
 }
 
-function filterSelection(render: SceneService, editor: EditorService, selection: Konva.Node[]) {
+function filterSelection(render: SceneService, canvasRegistry: Pick<CanvasRegistryService, "toElement" | "toGroup">, selection: Konva.Node[]) {
+  void render;
+
   return fxFilterSelection({
     Konva,
   }, {
-    editor,
+    editor: canvasRegistry,
     selection: selection.filter((node): node is Konva.Group | Konva.Shape => {
       return node instanceof Konva.Group || node instanceof Konva.Shape;
     }),
@@ -312,7 +314,7 @@ export function createImagePlugin(): IPlugin<{
         const node = render.staticForegroundLayer.findOne((candidate: Konva.Node) => {
           return candidate.id() === element.id;
         });
-        fxGetCanvasAncestorGroups({}, { editor, node }).forEach((group) => {
+        fxGetCanvasAncestorGroups({}, { editor: canvasRegistry, node }).forEach((group) => {
           group.fire("transform");
         });
         render.staticForegroundLayer.batchDraw();
@@ -320,18 +322,18 @@ export function createImagePlugin(): IPlugin<{
 
       const setupNode = (node: Konva.Image) => {
         txSetupImageListeners({
+          canvasRegistry,
           crdt,
-          editor,
           history,
           render,
           selection,
           hooks: ctx.hooks,
-          startDragClone: (args) => editor.startDragClone(args),
+          startDragClone: (args) => canvasRegistry.createDragClone(args),
           applyElement,
           updateImageNodeFromElementPortal,
-          filterSelection: (nodes) => filterSelection(render, editor, nodes),
+          filterSelection: (nodes) => filterSelection(render, canvasRegistry, nodes),
           safeStopDrag,
-          toElement: (imageNode) => toElement(render, editor, imageNode),
+          toElement: (imageNode) => toElement(render, canvasRegistry, imageNode),
           createThrottledPatch: () => {
             return throttle((element: TElement) => {
               if (crdt.doc().elements[element.id] === undefined) {
@@ -361,7 +363,7 @@ export function createImagePlugin(): IPlugin<{
         createPreviewClone: (sourceNode: Konva.Image) => createPreviewClone(render, sourceNode),
         createImageNode: (element: TElement) => createImageNode(render, element),
         setupNode,
-        toElement: (imageNode: Konva.Image) => toElement(render, editor, imageNode),
+        toElement: (imageNode: Konva.Image) => toElement(render, canvasRegistry, imageNode),
         now: () => Date.now(),
       };
 
@@ -387,7 +389,7 @@ export function createImagePlugin(): IPlugin<{
           getViewportWorldSize: () => getViewportWorldSize(render),
           createImageNode: (element) => createImageNode(render, element),
           setupNode,
-          toElement: (node) => toElement(render, editor, node),
+          toElement: (node) => toElement(render, canvasRegistry, node),
         }, args);
       };
 
@@ -402,7 +404,7 @@ export function createImagePlugin(): IPlugin<{
           priority: 300,
           onSelect: () => {
             selection.setSelection(activeSelection);
-            txDeleteSelection({ crdt, editor, history, render, renderOrder, selection }, {});
+            txDeleteSelection({ Group: Konva.Group, Shape: Konva.Shape, Layer: Konva.Layer, canvasRegistry, crdt, history, render, renderOrder, selection }, {});
           },
         }];
       });
@@ -426,7 +428,7 @@ export function createImagePlugin(): IPlugin<{
             return null;
           }
 
-          return toElement(render, editor, node);
+          return toElement(render, canvasRegistry, node);
         },
         createNode: (element) => {
           if (element.data.type !== "image") {

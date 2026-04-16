@@ -230,7 +230,7 @@ export function createTextPlugin(): IPlugin<{
           serializeNode: ({ node, createdAt, updatedAt }) => fxSerializeTextNode(canvasRegistry, { node, createdAt, updatedAt }),
           theme,
           now,
-          startDragClone: (args) => editor.startDragClone(args),
+          startDragClone: (args) => canvasRegistry.createDragClone(args),
           createThrottledPatch: (callback) => throttle(callback, 100),
         }, {
           freeTextName: FREE_TEXT_NAME,
@@ -424,7 +424,7 @@ export function createTextPlugin(): IPlugin<{
           priority: 300,
           onSelect: () => {
             selection.setSelection(activeSelection);
-            txDeleteSelection({ crdt, editor, history, render: scene, renderOrder, selection }, {});
+            txDeleteSelection({ Group: Konva.Group, Shape: Konva.Shape, Layer: Konva.Layer, canvasRegistry, crdt, history, render: scene, renderOrder, selection }, {});
           },
         }];
       });

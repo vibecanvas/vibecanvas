@@ -12,8 +12,7 @@ import type { TEditorServiceHooks, TEditorTool, TEditorToolCanvasPoint, TEditorT
 export * from "./types";
 
 /**
- * Also owns tool registry, current active tool,
- * refs, and node<->element registries.
+ * Owns tool registry and transient editor state.
  */
 export class EditorService implements IService<TEditorServiceHooks>, IStartableService {
   readonly name = "editor";

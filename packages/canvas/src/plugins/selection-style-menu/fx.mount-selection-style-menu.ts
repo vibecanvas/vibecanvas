@@ -50,7 +50,7 @@ type TPortalMountSelectionStyleMenu = {
   clearTimeout: (timer: TSelectionStyleMenuTimer | null) => void;
   canvasRegistry: CanvasRegistryService;
   crdt: CrdtService;
-  editor: EditorService;
+  editor: Pick<EditorService, "editingShape1dId" | "editingTextId" | "getActiveTool" | "hooks">;
   history: HistoryService;
   scene: SceneService;
   selection: SelectionService;
@@ -130,7 +130,7 @@ export function fxMountSelectionStyleMenu(portal: TPortalMountSelectionStyleMenu
   const txPortal: TPortalApplySelectionStyleChange = {
     Konva: portal.Konva,
     crdt: portal.crdt,
-    editor: portal.editor,
+    editor: portal.canvasRegistry,
     canvasRegistry: portal.canvasRegistry,
     history: portal.history,
     scene: portal.scene,
@@ -193,7 +193,7 @@ export function fxMountSelectionStyleMenu(portal: TPortalMountSelectionStyleMenu
       version();
       return fxResolveSelectionStyleElements({
         Konva: portal.Konva,
-        editor: portal.editor,
+        editor: portal.canvasRegistry,
         scene: portal.scene,
         selection: portal.selection,
       }, {});
@@ -226,7 +226,7 @@ export function fxMountSelectionStyleMenu(portal: TPortalMountSelectionStyleMenu
       version();
 
       return fxResolveSelectionStyleTextElements({
-        editor: portal.editor,
+        editor: portal.canvasRegistry,
         fxFindAttachedTextNodeByContainerId: findAttachedTextNodeByContainerId,
       }, {
         elements: elements(),

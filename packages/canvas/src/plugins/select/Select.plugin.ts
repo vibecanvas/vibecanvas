@@ -3,8 +3,8 @@ import type { ThemeService } from "@vibecanvas/service-theme";
 import Konva from "konva";
 import type { Node } from "konva/lib/Node";
 import type { ContextMenuService } from "../../services/context-menu/ContextMenuService";
+import type { CanvasRegistryService } from "../../services/canvas-registry/CanvasRegistryService";
 import type { CrdtService } from "../../services/crdt/CrdtService";
-import type { EditorService } from "../../services/editor/EditorService";
 import type { HistoryService } from "../../services/history/HistoryService";
 import type { RenderOrderService } from "../../services/render-order/RenderOrderService";
 import type { SceneService } from "../../services/scene/SceneService";
@@ -79,9 +79,9 @@ function txHandleStagePointerDown(args: {
  * Uses SelectionService as the shared runtime state.
  */
 export function createSelectPlugin(): IPlugin<{
+  canvasRegistry: CanvasRegistryService;
   contextMenu: ContextMenuService;
   crdt: CrdtService;
-  editor: EditorService;
   history: HistoryService;
   scene: SceneService;
   renderOrder: RenderOrderService;
@@ -91,9 +91,9 @@ export function createSelectPlugin(): IPlugin<{
   return {
     name: "select",
     apply(ctx) {
+      const canvasRegistry = ctx.services.require("canvasRegistry");
       const contextMenu = ctx.services.require("contextMenu");
       const crdt = ctx.services.require("crdt");
-      const editor = ctx.services.require("editor");
       const history = ctx.services.require("history");
       const render = ctx.services.require("scene");
       const renderOrder = ctx.services.require("renderOrder");
@@ -133,7 +133,7 @@ export function createSelectPlugin(): IPlugin<{
           priority: 300,
           onSelect: () => {
             selection.setSelection(activeSelection);
-            txDeleteSelection({ crdt, editor, history, render, renderOrder, selection }, {});
+            txDeleteSelection({ Group: Konva.Group, Shape: Konva.Shape, Layer: Konva.Layer, canvasRegistry, crdt, history, render, renderOrder, selection }, {});
           },
         }];
       });
@@ -151,7 +151,7 @@ export function createSelectPlugin(): IPlugin<{
           return true;
         }
 
-        return txHandleElementPointerDown({ editor, render, selection, hasSameSelectionOrder }, { event });
+        return txHandleElementPointerDown({ editor: canvasRegistry, render, selection, hasSameSelectionOrder }, { event });
       });
 
       ctx.hooks.elementPointerDoubleClick.tap((event) => {
@@ -163,7 +163,7 @@ export function createSelectPlugin(): IPlugin<{
           return true;
         }
 
-        return txHandleElementPointerDoubleClick({ editor, render, selection, hasSameSelectionOrder }, { event });
+        return txHandleElementPointerDoubleClick({ editor: canvasRegistry, render, selection, hasSameSelectionOrder }, { event });
       });
 
       ctx.hooks.pointerDown.tap((event) => {
@@ -237,7 +237,7 @@ export function createSelectPlugin(): IPlugin<{
 
         event.preventDefault();
         event.stopPropagation();
-        txDeleteSelection({ crdt, editor, history, render, renderOrder, selection }, {});
+        txDeleteSelection({ Group: Konva.Group, Shape: Konva.Shape, Layer: Konva.Layer, canvasRegistry, crdt, history, render, renderOrder, selection }, {});
       });
 
       ctx.hooks.destroy.tap(() => {

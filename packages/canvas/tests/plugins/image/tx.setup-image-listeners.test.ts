@@ -35,7 +35,7 @@ function createImageElement(id: string, x: number, y: number) {
 }
 
 describe("txSetupImageListeners", () => {
-  test("alt-drag delegates clone startup through the new editor clone path", () => {
+  test("alt-drag delegates clone startup through the canvas registry clone path", () => {
     const container = createTestContainer();
     const stage = new Konva.Stage({ container, width: 800, height: 600 });
     const layer = new Konva.Layer();
@@ -47,8 +47,8 @@ describe("txSetupImageListeners", () => {
     const startDragClone = vi.fn();
 
     txSetupImageListeners({
+      canvasRegistry: { toElement: vi.fn(() => createImageElement("image-1", 10, 20)), toGroup: vi.fn(() => null) } as never,
       crdt: { build: vi.fn() } as never,
-      editor: { toElement: vi.fn(() => createImageElement("image-1", 10, 20)), toGroup: vi.fn(() => null) } as never,
       history: { record: vi.fn() } as never,
       render: { staticForegroundLayer: layer } as never,
       selection: { mode: "select", selection: [node] } as never,
@@ -107,11 +107,7 @@ describe("txSetupImageListeners", () => {
     const applyElement = vi.fn();
 
     txSetupImageListeners({
-      crdt: {
-        build: () => ({ patchElement, commit }),
-        applyOps: vi.fn(),
-      } as never,
-      editor: {
+      canvasRegistry: {
         toElement: (candidate: Konva.Node) => {
           if (candidate.id() === "shape-2") {
             return createImageElement("shape-2", 45, 75);
@@ -120,6 +116,10 @@ describe("txSetupImageListeners", () => {
           return createImageElement(candidate.id(), candidate.x(), candidate.y());
         },
         toGroup: vi.fn(() => null),
+      } as never,
+      crdt: {
+        build: () => ({ patchElement, commit }),
+        applyOps: vi.fn(),
       } as never,
       history: { record: historyRecord } as never,
       render: { staticForegroundLayer: layer } as never,
