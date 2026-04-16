@@ -69,19 +69,17 @@ function fnApplyElements(canvasRegistry: TApplySelectionStyleChangeCanvasRegistr
 
 function fnIsTextStyleProperty(property: TSelectionStyleProperty) {
   return property === "fontFamily"
-    || property === "fontSizePreset"
+    || property === "fontSize"
     || property === "textAlign"
     || property === "verticalAlign";
 }
 
 function fnIsDataStyleProperty(property: TSelectionStyleProperty): property is Extract<
   TSelectionStyleProperty,
-  "fontFamily" | "fontSizePreset" | "textAlign" | "verticalAlign" | "lineType" | "startCap" | "endCap"
+  "fontFamily" | "fontSize" | "lineType" | "startCap" | "endCap"
 > {
   return property === "fontFamily"
-    || property === "fontSizePreset"
-    || property === "textAlign"
-    || property === "verticalAlign"
+    || property === "fontSize"
     || property === "lineType"
     || property === "startCap"
     || property === "endCap";
@@ -138,12 +136,26 @@ export function txCreateSelectionStyleChangePlan(
       return patches;
     }
 
-    if (args.property === "strokeWidth" && typeof args.value === "number") {
+    if (args.property === "strokeWidth" && typeof args.value === "string") {
       return [fxCloneElementWithSelectionStyle({ now: portal.now }, { element, style: { strokeWidth: args.value } })];
     }
 
     if (args.property === "opacity" && typeof args.value === "number") {
       return [fxCloneElementWithSelectionStyle({ now: portal.now }, { element, style: { opacity: args.value } })];
+    }
+
+    if (args.property === "textAlign" && typeof args.value === "string") {
+      return [fxCloneElementWithSelectionStyle({ now: portal.now }, {
+        element,
+        style: { textAlign: args.value as "left" | "center" | "right" },
+      })];
+    }
+
+    if (args.property === "verticalAlign" && typeof args.value === "string") {
+      return [fxCloneElementWithSelectionStyle({ now: portal.now }, {
+        element,
+        style: { verticalAlign: args.value as "top" | "middle" | "bottom" },
+      })];
     }
 
     if (typeof args.value === "string" && fnIsDataStyleProperty(args.property)) {

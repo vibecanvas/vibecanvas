@@ -13,7 +13,6 @@ import type { RenderOrderService } from "../../services/render-order/RenderOrder
 import type { SceneService } from "../../services/scene/SceneService";
 import type { TCanvasTransformAnchor, SelectionService, CanvasRegistryService } from "../../services";
 import { CanvasMode } from "../../services/selection/CONSTANTS";
-import { fnGetFontSizePresetValue, fnGetNearestFontSizePreset, type TFontSizePreset } from "../../core/fn.text-style";
 import type { IHooks } from "../../runtime";
 import { fxCreateTextElement } from "./fn.create-text-element";
 import { fxToElement } from "./fx.to-element";
@@ -23,6 +22,13 @@ import { txSetupTextNode } from "./tx.setup-text-node";
 import { txUpdateTextNodeFromElement } from "./tx.update-text-node-from-element";
 import { txDeleteSelection } from "../select/tx.delete-selection";
 import { txFinalizeOwnedTransform } from "../transform/tx.finalize-owned-transform";
+import {
+  DEFAULT_TEXT_ALIGN,
+  DEFAULT_TEXT_FONT_FAMILY,
+  DEFAULT_TEXT_FONT_SIZE_TOKEN,
+  DEFAULT_TEXT_LINE_HEIGHT,
+  DEFAULT_TEXT_VERTICAL_ALIGN,
+} from "./CONSTANTS";
 
 const FREE_TEXT_NAME = "free-text";
 const ATTACHED_TEXT_NAME = "attached-text";
@@ -35,7 +41,7 @@ const TEXT_TRANSFORM_ANCHORS: TCanvasTransformAnchor[] = [
   "bottom-left",
   "bottom-right",
 ];
-const DEFAULT_TEXT_COLOR_TOKEN = "@gray/900";
+const DEFAULT_TEXT_COLOR_TOKEN = "@base/900";
 
 function usesThemeTextColor(element: Pick<TElement, "style">) {
   return !element.style.strokeColor;
@@ -61,16 +67,18 @@ function createTextNode(theme: ThemeService, element: TElement) {
     width: data.w,
     height: data.h,
     text: data.text,
-    fontSize: data.fontSize,
+    fontSize: theme.resolveFontSize(element.style.fontSize),
     fontFamily: data.fontFamily,
-    align: data.textAlign,
-    verticalAlign: data.verticalAlign,
-    lineHeight: data.lineHeight,
+    align: element.style.textAlign ?? DEFAULT_TEXT_ALIGN,
+    verticalAlign: element.style.verticalAlign ?? DEFAULT_TEXT_VERTICAL_ALIGN,
+    lineHeight: DEFAULT_TEXT_LINE_HEIGHT,
     wrap: isAttachedText ? "word" : "none",
     draggable: !isAttachedText,
     listening: !isAttachedText,
     fill: getTextFillColor(theme, element),
     opacity: element.style.opacity ?? 1,
+    scaleX: element.scaleX ?? 1,
+    scaleY: element.scaleY ?? 1,
   });
 
   applyTextThemeState(node, element);
@@ -78,7 +86,6 @@ function createTextNode(theme: ThemeService, element: TElement) {
   node.setAttr("vcContainerId", data.containerId ?? null);
   node.setAttr("vcOriginalText", data.originalText);
   node.setAttr("vcTextAutoResize", data.autoResize);
-  node.setAttr("vcFontSizePreset", data.fontSizePreset ?? fnGetNearestFontSizePreset(data.fontSize));
   node.name(isAttachedText ? ATTACHED_TEXT_NAME : FREE_TEXT_NAME);
   return node;
 }
@@ -99,7 +106,14 @@ function fxSerializeTextNode(canvasRegistry: CanvasRegistryService, args: {
 
 function fxApplyRememberedTextToolStyle(args: {
   element: TElement;
-  rememberedStyle: ReturnType<EditorService["getToolSelectionStyleValues"]>;
+  rememberedStyle: {
+    strokeColor?: string;
+    opacity?: number;
+    fontFamily?: string;
+    fontSize?: string;
+    textAlign?: TElement["style"]["textAlign"];
+    verticalAlign?: TElement["style"]["verticalAlign"];
+  };
 }) {
   const nextElement = structuredClone(args.element);
   const rememberedStrokeColor = args.rememberedStyle.strokeColor;
@@ -121,20 +135,20 @@ function fxApplyRememberedTextToolStyle(args: {
     nextElement.data.fontFamily = rememberedFontFamily;
   }
 
-  const rememberedFontSizePreset = args.rememberedStyle.fontSizePreset;
-  if (typeof rememberedFontSizePreset === "string") {
-    nextElement.data.fontSizePreset = rememberedFontSizePreset as TFontSizePreset;
-    nextElement.data.fontSize = fnGetFontSizePresetValue(rememberedFontSizePreset as TFontSizePreset);
+  const rememberedFontSize = args.rememberedStyle.fontSize;
+  if (typeof rememberedFontSize === "string") {
+    nextElement.style.fontSize = rememberedFontSize;
   }
+
 
   const rememberedTextAlign = args.rememberedStyle.textAlign;
   if (rememberedTextAlign === "left" || rememberedTextAlign === "center" || rememberedTextAlign === "right") {
-    nextElement.data.textAlign = rememberedTextAlign;
+    nextElement.style.textAlign = rememberedTextAlign;
   }
 
   const rememberedVerticalAlign = args.rememberedStyle.verticalAlign;
   if (rememberedVerticalAlign === "top" || rememberedVerticalAlign === "middle" || rememberedVerticalAlign === "bottom") {
-    nextElement.data.verticalAlign = rememberedVerticalAlign;
+    nextElement.style.verticalAlign = rememberedVerticalAlign;
   }
 
   return nextElement;
@@ -143,20 +157,7 @@ function fxApplyRememberedTextToolStyle(args: {
 function txApplyTextTransform(args: {
   node: Konva.Node;
 }) {
-  if (!(args.node instanceof Konva.Text)) {
-    return false;
-  }
-
-  const scaleX = args.node.scaleX();
-  const scaleY = args.node.scaleY();
-  args.node.setAttrs({
-    width: args.node.width() * scaleX,
-    height: args.node.height() * scaleY,
-    fontSize: Math.max(1, args.node.fontSize() * scaleX),
-    scaleX: 1,
-    scaleY: 1,
-  });
-  return true;
+  return args.node instanceof Konva.Text;
 }
 
 /**
@@ -319,10 +320,10 @@ export function createTextPlugin(): IPlugin<{
           values: {
             strokeColor: DEFAULT_TEXT_COLOR_TOKEN,
             opacity: 1,
-            fontFamily: "Arial, sans-serif",
-            fontSizePreset: fnGetNearestFontSizePreset(16),
-            textAlign: "left",
-            verticalAlign: "top",
+            fontFamily: `${DEFAULT_TEXT_FONT_FAMILY}, sans-serif`,
+            fontSize: DEFAULT_TEXT_FONT_SIZE_TOKEN,
+            textAlign: DEFAULT_TEXT_ALIGN,
+            verticalAlign: DEFAULT_TEXT_VERTICAL_ALIGN,
           },
         }),
         getTransformOptions: ({ element }) => {
@@ -466,11 +467,11 @@ export function createTextPlugin(): IPlugin<{
           rememberedStyle: {
             strokeColor: DEFAULT_TEXT_COLOR_TOKEN,
             opacity: 1,
-            fontFamily: "Arial, sans-serif",
-            fontSizePreset: fnGetNearestFontSizePreset(16),
-            textAlign: "left",
-            verticalAlign: "top",
-            ...editor.getToolSelectionStyleValues("text"),
+            fontFamily: `${DEFAULT_TEXT_FONT_FAMILY}, sans-serif`,
+            fontSize: DEFAULT_TEXT_FONT_SIZE_TOKEN,
+            textAlign: DEFAULT_TEXT_ALIGN,
+            verticalAlign: DEFAULT_TEXT_VERTICAL_ALIGN,
+            ...theme.getRememberedStyle("text"),
           },
         });
         const node = canvasRegistry.createNodeFromElement(element);

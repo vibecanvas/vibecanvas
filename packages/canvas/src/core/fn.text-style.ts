@@ -1,8 +1,6 @@
-import type { TTextData } from "@vibecanvas/service-automerge/types/canvas-doc.types";
-
 export type TFontSizePreset = "S" | "M" | "L" | "XL";
-export type TTextAlign = TTextData["textAlign"];
-export type TVerticalAlign = TTextData["verticalAlign"];
+export type TTextAlign = "left" | "center" | "right";
+export type TVerticalAlign = "top" | "middle" | "bottom";
 
 export function fnGetFontSizePresetOptions() {
   return [

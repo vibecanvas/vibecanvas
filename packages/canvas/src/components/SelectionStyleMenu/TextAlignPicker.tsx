@@ -1,15 +1,14 @@
 import { For } from "solid-js";
-import type { TTextData } from "@vibecanvas/service-automerge/types/canvas-doc.types";
 
 const OPTIONS = [
   { label: "Left", value: "left" },
   { label: "Center", value: "center" },
   { label: "Right", value: "right" },
-] as const satisfies Array<{ label: string; value: TTextData["textAlign"] }>;
+] as const satisfies Array<{ label: string; value: "left" | "center" | "right" }>;
 
 export function TextAlignPicker(props: {
-  value: TTextData["textAlign"] | undefined;
-  onChange: (value: TTextData["textAlign"]) => void;
+  value: "left" | "center" | "right" | undefined;
+  onChange: (value: "left" | "center" | "right") => void;
 }) {
   return (
     <div

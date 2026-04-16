@@ -7,6 +7,7 @@ import { fxGetCanvasParentGroupId } from "../../core/fx.canvas-node-semantics";
 import {
   DEFAULT_STROKE,
   DEFAULT_STROKE_WIDTH,
+  STROKE_WIDTH_VALUE_BY_TOKEN,
   type TShape1dData,
   type TShape1dNode,
   ELEMENT_CREATED_AT_ATTR,
@@ -67,7 +68,13 @@ export type TPortalFxGetStrokeWidthFromStyle = {};
 export type TArgsFxGetStrokeWidthFromStyle = { style: TElementStyle };
 export function fxGetStrokeWidthFromStyle(portal: TPortalFxGetStrokeWidthFromStyle, args: TArgsFxGetStrokeWidthFromStyle) {
   void portal;
-  return args.style.strokeWidth ?? DEFAULT_STROKE_WIDTH;
+  if (typeof args.style.strokeWidth === "string") {
+    return STROKE_WIDTH_VALUE_BY_TOKEN[args.style.strokeWidth as keyof typeof STROKE_WIDTH_VALUE_BY_TOKEN]
+      ?? Number.parseFloat(args.style.strokeWidth)
+      ?? DEFAULT_STROKE_WIDTH;
+  }
+
+  return DEFAULT_STROKE_WIDTH;
 }
 
 export type TPortalFxGetStrokeColorFromStyle = {
@@ -128,7 +135,6 @@ export function fxToTElement(portal: TPortalFxToTElement, args: TArgsFxToTElemen
   const style: TElementStyle = {
     ...structuredClone(baseStyle),
     opacity: args.node.opacity(),
-    strokeWidth: args.node.strokeWidth(),
   };
   delete style.backgroundColor;
   delete style.strokeColor;
@@ -139,16 +145,15 @@ export function fxToTElement(portal: TPortalFxToTElement, args: TArgsFxToTElemen
     x,
     y,
     rotation: args.node.getAbsoluteRotation(),
+    scaleX,
+    scaleY,
     bindings: [],
     createdAt: Number(args.node.getAttr(ELEMENT_CREATED_AT_ATTR) ?? now),
     locked: false,
     parentGroupId: fxGetCanvasParentGroupId({}, { editor: portal.editor, node: args.node }),
     updatedAt: now,
     zIndex: typeof args.node.getAttr("vcZIndex") === "string" ? args.node.getAttr("vcZIndex") : "",
-    data: {
-      ...baseData,
-      points: baseData.points.map(([px, py]) => [px * scaleX, py * scaleY] as [number, number]),
-    },
+    data: structuredClone(baseData),
     style,
   } satisfies TElement;
 }

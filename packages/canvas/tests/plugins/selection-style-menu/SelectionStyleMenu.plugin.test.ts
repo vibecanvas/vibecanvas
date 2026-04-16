@@ -32,9 +32,9 @@ function createPenElement(args?: {
     parentGroupId: null,
     zIndex: "",
     style: {
-      backgroundColor: args?.color ?? "@gray/900",
+      backgroundColor: args?.color ?? "@base/900",
       opacity: 0.92,
-      strokeWidth: 7,
+      strokeWidth: "@stroke-width/thick",
     },
     data: {
       type: "pen",
@@ -66,6 +66,7 @@ describe("SelectionStyleMenu plugin", () => {
   test("stores remembered pen tool color from the menu when nothing is selected", async () => {
     const harness = await createNewCanvasHarness();
     const editor = harness.runtime.services.require("editor");
+    const theme = harness.runtime.services.require("theme");
     const root = getStageDom(harness);
 
     editor.setActiveTool("pen");
@@ -75,7 +76,7 @@ describe("SelectionStyleMenu plugin", () => {
     clickElement(blueButton);
     await flushCanvasEffects();
 
-    expect(editor.getToolSelectionStyleValues("pen").strokeColor).toBe("@blue/700");
+    expect(theme.getRememberedStyle("pen").strokeColor).toBe("@blue/700");
     expect(root.querySelectorAll('button[title="blue/700"]').length).toBe(2);
 
     await harness.destroy();
@@ -128,12 +129,12 @@ describe("SelectionStyleMenu plugin", () => {
     editor.setActiveTool("pen");
     await flushCanvasEffects();
 
-    const currentColorButton = getButtonByTitle(root, "gray/900", 1);
+    const currentColorButton = getButtonByTitle(root, "base/900", 1);
     clickElement(currentColorButton);
     await flushCanvasEffects();
 
-    expect(root.querySelector('button[title="gray/100"]')).toBeTruthy();
-    expect(root.querySelectorAll('button[title="gray/900"]').length).toBeGreaterThanOrEqual(2);
+    expect(root.querySelector('button[title="base/100"]')).toBeTruthy();
+    expect(root.querySelectorAll('button[title="base/900"]').length).toBeGreaterThanOrEqual(2);
 
     await harness.destroy();
   });

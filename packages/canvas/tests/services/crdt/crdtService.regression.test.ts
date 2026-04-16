@@ -66,12 +66,11 @@ describe("CrdtService regressions", () => {
       ...createElement("e1").data,
       text: "nested-replace",
       originalText: "nested-replace",
-      fontSize: 22,
     });
     builder.commit();
 
     expect(docHandle.doc().elements.e1.data.text).toBe("nested-replace");
-    expect(docHandle.doc().elements.e1.data.fontSize).toBe(22);
+    expect(docHandle.doc().elements.e1.data.originalText).toBe("nested-replace");
   });
 
   test("builder commit marks its change as local for hydrator-style consumers", () => {

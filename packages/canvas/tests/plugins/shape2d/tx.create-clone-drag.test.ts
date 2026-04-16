@@ -28,7 +28,7 @@ function createRectElement(id: string, x: number, y: number) {
     locked: false,
     parentGroupId: null,
     zIndex: "",
-    style: { backgroundColor: "#ff0000", opacity: 1, strokeWidth: 0 },
+    style: { backgroundColor: "#ff0000", opacity: 1, strokeWidth: "@stroke-width/none" },
     data: {
       type: "rect" as const,
       w: 120,

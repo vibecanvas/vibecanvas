@@ -31,7 +31,10 @@ export function ensureResizeObserver() {
     disconnect() { }
   }
 
-  vi.stubGlobal("ResizeObserver", MockResizeObserver);
+  vi.stubGlobal?.("ResizeObserver", MockResizeObserver);
+  if (typeof ResizeObserver === "undefined") {
+    Object.assign(globalThis, { ResizeObserver: MockResizeObserver });
+  }
 }
 
 function createEmptyDomRect(): DOMRect {

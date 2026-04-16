@@ -59,6 +59,8 @@ export function txCreatePenPathFromElement(portal: TPortalTxCreatePenPathFromEle
     }),
     fill: getPenFillFromStyle(portal, args.element),
     opacity: args.element.style.opacity ?? DEFAULT_OPACITY,
+    scaleX: args.element.scaleX ?? 1,
+    scaleY: args.element.scaleY ?? 1,
     listening: true,
     draggable: true,
     visible: true,
@@ -90,7 +92,7 @@ export function txUpdatePenPathFromElement(portal: TPortalTxUpdatePenPathFromEle
   }));
   args.node.fill(getPenFillFromStyle(portal, args.element));
   args.node.opacity(args.element.style.opacity ?? DEFAULT_OPACITY);
-  args.node.scale({ x: 1, y: 1 });
+  args.node.scale({ x: args.element.scaleX ?? 1, y: args.element.scaleY ?? 1 });
   syncPenMetadata(args.node, args.element);
   args.node.setAttr(VC_Z_INDEX_ATTR, args.element.zIndex);
   return true;

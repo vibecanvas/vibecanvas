@@ -46,13 +46,16 @@ describe("new Text plugin click-create", () => {
   test("remembered text tool style is used for new text", async () => {
     const harness = await createNewCanvasHarness();
     const editor = harness.runtime.services.require("editor");
+    const theme = harness.runtime.services.require("theme");
 
-    editor.setToolSelectionStyleValue("text", "strokeColor", "@purple/700");
-    editor.setToolSelectionStyleValue("text", "fontFamily", "monospace");
-    editor.setToolSelectionStyleValue("text", "fontSizePreset", "XL");
-    editor.setToolSelectionStyleValue("text", "textAlign", "center");
-    editor.setToolSelectionStyleValue("text", "verticalAlign", "middle");
-    editor.setToolSelectionStyleValue("text", "opacity", 0.5);
+    theme.setRememberedStyle("text", {
+      strokeColor: "@purple/700",
+      fontFamily: "monospace",
+      fontSize: "@text/xl",
+      textAlign: "center",
+      verticalAlign: "middle",
+      opacity: 0.5,
+    });
     editor.setActiveTool("text");
     await flushCanvasEffects();
 

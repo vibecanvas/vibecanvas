@@ -37,12 +37,12 @@ export function txUpdateImageNodeFromElement(
     args.node.height(data.h);
   }
 
-  if (args.node.scaleX() !== 1) {
-    args.node.scaleX(1);
+  if (args.node.scaleX() !== (args.element.scaleX ?? 1)) {
+    args.node.scaleX(args.element.scaleX ?? 1);
   }
 
-  if (args.node.scaleY() !== 1) {
-    args.node.scaleY(1);
+  if (args.node.scaleY() !== (args.element.scaleY ?? 1)) {
+    args.node.scaleY(args.element.scaleY ?? 1);
   }
 
   if (args.node.opacity() !== (args.element.style.opacity ?? 1)) {

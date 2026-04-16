@@ -51,6 +51,8 @@ export function fxCreatePenNode(portal: TPortalFxCreatePenNode, args: TArgsFxCre
     }),
     fill: getPenFillFromStyle(portal, args.element),
     opacity: args.element.style.opacity ?? DEFAULT_OPACITY,
+    scaleX: args.element.scaleX ?? 1,
+    scaleY: args.element.scaleY ?? 1,
     listening: true,
     draggable: true,
     visible: true,

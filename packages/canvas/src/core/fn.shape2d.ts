@@ -16,7 +16,7 @@ export type TShape2dBounds = {
 
 const DEFAULT_STYLE: TElementStyle = {
   opacity: 1,
-  strokeWidth: 0,
+  strokeWidth: "@stroke-width/none",
 };
 
 export function fnIsShape2dToolId(toolId: string): toolId is TShape2dToolId {
@@ -102,6 +102,8 @@ export function fnCreateShape2dElement(args: {
     x: args.x,
     y: args.y,
     rotation: args.rotation,
+    scaleX: 1,
+    scaleY: 1,
     bindings: [],
     createdAt: args.createdAt,
     updatedAt: args.updatedAt,

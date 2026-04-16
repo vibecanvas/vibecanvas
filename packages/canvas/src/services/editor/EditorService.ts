@@ -4,7 +4,7 @@ import { SyncHook } from "@vibecanvas/tapable";
 import type Konva from "konva";
 import type { KonvaEventObject, Node, NodeConfig } from "konva/lib/Node";
 import type { IHooks } from "src/runtime";
-import type { CanvasRegistryService, TCanvasRegistrySelectionStyleValues } from "../canvas-registry/CanvasRegistryService";
+import type { CanvasRegistryService } from "../canvas-registry/CanvasRegistryService";
 import type { CrdtService } from "../crdt/CrdtService";
 import type { SceneService } from "../scene/SceneService";
 import type { SelectionService } from "../selection/SelectionService";
@@ -83,7 +83,6 @@ export type TEditorCloneElement = (args: { sourceElement: TElement; clonedElemen
 export interface TEditorServiceHooks {
   toolsChange: SyncHook<[]>;
   activeToolChange: SyncHook<[string]>;
-  toolSelectionStyleChange: SyncHook<[string]>;
   editingTextChange: SyncHook<[string | null]>;
   editingShape1dChange: SyncHook<[string | null]>;
   transformerChange: SyncHook<[Konva.Transformer | null]>;
@@ -119,14 +118,12 @@ export class EditorService implements IService<TEditorServiceHooks> {
   readonly hooks: TEditorServiceHooks = {
     toolsChange: new SyncHook(),
     activeToolChange: new SyncHook(),
-    toolSelectionStyleChange: new SyncHook(),
     editingTextChange: new SyncHook(),
     editingShape1dChange: new SyncHook(),
     transformerChange: new SyncHook(),
   };
 
   private readonly tools = new Map<string, TEditorTool>();
-  private readonly toolSelectionStyleValues = new Map<string, Partial<TCanvasRegistrySelectionStyleValues>>();
 
   activeToolId = "select";
   editingTextId: string | null = null;
@@ -279,23 +276,6 @@ export class EditorService implements IService<TEditorServiceHooks> {
    */
   getActiveTool() {
     return this.tools.get(this.activeToolId);
-  }
-
-  getToolSelectionStyleValues(toolId: string) {
-    return structuredClone(this.toolSelectionStyleValues.get(toolId) ?? {});
-  }
-
-  setToolSelectionStyleValue<K extends keyof TCanvasRegistrySelectionStyleValues>(
-    toolId: string,
-    key: K,
-    value: TCanvasRegistrySelectionStyleValues[K],
-  ) {
-    const next = {
-      ...(this.toolSelectionStyleValues.get(toolId) ?? {}),
-      [key]: value,
-    } satisfies Partial<TCanvasRegistrySelectionStyleValues>;
-    this.toolSelectionStyleValues.set(toolId, next);
-    this.hooks.toolSelectionStyleChange.call(toolId);
   }
 
   /**

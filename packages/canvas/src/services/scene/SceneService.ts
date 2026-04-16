@@ -1,12 +1,9 @@
-import type { DocHandle } from "@automerge/automerge-repo";
 import type { IService, IStartableService, IStoppableService } from "@vibecanvas/runtime";
-import type { TCanvasDoc } from "@vibecanvas/service-automerge/types/canvas-doc.types";
 import { SyncHook } from "@vibecanvas/tapable";
 import Konva from "konva";
 
 export type TSceneServiceArgs = {
   container: HTMLDivElement;
-  docHandle: DocHandle<TCanvasDoc>;
 };
 
 export interface TSceneServiceHooks {
@@ -17,7 +14,6 @@ export class SceneService implements IService<TSceneServiceHooks>, IStartableSer
   readonly name = "scene";
 
   readonly container: HTMLDivElement;
-  readonly docHandle: DocHandle<TCanvasDoc>;
   readonly hooks: TSceneServiceHooks = {
     resize: new SyncHook(),
   };
@@ -32,7 +28,6 @@ export class SceneService implements IService<TSceneServiceHooks>, IStartableSer
 
   constructor(args: TSceneServiceArgs) {
     this.container = args.container;
-    this.docHandle = args.docHandle;
   }
 
   start(): void | Promise<void> {

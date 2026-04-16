@@ -26,7 +26,7 @@ function createRectElement(overrides?: Partial<TElement>): TElement {
     style: {
       backgroundColor: '#ffffff',
       strokeColor: '#111111',
-      strokeWidth: 1,
+      strokeWidth: "@stroke-width/thin",
       opacity: 1,
     },
     ...overrides,
@@ -150,7 +150,7 @@ describe('query canvas command', () => {
             createdAt: 1712345678000,
             updatedAt: 1712345678999,
             data: { type: 'rect', w: 320, h: 180 },
-            style: { backgroundColor: '#ffffff', strokeColor: '#111111', strokeWidth: 1, opacity: 1 },
+            style: { backgroundColor: '#ffffff', strokeColor: '#111111', strokeWidth: "@stroke-width/thin", opacity: 1 },
           },
         },
       ],
@@ -161,12 +161,12 @@ describe('query canvas command', () => {
     const red = createRectElement({
       id: 'rect-red',
       zIndex: 'a0',
-      style: { backgroundColor: '#ff0000', strokeColor: '#aa0000', strokeWidth: 2, opacity: 0.8 },
+      style: { backgroundColor: '#ff0000', strokeColor: '#aa0000', strokeWidth: "2", opacity: 0.8 },
     });
     const blue = createRectElement({
       id: 'rect-blue',
       zIndex: 'a1',
-      style: { backgroundColor: '#0000ff', strokeColor: '#0000aa', strokeWidth: 2, opacity: 0.8 },
+      style: { backgroundColor: '#0000ff', strokeColor: '#0000aa', strokeWidth: "2", opacity: 0.8 },
     });
 
     const handle = automergeService.repo.create<TCanvasDoc>({

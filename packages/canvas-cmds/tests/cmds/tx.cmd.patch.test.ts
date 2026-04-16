@@ -19,7 +19,7 @@ function createRectElement(overrides?: Partial<TElement>): TElement {
     createdAt: 1,
     updatedAt: 100,
     data: { type: 'rect', w: 120, h: 80 },
-    style: { backgroundColor: '#ffffff', strokeColor: '#111111', strokeWidth: 1, opacity: 1 },
+    style: { backgroundColor: '#ffffff', strokeColor: '#111111', strokeWidth: "@stroke-width/thin", opacity: 1, fontSize: '@text/s', textAlign: 'left', verticalAlign: 'top' },
     ...overrides,
   };
 }
@@ -42,16 +42,12 @@ function createTextElement(overrides?: Partial<TElement>): TElement {
       h: 40,
       text: 'hello',
       originalText: 'hello',
-      fontSize: 16,
       fontFamily: 'Inter',
-      textAlign: 'left',
-      verticalAlign: 'top',
-      lineHeight: 1.2,
       link: null,
       containerId: null,
       autoResize: false,
     },
-    style: { backgroundColor: '#ffffff', strokeColor: '#111111', strokeWidth: 1, opacity: 1 },
+    style: { backgroundColor: '#ffffff', strokeColor: '#111111', strokeWidth: "@stroke-width/thin", opacity: 1, fontSize: '@text/s', textAlign: 'left', verticalAlign: 'top' },
     ...overrides,
   };
 }

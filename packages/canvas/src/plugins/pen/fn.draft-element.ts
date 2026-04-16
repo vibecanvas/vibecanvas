@@ -21,6 +21,8 @@ export function fxCreatePenDraftElement(args: TArgsCreatePenDraftElement): TElem
     x: penData.x,
     y: penData.y,
     rotation: 0,
+    scaleX: 1,
+    scaleY: 1,
     zIndex: "",
     parentGroupId: null,
     bindings: [],

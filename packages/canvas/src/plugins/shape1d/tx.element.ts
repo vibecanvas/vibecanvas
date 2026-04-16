@@ -27,9 +27,14 @@ export function txUpdateShapeFromElement(portal: TPortalTxUpdateShapeFromElement
   args.node.stroke(color);
   args.node.fill(color);
   args.node.strokeWidth(strokeWidth);
+  args.node.dash(args.element.style.strokeStyle === "dashed"
+    ? [strokeWidth * 4, strokeWidth * 2]
+    : args.element.style.strokeStyle === "dotted"
+      ? [strokeWidth, strokeWidth * 1.5]
+      : []);
   args.node.hitStrokeWidth(Math.max(MIN_HIT_STROKE_WIDTH, strokeWidth + 8));
   args.node.opacity(args.element.style.opacity ?? DEFAULT_OPACITY);
-  args.node.scale({ x: 1, y: 1 });
+  args.node.scale({ x: args.element.scaleX ?? 1, y: args.element.scaleY ?? 1 });
   args.node.setAttr(ELEMENT_CREATED_AT_ATTR, args.element.createdAt);
   args.node.setAttr("vcElementData", structuredClone(args.element.data));
   args.node.setAttr("vcElementStyle", structuredClone(args.element.style));

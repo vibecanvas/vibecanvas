@@ -2,7 +2,7 @@ import type { TElement } from "@vibecanvas/service-automerge/types/canvas-doc.ty
 import type { TSelectionStyleMenuSections, TSelectionStyleMenuValues } from "../components/SelectionStyleMenu";
 import type { TCapStyle, TFontFamily, TLineType, TStrokeWidthOption } from "../components/SelectionStyleMenu/types";
 import type { TCanvasRegistrySelectionStyleConfig } from "../services/canvas-registry/CanvasRegistryService";
-import { fnGetNearestFontSizePreset, type TFontSizePreset } from "./fn.text-style";
+import { DEFAULT_TEXT_FONT_SIZE_TOKEN } from "../plugins/text/CONSTANTS";
 
 const LINE_TYPES = new Set(["line", "arrow"]);
 
@@ -12,7 +12,7 @@ export type TSelectionStyleProperty =
   | "strokeWidth"
   | "opacity"
   | "fontFamily"
-  | "fontSizePreset"
+  | "fontSize"
   | "textAlign"
   | "verticalAlign"
   | "lineType"
@@ -43,7 +43,7 @@ function getSectionKeyForProperty(property: TSelectionStyleProperty): keyof TSel
     case "opacity":
       return "showOpacityPicker";
     case "fontFamily":
-    case "fontSizePreset":
+    case "fontSize":
     case "textAlign":
     case "verticalAlign":
       return "showTextPickers";
@@ -91,6 +91,7 @@ function getMergedValues(configs: TCanvasRegistrySelectionStyleConfig[]) {
   }, {} as TSelectionStyleMenuValues);
 }
 
+
 export function fxHasSelectionStylePropertySupport(args: {
   config: TCanvasRegistrySelectionStyleConfig | null | undefined;
   property: TSelectionStyleProperty;
@@ -123,7 +124,7 @@ export function fxGetSelectionStyleStrokeWidthOptions(args: {
     return undefined;
   }
 
-  const deduped = new Map<number, TStrokeWidthOption>();
+  const deduped = new Map<string, TStrokeWidthOption>();
   options.forEach((option) => {
     if (!deduped.has(option.value)) {
       deduped.set(option.value, option);
@@ -144,7 +145,7 @@ export function fxGetSelectionStyleMenuValues(args: {
   const stroke = args.elements.find((element) => {
     return typeof element.style.strokeColor === "string" || typeof element.style.backgroundColor === "string";
   });
-  const width = args.elements.find((element) => typeof element.style.strokeWidth === "number");
+  const width = args.elements.find((element) => typeof element.style.strokeWidth === "string");
   const opacity = args.elements.find((element) => typeof element.style.opacity === "number");
   const text = args.textElements[0];
   const line = args.elements.find((element) => {
@@ -160,16 +161,14 @@ export function fxGetSelectionStyleMenuValues(args: {
     fontFamily: sections.showTextPickers
       ? (text?.data.type === "text" ? text.data.fontFamily as TFontFamily : defaults.fontFamily)
       : undefined,
-    fontSizePreset: sections.showTextPickers
-      ? (text?.data.type === "text"
-        ? (text.data.fontSizePreset ?? fnGetNearestFontSizePreset(text.data.fontSize)) as TFontSizePreset
-        : defaults.fontSizePreset)
+    fontSize: sections.showTextPickers
+      ? (text?.style.fontSize ?? defaults.fontSize ?? DEFAULT_TEXT_FONT_SIZE_TOKEN)
       : undefined,
     textAlign: sections.showTextPickers
-      ? (text?.data.type === "text" ? text.data.textAlign : defaults.textAlign)
+      ? (text?.style.textAlign ?? defaults.textAlign)
       : undefined,
     verticalAlign: sections.showTextPickers
-      ? (text?.data.type === "text" ? text.data.verticalAlign : defaults.verticalAlign)
+      ? (text?.style.verticalAlign ?? defaults.verticalAlign)
       : undefined,
     lineType: sections.showLineTypePicker
       ? (line?.data.type === "line" || line?.data.type === "arrow" ? line.data.lineType as TLineType : defaults.lineType)

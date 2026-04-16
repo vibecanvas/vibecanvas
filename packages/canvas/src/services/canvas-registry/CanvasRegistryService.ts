@@ -1,10 +1,9 @@
-import type { TElement, TGroup, TTextData } from "@vibecanvas/service-automerge/types/canvas-doc.types";
+import type { TElement, TGroup } from "@vibecanvas/service-automerge/types/canvas-doc.types";
 import type { IService } from "@vibecanvas/runtime";
 import { SyncHook } from "@vibecanvas/tapable";
 import type { ThemeService } from "@vibecanvas/service-theme";
 import type Konva from "konva";
 import type { TCapStyle, TFontFamily, TLineType, TStrokeWidthOption } from "../../components/SelectionStyleMenu/types";
-import type { TFontSizePreset } from "../../core/fn.text-style";
 
 export type TCanvasNodeType = TElement["data"]["type"] | "group";
 
@@ -65,12 +64,12 @@ export type TCanvasRegistrySelectionStyleSections = {
 export type TCanvasRegistrySelectionStyleValues = {
   fillColor?: string;
   strokeColor?: string;
-  strokeWidth?: number;
+  strokeWidth?: string;
   opacity?: number;
   fontFamily?: TFontFamily;
-  fontSizePreset?: TFontSizePreset;
-  textAlign?: TTextData["textAlign"];
-  verticalAlign?: TTextData["verticalAlign"];
+  fontSize?: string;
+  textAlign?: "left" | "center" | "right";
+  verticalAlign?: "top" | "middle" | "bottom";
   lineType?: TLineType;
   startCap?: TCapStyle;
   endCap?: TCapStyle;

@@ -10,6 +10,8 @@ export type TArgsToImageElement = {
   parentGroupId: string | null;
   zIndex: string;
   opacity: number;
+  scaleX: number;
+  scaleY: number;
   url: string | null;
   base64: string | null;
   width: number;
@@ -27,6 +29,8 @@ export function fxToImageElement(args: TArgsToImageElement): TElement {
     x: args.x,
     y: args.y,
     rotation: args.rotation,
+    scaleX: args.scaleX,
+    scaleY: args.scaleY,
     bindings: [],
     createdAt: args.createdAt,
     updatedAt: args.updatedAt,

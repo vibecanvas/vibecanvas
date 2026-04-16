@@ -69,7 +69,7 @@ function createLineElement(args?: {
     style: {
       strokeColor: "#0f172a",
       opacity: 0.92,
-      strokeWidth: 4,
+      strokeWidth: "@stroke-width/medium",
     },
     data: {
       type: "line",
@@ -103,7 +103,7 @@ function createArrowElement(args?: {
     style: {
       strokeColor: "#0f172a",
       opacity: 0.92,
-      strokeWidth: 4,
+      strokeWidth: "@stroke-width/medium",
     },
     data: {
       type: "arrow",
@@ -153,11 +153,14 @@ describe("shape1d plugin", () => {
   test("remembered line tool style is used for newly created lines", async () => {
     const harness = await createNewCanvasHarness();
     const editor = harness.runtime.services.require("editor");
+    const theme = harness.runtime.services.require("theme");
 
-    editor.setToolSelectionStyleValue("line", "strokeColor", "@blue/700");
-    editor.setToolSelectionStyleValue("line", "strokeWidth", 2);
-    editor.setToolSelectionStyleValue("line", "opacity", 0.4);
-    editor.setToolSelectionStyleValue("line", "lineType", "curved");
+    theme.setRememberedStyle("line", {
+      strokeColor: "@blue/700",
+      strokeWidth: "2",
+      opacity: 0.4,
+      lineType: "curved",
+    });
     editor.setActiveTool("line");
     await flushCanvasEffects();
 
@@ -186,13 +189,16 @@ describe("shape1d plugin", () => {
   test("remembered arrow tool style is used for newly created arrows", async () => {
     const harness = await createNewCanvasHarness();
     const editor = harness.runtime.services.require("editor");
+    const theme = harness.runtime.services.require("theme");
 
-    editor.setToolSelectionStyleValue("arrow", "strokeColor", "@red/600");
-    editor.setToolSelectionStyleValue("arrow", "strokeWidth", 1);
-    editor.setToolSelectionStyleValue("arrow", "opacity", 0.6);
-    editor.setToolSelectionStyleValue("arrow", "lineType", "curved");
-    editor.setToolSelectionStyleValue("arrow", "startCap", "dot");
-    editor.setToolSelectionStyleValue("arrow", "endCap", "diamond");
+    theme.setRememberedStyle("arrow", {
+      strokeColor: "@red/600",
+      strokeWidth: "@stroke-width/thin",
+      opacity: 0.6,
+      lineType: "curved",
+      startCap: "dot",
+      endCap: "diamond",
+    });
     editor.setActiveTool("arrow");
     await flushCanvasEffects();
 

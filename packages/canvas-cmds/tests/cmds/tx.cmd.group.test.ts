@@ -19,7 +19,7 @@ function createRectElement(overrides?: Partial<TElement>): TElement {
     createdAt: 1,
     updatedAt: 1,
     data: { type: 'rect', w: 120, h: 80 },
-    style: { backgroundColor: '#ffffff', strokeColor: '#111111', strokeWidth: 1, opacity: 1 },
+    style: { backgroundColor: '#ffffff', strokeColor: '#111111', strokeWidth: "@stroke-width/thin", opacity: 1 },
     ...overrides,
   };
 }

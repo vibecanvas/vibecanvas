@@ -147,6 +147,8 @@ function createImageNode(render: SceneService, element: TElement) {
     width: data.w,
     height: data.h,
     opacity: element.style.opacity ?? 1,
+    scaleX: element.scaleX ?? 1,
+    scaleY: element.scaleY ?? 1,
     draggable: true,
     image: undefined,
   });
@@ -202,10 +204,12 @@ function toElement(render: SceneService, editor: EditorService, node: Konva.Imag
     parentGroupId,
     zIndex: fnGetNodeZIndex({ node }),
     opacity: node.opacity(),
+    scaleX: absoluteScale.x / layerScaleX,
+    scaleY: absoluteScale.y / layerScaleY,
     url: (node.getAttr(IMAGE_URL_ATTR) as string | null) ?? null,
     base64: (node.getAttr(IMAGE_BASE64_ATTR) as string | null) ?? null,
-    width: node.width() * (absoluteScale.x / layerScaleX),
-    height: node.height() * (absoluteScale.y / layerScaleY),
+    width: node.width(),
+    height: node.height(),
     crop,
   });
 }

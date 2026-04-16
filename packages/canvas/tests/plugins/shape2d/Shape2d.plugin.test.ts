@@ -10,8 +10,14 @@ function ensureDom() {
   }
 
   const dom = new JSDOM("<!doctype html><html><body></body></html>");
-  vi.stubGlobal("window", dom.window);
-  vi.stubGlobal("document", dom.window.document);
+  vi.stubGlobal?.("window", dom.window);
+  vi.stubGlobal?.("document", dom.window.document);
+  if (typeof window === "undefined") {
+    Object.assign(globalThis, {
+      window: dom.window,
+      document: dom.window.document,
+    });
+  }
 }
 
 function createRectElement() {
@@ -29,7 +35,7 @@ function createRectElement() {
     style: {
       backgroundColor: "#112233",
       strokeColor: "#445566",
-      strokeWidth: 4,
+      strokeWidth: "@stroke-width/medium",
       opacity: 0.35,
     },
     data: {
@@ -55,7 +61,7 @@ function createEllipseElement() {
     style: {
       backgroundColor: "#abcdef",
       strokeColor: "#123456",
-      strokeWidth: 2,
+      strokeWidth: "2",
       opacity: 0.8,
     },
     data: {
@@ -79,6 +85,9 @@ describe("shape2d runtime helpers", () => {
       render: {} as never,
       theme: {
         resolveThemeColor: (value: string | undefined) => value,
+        resolveStrokeWidth: (value: string | undefined, fallback: number) => typeof value === "string" ? Number.parseFloat(value) || (value === "@stroke-width/medium" ? 4 : fallback) : fallback,
+        resolveStrokeDash: () => [],
+        resolveCornerRadius: (_value: string | undefined, fallback: number) => fallback,
       } as never,
       setNodeZIndex: (candidate, zIndex) => candidate.setAttr("vcZIndex", zIndex),
     }, {
@@ -113,7 +122,7 @@ describe("shape2d runtime helpers", () => {
       opacity: 0.8,
       fill: "#abcdef",
       stroke: "#123456",
-      strokeWidth: 2,
+      strokeWidth: "2",
     });
     node.setAttr("vcShape2dType", "ellipse");
     node.setAttr("vcElementCreatedAt", 7);

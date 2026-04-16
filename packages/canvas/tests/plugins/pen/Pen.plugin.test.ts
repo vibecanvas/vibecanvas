@@ -35,7 +35,7 @@ function createPenElement(args?: {
     style: {
       backgroundColor: "#0f172a",
       opacity: 0.92,
-      strokeWidth: 7,
+      strokeWidth: "@stroke-width/thick",
     },
     data: {
       type: "pen",
@@ -242,10 +242,13 @@ describe("new Pen plugin", () => {
   test("remembered pen tool style is used for the next stroke", async () => {
     const harness = await createNewCanvasHarness();
     const editor = harness.runtime.services.require("editor");
+    const theme = harness.runtime.services.require("theme");
 
-    editor.setToolSelectionStyleValue("pen", "strokeColor", "@blue/700");
-    editor.setToolSelectionStyleValue("pen", "strokeWidth", 12);
-    editor.setToolSelectionStyleValue("pen", "opacity", 0.5);
+    theme.setRememberedStyle("pen", {
+      strokeColor: "@blue/700",
+      strokeWidth: "@stroke-width/heavy",
+      opacity: 0.5,
+    });
     editor.setActiveTool("pen");
     await flushCanvasEffects();
 

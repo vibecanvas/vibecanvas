@@ -1,5 +1,4 @@
-import type { TArrowData, TElement, TElementStyle, TLineData, TTextData } from "@vibecanvas/service-automerge/types/canvas-doc.types";
-import { fnGetScaledFontSizeFromPreset, type TFontSizePreset } from "./fn.text-style";
+import type { TArrowData, TElement, TElementStyle, TLineData } from "@vibecanvas/service-automerge/types/canvas-doc.types";
 import type { TSelectionStyleProperty } from "./fn.selection-style-menu";
 import type { TCapStyle, TLineType } from "../components/SelectionStyleMenu/types";
 
@@ -28,7 +27,7 @@ export function fxCloneElementWithSelectionStyle(
 
 export type TArgsCreateSelectionStyleDataPatch = {
   element: TElement;
-  property: Extract<TSelectionStyleProperty, "fontFamily" | "fontSizePreset" | "textAlign" | "verticalAlign" | "lineType" | "startCap" | "endCap">;
+  property: Extract<TSelectionStyleProperty, "fontFamily" | "fontSize" | "lineType" | "startCap" | "endCap">;
   value: string;
 };
 
@@ -47,41 +46,13 @@ export function fxCreateSelectionStyleDataPatch(
     };
   }
 
-  if (args.property === "fontSizePreset" && args.element.data.type === "text") {
-    const textData = structuredClone(args.element.data) as TTextData;
+  if (args.property === "fontSize" && args.element.data.type === "text") {
     return {
       ...structuredClone(args.element),
       updatedAt: portal.now(),
-      data: {
-        ...textData,
-        fontSize: fnGetScaledFontSizeFromPreset({
-          currentFontSize: textData.fontSize,
-          currentPreset: textData.fontSizePreset,
-          nextPreset: args.value as TFontSizePreset,
-        }),
-        fontSizePreset: args.value as TFontSizePreset,
-      },
-    };
-  }
-
-  if (args.property === "textAlign" && args.element.data.type === "text") {
-    return {
-      ...structuredClone(args.element),
-      updatedAt: portal.now(),
-      data: {
-        ...args.element.data,
-        textAlign: args.value as TTextData["textAlign"],
-      },
-    };
-  }
-
-  if (args.property === "verticalAlign" && args.element.data.type === "text") {
-    return {
-      ...structuredClone(args.element),
-      updatedAt: portal.now(),
-      data: {
-        ...args.element.data,
-        verticalAlign: args.value as TTextData["verticalAlign"],
+      style: {
+        ...structuredClone(args.element.style),
+        fontSize: args.value,
       },
     };
   }

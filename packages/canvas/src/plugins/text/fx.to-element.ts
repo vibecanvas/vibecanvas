@@ -1,9 +1,9 @@
 import type { TElement, TElementStyle, TTextData } from "@vibecanvas/service-automerge/types/canvas-doc.types";
 import { fnGetNodeZIndex } from "../../core/fn.get-node-z-index";
-import { fnGetNearestFontSizePreset } from "../../core/fn.text-style";
 import { fnGetWorldPosition } from "../../core/fn.world-position";
 import { fxGetCanvasParentGroupId } from "../../core/fx.canvas-node-semantics";
 import type Konva from "konva";
+import { DEFAULT_TEXT_FONT_SIZE_TOKEN } from "./CONSTANTS";
 
 const ELEMENT_STYLE_ATTR = "vcElementStyle";
 
@@ -29,32 +29,29 @@ export function fxToElement(portal: TPortalToElement, args: TArgsToElement) {
   const parentGroupId = fxGetCanvasParentGroupId({}, { editor: portal.editor, node: args.node });
 
   const baseStyle = structuredClone((args.node.getAttr(ELEMENT_STYLE_ATTR) as TElementStyle | undefined) ?? {});
+
+  const textScaleX = absoluteScale.x / layerScaleX;
+  const textScaleY = absoluteScale.y / layerScaleY;
+
   const style: TElementStyle = {
     ...baseStyle,
     opacity: args.node.opacity(),
+    fontSize: baseStyle.fontSize ?? DEFAULT_TEXT_FONT_SIZE_TOKEN,
+    textAlign: args.node.align() as "left" | "center" | "right",
+    verticalAlign: args.node.verticalAlign() as "top" | "middle" | "bottom",
   };
   const fill = args.node.fill();
   const usesThemeTextColor = args.node.getAttr("vcUsesThemeTextColor") === true;
   if (!usesThemeTextColor && typeof baseStyle.strokeColor !== "string" && typeof fill === "string") {
     style.strokeColor = fill;
   }
-
-  const textScaleX = absoluteScale.x / layerScaleX;
-  const textScaleY = absoluteScale.y / layerScaleY;
-
-  const fontSize = Math.max(1, args.node.fontSize() * textScaleX);
   const data: TTextData = {
     type: "text",
-    w: args.node.width() * textScaleX,
-    h: args.node.height() * textScaleY,
+    w: args.node.width(),
+    h: args.node.height(),
     text: args.node.text(),
     originalText: (args.node.getAttr("vcOriginalText") as string | undefined) ?? args.node.text(),
-    fontSize,
-    fontSizePreset: (args.node.getAttr("vcFontSizePreset") as TTextData["fontSizePreset"] | undefined) ?? fnGetNearestFontSizePreset(fontSize),
     fontFamily: args.node.fontFamily(),
-    textAlign: args.node.align() as TTextData["textAlign"],
-    verticalAlign: args.node.verticalAlign() as TTextData["verticalAlign"],
-    lineHeight: args.node.lineHeight(),
     link: null,
     containerId: (args.node.getAttr("vcContainerId") as string | null | undefined) ?? null,
     autoResize: (args.node.getAttr("vcTextAutoResize") as boolean | undefined) ?? false,
@@ -65,6 +62,8 @@ export function fxToElement(portal: TPortalToElement, args: TArgsToElement) {
     x: worldPosition.x,
     y: worldPosition.y,
     rotation: args.node.getAbsoluteRotation(),
+    scaleX: textScaleX,
+    scaleY: textScaleY,
     bindings: [],
     createdAt: args.createdAt,
     updatedAt: args.updatedAt,

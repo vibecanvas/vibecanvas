@@ -15,6 +15,8 @@ export const zBaseElement = z.object({
   x: z.number(),
   y: z.number(),
   rotation: z.number(),
+  scaleX: z.number().optional(),
+  scaleY: z.number().optional(),
   zIndex: z.string(),
   parentGroupId: z.string().nullable(),
   bindings: z.array(zBinding),
@@ -23,12 +25,19 @@ export const zBaseElement = z.object({
   updatedAt: z.number(),
 });
 
+const zTextAlign = z.union([z.literal('left'), z.literal('center'), z.literal('right')]);
+const zVerticalAlign = z.union([z.literal('top'), z.literal('middle'), z.literal('bottom')]);
+
 export const zDrawingStyle = z.object({
   backgroundColor: z.string().optional(),
   strokeColor: z.string().optional(),
-  strokeWidth: z.number().optional(),
+  strokeWidth: z.string().optional(),
   opacity: z.number().optional(),
-  cornerRadius: z.number().optional(),
+  cornerRadius: z.string().optional(),
+  strokeStyle: z.union([z.literal('solid'), z.literal('dashed'), z.literal('dotted')]).optional(),
+  fontSize: z.string().optional(),
+  textAlign: zTextAlign.optional(),
+  verticalAlign: zVerticalAlign.optional(),
 });
 
 export const zRectData = z.object({
@@ -82,12 +91,7 @@ export const zTextData = z.object({
   h: z.number(),
   text: z.string(),
   originalText: z.string(),
-  fontSize: z.number(),
-  fontSizePreset: z.union([z.literal('S'), z.literal('M'), z.literal('L'), z.literal('XL')]).optional(),
   fontFamily: z.string(),
-  textAlign: z.union([z.literal('left'), z.literal('center'), z.literal('right')]),
-  verticalAlign: z.union([z.literal('top'), z.literal('middle'), z.literal('bottom')]),
-  lineHeight: z.number(),
   link: z.string().nullable(),
   containerId: z.string().nullable(),
   autoResize: z.boolean(),
@@ -214,11 +218,13 @@ export const zElementData = z.union([
 export const zElementStyle = z.object({
   backgroundColor: z.string().optional(),
   strokeColor: z.string().optional(),
-  strokeWidth: z.number().optional(),
+  strokeWidth: z.string().optional(),
   opacity: z.number().optional(),
-  cornerRadius: z.number().optional(),
-  borderColor: z.string().optional(),
-  headerColor: z.string().optional(),
+  cornerRadius: z.string().optional(),
+  strokeStyle: z.union([z.literal('solid'), z.literal('dashed'), z.literal('dotted')]).optional(),
+  fontSize: z.string().optional(),
+  textAlign: zTextAlign.optional(),
+  verticalAlign: zVerticalAlign.optional(),
 });
 
 export const zElement = zBaseElement.extend({

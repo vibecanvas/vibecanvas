@@ -3,8 +3,8 @@ import type { TStrokeWidthOption } from "./types";
 
 export function StrokeWidthPicker(props: {
   options: TStrokeWidthOption[];
-  value: number;
-  onChange: (width: number) => void;
+  value: string | undefined;
+  onChange: (width: string) => void;
 }) {
   return (
     <div style={{ display: "flex", gap: "0.25rem", "flex-wrap": "wrap" }}>

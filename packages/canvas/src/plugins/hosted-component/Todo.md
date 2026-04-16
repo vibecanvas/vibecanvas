@@ -1,19 +1,7 @@
+---SERVICE: WIDGET MANAGER---
+store widget
 
-- [ ] create registry service
-- [ ] 
-tell how to register tool
-tell how to convert TElementData
 
-scene: datastructs, mappers, 
-editor: preview, tool, onDraw, onClick, onClone
+---PLUGIN: WIDET ??? maybe not needed---
 
-- [ ] simplify services use for scence
-- [ ] simplify pen
-- [ ] simplify text
-- [ ] simplify image
-- [ ] simplify 1d
-- [ ] simplify 2d
-
-- [ ] write hosted-component service
-- [ ] example load -> 
-- [ ]
+react to widget

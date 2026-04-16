@@ -2,7 +2,7 @@ import type { TElement } from "@vibecanvas/service-automerge/types/canvas-doc.ty
 import {
   DEFAULT_OPACITY,
   DEFAULT_STROKE_COLOR_TOKEN,
-  DEFAULT_STROKE_WIDTH,
+  DEFAULT_STROKE_WIDTH_TOKEN,
   type TPoint,
   type TShape1dData,
   type TShape1dTool,
@@ -11,7 +11,7 @@ import {
 function fxGetShape1dStyleDefaults(args: {
   rememberedStyle?: {
     strokeColor?: string;
-    strokeWidth?: number;
+    strokeWidth?: string;
     opacity?: number;
     lineType?: "straight" | "curved";
     startCap?: "none" | "arrow" | "dot" | "diamond";
@@ -20,7 +20,7 @@ function fxGetShape1dStyleDefaults(args: {
 }) {
   return {
     strokeColor: args.rememberedStyle?.strokeColor ?? DEFAULT_STROKE_COLOR_TOKEN,
-    strokeWidth: args.rememberedStyle?.strokeWidth ?? DEFAULT_STROKE_WIDTH,
+    strokeWidth: args.rememberedStyle?.strokeWidth ?? DEFAULT_STROKE_WIDTH_TOKEN,
     opacity: args.rememberedStyle?.opacity ?? DEFAULT_OPACITY,
     lineType: args.rememberedStyle?.lineType ?? "straight",
     startCap: args.rememberedStyle?.startCap ?? "none",
@@ -35,7 +35,7 @@ export function fxCreateFallbackPreviewElement(args: {
   now: () => number;
   rememberedStyle?: {
     strokeColor?: string;
-    strokeWidth?: number;
+    strokeWidth?: string;
     opacity?: number;
     lineType?: "straight" | "curved";
     startCap?: "none" | "arrow" | "dot" | "diamond";
@@ -81,7 +81,7 @@ export function fxCreateDraftElement(args: {
   now: () => number;
   rememberedStyle?: {
     strokeColor?: string;
-    strokeWidth?: number;
+    strokeWidth?: string;
     opacity?: number;
     lineType?: "straight" | "curved";
     startCap?: "none" | "arrow" | "dot" | "diamond";

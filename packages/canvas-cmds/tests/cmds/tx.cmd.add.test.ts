@@ -78,7 +78,7 @@ describe('add canvas command', () => {
     expect(rect?.locked).toBe(false);
     expect(rect?.style.backgroundColor).toBe('#ffffff');
     expect(rect?.style.strokeColor).toBe('#111111');
-    expect(rect?.style.strokeWidth).toBe(1);
+    expect(rect?.style.strokeWidth).toBe('@stroke-width/thin');
     expect(rect?.style.opacity).toBe(1);
     expect(rect?.data.type).toBe('rect');
     if (rect?.data.type !== 'rect') throw new Error('expected rect');
@@ -90,17 +90,16 @@ describe('add canvas command', () => {
     expect(text.data.originalText).toBe('hello');
     expect(text.data.w).toBe(120);
     expect(text.data.h).toBe(40);
-    expect(text.data.fontSize).toBe(16);
     expect(text.data.fontFamily).toBe('Inter');
-    expect(text.data.textAlign).toBe('left');
-    expect(text.data.verticalAlign).toBe('top');
-    expect(text.data.lineHeight).toBe(1.2);
+    expect(text.style.fontSize).toBe('@text/s');
+    expect(text.style.textAlign).toBe('left');
+    expect(text.style.verticalAlign).toBe('top');
     expect(text.data.autoResize).toBe(false);
   });
 
   test('fails on parent group not found and id conflict', async () => {
     const existing = createGroup({ id: 'group-existing' });
-    const handle = automergeService.repo.create<TCanvasDoc>({ id: 'canvas-2', name: 'add-errors-canvas', elements: { 'rect-1': { id: 'rect-1', x: 0, y: 0, rotation: 0, zIndex: 'z00000000', parentGroupId: null, bindings: [], locked: false, createdAt: 1, updatedAt: 1, data: { type: 'rect', w: 120, h: 80 }, style: { backgroundColor: '#ffffff', strokeColor: '#111111', strokeWidth: 1, opacity: 1 } } }, groups: { [existing.id]: existing } });
+    const handle = automergeService.repo.create<TCanvasDoc>({ id: 'canvas-2', name: 'add-errors-canvas', elements: { 'rect-1': { id: 'rect-1', x: 0, y: 0, rotation: 0, zIndex: 'z00000000', parentGroupId: null, bindings: [], locked: false, createdAt: 1, updatedAt: 1, data: { type: 'rect', w: 120, h: 80 }, style: { backgroundColor: '#ffffff', strokeColor: '#111111', strokeWidth: "@stroke-width/thin", opacity: 1 } } }, groups: { [existing.id]: existing } });
     await handle.whenReady();
     const row = dbService.canvas.create({ id: 'canvas-2', automerge_url: handle.url, name: 'add-errors-canvas' });
 

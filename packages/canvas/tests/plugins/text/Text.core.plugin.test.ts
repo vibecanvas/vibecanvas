@@ -28,11 +28,7 @@ function createTextElement(overrides?: Partial<TElement>): TElement {
       h: 30,
       text: "hello",
       originalText: "hello",
-      fontSize: 16,
       fontFamily: "Arial",
-      textAlign: "left",
-      verticalAlign: "top",
-      lineHeight: 1.2,
       link: null,
       containerId: null,
       autoResize: false,
@@ -92,8 +88,8 @@ describe("new Text plugin core", () => {
 
     expect(node.text()).toBe("Hello world");
     expect(data.text).toBe("Hello world");
-    expect(data.fontSize).toBe(16);
-    expect(data.textAlign).toBe("left");
+    expect(roundTrip.style.fontSize).toBe("@text/s");
+    expect(roundTrip.style.textAlign).toBe("left");
     expect(editor.toElement(node)?.data.type).toBe("text");
 
     await harness.destroy();

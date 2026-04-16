@@ -1,13 +1,13 @@
 export const DEFAULT_STROKE_WIDTHS = [
-  { name: "Thin", value: 1 },
-  { name: "Medium", value: 2 },
-  { name: "Thick", value: 4 },
+  { name: "Thin", value: "@stroke-width/thin" },
+  { name: "Medium", value: "@stroke-width/medium" },
+  { name: "Thick", value: "@stroke-width/thick" },
 ] as const;
 
 export const PEN_STROKE_WIDTHS = [
-  { name: "Thin", value: 3 },
-  { name: "Medium", value: 7 },
-  { name: "Thick", value: 12 },
+  { name: "Medium", value: "@stroke-width/medium" },
+  { name: "Thick", value: "@stroke-width/thick" },
+  { name: "Heavy", value: "@stroke-width/heavy" },
 ] as const;
 
 export const FONT_FAMILIES = [
@@ -30,7 +30,7 @@ export const CAP_STYLES = [
 
 export type TStrokeWidthOption = {
   name: string;
-  value: number;
+  value: string;
 };
 
 export type TFontFamily = typeof FONT_FAMILIES[number]["value"];

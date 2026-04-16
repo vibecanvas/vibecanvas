@@ -1,15 +1,14 @@
 import { For } from "solid-js";
-import type { TTextData } from "@vibecanvas/service-automerge/types/canvas-doc.types";
 
 const OPTIONS = [
   { label: "Top", value: "top" },
   { label: "Middle", value: "middle" },
   { label: "Bottom", value: "bottom" },
-] as const satisfies Array<{ label: string; value: TTextData["verticalAlign"] }>;
+] as const satisfies Array<{ label: string; value: "top" | "middle" | "bottom" }>;
 
 export function VerticalAlignPicker(props: {
-  value: TTextData["verticalAlign"] | undefined;
-  onChange: (value: TTextData["verticalAlign"]) => void;
+  value: "top" | "middle" | "bottom" | undefined;
+  onChange: (value: "top" | "middle" | "bottom") => void;
 }) {
   return (
     <div

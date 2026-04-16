@@ -1,5 +1,6 @@
 import { fxComputeTextHeight } from "./fn.compute-text-height";
 import { fxComputeTextWidth } from "./fx.compute-text-width";
+import { DEFAULT_TEXT_LINE_HEIGHT } from "./CONSTANTS";
 import { fxToElement } from "./fx.to-element";
 import { txUpdateTextNodeFromElement } from "./tx.update-text-node-from-element";
 import { fxMeasureTextLayout } from "../../core/fx.pretext";
@@ -195,7 +196,7 @@ export function txEnterEditMode(portal: TPortalEnterEditMode, args: TArgsEnterEd
       fontSize: args.node.fontSize(),
       fontFamily: args.node.fontFamily(),
       fontStyle: args.node.fontStyle(),
-      lineHeight: args.node.lineHeight(),
+      lineHeight: DEFAULT_TEXT_LINE_HEIGHT,
       width: args.node.width(),
     });
     const nextHostElement = originalHostElement && fnIsShape2dElementType(originalHostElement.data.type)
@@ -271,7 +272,7 @@ export function txEnterEditMode(portal: TPortalEnterEditMode, args: TArgsEnterEd
     minHeight: `${initialScaledFontSize}px`,
     fontSize: `${initialScaledFontSize}px`,
     fontFamily: args.node.fontFamily(),
-    lineHeight: String(args.node.lineHeight()),
+    lineHeight: String(DEFAULT_TEXT_LINE_HEIGHT),
     textAlign: args.node.align(),
     transform: `rotate(${args.node.getAbsoluteRotation()}deg)`,
     transformOrigin: "top left",
@@ -389,13 +390,13 @@ export function txEnterEditMode(portal: TPortalEnterEditMode, args: TArgsEnterEd
         fontSize: args.node.fontSize(),
         fontFamily: args.node.fontFamily(),
         fontStyle: args.node.fontStyle(),
-        lineHeight: args.node.lineHeight(),
+        lineHeight: DEFAULT_TEXT_LINE_HEIGHT,
         width: worldWidth,
       });
       const computedWidth = fxComputeTextWidth({ document: portal.document }, { node: args.node, text: textToSet });
       const computedHeight = fxComputeTextHeight({
         fontSize: args.node.fontSize(),
-        lineHeight: args.node.lineHeight(),
+        lineHeight: DEFAULT_TEXT_LINE_HEIGHT,
         padding: args.node.padding(),
         text: textToSet,
       });

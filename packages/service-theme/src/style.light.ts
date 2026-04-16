@@ -4,7 +4,7 @@ import { createColorScale, createThemeStyle } from "./style.shared";
 export const STYLE_LIGHT = createThemeStyle({
   id: THEME_ID_LIGHT,
   palette: {
-    gray: createColorScale("#f5f5f4", "#d6d3d1", "#78716c", "#44403c", "#1c1917"),
+    base: createColorScale("#f5f5f4", "#d6d3d1", "#78716c", "#44403c", "#1c1917"),
     red: createColorScale("#fee2e2", "#fca5a5", "#ef4444", "#b91c1c", "#7f1d1d"),
     orange: createColorScale("#ffedd5", "#fdba74", "#f97316", "#c2410c", "#7c2d12"),
     yellow: createColorScale("#fef9c3", "#fde047", "#eab308", "#a16207", "#713f12"),

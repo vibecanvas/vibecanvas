@@ -10,8 +10,6 @@ import { StrokeWidthPicker } from "./StrokeWidthPicker";
 import { TextAlignPicker } from "./TextAlignPicker";
 import { VerticalAlignPicker } from "./VerticalAlignPicker";
 import { DEFAULT_STROKE_WIDTHS, type TCapStyle, type TFontFamily, type TLineType, type TStrokeWidthOption } from "./types";
-import type { TFontSizePreset } from "../../core/fn.text-style";
-import type { TTextData } from "@vibecanvas/service-automerge/types/canvas-doc.types";
 
 export type TSelectionStyleMenuSections = {
   showFillPicker: boolean;
@@ -27,12 +25,12 @@ export type TSelectionStyleMenuSections = {
 export type TSelectionStyleMenuValues = {
   fillColor?: string;
   strokeColor?: string;
-  strokeWidth?: number;
+  strokeWidth?: string;
   opacity?: number;
   fontFamily?: TFontFamily;
-  fontSizePreset?: TFontSizePreset;
-  textAlign?: TTextData["textAlign"];
-  verticalAlign?: TTextData["verticalAlign"];
+  fontSize?: string;
+  textAlign?: "left" | "center" | "right";
+  verticalAlign?: "top" | "middle" | "bottom";
   lineType?: TLineType;
   startCap?: TCapStyle;
   endCap?: TCapStyle;
@@ -58,12 +56,12 @@ export function SelectionStyleMenu(props: {
   colorPalette: () => TThemeColorPickerPalette;
   onFillChange: (color: string) => void;
   onStrokeChange: (color: string) => void;
-  onStrokeWidthChange: (width: number) => void;
+  onStrokeWidthChange: (width: string) => void;
   onOpacityChange: (opacity: number) => void;
   onFontFamilyChange: (fontFamily: TFontFamily) => void;
-  onFontSizePresetChange?: (preset: TFontSizePreset) => void;
-  onTextAlignChange?: (textAlign: TTextData["textAlign"]) => void;
-  onVerticalAlignChange?: (verticalAlign: TTextData["verticalAlign"]) => void;
+  onFontSizeChange?: (fontSize: string) => void;
+  onTextAlignChange?: (textAlign: "left" | "center" | "right") => void;
+  onVerticalAlignChange?: (verticalAlign: "top" | "middle" | "bottom") => void;
   onLineTypeChange: (lineType: TLineType) => void;
   onStartCapChange: (capStyle: TCapStyle) => void;
   onEndCapChange: (capStyle: TCapStyle) => void;
@@ -138,7 +136,7 @@ export function SelectionStyleMenu(props: {
                 <span style={labelStyle}>WIDTH</span>
                 <StrokeWidthPicker
                   options={props.strokeWidthOptions?.() ?? [...DEFAULT_STROKE_WIDTHS]}
-                  value={props.values().strokeWidth ?? 2}
+                  value={props.values().strokeWidth}
                   onChange={props.onStrokeWidthChange}
                 />
               </div>
@@ -157,8 +155,8 @@ export function SelectionStyleMenu(props: {
                 <div style={sectionStyle}>
                   <span style={labelStyle}>SIZE</span>
                   <FontSizePicker
-                    value={props.values().fontSizePreset}
-                    onChange={(preset) => props.onFontSizePresetChange?.(preset)}
+                    value={props.values().fontSize}
+                    onChange={(fontSize) => props.onFontSizeChange?.(fontSize)}
                   />
                 </div>
 

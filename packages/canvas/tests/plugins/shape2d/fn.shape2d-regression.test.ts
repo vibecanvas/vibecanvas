@@ -20,13 +20,13 @@ describe("shape2d default style regression", () => {
 
     expect(element.style.backgroundColor).toBeUndefined();
     expect(element.style.opacity).toBe(1);
-    expect(element.style.strokeWidth).toBe(0);
+    expect(element.style.strokeWidth).toBe("@stroke-width/none");
   });
 
   test("shape2d defaults use the stable token we expect, not red or light-mode white", () => {
-    expect(fxGetShape2dToolDefaults().fillColor).toBe("@gray/300");
+    expect(fxGetShape2dToolDefaults().fillColor).toBe("@base/300");
     expect(fxGetShape2dToolDefaults().fillColor).not.toBe("red");
-    expect(fxGetShape2dToolDefaults().fillColor).not.toBe("@gray/100");
+    expect(fxGetShape2dToolDefaults().fillColor).not.toBe("@base/100");
   });
 
   test("tool defaults can seed fill without being overridden by a built-in red default", () => {
@@ -49,7 +49,7 @@ describe("shape2d default style regression", () => {
       rememberedStyle: {},
     });
 
-    expect(nextElement.style.backgroundColor).toBe("@gray/300");
+    expect(nextElement.style.backgroundColor).toBe("@base/300");
     expect(nextElement.style.backgroundColor).not.toBe("red");
   });
 });

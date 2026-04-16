@@ -16,6 +16,7 @@ import {
   type TThemeColorPaletteGroup,
   type TThemeColorSwatch,
   type TThemeColorToken,
+  type TThemeColorValueMap,
 } from "./types";
 
 export const BUILTIN_THEME_STYLES = [
@@ -80,14 +81,28 @@ export function resolveThemeColor(
   return style.palette[family]?.[step] ?? fallback;
 }
 
+export function getThemeColorValueMap(theme: ThemeId | TThemeDefinition): TThemeColorValueMap {
+  const style = getThemeStyle(theme);
+  const entries: Array<[TThemeColorToken, string]> = [["@transparent", "transparent"]];
+
+  THEME_COLOR_FAMILIES.forEach((family) => {
+    THEME_COLOR_STEPS.forEach((step) => {
+      entries.push([`@${family}/${step}`, style.palette[family][step]]);
+    });
+  });
+
+  return Object.fromEntries(entries) as TThemeColorValueMap;
+}
+
 export function getThemeColorPickerPalette(theme: ThemeId | TThemeDefinition): TThemeColorPickerPalette {
   const style = getThemeStyle(theme);
+  const colorValueMap = getThemeColorValueMap(style.id);
 
   const toSwatch = (token: TThemeColorToken): TThemeColorSwatch => {
     return {
       token,
       label: token === "@transparent" ? "Transparent" : token.slice(1),
-      color: resolveThemeColor(style.id, token, "transparent") ?? "transparent",
+      color: colorValueMap[token] ?? "transparent",
     };
   };
 

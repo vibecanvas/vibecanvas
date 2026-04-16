@@ -63,6 +63,8 @@ export function fxPenPathToElement(portal: TPortalFxPenPathToElement, args: TArg
   return {
     id: args.node.id(),
     rotation: args.node.getAbsoluteRotation(),
+    scaleX,
+    scaleY,
     x: worldPosition.x,
     y: worldPosition.y,
     bindings: [],
@@ -71,10 +73,7 @@ export function fxPenPathToElement(portal: TPortalFxPenPathToElement, args: TArg
     parentGroupId,
     updatedAt: portal.now(),
     zIndex: fnGetNodeZIndex({ node: args.node }),
-    data: {
-      ...baseData,
-      points: fxScalePenDataPoints({ points: baseData.points, scaleX, scaleY }),
-    },
+    data: structuredClone(baseData),
     style: fxCreatePenStyleFromNode({
       nodeFill: (() => {
         const fill = args.node.fill();

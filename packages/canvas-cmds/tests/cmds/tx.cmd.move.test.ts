@@ -7,7 +7,7 @@ import { tmpdir } from 'node:os';
 import { txExecuteCanvasMove } from 'packages/canvas-cmds/src/cmds/tx.cmd.move';
 
 function createRectElement(overrides?: Partial<TElement>): TElement {
-  return { id: 'rect-1', x: 40, y: 80, rotation: 0, zIndex: 'a0', parentGroupId: null, bindings: [], locked: false, createdAt: 1, updatedAt: 1, data: { type: 'rect', w: 120, h: 80 }, style: { backgroundColor: '#ffffff', strokeColor: '#111111', strokeWidth: 1, opacity: 1 }, ...overrides };
+  return { id: 'rect-1', x: 40, y: 80, rotation: 0, zIndex: 'a0', parentGroupId: null, bindings: [], locked: false, createdAt: 1, updatedAt: 1, data: { type: 'rect', w: 120, h: 80 }, style: { backgroundColor: '#ffffff', strokeColor: '#111111', strokeWidth: "@stroke-width/thin", opacity: 1 }, ...overrides };
 }
 function createGroup(overrides?: Partial<TGroup>): TGroup {
   return { id: 'group-1', parentGroupId: null, zIndex: 'a0', locked: false, createdAt: 1, ...overrides };

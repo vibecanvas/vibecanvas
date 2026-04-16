@@ -157,6 +157,11 @@ export function txCreateShapeFromElement(portal: TPortalTxCreateShapeFromElement
     stroke: color,
     fill: color,
     strokeWidth,
+    dash: args.element.style.strokeStyle === "dashed"
+      ? [strokeWidth * 4, strokeWidth * 2]
+      : args.element.style.strokeStyle === "dotted"
+        ? [strokeWidth, strokeWidth * 1.5]
+        : [],
     hitStrokeWidth: Math.max(MIN_HIT_STROKE_WIDTH, strokeWidth + 8),
     opacity: args.element.style.opacity ?? DEFAULT_OPACITY,
     draggable: false,
@@ -164,6 +169,7 @@ export function txCreateShapeFromElement(portal: TPortalTxCreateShapeFromElement
   });
 
   txAttachShapeRuntime({}, { node });
+  node.scale({ x: args.element.scaleX ?? 1, y: args.element.scaleY ?? 1 });
   node.setAttr(ELEMENT_CREATED_AT_ATTR, args.element.createdAt);
   node.setAttr("vcElementData", structuredClone(args.element.data));
   node.setAttr("vcElementStyle", structuredClone(args.element.style));

@@ -1,5 +1,5 @@
 import type { ThemeService } from "@vibecanvas/service-theme";
-import { fnGetNearestFontSizePreset } from "../../core/fn.text-style";
+import { DEFAULT_TEXT_LINE_HEIGHT } from "./CONSTANTS";
 import { fnGetAbsolutePositionFromWorldPosition } from "../../core/fn.world-position";
 import type { TElement, TTextData } from "@vibecanvas/service-automerge/types/canvas-doc.types";
 import type Konva from "konva";
@@ -42,11 +42,11 @@ export function txUpdateTextNodeFromElement(portal: TPortalUpdateTextNodeFromEle
   node.width(data.w);
   node.height(data.h);
   node.text(data.text);
-  node.fontSize(data.fontSize);
+  node.fontSize(portal.theme.resolveFontSize(args.element.style.fontSize));
   node.fontFamily(data.fontFamily);
-  node.align(data.textAlign);
-  node.verticalAlign(data.verticalAlign);
-  node.lineHeight(data.lineHeight);
+  node.align(args.element.style.textAlign ?? "left");
+  node.verticalAlign(args.element.style.verticalAlign ?? "top");
+  node.lineHeight(DEFAULT_TEXT_LINE_HEIGHT);
   node.opacity(args.element.style.opacity ?? 1);
   node.fill(portal.theme.resolveThemeColor(args.element.style.strokeColor, portal.theme.getTheme().colors.canvasText) ?? portal.theme.getTheme().colors.canvasText);
   node.setAttr(ELEMENT_STYLE_ATTR, structuredClone(args.element.style));
@@ -54,8 +54,7 @@ export function txUpdateTextNodeFromElement(portal: TPortalUpdateTextNodeFromEle
   node.setAttr("vcContainerId", data.containerId ?? null);
   node.setAttr("vcOriginalText", data.originalText);
   node.setAttr("vcTextAutoResize", data.autoResize);
-  node.setAttr("vcFontSizePreset", data.fontSizePreset ?? fnGetNearestFontSizePreset(data.fontSize));
-  node.scale({ x: 1, y: 1 });
+  node.scale({ x: args.element.scaleX ?? 1, y: args.element.scaleY ?? 1 });
   node.wrap(data.containerId === null ? "none" : "word");
   node.listening(data.containerId === null);
   node.draggable(data.containerId === null);

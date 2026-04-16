@@ -10,6 +10,12 @@ import type { RenderOrderService } from "../../services/render-order/RenderOrder
 import type { SceneService } from "../../services/scene/SceneService";
 import type { SelectionService } from "../../services/selection/SelectionService";
 import { fxGetShapeTextHostBounds } from "./fn.text-host-bounds";
+import {
+  DEFAULT_ATTACHED_TEXT_ALIGN,
+  DEFAULT_ATTACHED_TEXT_VERTICAL_ALIGN,
+  DEFAULT_TEXT_FONT_FAMILY,
+  TEXT_FONT_SIZE_TOKEN_BY_PRESET,
+} from "../text/CONSTANTS";
 
 const ATTACHED_TEXT_NAME = "attached-text";
 
@@ -52,10 +58,6 @@ export type TArgsOpenAttachedTextEditMode = {
   shapeNode: Konva.Shape;
 };
 
-function clamp(value: number, min: number, max: number) {
-  return Math.max(min, Math.min(max, value));
-}
-
 function getTextNode(portal: TPortalAttachedText, containerId: string) {
   const node = portal.scene.staticForegroundLayer.findOne((candidate: Konva.Node) => {
     return candidate instanceof portal.Konva.Text && candidate.getAttr("vcContainerId") === containerId;
@@ -82,6 +84,8 @@ function createAttachedTextElement(portal: TPortalAttachedText, shapeNode: Konva
     x: bounds.x,
     y: bounds.y,
     rotation: bounds.rotation,
+    scaleX: 1,
+    scaleY: 1,
     bindings: [],
     locked: false,
     parentGroupId: fxGetCanvasParentGroupId({}, { editor: portal.editor, node: shapeNode }),
@@ -90,6 +94,9 @@ function createAttachedTextElement(portal: TPortalAttachedText, shapeNode: Konva
     updatedAt: now,
     style: {
       opacity: shapeNode.opacity(),
+      fontSize: TEXT_FONT_SIZE_TOKEN_BY_PRESET.M,
+      textAlign: DEFAULT_ATTACHED_TEXT_ALIGN,
+      verticalAlign: DEFAULT_ATTACHED_TEXT_VERTICAL_ALIGN,
     },
     data: {
       type: "text",
@@ -97,11 +104,7 @@ function createAttachedTextElement(portal: TPortalAttachedText, shapeNode: Konva
       h: Math.max(4, bounds.height),
       text: "",
       originalText: "",
-      fontSize: clamp(bounds.height * 0.35, 14, 24),
-      fontFamily: "Arial",
-      textAlign: "center",
-      verticalAlign: "middle",
-      lineHeight: 1.2,
+      fontFamily: DEFAULT_TEXT_FONT_FAMILY,
       link: null,
       containerId: shapeNode.id(),
       autoResize: false,

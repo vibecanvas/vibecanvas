@@ -17,6 +17,8 @@ export function fxCreateImageElement(args: TArgsCreateImageElement): TElement {
     x: args.center.x - args.width / 2,
     y: args.center.y - args.height / 2,
     rotation: 0,
+    scaleX: 1,
+    scaleY: 1,
     bindings: [],
     createdAt: args.now,
     locked: false,

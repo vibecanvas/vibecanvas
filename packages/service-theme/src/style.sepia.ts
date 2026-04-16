@@ -4,7 +4,7 @@ import { createColorScale, createThemeStyle } from "./style.shared";
 export const STYLE_SEPIA = createThemeStyle({
   id: THEME_ID_SEPIA,
   palette: {
-    gray: createColorScale("#f2e8d8", "#d7c3a1", "#7c6549", "#6b4f2d", "#433422"),
+    base: createColorScale("#f2e8d8", "#d7c3a1", "#7c6549", "#6b4f2d", "#433422"),
     red: createColorScale("#f5ddd4", "#dc9f89", "#b8573d", "#8c3f2b", "#5b261c"),
     orange: createColorScale("#f7e4c8", "#ddb57b", "#c17b2e", "#8f541d", "#5d3410"),
     yellow: createColorScale("#f5ebc8", "#dec97a", "#b7791f", "#8a5d16", "#5a3d10"),

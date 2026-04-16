@@ -80,6 +80,24 @@ function mergeSelectionStyleChangePlans(args: {
   } satisfies TSelectionStyleChangePlan;
 }
 
+function fnGetSelectionStyleOverridesFromRememberedStyle(rememberedStyle: ReturnType<ThemeService["getRememberedStyle"]>) {
+  return {
+    fillColor: typeof rememberedStyle.fillColor === "string"
+      ? rememberedStyle.fillColor
+      : rememberedStyle.backgroundColor,
+    strokeColor: rememberedStyle.strokeColor,
+    strokeWidth: rememberedStyle.strokeWidth,
+    opacity: rememberedStyle.opacity,
+    fontFamily: rememberedStyle.fontFamily as TFontFamily | undefined,
+    fontSize: rememberedStyle.fontSize,
+    textAlign: rememberedStyle.textAlign,
+    verticalAlign: rememberedStyle.verticalAlign,
+    lineType: rememberedStyle.lineType as TLineType | undefined,
+    startCap: rememberedStyle.startCap as TCapStyle | undefined,
+    endCap: rememberedStyle.endCap as TCapStyle | undefined,
+  };
+}
+
 export function fxMountSelectionStyleMenu(portal: TPortalMountSelectionStyleMenu, args: TArgsMountSelectionStyleMenu) {
   void args;
 
@@ -165,10 +183,10 @@ export function fxMountSelectionStyleMenu(portal: TPortalMountSelectionStyleMenu
   portal.editor.hooks.activeToolChange.tap(syncVersion);
   portal.editor.hooks.editingTextChange.tap(syncVersion);
   portal.editor.hooks.editingShape1dChange.tap(syncVersion);
-  portal.editor.hooks.toolSelectionStyleChange.tap(syncVersion);
   portal.canvasRegistry.hooks.elementsChange.tap(syncVersion);
   portal.crdt.hooks.change.tap(syncVersion);
   portal.theme.hooks.change.tap(syncVersion);
+  portal.theme.hooks.rememberedStyleChange.tap(syncVersion);
 
   const disposeRender = portal.renderSolid(() => {
     const selectedElements = portal.createMemo(() => {
@@ -255,7 +273,7 @@ export function fxMountSelectionStyleMenu(portal: TPortalMountSelectionStyleMenu
         return {};
       }
 
-      return portal.editor.getToolSelectionStyleValues(toolId);
+      return portal.theme.getRememberedStyle(toolId);
     });
 
     const configs = portal.createMemo(() => {
@@ -307,7 +325,7 @@ export function fxMountSelectionStyleMenu(portal: TPortalMountSelectionStyleMenu
 
       return fxGetSelectionStyleMenuValuesWithOverrides({
         values: resolvedValues,
-        overrides: activeToolRememberedValues(),
+        overrides: fnGetSelectionStyleOverridesFromRememberedStyle(activeToolRememberedValues()),
       });
     });
 
@@ -337,8 +355,8 @@ export function fxMountSelectionStyleMenu(portal: TPortalMountSelectionStyleMenu
             return "opacity" as const;
           case "fontFamily":
             return "fontFamily" as const;
-          case "fontSizePreset":
-            return "fontSizePreset" as const;
+          case "fontSize":
+            return "fontSize" as const;
           case "textAlign":
             return "textAlign" as const;
           case "verticalAlign":
@@ -353,7 +371,7 @@ export function fxMountSelectionStyleMenu(portal: TPortalMountSelectionStyleMenu
       })();
 
       if (toolId && fxHasSelectionStylePropertySupport({ config: toolConfig, property })) {
-        portal.editor.setToolSelectionStyleValue(toolId, valueKey, value as never);
+        portal.theme.setRememberedStyle(toolId, { [valueKey]: value } as never);
       }
 
       if (elements().length === 0) {
@@ -386,7 +404,7 @@ export function fxMountSelectionStyleMenu(portal: TPortalMountSelectionStyleMenu
       onStrokeWidthChange: (width) => applyStyle("strokeWidth", width),
       onOpacityChange: (opacity) => applyStyle("opacity", opacity),
       onFontFamilyChange: (fontFamily: TFontFamily) => applyStyle("fontFamily", fontFamily),
-      onFontSizePresetChange: (preset) => applyStyle("fontSizePreset", preset),
+      onFontSizeChange: (fontSize) => applyStyle("fontSize", fontSize),
       onTextAlignChange: (textAlign) => applyStyle("textAlign", textAlign),
       onVerticalAlignChange: (verticalAlign) => applyStyle("verticalAlign", verticalAlign),
       onLineTypeChange: (lineType: TLineType) => applyStyle("lineType", lineType),

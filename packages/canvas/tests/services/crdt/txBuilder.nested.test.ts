@@ -74,7 +74,6 @@ describe("txBuilder nested", () => {
     const nextData = createTextData({
       text: "fresh",
       originalText: "fresh",
-      fontSize: 22,
     });
 
     createBuilder(docHandle)
@@ -145,10 +144,10 @@ describe("txBuilder nested", () => {
     });
 
     createBuilder(docHandle)
-      .patchElement("e1", "style", "headerColor", "#ff0000")
+      .patchElement("e1", "style", "strokeColor", "#ff0000")
       .commit();
 
-    expect(docHandle.doc().elements.e1.style.headerColor).toBe("#ff0000");
+    expect(docHandle.doc().elements.e1.style.strokeColor).toBe("#ff0000");
   });
 
   test("applies nested operations in order within one commit", () => {

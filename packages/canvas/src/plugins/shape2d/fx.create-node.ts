@@ -34,8 +34,10 @@ export function fxCreateShape2dNode(portal: TPortalCreateShape2dNode, args: TArg
       height: args.element.data.h,
       fill,
       stroke,
-      strokeWidth: style.strokeWidth ?? 0,
+      strokeWidth: portal.theme.resolveStrokeWidth(style.strokeWidth, 0),
       opacity: style.opacity ?? 1,
+      dash: portal.theme.resolveStrokeDash(style.strokeStyle, style.strokeWidth),
+      cornerRadius: portal.theme.resolveCornerRadius(style.cornerRadius, 0),
       draggable: true,
       listening: true,
     });
@@ -60,8 +62,9 @@ export function fxCreateShape2dNode(portal: TPortalCreateShape2dNode, args: TArg
       }),
       fill,
       stroke,
-      strokeWidth: style.strokeWidth ?? 0,
+      strokeWidth: portal.theme.resolveStrokeWidth(style.strokeWidth, 0),
       opacity: style.opacity ?? 1,
+      dash: portal.theme.resolveStrokeDash(style.strokeStyle, style.strokeWidth),
       draggable: true,
       listening: true,
     });
@@ -83,8 +86,9 @@ export function fxCreateShape2dNode(portal: TPortalCreateShape2dNode, args: TArg
       radiusY: args.element.data.ry,
       fill,
       stroke,
-      strokeWidth: style.strokeWidth ?? 0,
+      strokeWidth: portal.theme.resolveStrokeWidth(style.strokeWidth, 0),
       opacity: style.opacity ?? 1,
+      dash: portal.theme.resolveStrokeDash(style.strokeStyle, style.strokeWidth),
       draggable: true,
       listening: true,
     });

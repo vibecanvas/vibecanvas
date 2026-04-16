@@ -17,9 +17,17 @@ export type THandleDragSnapshot = {
 
 export const ELEMENT_CREATED_AT_ATTR = "vcElementCreatedAt";
 export const DEFAULT_STROKE = "#0f172a";
-export const DEFAULT_STROKE_COLOR_TOKEN = "@gray/900";
+export const DEFAULT_STROKE_COLOR_TOKEN = "@base/900";
 export const DEFAULT_OPACITY = 0.92;
 export const DEFAULT_STROKE_WIDTH = 4;
+export const DEFAULT_STROKE_WIDTH_TOKEN = "@stroke-width/medium";
+export const STROKE_WIDTH_VALUE_BY_TOKEN = {
+  "@stroke-width/none": 0,
+  "@stroke-width/thin": 1,
+  "@stroke-width/medium": 4,
+  "@stroke-width/thick": 7,
+  "@stroke-width/heavy": 12,
+} as const;
 export const MIN_HIT_STROKE_WIDTH = 16;
 export const CURVE_TENSION = 1;
 export const EDIT_HANDLE_RADIUS = 7;

@@ -80,8 +80,8 @@ function getFocusedShape2dTextHost(canvasRegistry: CanvasRegistryService, select
   return isShape2dTextHostNode(candidate) ? candidate : null;
 }
 
-const DEFAULT_SHAPE2D_FILL_COLOR_TOKEN = "@gray/300";
-const DEFAULT_SHAPE2D_STROKE_WIDTH = 0;
+const DEFAULT_SHAPE2D_FILL_COLOR_TOKEN = "@base/300";
+const DEFAULT_SHAPE2D_STROKE_WIDTH = "@stroke-width/none";
 const DEFAULT_SHAPE2D_OPACITY = 1;
 
 export function fxGetShape2dToolDefaults() {
@@ -94,7 +94,12 @@ export function fxGetShape2dToolDefaults() {
 
 export function fxApplyRememberedShape2dToolStyle(args: {
   element: TElement;
-  rememberedStyle: ReturnType<EditorService["getToolSelectionStyleValues"]>;
+  rememberedStyle: {
+    fillColor?: string;
+    strokeColor?: string;
+    strokeWidth?: string;
+    opacity?: number;
+  };
 }) {
   const defaults = fxGetShape2dToolDefaults();
   const nextElement = structuredClone(args.element);
@@ -103,7 +108,7 @@ export function fxApplyRememberedShape2dToolStyle(args: {
     nextElement.style.backgroundColor = defaults.fillColor;
   }
 
-  if (typeof nextElement.style.strokeWidth !== "number") {
+  if (typeof nextElement.style.strokeWidth !== "string") {
     nextElement.style.strokeWidth = defaults.strokeWidth;
   }
 
@@ -122,7 +127,7 @@ export function fxApplyRememberedShape2dToolStyle(args: {
   }
 
   const rememberedStrokeWidth = args.rememberedStyle.strokeWidth;
-  if (typeof rememberedStrokeWidth === "number") {
+  if (typeof rememberedStrokeWidth === "string") {
     nextElement.style.strokeWidth = rememberedStrokeWidth;
   }
 
@@ -669,7 +674,7 @@ export function createShape2dPlugin(): IPlugin<{
             parentGroupId: null,
             zIndex: "",
           }),
-          rememberedStyle: editor.getToolSelectionStyleValues(editor.activeToolId),
+          rememberedStyle: theme.getRememberedStyle(editor.activeToolId),
         });
         const node = createNode(element);
         if (!node) {

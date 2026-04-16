@@ -1,10 +1,16 @@
 import type { TElementStyle } from "@vibecanvas/service-automerge/types/canvas-doc.types";
-import { DEFAULT_FILL, DEFAULT_STROKE_WIDTH } from "./CONSTANTS";
+import { DEFAULT_FILL, DEFAULT_STROKE_WIDTH, STROKE_WIDTH_VALUE_BY_TOKEN } from "./CONSTANTS";
 
 export function fxGetPenStrokeWidthFromStyle(args: {
   style: TElementStyle;
 }) {
-  return args.style.strokeWidth ?? DEFAULT_STROKE_WIDTH;
+  if (typeof args.style.strokeWidth === "string") {
+    return STROKE_WIDTH_VALUE_BY_TOKEN[args.style.strokeWidth as keyof typeof STROKE_WIDTH_VALUE_BY_TOKEN]
+      ?? Number.parseFloat(args.style.strokeWidth)
+      ?? DEFAULT_STROKE_WIDTH;
+  }
+
+  return DEFAULT_STROKE_WIDTH;
 }
 
 export function fxGetPenColorStyleKey(args: {
@@ -27,7 +33,8 @@ export function fxCreatePenStyleFromNode(args: {
   const style: TElementStyle = {
     ...structuredClone(args.baseStyle),
     opacity: args.opacity,
-    strokeWidth: args.strokeWidth || DEFAULT_STROKE_WIDTH,
+    strokeWidth: args.baseStyle.strokeWidth,
+    strokeStyle: args.baseStyle.strokeStyle,
   };
 
   const colorStyleKey = fxGetPenColorStyleKey({ style: args.baseStyle });

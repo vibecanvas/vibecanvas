@@ -28,7 +28,6 @@ function getNodeStyle(node: Konva.Shape): TElementStyle {
   const style: TElementStyle = {
     ...baseStyle,
     opacity: node.opacity(),
-    strokeWidth: node.strokeWidth(),
   };
 
   if (typeof baseStyle.backgroundColor !== "string") {

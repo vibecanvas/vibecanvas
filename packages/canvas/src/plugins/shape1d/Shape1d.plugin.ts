@@ -25,6 +25,7 @@ import {
   DEFAULT_OPACITY,
   DEFAULT_STROKE_COLOR_TOKEN,
   DEFAULT_STROKE_WIDTH,
+  DEFAULT_STROKE_WIDTH_TOKEN,
   EDIT_HANDLE_FILL,
   EDIT_HANDLE_RADIUS,
   EDIT_HANDLE_STROKE,
@@ -178,7 +179,7 @@ export function createShape1dPlugin(): IPlugin<{
       }
 
       function getRememberedStyle(tool: "line" | "arrow" | null) {
-        return tool ? editor.getToolSelectionStyleValues(tool) : {};
+        return tool ? theme.getRememberedStyle(tool) : {};
       }
 
       function createDraftFromState() {
@@ -800,7 +801,7 @@ export function createShape1dPlugin(): IPlugin<{
           },
           values: {
             strokeColor: DEFAULT_STROKE_COLOR_TOKEN,
-            strokeWidth: DEFAULT_STROKE_WIDTH,
+            strokeWidth: DEFAULT_STROKE_WIDTH_TOKEN,
             opacity: DEFAULT_OPACITY,
             lineType: "straight",
           },
@@ -822,7 +823,7 @@ export function createShape1dPlugin(): IPlugin<{
           },
           values: {
             strokeColor: DEFAULT_STROKE_COLOR_TOKEN,
-            strokeWidth: DEFAULT_STROKE_WIDTH,
+            strokeWidth: DEFAULT_STROKE_WIDTH_TOKEN,
             opacity: DEFAULT_OPACITY,
             lineType: "straight",
             startCap: "none",

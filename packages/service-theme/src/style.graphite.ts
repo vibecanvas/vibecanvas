@@ -4,7 +4,7 @@ import { createColorScale, createThemeStyle } from "./style.shared";
 export const STYLE_GRAPHITE = createThemeStyle({
   id: THEME_ID_GRAPHITE,
   palette: {
-    gray: createColorScale("#1f2937", "#334155", "#64748b", "#cbd5e1", "#f8fafc"),
+    base: createColorScale("#1f2937", "#334155", "#64748b", "#cbd5e1", "#f8fafc"),
     red: createColorScale("#3f1d24", "#7f1d1d", "#ef4444", "#fca5a5", "#fee2e2"),
     orange: createColorScale("#3b2216", "#9a3412", "#f97316", "#fdba74", "#ffedd5"),
     yellow: createColorScale("#3d3014", "#a16207", "#eab308", "#fde047", "#fef9c3"),

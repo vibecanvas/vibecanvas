@@ -3,7 +3,7 @@ import type { TElement } from "@vibecanvas/service-automerge/types/canvas-doc.ty
 import Konva from "konva";
 import Pencil from "lucide-static/icons/pencil.svg?raw";
 import { throttle } from "@solid-primitives/scheduled";
-import { resolveThemeColor, type ThemeService } from "@vibecanvas/service-theme";
+import { resolveThemeColor, type ThemeService, type TThemeRememberedStyle } from "@vibecanvas/service-theme";
 import { PEN_STROKE_WIDTHS } from "../../components/SelectionStyleMenu/types";
 import { getStroke } from "perfect-freehand";
 import type { IHooks, TElementPointerEvent } from "../../runtime";
@@ -16,13 +16,13 @@ import type { SelectionService } from "../../services/selection/SelectionService
 import { fxPenPathToElement } from "./fx.path";
 import { fxCreatePenDataFromStrokePoints } from "./fn.math";
 import { EditorService, type TEditorToolCanvasPoint } from "src/services/editor/EditorService";
-import { DEFAULT_OPACITY, DEFAULT_STROKE_WIDTH } from "./CONSTANTS";
+import { DEFAULT_OPACITY, DEFAULT_STROKE_WIDTH, DEFAULT_STROKE_WIDTH_TOKEN } from "./CONSTANTS";
 import { fxCreatePenNode } from "./fx.create-node";
 import { txCreatePenCloneDrag } from "./tx.clone";
 import { txUpdatePenPathFromElement } from "./tx.path";
 import { txFinalizeOwnedTransform } from "../transform/tx.finalize-owned-transform";
 
-const DEFAULT_PEN_COLOR_TOKEN = "@gray/900";
+const DEFAULT_PEN_COLOR_TOKEN = "@base/900";
 const DRAFT_POINTS_ATTR = "vcDraftStrokePoints";
 const PEN_NODE_SETUP_ATTR = "vcPenNodeSetup";
 const PEN_MOVE_BEFORE_ELEMENT_ATTR = "vcPenMoveBeforeElement";
@@ -40,11 +40,7 @@ function fxCreatePenElementFromDraft(args: {
   id: string;
   now: number;
   points: TEditorToolCanvasPoint[];
-  rememberedStyle?: {
-    strokeColor?: string;
-    strokeWidth?: number;
-    opacity?: number;
-  };
+  rememberedStyle?: Pick<TThemeRememberedStyle, "strokeColor" | "strokeWidth" | "opacity">;
 }): TElement {
   const penData = fxCreatePenDataFromStrokePoints({ points: args.points });
   if (!penData) {
@@ -56,6 +52,8 @@ function fxCreatePenElementFromDraft(args: {
     x: penData.x,
     y: penData.y,
     rotation: 0,
+    scaleX: 1,
+    scaleY: 1,
     zIndex: "",
     parentGroupId: null,
     bindings: [],
@@ -66,7 +64,7 @@ function fxCreatePenElementFromDraft(args: {
     style: {
       backgroundColor: args.rememberedStyle?.strokeColor ?? DEFAULT_PEN_COLOR_TOKEN,
       opacity: args.rememberedStyle?.opacity ?? DEFAULT_OPACITY,
-      strokeWidth: args.rememberedStyle?.strokeWidth ?? DEFAULT_STROKE_WIDTH,
+      strokeWidth: args.rememberedStyle?.strokeWidth ?? DEFAULT_STROKE_WIDTH_TOKEN,
     },
   };
 }
@@ -99,11 +97,7 @@ function fxStartPenDraftNode(args: {
   theme: ThemeService;
   now: () => number;
   point: TEditorToolCanvasPoint;
-  rememberedStyle?: {
-    strokeColor?: string;
-    strokeWidth?: number;
-    opacity?: number;
-  };
+  rememberedStyle?: Pick<TThemeRememberedStyle, "strokeColor" | "strokeWidth" | "opacity">;
 }) {
   const node = fxCreatePenRuntimeNode(args.theme, fxCreatePenElementFromDraft({
     id: "pen-draft",
@@ -128,11 +122,7 @@ function txUpdatePenDraftNode(args: {
   previewNode: Konva.Path;
   point: TEditorToolCanvasPoint;
   now: number;
-  rememberedStyle?: {
-    strokeColor?: string;
-    strokeWidth?: number;
-    opacity?: number;
-  };
+  rememberedStyle?: Pick<TThemeRememberedStyle, "strokeColor" | "strokeWidth" | "opacity">;
 }) {
   const points = [
     ...((args.previewNode.getAttr(DRAFT_POINTS_ATTR) as TEditorToolCanvasPoint[] | undefined) ?? []),
@@ -165,11 +155,7 @@ function txUpdatePenDraft(args: {
   previewNode: Konva.Shape;
   point: TEditorToolCanvasPoint;
   now: number;
-  rememberedStyle?: {
-    strokeColor?: string;
-    strokeWidth?: number;
-    opacity?: number;
-  };
+  rememberedStyle?: Pick<TThemeRememberedStyle, "strokeColor" | "strokeWidth" | "opacity">;
 }) {
   if (!(args.previewNode instanceof Konva.Path)) {
     return;
@@ -535,7 +521,7 @@ export function createPenPlugin(): IPlugin<{
           },
           values: {
             strokeColor: DEFAULT_PEN_COLOR_TOKEN,
-            strokeWidth: DEFAULT_STROKE_WIDTH,
+            strokeWidth: DEFAULT_STROKE_WIDTH_TOKEN,
             opacity: DEFAULT_OPACITY,
           },
           strokeWidthOptions: [...PEN_STROKE_WIDTHS],
@@ -641,7 +627,7 @@ export function createPenPlugin(): IPlugin<{
               theme,
               now,
               point: args.point,
-              rememberedStyle: editor.getToolSelectionStyleValues("pen"),
+              rememberedStyle: theme.getRememberedStyle("pen"),
             }),
             updateDraft: (previewNode, args) => txUpdatePenDraft({
               render,
@@ -649,7 +635,7 @@ export function createPenPlugin(): IPlugin<{
               previewNode,
               point: args.point,
               now: args.now,
-              rememberedStyle: editor.getToolSelectionStyleValues("pen"),
+              rememberedStyle: theme.getRememberedStyle("pen"),
             }),
           },
         });

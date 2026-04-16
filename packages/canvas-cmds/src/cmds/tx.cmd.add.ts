@@ -84,6 +84,9 @@ function fnValidateElementPayload(element: TCanvasAddElementInput, doc: TCanvasD
 
 function fnBuildElement(args: { input: TCanvasAddElementInput; zIndex: string; randomUUID: () => string }): TElement {
   const now = Date.now();
+  const defaultStyleByType = args.input.type === 'text'
+    ? { fontSize: '@text/s', textAlign: 'left' as const, verticalAlign: 'top' as const }
+    : {};
   return {
     id: args.input.id ?? args.randomUUID(),
     x: args.input.x ?? 0,
@@ -96,7 +99,7 @@ function fnBuildElement(args: { input: TCanvasAddElementInput; zIndex: string; r
     createdAt: now,
     updatedAt: now,
     data: fxBuildCanvasAddData(args.input.type, args.input.data ?? {}),
-    style: { ...fxDefaultCanvasAddStyle(), ...(args.input.style ?? {}) },
+    style: { ...fxDefaultCanvasAddStyle(), ...defaultStyleByType, ...(args.input.style ?? {}) },
   };
 }
 
