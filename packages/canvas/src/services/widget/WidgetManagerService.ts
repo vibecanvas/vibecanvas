@@ -47,7 +47,7 @@ export class WidgetManagerService implements IService<IWidgetManagerServiceHooks
     this.canvasRegistry.registerElement({
 
       id: wConfig.id,
-
+      matchesElement: (element) => element.data.type === "widget" && element.data.kind === wConfig.id,
       createNode: (element) => {
         console.log('WidgetManagerService createNode', element)
         // element.data.type

@@ -87,7 +87,191 @@ export type TCanvasRegistrySelectionStyleArgs = {
   node?: Konva.Node;
 };
 
-export interface TCanvasRegistryElementDefinition {
+type TCanvasRegistryToElement = (node: Konva.Node) => TElement | null;
+type TCanvasRegistryAfterToElement = (args: { node: Konva.Node; element: TElement }) => TElement | void;
+type TCanvasRegistryCreateNode = (element: TElement) => Konva.Group | Konva.Shape | null;
+type TCanvasRegistryAfterCreateNode = (args: { element: TElement; node: Konva.Group | Konva.Shape }) => void;
+type TCanvasRegistryAttachListeners = (node: Konva.Node) => boolean | void;
+type TCanvasRegistryUpdateElement = (element: TElement) => boolean | void;
+type TCanvasRegistryCreateDragClone = (args: {
+  node: Konva.Node;
+  selection: Array<Konva.Group | Konva.Shape>;
+}) => boolean | void;
+type TCanvasRegistryGetSelectionStyleMenu = (args: TCanvasRegistrySelectionStyleArgs) => TCanvasRegistrySelectionStyleConfig | null | void;
+type TCanvasRegistryGetTransformOptions = (args: {
+  node: Konva.Node;
+  element: TElement;
+  selection: Array<Konva.Group | Konva.Shape>;
+}) => TCanvasRegistryTransformOptions | void;
+type TCanvasRegistryMoveHook = (args: TCanvasRegistryMoveArgs) => TCanvasRegistryTransformHookResult | void;
+type TCanvasRegistryRotateHook = (args: TCanvasRegistryRotateArgs) => TCanvasRegistryTransformHookResult | void;
+type TCanvasRegistryResizeHook = (args: TCanvasRegistryResizeArgs) => TCanvasRegistryTransformHookResult | void;
+
+type TCanvasRegistryRequireAtLeastOne<T extends object> = {
+  [K in keyof T]-?: Required<Pick<T, K>> & Partial<Omit<T, K>>;
+}[keyof T];
+
+type TCanvasRegistryElementMatcher = {
+  /**
+   * Matches persisted elements for create/update/clone flows.
+   * Base definitions should usually provide this.
+   * Modifier definitions may provide it when they want to augment persisted element behavior.
+   */
+  matchesElement: (element: TElement) => boolean;
+};
+
+type TCanvasRegistryNodeMatcher = {
+  /**
+   * Matches runtime nodes for serialize/listener flows.
+   * Base definitions should usually provide this.
+   * Modifier definitions may provide it when they want to augment runtime node behavior.
+   */
+  matchesNode: (node: Konva.Node) => boolean;
+};
+
+type TCanvasRegistryElementHookBag = {
+  /**
+   * Base serialize step.
+   * The first matching definition with toElement builds the initial persisted element.
+   */
+  toElement?: TCanvasRegistryToElement;
+  /**
+   * Serialize augmentation step.
+   * Runs after the base toElement step for every matching definition in priority order.
+   * May return a replacement element or mutate by returning void and relying on object updates.
+   */
+  afterToElement?: TCanvasRegistryAfterToElement;
+  /**
+   * Base create step.
+   * The first matching definition with createNode builds the one root runtime node for the element.
+   * If the element needs multiple visual parts, return a Konva.Group.
+   */
+  createNode?: TCanvasRegistryCreateNode;
+  /**
+   * Create augmentation step.
+   * Runs after the base createNode step for every matching definition in priority order.
+   */
+  afterCreateNode?: TCanvasRegistryAfterCreateNode;
+  /**
+   * Runtime wiring step.
+   * Runs for every matching definition in priority order.
+   * Use this to attach drag/pointer/transform listeners and other runtime behavior.
+   */
+  attachListeners?: TCanvasRegistryAttachListeners;
+  /**
+   * Update step.
+   * Runs for every matching definition in priority order.
+   * Use this to apply persisted element state back onto an existing runtime node.
+   */
+  updateElement?: TCanvasRegistryUpdateElement;
+  /**
+   * Optional alt-drag clone behavior for this element definition.
+   * Returns true when the definition handled clone-drag startup.
+   */
+  createDragClone?: TCanvasRegistryCreateDragClone;
+  /**
+   * Optional selection-style menu config for this element definition.
+   * Used for active-tool defaults and for combining style controls across selections.
+   */
+  getSelectionStyleMenu?: TCanvasRegistryGetSelectionStyleMenu;
+  /**
+   * Optional transformer UI behavior for this node type.
+   * Runs in priority order and later definitions may override earlier fields.
+   */
+  getTransformOptions?: TCanvasRegistryGetTransformOptions;
+  /**
+   * Called while one selected node is moved.
+   * Publishes the move event to the CRDT if `crdt` is true.
+   */
+  onMove?: TCanvasRegistryMoveHook;
+  /**
+   * Called after move handling completes.
+   */
+  afterMove?: TCanvasRegistryMoveHook;
+  /**
+   * Called while one selected node is rotated.
+   * Publishes the rotate event to the CRDT if `crdt` is true.
+   */
+  onRotate?: TCanvasRegistryRotateHook;
+  /**
+   * Called after rotate handling completes.
+   */
+  afterRotate?: TCanvasRegistryRotateHook;
+  /**
+   * Called while one selected node is resized.
+   * Publishes the resize event to the CRDT if `crdt` is true.
+   */
+  onResize?: TCanvasRegistryResizeHook;
+  /**
+   * Called after resize handling completes.
+   */
+  afterResize?: TCanvasRegistryResizeHook;
+};
+
+type TCanvasRegistryNodeRuntimeHookBag = Pick<
+  TCanvasRegistryElementHookBag,
+  | "attachListeners"
+  | "createDragClone"
+  | "getTransformOptions"
+  | "onMove"
+  | "afterMove"
+  | "onRotate"
+  | "afterRotate"
+  | "onResize"
+  | "afterResize"
+>;
+
+type TCanvasRegistryElementRuntimeHookBag = Pick<
+  TCanvasRegistryElementHookBag,
+  | "updateElement"
+  | "getSelectionStyleMenu"
+>;
+
+type TCanvasRegistrySerializeDefinition =
+  | (TCanvasRegistryNodeMatcher & {
+    toElement: TCanvasRegistryToElement;
+    afterToElement?: never;
+  })
+  | (TCanvasRegistryNodeMatcher & {
+    toElement?: never;
+    afterToElement: TCanvasRegistryAfterToElement;
+  })
+  | {
+    toElement?: never;
+    afterToElement?: never;
+  };
+
+type TCanvasRegistryCreateDefinition =
+  | (TCanvasRegistryElementMatcher & {
+    createNode: TCanvasRegistryCreateNode;
+    afterCreateNode?: never;
+  })
+  | (TCanvasRegistryElementMatcher & {
+    createNode?: never;
+    afterCreateNode: TCanvasRegistryAfterCreateNode;
+  })
+  | {
+    createNode?: never;
+    afterCreateNode?: never;
+  };
+
+type TCanvasRegistryNodeRuntimeDefinition =
+  | (TCanvasRegistryNodeMatcher & TCanvasRegistryRequireAtLeastOne<TCanvasRegistryNodeRuntimeHookBag>)
+  | {
+    [K in keyof TCanvasRegistryNodeRuntimeHookBag]?: never;
+  };
+
+type TCanvasRegistryElementRuntimeDefinition =
+  | (TCanvasRegistryElementMatcher & TCanvasRegistryRequireAtLeastOne<TCanvasRegistryElementRuntimeHookBag>)
+  | {
+    [K in keyof TCanvasRegistryElementRuntimeHookBag]?: never;
+  };
+
+/**
+ * One definition may own a lifecycle step or augment it, but not both in the same step.
+ * The required matcher is enforced based on the hook family the definition participates in.
+ */
+export type TCanvasRegistryElementDefinition = {
   /**
    * Unique registration id for this definition.
    * This is a registration identity, not necessarily the persisted element type.
@@ -100,100 +284,19 @@ export interface TCanvasRegistryElementDefinition {
   priority?: number;
   /**
    * Matches persisted elements for create/update/clone flows.
-   * Base definitions should usually provide this.
-   * Modifier definitions may provide it when they want to augment persisted element behavior.
+   * Required when the definition participates in element-based hooks.
    */
   matchesElement?: (element: TElement) => boolean;
   /**
    * Matches runtime nodes for serialize/listener flows.
-   * Base definitions should usually provide this.
-   * Modifier definitions may provide it when they want to augment runtime node behavior.
+   * Required when the definition participates in node-based hooks.
    */
   matchesNode?: (node: Konva.Node) => boolean;
-  /**
-   * Base serialize step.
-   * The first matching definition with toElement builds the initial persisted element.
-   */
-  toElement?: (node: Konva.Node) => TElement | null;
-  /**
-   * Serialize augmentation step.
-   * Runs after the base toElement step for every matching definition in priority order.
-   * May return a replacement element or mutate by returning void and relying on object updates.
-   */
-  afterToElement?: (args: { node: Konva.Node; element: TElement }) => TElement | void;
-  /**
-   * Base create step.
-   * The first matching definition with createNode builds the one root runtime node for the element.
-   * If the element needs multiple visual parts, return a Konva.Group.
-   */
-  createNode?: (element: TElement) => Konva.Group | Konva.Shape | null;
-  /**
-   * Create augmentation step.
-   * Runs after the base createNode step for every matching definition in priority order.
-   */
-  afterCreateNode?: (args: { element: TElement; node: Konva.Group | Konva.Shape }) => void;
-  /**
-   * Runtime wiring step.
-   * Runs for every matching definition in priority order.
-   * Use this to attach drag/pointer/transform listeners and other runtime behavior.
-   */
-  attachListeners?: (node: Konva.Node) => boolean | void;
-  /**
-   * Update step.
-   * Runs for every matching definition in priority order.
-   * Use this to apply persisted element state back onto an existing runtime node.
-   */
-  updateElement?: (element: TElement) => boolean | void;
-  /**
-   * Optional alt-drag clone behavior for this element definition.
-   * Returns true when the definition handled clone-drag startup.
-   */
-  createDragClone?: (args: {
-    node: Konva.Node;
-    selection: Array<Konva.Group | Konva.Shape>;
-  }) => boolean | void;
-  /**
-   * Optional selection-style menu config for this element definition.
-   * Used for active-tool defaults and for combining style controls across selections.
-   */
-  getSelectionStyleMenu?: (args: TCanvasRegistrySelectionStyleArgs) => TCanvasRegistrySelectionStyleConfig | null | void;
-  /**
-   * Optional transformer UI behavior for this node type.
-   * Runs in priority order and later definitions may override earlier fields.
-   */
-  getTransformOptions?: (args: {
-    node: Konva.Node;
-    element: TElement;
-    selection: Array<Konva.Group | Konva.Shape>;
-  }) => TCanvasRegistryTransformOptions | void;
-  /**
-   * Called while one selected node is moved.
-   * Publishes the move event to the CRDT if `crdt` is true.
-   */
-  onMove?: (args: TCanvasRegistryMoveArgs) => TCanvasRegistryTransformHookResult | void;
-  /**
-   * Called after move handling completes.
-   */
-  afterMove?: (args: TCanvasRegistryMoveArgs) => TCanvasRegistryTransformHookResult | void;
-  /**
-   * Called while one selected node is rotated.
-   * Publishes the rotate event to the CRDT if `crdt` is true.
-   */
-  onRotate?: (args: TCanvasRegistryRotateArgs) => TCanvasRegistryTransformHookResult | void;
-  /**
-   * Called after rotate handling completes.
-   */
-  afterRotate?: (args: TCanvasRegistryRotateArgs) => TCanvasRegistryTransformHookResult | void;
-  /**
-   * Called while one selected node is resized.
-   * Publishes the resize event to the CRDT if `crdt` is true.
-   */
-  onResize?: (args: TCanvasRegistryResizeArgs) => TCanvasRegistryTransformHookResult | void;
-  /**
-   * Called after resize handling completes.
-   */
-  afterResize?: (args: TCanvasRegistryResizeArgs) => TCanvasRegistryTransformHookResult | void;
-}
+} & TCanvasRegistryRequireAtLeastOne<TCanvasRegistryElementHookBag>
+  & TCanvasRegistrySerializeDefinition
+  & TCanvasRegistryCreateDefinition
+  & TCanvasRegistryNodeRuntimeDefinition
+  & TCanvasRegistryElementRuntimeDefinition;
 
 export type TCanvasRegistryGroupDefinition = {
   /**
