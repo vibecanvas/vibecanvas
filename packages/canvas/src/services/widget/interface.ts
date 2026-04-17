@@ -19,7 +19,7 @@ export interface IWidgetManagerServiceProps {
 export interface IWidgetConfig {
   id: string;
   tool?: Pick<TEditorTool, "group" | "icon" | "label" | "priority" | "shortcuts" >
-
+  initialPayload?: Record<string, any>;
 
 
 }

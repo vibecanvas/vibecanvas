@@ -121,7 +121,7 @@ type TPortalCreateHost = {
   themeService: ThemeService;
 }
 
-type TArgsCreateHost = TEditorToolDrawCreateStartDraftArgs
+type TArgsCreateHost = { kind: string, initialPayload: Record<string, any> } & TEditorToolDrawCreateStartDraftArgs
 
 export function fxDrawHost(portal: TPortalCreateHost, args: TArgsCreateHost) {
   const hostThemeColors = getHostThemeColors(portal.themeService)
@@ -211,11 +211,13 @@ export function fxDrawHost(portal: TPortalCreateHost, args: TArgsCreateHost) {
   group.add(border)
 
   const elementData: TElementData = {
-    type: 'custom',
+    type: 'widget',
     expanded: false,
+    kind: args.kind,
+    window: 'contained',
     h: WIDGET_HOST_HEADER_HEIGHT,
     w: WIDGET_HOST_MIN_WIDTH,
-    payload: {}
+    payload: args.initialPayload
   }
 
   group.setAttr(WIDGET_HOST_ELEMENT_DATA_ATTR, elementData)

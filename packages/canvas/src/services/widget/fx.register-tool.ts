@@ -26,13 +26,14 @@ export function fxRegisterWidgetTool(portal: TPortalRegisterWidgetTool, args: TA
     priority: args.widgetConfig.tool.priority,
     behavior: { type: 'mode', mode: 'draw-create' },
     drawCreate: {
-      startDraft(args) {
-        return fxDrawHost({ konva: portal.konva, themeService: portal.themeService }, args)
+      startDraft(localArgs) {
+        return fxDrawHost({ konva: portal.konva, themeService: portal.themeService },
+          { ...localArgs, kind: args.widgetConfig.id, initialPayload: args.widgetConfig.initialPayload ?? {} })
       },
-      updateDraft(previewNode, args) {
+      updateDraft(previewNode, localArgs) {
         if (!(previewNode instanceof portal.konva.Group)) return
 
-        fxUpdateHost({ konva: portal.konva, group: previewNode, themeService: portal.themeService }, args)
+        fxUpdateHost({ konva: portal.konva, group: previewNode, themeService: portal.themeService }, localArgs)
       },
     },
   })
