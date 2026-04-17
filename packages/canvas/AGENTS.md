@@ -467,7 +467,3 @@ And specifically:
 - do not reintroduce old migration language into docs
 - do not describe `src/services/widget` as stable
 - do not describe `src/plugins/hosted-component` as stable
-
-#IMPORTANT
-Always read `./ARCHITECTURE.md`
-Always read `./FILES.md`

@@ -35,6 +35,12 @@ Folder rule:
 - when logic is local to one feature or plugin, prefer sibling `fn.*.ts`, `fx.*.ts`, and `tx.*.ts` files next to the orchestrating file
 - if package structure needs it, `/core` may live inside a subfolder instead
 - only do nested `/core` folders when complexity is high and locality is better
+- use one `CONSTANTS.md` file per folder when needed.
+- use one `typed.ts` and or `interface.ts` file per folder only for reusable typings
+- `CONSTANTS.ts` is allowed to be imported by local `fn.*.ts`, `fx.*.ts`, and `tx.*.ts` files
+- `types.ts` and `interface.ts` are allowed to be imported by local `fn.*.ts`, `fx.*.ts`, and `tx.*.ts` files
+- always put local TPortal* TArgs* types locally
+- always omit suffix in TPortal* TArgs* if you have only one function to export
 
 Local split rule:
 - keep orchestration-heavy files as the main local file when that shape fits the feature, for example plugin files like `Grid.plugin.ts`
@@ -42,8 +48,7 @@ Local split rule:
 - move impure read helpers into sibling `fx.*.ts` files
 - move impure write helpers into sibling `tx.*.ts` files
 - use `CONSTANTS.ts` for local shared constants that are not themselves function files
-- `CONSTANTS.ts` is allowed to be imported by local `fn.*.ts`, `fx.*.ts`, and `tx.*.ts` files
-- prefer local sibling split over creating a shared `/core` module when the logic is only used by that feature
+- prefer local sibling split over creating a shared `/core` module when the logic is only used by that folder
 - example: `Grid.plugin.ts` may orchestrate behavior while `fn.math.ts`, `tx.draw.ts`, and `CONSTANTS.ts` hold outsourced local pieces by role
 
 Bias:
@@ -103,3 +108,6 @@ Do not guess. Use these rules.
 - `TArgs` is usually serializable payload data
 - tx is for impure writes; use brain and prefer tx when code changes external world state
 - tx may runtime-import `fn.*`, `fx.*`, `tx.*`, and `CONSTANTS`
+
+## IMPORTANT
+Always read `@FILES.md`
