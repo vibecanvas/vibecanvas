@@ -1,6 +1,6 @@
 import type Konva from "konva";
 import type { TElement, TElementStyle } from "@vibecanvas/service-automerge/types/canvas-doc.types";
-import { fxGetCanvasParentGroupId } from "../../core/fx.canvas-node-semantics";
+import { fnGetCanvasParentGroupId } from "../../core/fn.canvas-node-semantics";
 import { fnGetNodeZIndex } from "../../core/fn.get-node-z-index";
 import { fnCreateShape2dElement } from "../../core/fn.shape2d";
 import { fnGetWorldPosition } from "../../core/fn.world-position";
@@ -109,7 +109,7 @@ export function fxToShape2dElement(portal: TPortalToShape2dElement, args: TArgsT
     height,
     createdAt,
     updatedAt,
-    parentGroupId: fxGetCanvasParentGroupId({}, { editor: portal.canvasRegistry, node }),
+    parentGroupId: fnGetCanvasParentGroupId({ editor: portal.canvasRegistry, node }),
     zIndex: fnGetNodeZIndex({ node }),
     style: getNodeStyle(node),
   }) satisfies TElement;

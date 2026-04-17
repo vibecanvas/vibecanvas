@@ -2,7 +2,7 @@ import type Konva from "konva";
 import type { TElement } from "@vibecanvas/service-automerge/types/canvas-doc.types";
 import { isKonvaGroup, isKonvaShape } from "./GUARDS";
 import { fxFilterSelection } from "./fx.filter-selection";
-import type { TCanvasSemanticsEditor } from "./fx.canvas-node-semantics";
+import type { TCanvasSemanticsEditor } from "./fn.canvas-node-semantics";
 import type { SceneService } from "../services/scene/SceneService";
 import type { SelectionService } from "../services/selection/SelectionService";
 

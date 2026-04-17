@@ -6,7 +6,7 @@ import type { HistoryService } from "../../services/history/HistoryService";
 import type { SceneService } from "../../services/scene/SceneService";
 import type { SelectionService } from "../../services/selection/SelectionService";
 import type { IRuntimeHooks, TElementPointerEvent } from "../../runtime";
-import { fxGetCanvasAncestorGroups } from "../../core/fx.canvas-node-semantics";
+import { fnGetCanvasAncestorGroups } from "../../core/fn.canvas-node-semantics";
 import { txUpdateImageNodeFromElement } from "./tx.update-image-node-from-element";
 import type { TPortalUpdateImageNodeFromElement } from "./tx.update-image-node-from-element";
 
@@ -48,7 +48,7 @@ export function txSetupImageListeners(
       element,
     });
 
-    fxGetCanvasAncestorGroups({}, {
+    fnGetCanvasAncestorGroups({
       editor: portal.canvasRegistry,
       node: args.node,
     }).forEach((group) => {

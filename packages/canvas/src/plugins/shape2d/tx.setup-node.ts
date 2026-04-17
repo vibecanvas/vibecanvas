@@ -1,6 +1,6 @@
 import type { TElement } from "@vibecanvas/service-automerge/types/canvas-doc.types";
 import type Konva from "konva";
-import { fxGetCanvasAncestorGroups, fxGetCanvasNodeKind, fxIsCanvasGroupNode } from "../../core/fx.canvas-node-semantics";
+import { fnGetCanvasAncestorGroups, fnGetCanvasNodeKind, fnIsCanvasGroupNode } from "../../core/fn.canvas-node-semantics";
 import type { IRuntimeHooks, TElementPointerEvent } from "../../runtime";
 import type { CanvasRegistryService } from "../../services/canvas-registry/CanvasRegistryService";
 import type { CrdtService } from "../../services/crdt/CrdtService";
@@ -50,7 +50,7 @@ function applyElement(portal: TPortalSetupShape2dNode, element: TElement) {
     return;
   }
 
-  fxGetCanvasAncestorGroups({}, {
+  fnGetCanvasAncestorGroups({
     editor: portal.canvasRegistry,
     node: findSceneNodeById(portal, element.id),
   }).forEach((group) => {
@@ -59,13 +59,13 @@ function applyElement(portal: TPortalSetupShape2dNode, element: TElement) {
 }
 
 function serializeNodeElements(portal: TPortalSetupShape2dNode, node: Konva.Node) {
-  const kind = fxGetCanvasNodeKind({}, { editor: portal.canvasRegistry, node });
+  const kind = fnGetCanvasNodeKind({ editor: portal.canvasRegistry, node });
   if (kind === "element") {
     const element = portal.canvasRegistry.toElement(node);
     return element ? [structuredClone(element)] : [];
   }
 
-  if (kind === "group" && fxIsCanvasGroupNode({}, { editor: portal.canvasRegistry, node })) {
+  if (kind === "group" && fnIsCanvasGroupNode({ editor: portal.canvasRegistry, node })) {
     return fnSerializeSubtreeElements({
       canvasRegistry: portal.canvasRegistry,
       Shape: portal.Shape,

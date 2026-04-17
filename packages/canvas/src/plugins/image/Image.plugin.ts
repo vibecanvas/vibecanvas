@@ -20,7 +20,7 @@ import type { RenderOrderService } from "../../services/render-order/RenderOrder
 import type { SceneService } from "../../services/scene/SceneService";
 import type { SelectionService } from "../../services/selection/SelectionService";
 import type { IRuntimeHooks } from "../../runtime";
-import { fxGetCanvasAncestorGroups, fxGetCanvasParentGroupId } from "../../core/fx.canvas-node-semantics";
+import { fnGetCanvasAncestorGroups, fnGetCanvasParentGroupId } from "../../core/fn.canvas-node-semantics";
 import { fxFilterSelection } from "../../core/fx.filter-selection";
 import { fnGetNodeZIndex } from "../../core/fn.get-node-z-index";
 import { fnGetWorldPosition } from "../../core/fn.world-position";
@@ -180,7 +180,7 @@ function toElement(render: SceneService, canvasRegistry: Pick<CanvasRegistryServ
   const layer = node.getLayer();
   const layerScaleX = layer?.scaleX() ?? 1;
   const layerScaleY = layer?.scaleY() ?? 1;
-  const parentGroupId = fxGetCanvasParentGroupId({}, { editor: canvasRegistry, node });
+  const parentGroupId = fnGetCanvasParentGroupId({ editor: canvasRegistry, node });
 
   const crop = structuredClone(node.getAttr(IMAGE_CROP_ATTR) ?? {
     x: 0,
@@ -311,7 +311,7 @@ export function createImagePlugin(): IPlugin<{
         const node = render.staticForegroundLayer.findOne((candidate: Konva.Node) => {
           return candidate.id() === element.id;
         });
-        fxGetCanvasAncestorGroups({}, { editor: canvasRegistry, node }).forEach((group) => {
+        fnGetCanvasAncestorGroups({ editor: canvasRegistry, node }).forEach((group) => {
           group.fire("transform");
         });
         render.staticForegroundLayer.batchDraw();

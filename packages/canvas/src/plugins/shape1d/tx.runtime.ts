@@ -7,7 +7,7 @@ import type { RenderOrderService } from "../../services/render-order/RenderOrder
 import type { SceneService } from "../../services/scene/SceneService";
 import type { SelectionService } from "../../services/selection/SelectionService";
 import type { IRuntimeHooks, TElementPointerEvent } from "../../runtime";
-import { fxGetCanvasAncestorGroups, fxGetCanvasNodeKind, fxIsCanvasGroupNode } from "../../core/fx.canvas-node-semantics";
+import { fnGetCanvasAncestorGroups, fnGetCanvasNodeKind, fnIsCanvasGroupNode } from "../../core/fn.canvas-node-semantics";
 import { fxFilterSelection } from "../../core/fx.filter-selection";
 import { fnSerializeSubtreeElements } from "../group/fn.serialize-subtree-elements";
 import type { CanvasRegistryService } from "../../services/canvas-registry/CanvasRegistryService";
@@ -57,19 +57,19 @@ function applyElement(portal: TPortalTxShape1dRuntime, element: TElement) {
     return;
   }
 
-  fxGetCanvasAncestorGroups({}, { editor: portal.canvasRegistry, node: findSceneNodeById(portal, element.id) }).forEach((group) => {
+  fnGetCanvasAncestorGroups({ editor: portal.canvasRegistry, node: findSceneNodeById(portal, element.id) }).forEach((group) => {
     group.fire("transform");
   });
 }
 
 function serializeNodeElements(portal: TPortalTxShape1dRuntime, node: Konva.Node) {
-  const kind = fxGetCanvasNodeKind({}, { editor: portal.canvasRegistry, node });
+  const kind = fnGetCanvasNodeKind({ editor: portal.canvasRegistry, node });
   if (kind === "element") {
     const element = portal.canvasRegistry.toElement(node);
     return element ? [structuredClone(element)] : [];
   }
 
-  if (kind === "group" && fxIsCanvasGroupNode({}, { editor: portal.canvasRegistry, node })) {
+  if (kind === "group" && fnIsCanvasGroupNode({ editor: portal.canvasRegistry, node })) {
     return fnSerializeSubtreeElements({
       canvasRegistry: portal.canvasRegistry,
       Shape: portal.Konva.Shape,

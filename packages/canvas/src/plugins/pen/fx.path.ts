@@ -1,7 +1,7 @@
 import type { TElement, TElementStyle, TPenData } from "@vibecanvas/service-automerge/types/canvas-doc.types";
 import type Konva from "konva";
 import { fnGetAbsolutePositionFromWorldPosition, fnGetWorldPosition } from "../../core/fn.world-position";
-import { fxGetCanvasParentGroupId } from "../../core/fx.canvas-node-semantics";
+import { fnGetCanvasParentGroupId } from "../../core/fn.canvas-node-semantics";
 import { fnGetNodeZIndex } from "../../core/fn.get-node-z-index";
 import { fnCreatePenStyleFromNode } from "./fn.style";
 import { fnScalePenDataPoints } from "./fn.math";
@@ -58,7 +58,7 @@ export function fxPenPathToElement(portal: TPortalFxPenPathToElement, args: TArg
     absolutePosition: args.node.absolutePosition(),
     parentTransform: args.node.getLayer()?.getAbsoluteTransform() ?? null,
   });
-  const parentGroupId = fxGetCanvasParentGroupId({}, { editor: portal.editor, node: args.node });
+  const parentGroupId = fnGetCanvasParentGroupId({ editor: portal.editor, node: args.node });
 
   return {
     id: args.node.id(),

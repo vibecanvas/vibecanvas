@@ -12,7 +12,7 @@ import type { HistoryService } from "../../services/history/HistoryService";
 import type { SceneService } from "../../services/scene/SceneService";
 import type { SelectionService } from "../../services/selection/SelectionService";
 import type { IRuntimeHooks } from "../../runtime";
-import { fxIsCanvasGroupNode } from "../../core/fx.canvas-node-semantics";
+import { fnIsCanvasGroupNode } from "../../core/fn.canvas-node-semantics";
 import { fxGetProxyDragTarget } from "./fx.proxy-drag-target";
 import { fxGetProxyBounds } from "./fx.proxy-bounds";
 import { txDispatchSelectionTransformHooks } from "./tx.dispatch-selection-transform-hooks";
@@ -95,7 +95,7 @@ function normalizeSelectedGroupTransforms(nodes: Konva.Node[]) {
  */
 function refreshSelectedGroups(canvasRegistry: CanvasRegistryService, selection: SelectionService) {
   selection.selection.forEach((node) => {
-    if (fxIsCanvasGroupNode({}, { editor: canvasRegistry, node })) {
+    if (fnIsCanvasGroupNode({ editor: canvasRegistry, node })) {
       node.fire("transform");
     }
   });

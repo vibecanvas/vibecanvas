@@ -2,7 +2,7 @@ import type { IPlugin } from "@vibecanvas/runtime";
 import type { TElement, TGroup } from "@vibecanvas/service-automerge/types/canvas-doc.types";
 import Konva from "konva";
 import { isKonvaGroup, isKonvaShape, isKonvaText } from "../../core/GUARDS";
-import { fxIsCanvasGroupNode } from "../../core/fx.canvas-node-semantics";
+import { fnIsCanvasGroupNode } from "../../core/fn.canvas-node-semantics";
 import type { CanvasRegistryService } from "../../services/canvas-registry/CanvasRegistryService";
 import type { CrdtService } from "../../services/crdt/CrdtService";
 import type { EditorService } from "../../services/editor/EditorService";
@@ -128,7 +128,7 @@ function loadElementsTopDown(args: {
   const semantics = createCanvasSemantics(args.canvasRegistry);
   const groupsById = new Map(
     args.scene.staticForegroundLayer.find((candidate: Konva.Node) => {
-      return fxIsCanvasGroupNode({}, { editor: semantics, node: candidate });
+      return fnIsCanvasGroupNode({ editor: semantics, node: candidate });
     }).map((candidate) => [candidate.id(), candidate as Konva.Group]),
   );
   const invalidElementIds: string[] = [];
@@ -171,7 +171,7 @@ function sortSceneTopDown(scene: SceneService, canvasRegistry: CanvasRegistrySer
     })
     .forEach((child, index) => {
       child.zIndex(index);
-      if (fxIsCanvasGroupNode({}, { editor: semantics, node: child })) {
+      if (fnIsCanvasGroupNode({ editor: semantics, node: child })) {
         sortSceneTopDown(scene, canvasRegistry, child as Konva.Group);
       }
     });
@@ -193,7 +193,7 @@ function keepAttachedTextAboveHosts(scene: SceneService, canvasRegistry: CanvasR
   const detached: TSceneNode[] = [];
 
   orderedChildren.forEach((child) => {
-    if (fxIsCanvasGroupNode({}, { editor: semantics, node: child })) {
+    if (fnIsCanvasGroupNode({ editor: semantics, node: child })) {
       keepAttachedTextAboveHosts(scene, canvasRegistry, child as Konva.Group);
       detached.push(child);
       return;
@@ -213,7 +213,7 @@ function keepAttachedTextAboveHosts(scene: SceneService, canvasRegistry: CanvasR
   const nextChildren: TSceneNode[] = [];
   detached.forEach((child) => {
     nextChildren.push(child);
-    if (fxIsCanvasGroupNode({}, { editor: semantics, node: child })) {
+    if (fnIsCanvasGroupNode({ editor: semantics, node: child })) {
       return;
     }
 

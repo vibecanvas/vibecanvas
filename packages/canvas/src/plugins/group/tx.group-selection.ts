@@ -5,7 +5,7 @@ import type { CrdtService } from "../../services/crdt/CrdtService";
 import type { HistoryService } from "../../services/history/HistoryService";
 import type { SceneService } from "../../services/scene/SceneService";
 import type { SelectionService } from "../../services/selection/SelectionService";
-import { fxGetCanvasNodeKind, fxIsCanvasGroupNode } from "../../core/fx.canvas-node-semantics";
+import { fnGetCanvasNodeKind, fnIsCanvasGroupNode } from "../../core/fn.canvas-node-semantics";
 import { fnGetSelectionBounds } from "./fn.get-selection-bounds";
 import { fnFindSceneNodeById, fnGetGroupChildren, fnGetSelectionGroupParent, fnIsSceneParent, fnIsSceneNode, type TSceneNode } from "./fn.scene-node";
 import { fnToGroupPatch } from "./fn.to-group-patch";
@@ -51,7 +51,7 @@ export function txGroupSelection(
   const zIndex = portal.getNodeZIndex(selection[selection.length - 1] ?? selection[0]);
   const groupNode = portal.setupNode(portal.createGroupNode({
     id: groupId,
-    parentGroupId: fxIsCanvasGroupNode({}, { editor: portal.canvasRegistry, node: parent }) ? parent.id() : null,
+    parentGroupId: fnIsCanvasGroupNode({ editor: portal.canvasRegistry, node: parent }) ? parent.id() : null,
     zIndex,
     locked: false,
     createdAt,
@@ -75,7 +75,7 @@ export function txGroupSelection(
     groupNode.add(node);
     node.setAbsolutePosition(absolutePosition);
 
-    const kind = fxGetCanvasNodeKind({}, { editor: portal.canvasRegistry, node });
+    const kind = fnGetCanvasNodeKind({ editor: portal.canvasRegistry, node });
     if (kind === "group") {
       const groupPatch = portal.canvasRegistry.toGroup(node);
       if (groupPatch) {
@@ -113,7 +113,7 @@ export function txGroupSelection(
     label: "group",
     undo() {
       const currentGroupNode = fnFindSceneNodeById({ Group: portal.Group, Shape: portal.Shape, render: portal.render, id: groupId });
-      if (!fxIsCanvasGroupNode({}, { editor: portal.canvasRegistry, node: currentGroupNode })) {
+      if (!fnIsCanvasGroupNode({ editor: portal.canvasRegistry, node: currentGroupNode })) {
         return;
       }
 
@@ -131,7 +131,7 @@ export function txGroupSelection(
         currentParent.add(child);
         child.setAbsolutePosition(absolutePosition);
 
-        const kind = fxGetCanvasNodeKind({}, { editor: portal.canvasRegistry, node: child });
+        const kind = fnGetCanvasNodeKind({ editor: portal.canvasRegistry, node: child });
         if (kind === "group") {
           return;
         }
@@ -163,7 +163,7 @@ export function txGroupSelection(
 
       const recreated = portal.setupNode(portal.createGroupNode({
         id: groupId,
-        parentGroupId: fxIsCanvasGroupNode({}, { editor: portal.canvasRegistry, node: redoParent }) ? redoParent.id() : null,
+        parentGroupId: fnIsCanvasGroupNode({ editor: portal.canvasRegistry, node: redoParent }) ? redoParent.id() : null,
         zIndex,
         locked: false,
         createdAt,
@@ -186,7 +186,7 @@ export function txGroupSelection(
         recreated.add(node);
         node.setAbsolutePosition(absolutePosition);
 
-        const kind = fxGetCanvasNodeKind({}, { editor: portal.canvasRegistry, node });
+        const kind = fnGetCanvasNodeKind({ editor: portal.canvasRegistry, node });
         if (kind === "group") {
           return;
         }

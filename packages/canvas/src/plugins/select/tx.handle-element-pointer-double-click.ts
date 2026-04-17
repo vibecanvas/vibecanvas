@@ -1,5 +1,5 @@
 import { fnGetSelectionPath } from "./fn.get-selection-path";
-import type { TCanvasSemanticsEditor } from "../../core/fx.canvas-node-semantics";
+import type { TCanvasSemanticsEditor } from "../../core/fn.canvas-node-semantics";
 import type { SceneService } from "../../services/scene/SceneService";
 import type { SelectionService } from "../../services/selection/SelectionService";
 import type { TElementPointerEvent } from "../../runtime";

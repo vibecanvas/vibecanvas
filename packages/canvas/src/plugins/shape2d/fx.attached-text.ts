@@ -2,7 +2,7 @@ import type { layoutWithLines, prepareWithSegments } from "@chenglou/pretext";
 import type { TElement, TTextData } from "@vibecanvas/service-automerge/types/canvas-doc.types";
 import type { ThemeService } from "@vibecanvas/service-theme";
 import type Konva from "konva";
-import { fxGetCanvasParentGroupId, fxIsCanvasGroupNode } from "../../core/fx.canvas-node-semantics";
+import { fnGetCanvasParentGroupId, fnIsCanvasGroupNode } from "../../core/fn.canvas-node-semantics";
 import type { CanvasRegistryService } from "../../services/canvas-registry/CanvasRegistryService";
 import type { CrdtService } from "../../services/crdt/CrdtService";
 import type { EditorService } from "../../services/editor/EditorService";
@@ -85,7 +85,7 @@ function createAttachedTextElement(portal: TPortalAttachedText, shapeNode: Konva
     scaleY: 1,
     bindings: [],
     locked: false,
-    parentGroupId: fxGetCanvasParentGroupId({}, { editor: portal.canvasRegistry, node: shapeNode }),
+    parentGroupId: fnGetCanvasParentGroupId({ editor: portal.canvasRegistry, node: shapeNode }),
     zIndex: "",
     createdAt: now,
     updatedAt: now,
@@ -117,7 +117,7 @@ function fxCreateAttachedTextNode(portal: TPortalAttachedText, args: TArgsGetAtt
 
   fxSyncAttachedTextNodeToShape(portal, { shapeNode: args.shapeNode, textNode: node });
   const parentNode = args.shapeNode.getParent();
-  const parent = parentNode instanceof portal.Konva.Layer || fxIsCanvasGroupNode({}, { editor: portal.canvasRegistry, node: parentNode })
+  const parent = parentNode instanceof portal.Konva.Layer || fnIsCanvasGroupNode({ editor: portal.canvasRegistry, node: parentNode })
     ? parentNode
     : portal.scene.staticForegroundLayer;
   if (!(parent instanceof portal.Konva.Layer) && !(parent instanceof portal.Konva.Group)) {

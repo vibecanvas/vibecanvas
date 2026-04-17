@@ -1,7 +1,7 @@
 import { fnGetSelectionPath } from "./fn.get-selection-path";
-import type { TCanvasSemanticsEditor } from "../../core/fx.canvas-node-semantics";
+import type { TCanvasSemanticsEditor } from "../../core/fn.canvas-node-semantics";
 import type { SceneService } from "../../services/scene/SceneService";
-import { fxIsCanvasGroupNode } from "../../core/fx.canvas-node-semantics";
+import { fnIsCanvasGroupNode } from "../../core/fn.canvas-node-semantics";
 import type { SelectionService } from "../../services/selection/SelectionService";
 import type { TElementPointerEvent } from "../../runtime";
 
@@ -66,7 +66,7 @@ export function txHandleElementPointerDown(
 
   const topLevelNode = path[0];
   const isFlatMultiSelect = portal.selection.selection.length > 1
-    && !portal.selection.selection.some((node) => fxIsCanvasGroupNode({}, { editor: portal.editor, node: node.getParent() }));
+    && !portal.selection.selection.some((node) => fnIsCanvasGroupNode({ editor: portal.editor, node: node.getParent() }));
 
   if (isFlatMultiSelect && topLevelNode && portal.selection.selection.includes(topLevelNode)) {
     applyFocusedNode(portal, { node: topLevelNode });

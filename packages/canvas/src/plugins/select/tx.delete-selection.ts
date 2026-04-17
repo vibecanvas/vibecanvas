@@ -4,7 +4,7 @@ import type { Layer } from "konva/lib/Layer";
 import type { Node } from "konva/lib/Node";
 import type { Shape, ShapeConfig } from "konva/lib/Shape";
 import { isKonvaGroup, isKonvaLayer, isKonvaShape } from "../../core/GUARDS";
-import { fxGetCanvasNodeKind, fxIsCanvasGroupNode } from "../../core/fx.canvas-node-semantics";
+import { fnGetCanvasNodeKind, fnIsCanvasGroupNode } from "../../core/fn.canvas-node-semantics";
 import type { CrdtService } from "../../services/crdt/CrdtService";
 import type { HistoryService } from "../../services/history/HistoryService";
 import type { RenderOrderService } from "../../services/render-order/RenderOrderService";
@@ -98,7 +98,7 @@ function sortSceneTopDown(portal: TPortalDeleteSelection, parent: Group | Layer)
   portal.renderOrder.sortChildren(parent);
 
   parent.getChildren().forEach((child: Node) => {
-    if (!fxIsCanvasGroupNode({}, { editor: portal.canvasRegistry, node: child })) {
+    if (!fnIsCanvasGroupNode({ editor: portal.canvasRegistry, node: child })) {
       return;
     }
 
@@ -123,9 +123,9 @@ function collectDeleteSnapshot(portal: TPortalDeleteSelection, roots: TSceneNode
     visitedNodeIds.add(node.id());
     visitedNodes.push(node);
 
-    const kind = fxGetCanvasNodeKind({}, { editor: portal.canvasRegistry, node });
+    const kind = fnGetCanvasNodeKind({ editor: portal.canvasRegistry, node });
     if (kind === "group") {
-      if (!fxIsCanvasGroupNode({}, { editor: portal.canvasRegistry, node })) {
+      if (!fnIsCanvasGroupNode({ editor: portal.canvasRegistry, node })) {
         didFail = true;
         return;
       }
@@ -190,7 +190,7 @@ function collectDeleteSnapshot(portal: TPortalDeleteSelection, roots: TSceneNode
           return false;
         }
 
-        if (!fxIsCanvasGroupNode({}, { editor: portal.canvasRegistry, node: candidate })) {
+        if (!fnIsCanvasGroupNode({ editor: portal.canvasRegistry, node: candidate })) {
           return false;
         }
 
@@ -221,7 +221,7 @@ function restoreDeleteSnapshot(portal: TPortalDeleteSelection, snapshot: TDelete
       if (
         group.parentGroupId !== null
         && !createdGroups.has(group.parentGroupId)
-        && !fxIsCanvasGroupNode({}, { editor: portal.canvasRegistry, node: parentNode })
+        && !fnIsCanvasGroupNode({ editor: portal.canvasRegistry, node: parentNode })
       ) {
         continue;
       }

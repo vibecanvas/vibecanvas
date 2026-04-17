@@ -3,7 +3,7 @@ import type Konva from "konva";
 import type { CanvasRegistryService } from "../../services/canvas-registry/CanvasRegistryService";
 import type { SceneService } from "../../services/scene/SceneService";
 import type { SelectionService } from "../../services/selection/SelectionService";
-import { fxIsCanvasGroupNode } from "../../core/fx.canvas-node-semantics";
+import { fnIsCanvasGroupNode } from "../../core/fn.canvas-node-semantics";
 import { fxCreateGroupBoundary } from "./fx.create-group-boundary";
 
 export type TGroupBoundary = ReturnType<typeof fxCreateGroupBoundary>;
@@ -26,7 +26,7 @@ export function txSyncGroupBoundaries(
   const markedToRemove = new Set(portal.boundaries.keys());
 
   portal.selection.selection
-    .filter((node): node is Konva.Group => fxIsCanvasGroupNode({}, { editor: portal.canvasRegistry, node }))
+    .filter((node): node is Konva.Group => fnIsCanvasGroupNode({ editor: portal.canvasRegistry, node }))
     .forEach((group) => {
       const boundary = portal.boundaries.get(group.id()) ?? portal.createGroupBoundary(group);
       boundary.syncTheme();

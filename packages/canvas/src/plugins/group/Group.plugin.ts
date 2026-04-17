@@ -16,7 +16,7 @@ import type { SceneService } from "../../services/scene/SceneService";
 import type { SelectionService } from "../../services/selection/SelectionService";
 import { CanvasMode } from "../../services/selection/CONSTANTS";
 import type { IRuntimeHooks } from "../../runtime";
-import { fxIsCanvasGroupNode } from "../../core/fx.canvas-node-semantics";
+import { fnIsCanvasGroupNode } from "../../core/fn.canvas-node-semantics";
 import { txCreateGroupCloneDrag } from "./tx.create-group-clone-drag";
 import { fnIsSceneNode } from "./fn.scene-node";
 import { fnToGroupPatch } from "./fn.to-group-patch";
@@ -196,7 +196,7 @@ export function createGroupPlugin(): IPlugin<{
 
       contextMenu.registerProvider("group", ({ scope, activeSelection }) => {
         const selectedGroups = [...activeSelection].reverse().filter((node): node is Konva.Group => {
-          return fxIsCanvasGroupNode({}, { editor: canvasRegistry, node });
+          return fnIsCanvasGroupNode({ editor: canvasRegistry, node });
         });
 
         const actions = [] as Array<{
