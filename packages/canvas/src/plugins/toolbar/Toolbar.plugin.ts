@@ -6,7 +6,7 @@ import { render } from "solid-js/web";
 import { RuntimeToolbar } from "../../components/FloatingCanvasToolbar/RuntimeToolbar";
 import type { SceneService } from "../../services/scene/SceneService";
 import type { SelectionService } from "../../services/selection/SelectionService";
-import type { IRuntimeHooks } from "../../runtime";
+import type { IRuntimeHooks } from "../../types";
 import { CanvasMode } from "../../services/selection/CONSTANTS";
 import type { EditorService, TEditorTool } from "src/services/editor/EditorService";
 

@@ -1,7 +1,7 @@
 import type { IPlugin } from "@vibecanvas/runtime";
 import type { ThemeService } from "@vibecanvas/service-theme";
 import Konva from "konva";
-import type { IRuntimeHooks } from "../../runtime";
+import type { IRuntimeHooks } from "../../types";
 import type { CameraService } from "../../services/camera/CameraService";
 import type { CanvasRegistryService } from "../../services/canvas-registry/CanvasRegistryService";
 import type { SceneService } from "../../services/scene/SceneService";

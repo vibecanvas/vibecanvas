@@ -5,7 +5,7 @@ import type { CrdtService } from "../../services/crdt/CrdtService";
 import type { HistoryService } from "../../services/history/HistoryService";
 import type { SceneService } from "../../services/scene/SceneService";
 import type { SelectionService } from "../../services/selection/SelectionService";
-import type { IRuntimeHooks, TElementPointerEvent } from "../../runtime";
+import type { IRuntimeHooks, TElementPointerEvent } from "../../types";
 import { fnGetCanvasAncestorGroups } from "../../core/fn.canvas-node-semantics";
 import { txUpdateImageNodeFromElement } from "./tx.update-image-node-from-element";
 import type { TPortalUpdateImageNodeFromElement } from "./tx.update-image-node-from-element";

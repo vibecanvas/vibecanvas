@@ -11,7 +11,7 @@ import type { EditorService } from "../../services/editor/EditorService";
 import type { HistoryService } from "../../services/history/HistoryService";
 import type { SceneService } from "../../services/scene/SceneService";
 import type { SelectionService } from "../../services/selection/SelectionService";
-import type { IRuntimeHooks } from "../../runtime";
+import type { IRuntimeHooks } from "../../types";
 import { fxMountSelectionStyleMenu } from "./fx.mount-selection-style-menu";
 
 type TSelectionStyleMenuTimer = number | ReturnType<typeof globalThis.setTimeout>;

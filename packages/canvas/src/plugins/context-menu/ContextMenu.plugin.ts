@@ -8,7 +8,7 @@ import type { CanvasRegistryService } from "../../services/canvas-registry/Canva
 import type { ContextMenuService, TContextMenuNode, TContextMenuScope } from "../../services/context-menu/ContextMenuService";
 import type { SceneService } from "../../services/scene/SceneService";
 import type { SelectionService } from "../../services/selection/SelectionService";
-import type { IRuntimeHooks } from "../../runtime";
+import type { IRuntimeHooks } from "../../types";
 
 function getSelectionPath(
   scene: SceneService,

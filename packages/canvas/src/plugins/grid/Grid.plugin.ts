@@ -2,10 +2,10 @@ import type { IPlugin } from "@vibecanvas/runtime";
 import type { ThemeService } from "@vibecanvas/service-theme";
 import Konva from "konva";
 import Grid2x2 from "lucide-static/icons/grid-2x2.svg?raw";
-import type { IRuntimeHooks } from "../../runtime";
 import type { CameraService } from "../../services/camera/CameraService";
 import type { EditorService } from "../../services/editor/EditorService";
 import type { SceneService } from "../../services/scene/SceneService";
+import type { IRuntimeHooks } from "../../types";
 import { txDrawGrid } from "./tx.draw";
 
 export function createGridPlugin(): IPlugin<{

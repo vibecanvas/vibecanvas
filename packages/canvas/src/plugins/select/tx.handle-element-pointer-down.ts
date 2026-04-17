@@ -3,7 +3,7 @@ import type { TCanvasSemanticsEditor } from "../../core/fn.canvas-node-semantics
 import type { SceneService } from "../../services/scene/SceneService";
 import { fnIsCanvasGroupNode } from "../../core/fn.canvas-node-semantics";
 import type { SelectionService } from "../../services/selection/SelectionService";
-import type { TElementPointerEvent } from "../../runtime";
+import type { TElementPointerEvent } from "../../types";
 
 export type TPortalHandleElementPointerDown = {
   editor: TCanvasSemanticsEditor;

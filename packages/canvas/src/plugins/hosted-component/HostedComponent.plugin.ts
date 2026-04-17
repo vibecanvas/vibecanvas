@@ -1,6 +1,6 @@
 import type { IPlugin } from "@vibecanvas/runtime";
 import type { CameraService, CrdtService, EditorService, RenderOrderService, SceneService, SelectionService } from "../../services";
-import type { IRuntimeHooks } from "../../runtime";
+import type { IRuntimeHooks } from "../../types";
 
 const HOSTED_COMPONENT_PLUGIN_ID = "hosted-component";
 

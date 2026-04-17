@@ -8,7 +8,7 @@ import { resolveThemeColor, type ThemeService } from "@vibecanvas/service-theme"
 import { DEFAULT_STROKE_WIDTHS } from "../../components/SelectionStyleMenu/types";
 import { txSetNodeZIndex } from "../../core/tx.set-node-z-index";
 import { fxFilterSelection } from "../../core/fx.filter-selection";
-import type { IRuntimeHooks } from "../../runtime";
+import type { IRuntimeHooks } from "../../types";
 import type { CameraService } from "../../services/camera/CameraService";
 import type { CanvasRegistryService } from "../../services/canvas-registry/CanvasRegistryService";
 import type { ContextMenuService } from "../../services/context-menu/ContextMenuService";

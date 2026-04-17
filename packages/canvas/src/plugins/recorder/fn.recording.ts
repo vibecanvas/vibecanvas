@@ -1,4 +1,4 @@
-import type { TMouseEvent, TPointerEvent, TWheelEvent } from "../../runtime";
+import type { TMouseEvent, TPointerEvent, TWheelEvent } from "../../types";
 import type { CrdtService } from "../../services/crdt/CrdtService";
 import type { SceneService } from "../../services/scene/SceneService";
 import type { TCrdtOp, TModifiers, TRecording, TStep } from "./CONSTANTS";

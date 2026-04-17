@@ -3,7 +3,7 @@ import { createComponent, createSignal, type Accessor, type Setter } from "solid
 import Konva from "konva";
 import type { CrdtService } from "../../services/crdt/CrdtService";
 import type { SceneService } from "../../services/scene/SceneService";
-import type { IRuntimeHooks, TMouseEvent, TPointerEvent } from "../../runtime";
+import type { IRuntimeHooks, TMouseEvent, TPointerEvent } from "../../types";
 import { render as renderSolid } from "solid-js/web";
 import { CanvasRecorder } from "../../components/CanvasRecorder";
 import {

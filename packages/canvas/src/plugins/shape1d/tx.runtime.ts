@@ -6,7 +6,7 @@ import type { HistoryService } from "../../services/history/HistoryService";
 import type { RenderOrderService } from "../../services/render-order/RenderOrderService";
 import type { SceneService } from "../../services/scene/SceneService";
 import type { SelectionService } from "../../services/selection/SelectionService";
-import type { IRuntimeHooks, TElementPointerEvent } from "../../runtime";
+import type { IRuntimeHooks, TElementPointerEvent } from "../../types";
 import { fnGetCanvasAncestorGroups, fnGetCanvasNodeKind, fnIsCanvasGroupNode } from "../../core/fn.canvas-node-semantics";
 import { fxFilterSelection } from "../../core/fx.filter-selection";
 import { fnSerializeSubtreeElements } from "../group/fn.serialize-subtree-elements";

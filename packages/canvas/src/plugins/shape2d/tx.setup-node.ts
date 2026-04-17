@@ -1,7 +1,7 @@
 import type { TElement } from "@vibecanvas/service-automerge/types/canvas-doc.types";
 import type Konva from "konva";
 import { fnGetCanvasAncestorGroups, fnGetCanvasNodeKind, fnIsCanvasGroupNode } from "../../core/fn.canvas-node-semantics";
-import type { IRuntimeHooks, TElementPointerEvent } from "../../runtime";
+import type { IRuntimeHooks, TElementPointerEvent } from "../../types";
 import type { CanvasRegistryService } from "../../services/canvas-registry/CanvasRegistryService";
 import type { CrdtService } from "../../services/crdt/CrdtService";
 import type { HistoryService } from "../../services/history/HistoryService";

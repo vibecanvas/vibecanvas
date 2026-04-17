@@ -2,7 +2,7 @@ import { fnGetSelectionPath } from "./fn.get-selection-path";
 import type { TCanvasSemanticsEditor } from "../../core/fn.canvas-node-semantics";
 import type { SceneService } from "../../services/scene/SceneService";
 import type { SelectionService } from "../../services/selection/SelectionService";
-import type { TElementPointerEvent } from "../../runtime";
+import type { TElementPointerEvent } from "../../types";
 
 export type TPortalHandleElementPointerDoubleClick = {
   editor: TCanvasSemanticsEditor;

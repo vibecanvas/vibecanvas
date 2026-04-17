@@ -1,6 +1,6 @@
 import type { TElement, TImageData } from "@vibecanvas/service-automerge/types/canvas-doc.types";
 import type Konva from "konva";
-import type { TCloneImage } from "../../runtime";
+import type { TCloneImage } from "../../types";
 import type { CrdtService } from "../../services/crdt/CrdtService";
 import { txUpdateImageNodeFromElement } from "./tx.update-image-node-from-element";
 import type { TPortalUpdateImageNodeFromElement } from "./tx.update-image-node-from-element";

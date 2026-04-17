@@ -1,7 +1,7 @@
 import type { IPlugin } from "@vibecanvas/runtime";
 import Konva from "konva";
 import type { SceneService } from "../../services/scene/SceneService";
-import type { IRuntimeHooks, TElementPointerEvent, TMouseEvent, TPointerEvent, TWheelEvent } from "../../runtime";
+import type { IRuntimeHooks, TElementPointerEvent, TMouseEvent, TPointerEvent, TWheelEvent } from "../../types";
 
 function isInsideHostedWidget(target: EventTarget | null) {
   return target instanceof HTMLElement && target.closest('[data-hosted-widget-root="true"]') !== null;

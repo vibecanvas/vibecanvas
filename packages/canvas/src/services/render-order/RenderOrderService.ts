@@ -4,7 +4,7 @@ import Konva from "konva";
 import { fnCreateOrderedZIndex } from "../../core/fn.create-ordered-z-index";
 import { fnGetNodeZIndex } from "../../core/fn.get-node-z-index";
 import { txSetNodeZIndex } from "../../core/tx.set-node-z-index";
-import type { TRenderOrderSnapshot } from "../../runtime";
+import type { TRenderOrderSnapshot } from "../../types";
 import type { CanvasRegistryService } from "../canvas-registry/CanvasRegistryService";
 import type { CrdtService } from "../crdt/CrdtService";
 import type { HistoryService } from "../history/HistoryService";

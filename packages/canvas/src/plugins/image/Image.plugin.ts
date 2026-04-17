@@ -3,7 +3,7 @@ import type { IPlugin } from "@vibecanvas/runtime";
 import type { TElement, TImageData } from "@vibecanvas/service-automerge/types/canvas-doc.types";
 import ImageIcon from "lucide-static/icons/image.svg?raw";
 import Konva from "konva";
-import type { TCloneImage, TDeleteImage, TUploadImage } from "../../runtime";
+import type { TCloneImage, TDeleteImage, TUploadImage } from "../../types";
 import {
   fnFileToDataUrl,
   fnGetImageDimensions,
@@ -19,7 +19,7 @@ import type { HistoryService } from "../../services/history/HistoryService";
 import type { RenderOrderService } from "../../services/render-order/RenderOrderService";
 import type { SceneService } from "../../services/scene/SceneService";
 import type { SelectionService } from "../../services/selection/SelectionService";
-import type { IRuntimeHooks } from "../../runtime";
+import type { IRuntimeHooks } from "../../types";
 import { fnGetCanvasAncestorGroups, fnGetCanvasParentGroupId } from "../../core/fn.canvas-node-semantics";
 import { fxFilterSelection } from "../../core/fx.filter-selection";
 import { fnGetNodeZIndex } from "../../core/fn.get-node-z-index";
