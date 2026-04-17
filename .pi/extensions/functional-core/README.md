@@ -16,7 +16,7 @@ It also allows shared `CONSTANTS.ts` and `GUARDS.ts` runtime imports inside func
 
 ### fn.*.ts
 - ignore `fn.*.test.ts` files
-- exported functions must start with `fx`
+- exported functions must start with `fn`
 - imports must be type-only unless imported module leaf starts with `fn.`, `fx.`, `tx.`, is exactly `CONSTANTS` or `GUARDS`, or the imported runtime binding name is UPPER_CASE / underscore style
 - `CONSTANTS.ts` and `GUARDS.ts` imports are allowed for shared local constants and runtime guards
 - UPPER_CASE runtime value imports like `THEME_STROKE_WIDTH_VALUE_MAP` are allowed from any module

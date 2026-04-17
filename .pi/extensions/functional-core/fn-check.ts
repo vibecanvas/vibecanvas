@@ -32,7 +32,7 @@ const INSTANCEOF_GUARDS_BLOCK_NOTE = [
 ].join("\n");
 export const FN_CHECK_RULES = [
   "ignore fn.*.test.ts files",
-  "exported functions must start with fx",
+  "exported functions must start with fn",
   "imports must be type-only unless imported module leaf starts with fn., fx., or tx., is exactly CONSTANTS or GUARDS, or the imported runtime binding name is UPPER_CASE / underscore style",
   "CONSTANTS.ts and GUARDS.ts imports are allowed for shared local constants and runtime guards",
   "UPPER_CASE runtime value imports like THEME_STROKE_WIDTH_VALUE_MAP are allowed from any module",
@@ -363,8 +363,8 @@ function validateExports(content: string): string[] {
   for (const match of clean.matchAll(/(^|\n)\s*export\s+(?:default\s+)?(?:async\s+)?function\s+([A-Za-z_$][\w$]*)\s*\(/g)) {
     const name = match[2] ?? "";
     const line = getLineNumber(clean, (match.index ?? 0) + (match[1]?.length ?? 0));
-    if (!name.startsWith("fx")) {
-      errors.push(`line ${line}: exported function must start with fx`);
+    if (!name.startsWith("fn")) {
+      errors.push(`line ${line}: exported function must start with fn`);
     }
   }
 
@@ -379,8 +379,8 @@ function validateExports(content: string): string[] {
       continue;
     }
 
-    if (!name.startsWith("fx")) {
-      errors.push(`line ${line}: exported function must start with fx`);
+    if (!name.startsWith("fn")) {
+      errors.push(`line ${line}: exported function must start with fn`);
     }
   }
 
@@ -402,8 +402,8 @@ function validateExports(content: string): string[] {
       const exportedName = parts.at(-1) ?? localName;
 
       if (hasFrom) {
-        if (!exportedName.startsWith("fx")) {
-          errors.push(`line ${line}: exported function must start with fx`);
+        if (!exportedName.startsWith("fn")) {
+          errors.push(`line ${line}: exported function must start with fn`);
         }
         continue;
       }
@@ -417,8 +417,8 @@ function validateExports(content: string): string[] {
         errors.push(`line ${line}: exported value \"${exportedName}\" not allowed; export functions or types only`);
         continue;
       }
-      if (kind === "function" && !exportedName.startsWith("fx")) {
-        errors.push(`line ${line}: exported function must start with fx`);
+      if (kind === "function" && !exportedName.startsWith("fn")) {
+        errors.push(`line ${line}: exported function must start with fn`);
       }
     }
   }
