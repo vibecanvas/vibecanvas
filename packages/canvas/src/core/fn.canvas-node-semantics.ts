@@ -1,5 +1,7 @@
 import type Konva from "konva";
 import type { Shape, ShapeConfig } from "konva/lib/Shape";
+import { VC_NODE_KIND_ATTR } from "./CONSTANTS";
+import { isKonvaGroup } from "./GUARDS";
 
 export type TCanvasSemanticsEditor = {
   toElement?(node: Konva.Node): unknown;
@@ -13,10 +15,17 @@ export type TArgsGetCanvasNodeKind = {
   editor: TCanvasSemanticsEditor;
   node: Konva.Node | null | undefined;
 };
-
+// TODO: remove editor dependency
 export function fnGetCanvasNodeKind(args: TArgsGetCanvasNodeKind): TCanvasNodeKind | null {
   if (!args.node) {
     return null;
+  }
+  const kind = args.node.getAttr(VC_NODE_KIND_ATTR);
+  if (!kind) {
+    return null;
+  }
+  if (kind) {
+    return kind as TCanvasNodeKind;
   }
 
   if (args.editor.toGroup(args.node)) {
@@ -70,9 +79,8 @@ export type TArgsGetCanvasParentGroupId = {
 
 export function fnGetCanvasParentGroupId(args: TArgsGetCanvasParentGroupId) {
   const parent = args.node?.getParent();
-  if (!fnIsCanvasGroupNode({ editor: args.editor, node: parent })) {
-    return null;
-  }
+  if (!parent)  return null;
+  if (!fnIsCanvasGroupNode({ editor: args.editor, node: parent })) return null;
 
   return parent.id();
 }
@@ -87,7 +95,7 @@ export function fnGetCanvasAncestorGroups(args: TArgsGetCanvasAncestorGroups) {
   let current = args.node?.getParent() ?? null;
 
   while (current) {
-    if (fnIsCanvasGroupNode({ editor: args.editor, node: current })) {
+    if (isKonvaGroup(current) && fnIsCanvasGroupNode({ editor: args.editor, node: current })) {
       groups.push(current);
     }
 

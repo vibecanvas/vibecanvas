@@ -1,20 +1,18 @@
-import type Konva from "konva";
-import type { Group } from "konva/lib/Group";
-import type { Shape, ShapeConfig } from "konva/lib/Shape";
 import type { TElement } from "@vibecanvas/service-automerge/types/canvas-doc.types";
+import type Konva from "konva";
 import type { CanvasRegistryService } from "../../services";
 
 type TPortalTxDispatchSelectionTransformHooks = {
   canvasRegistry: CanvasRegistryService;
 };
 
-type TArgsTxDispatchSelectionTransformHooks<TArgs extends { node: Konva.Node; element: TElement; selection: Array<Group | Shape<ShapeConfig>> }> = {
-  selection: Array<Group | Shape<ShapeConfig>>;
-  createArgs: (node: Group | Shape<ShapeConfig>, element: TElement) => TArgs;
+type TArgsTxDispatchSelectionTransformHooks<TArgs extends { node: Konva.Node; element: TElement; selection: Konva.Node[] }> = {
+  selection: Konva.Node[];
+  createArgs: (node: Konva.Node, element: TElement) => TArgs;
   getHook: (definition: ReturnType<CanvasRegistryService["getMatchingElementDefinitionsByNode"]>[number]) => ((args: TArgs) => { cancel: boolean; crdt: boolean } | void) | undefined;
 };
 
-export function txDispatchSelectionTransformHooks<TArgs extends { node: Konva.Node; element: TElement; selection: Array<Group | Shape<ShapeConfig>> }>(portal: TPortalTxDispatchSelectionTransformHooks, args: TArgsTxDispatchSelectionTransformHooks<TArgs>) {
+export function txDispatchSelectionTransformHooks<TArgs extends { node: Konva.Node; element: TElement; selection: Konva.Node[] }>(portal: TPortalTxDispatchSelectionTransformHooks, args: TArgsTxDispatchSelectionTransformHooks<TArgs>) {
   let result = { cancel: false, crdt: false };
   const handledNodeIds = new Set<string>();
 
