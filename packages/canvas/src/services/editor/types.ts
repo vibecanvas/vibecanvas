@@ -36,7 +36,7 @@ export type TEditorToolDrawCreateUpdateDraftArgs = {
 };
 
 export type TEditorToolDrawCreateBehavior = {
-  startDraft: (args: TEditorToolDrawCreateStartDraftArgs) => Konva.Node;
+  startDraft: (args: TEditorToolDrawCreateStartDraftArgs) => Konva.Node | null;
   updateDraft: (previewNode: Konva.Node, args: TEditorToolDrawCreateUpdateDraftArgs) => unknown;
 };
 

@@ -7,6 +7,9 @@ import type { IRuntimeConfig, IRuntimeHooks } from "../../types";
 import { WIDGET_HOST_ELEMENT_DATA_ATTR } from "./CONSTANTS";
 import { fxRegisterWidgetTool } from "./fx.register-tool";
 import type { IWidgetConfig, IWidgetManagerServiceHooks, IWidgetManagerServiceProps } from "./interface";
+import { fnToWidgetElement } from "./fn.to-widget-element";
+import { fnCreateWidgetNode } from "./fn.create-widget-node";
+import { fnGetHostThemeColors } from "./fn.get-host-theme-colors";
 
 
 export class WidgetManagerService implements IService<IWidgetManagerServiceHooks>, IStartableService<IRuntimeHooks, IRuntimeConfig> {
@@ -41,20 +44,20 @@ export class WidgetManagerService implements IService<IWidgetManagerServiceHooks
       fxRegisterWidgetTool({
         editorService: this.editorService,
         konva: Konva,
-        themeService: this.themeService
+        themeService: this.themeService,
+        crypto
       }, { widgetConfig: wConfig })
     }
 
     this.canvasRegistry.registerElement({
-
       id: wConfig.id,
-      toElement: (node) => null,
-      matchesNode: (node) => node.getAttr(WIDGET_HOST_ELEMENT_DATA_ATTR)?.data?.type === 'custom',
+      toElement: fnToWidgetElement,
+      matchesNode: (node) => node.getAttr(WIDGET_HOST_ELEMENT_DATA_ATTR)?.type === 'widget',
       matchesElement: (element) => element.data.type === "widget" && element.data.kind === wConfig.id,
       createNode: (element) => {
-        console.log('WidgetManagerService createNode', element)
-        // element.data.type
-        return null
+        const colors = fnGetHostThemeColors(this.themeService)
+        const node = fnCreateWidgetNode(Konva, colors, element)
+        return node
       }
     })
 
@@ -65,6 +68,7 @@ export class WidgetManagerService implements IService<IWidgetManagerServiceHooks
       id: "example",
       tool: {
         label: "Example",
+        shortcuts: ['m']
 
       }
     }

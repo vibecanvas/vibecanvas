@@ -1,13 +1,14 @@
 import type { ThemeService } from "@vibecanvas/service-theme";
 import type Konva from "konva";
 import type { EditorService } from "../editor/EditorService";
-import type { IWidgetConfig } from "./interface";
 import { fxDrawHost, fxUpdateHost } from "./fx.draw-host";
+import type { IWidgetConfig } from "./interface";
 
 type TPortalRegisterWidgetTool = {
   editorService: EditorService;
   konva: typeof Konva;
   themeService: ThemeService;
+  crypto: typeof crypto;
 }
 
 type TArgsRegisterWidgetTool = {
@@ -27,7 +28,7 @@ export function fxRegisterWidgetTool(portal: TPortalRegisterWidgetTool, args: TA
     behavior: { type: 'mode', mode: 'draw-create' },
     drawCreate: {
       startDraft(localArgs) {
-        return fxDrawHost({ konva: portal.konva, themeService: portal.themeService },
+        return fxDrawHost({ konva: portal.konva, themeService: portal.themeService, crypto: portal.crypto },
           { ...localArgs, kind: args.widgetConfig.id, initialPayload: args.widgetConfig.initialPayload ?? {} })
       },
       updateDraft(previewNode, localArgs) {

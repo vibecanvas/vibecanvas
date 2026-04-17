@@ -1,4 +1,4 @@
-import type { TElementData } from '@vibecanvas/service-automerge/types/canvas-doc.types'
+import type { TElement, TElementData } from '@vibecanvas/service-automerge/types/canvas-doc.types'
 import type { ThemeService } from '@vibecanvas/service-theme'
 import type Konva from 'konva'
 import type { TEditorToolDrawCreateStartDraftArgs, TEditorToolDrawCreateUpdateDraftArgs } from '../editor/EditorService'
@@ -8,20 +8,14 @@ import {
   WIDGET_HOST_CLOSE_BUTTON_ID,
   WIDGET_HOST_DIVIDER_HEIGHT,
   WIDGET_HOST_DIVIDER_ID,
-  WIDGET_HOST_ELEMENT_DATA_ATTR,
-  WIDGET_HOST_ELEMENT_STYLE_ATTR,
   WIDGET_HOST_HEADER_HEIGHT,
   WIDGET_HOST_HEADER_ID,
   WIDGET_HOST_MAXIMIZE_BUTTON_ID,
   WIDGET_HOST_MINIMIZE_BUTTON_ID,
   WIDGET_HOST_MIN_WIDTH,
-  WIDGET_HOST_TRAFFIC_LIGHT_RADIUS,
-  WIDGET_HOST_TRAFFIC_LIGHT_SPACING,
-  WIDGET_HOST_TRAFFIC_LIGHT_START_X,
-  WIDGET_HOST_TRAFFIC_LIGHT_Y,
-  WIDGET_HOST_WINDOW_CORNER_RADIUS,
-  WIDGET_HOST_WINDOW_STROKE_WIDTH,
+  WIDGET_HOST_WINDOW_STROKE_WIDTH
 } from './CONSTANTS'
+import { fnCreateWidgetNode } from './fn.create-widget-node'
 
 type THostThemeColors = {
   headerFill: string;
@@ -66,7 +60,7 @@ export function fxUpdateHost(portal: TPortalUpdateHost, args: TArgsUpdateHost) {
   const minimizeButton = portal.group.findOne(`#${WIDGET_HOST_MINIMIZE_BUTTON_ID}`)
   const maximizeButton = portal.group.findOne(`#${WIDGET_HOST_MAXIMIZE_BUTTON_ID}`)
   if (!(body instanceof portal.konva.Rect)) return
-  if (!(header instanceof portal.konva.Rect)) return
+  if (!(header instanceof portal.konva.Group)) return
 
   const hostThemeColors = getHostThemeColors(portal.themeService)
   const width = Math.max(WIDGET_HOST_MIN_WIDTH, args.point.x - portal.group.x())
@@ -83,9 +77,12 @@ export function fxUpdateHost(portal: TPortalUpdateHost, args: TArgsUpdateHost) {
     border.stroke(hostThemeColors.windowStroke)
   }
 
-  header.width(width)
-  header.height(WIDGET_HOST_HEADER_HEIGHT)
-  header.fill(hostThemeColors.headerFill)
+  const headerBackground = header.findOne(`#${WIDGET_HOST_HEADER_ID}`)
+  if (!(headerBackground instanceof portal.konva.Rect)) return
+
+  headerBackground.width(width)
+  headerBackground.height(WIDGET_HOST_HEADER_HEIGHT)
+  headerBackground.fill(hostThemeColors.headerFill)
 
   if (divider instanceof portal.konva.Rect) {
     divider.x(WIDGET_HOST_WINDOW_STROKE_WIDTH)
@@ -119,100 +116,17 @@ export function fxUpdateHost(portal: TPortalUpdateHost, args: TArgsUpdateHost) {
 type TPortalCreateHost = {
   konva: typeof Konva;
   themeService: ThemeService;
+  crypto: typeof crypto;
 }
 
 type TArgsCreateHost = { kind: string, initialPayload: Record<string, any> } & TEditorToolDrawCreateStartDraftArgs
 
 export function fxDrawHost(portal: TPortalCreateHost, args: TArgsCreateHost) {
   const hostThemeColors = getHostThemeColors(portal.themeService)
-  const group = new portal.konva.Group({
-    x: args.point.x,
-    y: args.point.y,
-    width: WIDGET_HOST_MIN_WIDTH,
-    height: WIDGET_HOST_HEADER_HEIGHT,
-  })
-
-  const body = new portal.konva.Rect({
-    id: WIDGET_HOST_BODY_ID,
-    x: 0,
-    y: WIDGET_HOST_HEADER_HEIGHT,
-    width: WIDGET_HOST_MIN_WIDTH,
-    height: 0,
-    fill: hostThemeColors.bodyFill,
-    cornerRadius: [0, 0, WIDGET_HOST_WINDOW_CORNER_RADIUS, WIDGET_HOST_WINDOW_CORNER_RADIUS],
-  })
-
-  const header = new portal.konva.Rect({
-    id: WIDGET_HOST_HEADER_ID,
-    x: 0,
-    y: 0,
-    width: WIDGET_HOST_MIN_WIDTH,
-    height: WIDGET_HOST_HEADER_HEIGHT,
-    fill: hostThemeColors.headerFill,
-    cornerRadius: [WIDGET_HOST_WINDOW_CORNER_RADIUS, WIDGET_HOST_WINDOW_CORNER_RADIUS, 0, 0],
-  })
-
-  const divider = new portal.konva.Rect({
-    id: WIDGET_HOST_DIVIDER_ID,
-    x: WIDGET_HOST_WINDOW_STROKE_WIDTH,
-    y: WIDGET_HOST_HEADER_HEIGHT - WIDGET_HOST_DIVIDER_HEIGHT,
-    width: WIDGET_HOST_MIN_WIDTH - WIDGET_HOST_WINDOW_STROKE_WIDTH * 2,
-    height: WIDGET_HOST_DIVIDER_HEIGHT,
-    fill: hostThemeColors.dividerFill,
-  })
-
-  const closeButton = new portal.konva.Circle({
-    id: WIDGET_HOST_CLOSE_BUTTON_ID,
-    x: WIDGET_HOST_TRAFFIC_LIGHT_START_X,
-    y: WIDGET_HOST_TRAFFIC_LIGHT_Y,
-    radius: WIDGET_HOST_TRAFFIC_LIGHT_RADIUS,
-    fill: hostThemeColors.closeButtonFill,
-    stroke: hostThemeColors.trafficLightStroke,
-    strokeWidth: 1,
-  })
-
-  const minimizeButton = new portal.konva.Circle({
-    id: WIDGET_HOST_MINIMIZE_BUTTON_ID,
-    x: WIDGET_HOST_TRAFFIC_LIGHT_START_X + WIDGET_HOST_TRAFFIC_LIGHT_SPACING,
-    y: WIDGET_HOST_TRAFFIC_LIGHT_Y,
-    radius: WIDGET_HOST_TRAFFIC_LIGHT_RADIUS,
-    fill: hostThemeColors.minimizeButtonFill,
-    stroke: hostThemeColors.trafficLightStroke,
-    strokeWidth: 1,
-  })
-
-  const maximizeButton = new portal.konva.Circle({
-    id: WIDGET_HOST_MAXIMIZE_BUTTON_ID,
-    x: WIDGET_HOST_TRAFFIC_LIGHT_START_X + WIDGET_HOST_TRAFFIC_LIGHT_SPACING * 2,
-    y: WIDGET_HOST_TRAFFIC_LIGHT_Y,
-    radius: WIDGET_HOST_TRAFFIC_LIGHT_RADIUS,
-    fill: hostThemeColors.maximizeButtonFill,
-    stroke: hostThemeColors.trafficLightStroke,
-    strokeWidth: 1,
-  })
-
-  const border = new portal.konva.Rect({
-    id: WIDGET_HOST_BORDER_ID,
-    x: 0,
-    y: 0,
-    width: WIDGET_HOST_MIN_WIDTH,
-    height: WIDGET_HOST_HEADER_HEIGHT,
-    stroke: hostThemeColors.windowStroke,
-    strokeWidth: WIDGET_HOST_WINDOW_STROKE_WIDTH,
-    cornerRadius: WIDGET_HOST_WINDOW_CORNER_RADIUS,
-  })
-
-  group.add(body)
-  group.add(header)
-  group.add(divider)
-  group.add(closeButton)
-  group.add(minimizeButton)
-  group.add(maximizeButton)
-  group.add(border)
 
   const elementData: TElementData = {
     type: 'widget',
-    expanded: false,
+    expanded: true,
     kind: args.kind,
     window: 'contained',
     h: WIDGET_HOST_HEADER_HEIGHT,
@@ -220,8 +134,22 @@ export function fxDrawHost(portal: TPortalCreateHost, args: TArgsCreateHost) {
     payload: args.initialPayload
   }
 
-  group.setAttr(WIDGET_HOST_ELEMENT_DATA_ATTR, elementData)
-  group.setAttr(WIDGET_HOST_ELEMENT_STYLE_ATTR, {}) // style is fixed. no need for customization
+  const element: TElement = {
+    id: portal.crypto.randomUUID(),
+    x: args.point.x,
+    y: args.point.y,
+    rotation: 0,
+    zIndex: '',
+    parentGroupId: null,
+    bindings: [],
+    locked: false,
+    createdAt: Date.now(),
+    updatedAt: Date.now(),
+    data: elementData,
+    style: {}
+  }
+
+  const group = fnCreateWidgetNode(portal.konva, hostThemeColors, element)
 
   return group
 }
