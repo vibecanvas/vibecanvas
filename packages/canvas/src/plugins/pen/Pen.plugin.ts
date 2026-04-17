@@ -20,6 +20,7 @@ import { DEFAULT_OPACITY, DEFAULT_STROKE_WIDTH, DEFAULT_STROKE_WIDTH_TOKEN } fro
 import { fxCreatePenNode } from "./fx.create-node";
 import { txCreatePenCloneDrag } from "./tx.clone";
 import { txUpdatePenPathFromElement } from "./tx.path";
+import { isKonvaPath } from "../../core/GUARDS";
 import { txFinalizeOwnedTransform } from "../../core/tx.finalize-owned-transform";
 
 const DEFAULT_PEN_COLOR_TOKEN = "@base/900";
@@ -70,7 +71,7 @@ function fxCreatePenElementFromDraft(args: {
 }
 
 function fxToPenElement(canvasRegistry: CanvasRegistryService, now: () => number, node: Konva.Node) {
-  if (!(node instanceof Konva.Path)) {
+  if (!isKonvaPath(node)) {
     return null;
   }
 
@@ -157,7 +158,7 @@ function txUpdatePenDraft(args: {
   now: number;
   rememberedStyle?: Pick<TThemeRememberedStyle, "strokeColor" | "strokeWidth" | "opacity">;
 }) {
-  if (!(args.previewNode instanceof Konva.Path)) {
+  if (!isKonvaPath(args.previewNode)) {
     return;
   }
 
@@ -175,7 +176,7 @@ function txSetupPenSelectionNode(args: {
   hooks: IRuntimeHooks;
   node: Konva.Node;
 }) {
-  if (!(args.node instanceof Konva.Path)) {
+  if (!isKonvaPath(args.node)) {
     return false;
   }
 
@@ -219,7 +220,7 @@ function createCreateId(render: SceneService) {
 function txKeepPenTransformRatio(args: {
   node: Konva.Node;
 }) {
-  if (!(args.node instanceof Konva.Path)) {
+  if (!isKonvaPath(args.node)) {
     return false;
   }
 
@@ -244,7 +245,7 @@ function txCommitPenTransform(args: {
   render: SceneService;
   theme: ThemeService;
 }) {
-  if (!(args.node instanceof Konva.Path)) {
+  if (!isKonvaPath(args.node)) {
     return false;
   }
 
@@ -253,7 +254,7 @@ function txCommitPenTransform(args: {
     history: args.history,
     applyElement: args.applyElement,
     serializeAfterElement: (candidateNode) => {
-      if (!(candidateNode instanceof Konva.Path)) {
+      if (!isKonvaPath(candidateNode)) {
         return null;
       }
 
@@ -327,9 +328,9 @@ export function createPenPlugin(): IPlugin<{
 
       const updateNodeFromElement = (element: TElement) => {
         const node = render.staticForegroundLayer.findOne((candidate: Konva.Node) => {
-          return candidate instanceof Konva.Path && candidate.id() === element.id;
+          return isKonvaPath(candidate) && candidate.id() === element.id;
         });
-        if (!(node instanceof Konva.Path)) {
+        if (!isKonvaPath(node)) {
           return false;
         }
 
@@ -474,11 +475,11 @@ export function createPenPlugin(): IPlugin<{
       canvasRegistry.registerElement({
         id: "pen",
         matchesElement: (element) => element.data.type === "pen",
-        matchesNode: (node) => node instanceof Konva.Path,
+        matchesNode: (node) => isKonvaPath(node),
         toElement: (node) => fxToPenElement(canvasRegistry, now, node),
         createNode: (element) => fxCreatePenRuntimeNode(theme, element),
         attachListeners: (node) => {
-          if (!(node instanceof Konva.Path)) {
+          if (!isKonvaPath(node)) {
             return false;
           }
 
@@ -493,7 +494,7 @@ export function createPenPlugin(): IPlugin<{
           return updateNodeFromElement(element);
         },
         createDragClone: ({ node }) => {
-          if (!(node instanceof Konva.Path)) {
+          if (!isKonvaPath(node)) {
             return false;
           }
 
@@ -532,7 +533,7 @@ export function createPenPlugin(): IPlugin<{
           flipEnabled: false,
         }),
         onMove: ({ node }) => {
-          if (!(node instanceof Konva.Path)) {
+          if (!isKonvaPath(node)) {
             return {
               cancel: false,
               crdt: false,
@@ -547,7 +548,7 @@ export function createPenPlugin(): IPlugin<{
           };
         },
         afterMove: ({ node }) => {
-          if (!(node instanceof Konva.Path)) {
+          if (!isKonvaPath(node)) {
             return {
               cancel: false,
               crdt: false,
@@ -599,9 +600,9 @@ export function createPenPlugin(): IPlugin<{
 
       theme.hooks.change.tap(() => {
         render.staticForegroundLayer.find((candidate: Konva.Node) => {
-          return candidate instanceof Konva.Path;
+          return isKonvaPath(candidate);
         }).forEach((candidate) => {
-          if (!(candidate instanceof Konva.Path)) {
+          if (!isKonvaPath(candidate)) {
             return;
           }
 

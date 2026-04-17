@@ -7,6 +7,7 @@ import Circle from "lucide-static/icons/circle.svg?raw";
 import Diamond from "lucide-static/icons/diamond.svg?raw";
 import Square from "lucide-static/icons/square.svg?raw";
 import Konva from "konva";
+import { isKonvaGroup, isKonvaShape, isKonvaText } from "../../core/GUARDS";
 import { fxFilterSelection } from "../../core/fx.filter-selection";
 import {
   fnCreateShape2dElement,
@@ -67,7 +68,7 @@ function safeStopDrag(node: Konva.Node) {
 
 function isShape2dTextHostNode(node: Konva.Node | null | undefined): node is Konva.Shape {
   return Boolean(node)
-    && node instanceof Konva.Shape
+    && isKonvaShape(node)
     && fxGetShape2dNodeType({ Rect: Konva.Rect, Line: Konva.Line, Ellipse: Konva.Ellipse, node }) !== null;
 }
 
@@ -319,7 +320,7 @@ export function createShape2dPlugin(): IPlugin<{
                     originalText: sourceTextElement.data.text,
                   },
                 });
-                if (!(clonedTextNode instanceof Konva.Text)) {
+                if (!isKonvaText(clonedTextNode)) {
                   return { nodes: [], elements: [] };
                 }
 
@@ -343,7 +344,7 @@ export function createShape2dPlugin(): IPlugin<{
             return fxFilterSelection({ Konva }, {
               editor: canvasRegistry,
               selection: nodes.filter((candidate): candidate is Konva.Group | Konva.Shape => {
-                return candidate instanceof Konva.Group || candidate instanceof Konva.Shape;
+                return isKonvaGroup(candidate) || isKonvaShape(candidate);
               }),
             });
           },
@@ -534,9 +535,9 @@ export function createShape2dPlugin(): IPlugin<{
           }
 
           const node = render.staticForegroundLayer.findOne((candidate: Konva.Node) => {
-            return candidate instanceof Konva.Shape && candidate.id() === element.id;
+            return isKonvaShape(candidate) && candidate.id() === element.id;
           });
-          if (!(node instanceof Konva.Shape)) {
+          if (!isKonvaShape(node)) {
             return false;
           }
 
@@ -612,7 +613,7 @@ export function createShape2dPlugin(): IPlugin<{
                   originalText: sourceTextElement.data.text,
                 },
               });
-              if (!(clonedTextNode instanceof Konva.Text)) {
+              if (!isKonvaText(clonedTextNode)) {
                 return { nodes: [], elements: [] };
               }
 
@@ -819,9 +820,9 @@ export function createShape2dPlugin(): IPlugin<{
 
       theme.hooks.change.tap(() => {
         render.staticForegroundLayer.find((candidate: Konva.Node) => {
-          return candidate instanceof Konva.Shape && fxGetShape2dNodeType({ Rect: Konva.Rect, Line: Konva.Line, Ellipse: Konva.Ellipse, node: candidate }) !== null;
+          return isKonvaShape(candidate) && fxGetShape2dNodeType({ Rect: Konva.Rect, Line: Konva.Line, Ellipse: Konva.Ellipse, node: candidate }) !== null;
         }).forEach((candidate) => {
-          if (!(candidate instanceof Konva.Shape)) {
+          if (!isKonvaShape(candidate)) {
             return;
           }
 

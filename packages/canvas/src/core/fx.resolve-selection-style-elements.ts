@@ -1,5 +1,6 @@
 import type Konva from "konva";
 import type { TElement } from "@vibecanvas/service-automerge/types/canvas-doc.types";
+import { isKonvaGroup, isKonvaShape } from "./GUARDS";
 import { fxFilterSelection } from "./fx.filter-selection";
 import type { TCanvasSemanticsEditor } from "./fx.canvas-node-semantics";
 import type { SceneService } from "../services/scene/SceneService";
@@ -43,9 +44,9 @@ function collectSelectionStyleElements(args: {
 
     seenNodeIds.add(node.id());
 
-    if (node instanceof args.Konva.Group) {
+    if (isKonvaGroup(node)) {
       node.getChildren().forEach((child) => {
-        if (child instanceof args.Konva.Group || child instanceof args.Konva.Shape) {
+        if (isKonvaGroup(child) || isKonvaShape(child)) {
           visitNode(child);
         }
       });
@@ -109,11 +110,11 @@ export function fxResolveFocusedSelectionStyleElements(
   }
 
   const focusedNode = portal.scene.staticForegroundLayer.findOne((candidate: Konva.Node) => {
-    return (candidate instanceof portal.Konva.Group || candidate instanceof portal.Konva.Shape)
+    return (isKonvaGroup(candidate) || isKonvaShape(candidate))
       && candidate.id() === args.focusedId;
   });
 
-  if (!(focusedNode instanceof portal.Konva.Group) && !(focusedNode instanceof portal.Konva.Shape)) {
+  if (!isKonvaGroup(focusedNode) && !isKonvaShape(focusedNode)) {
     return [];
   }
 

@@ -9,6 +9,7 @@ import type { HistoryService } from "../../services/history/HistoryService";
 import type { RenderOrderService } from "../../services/render-order/RenderOrderService";
 import type { SceneService } from "../../services/scene/SceneService";
 import type { SelectionService } from "../../services/selection/SelectionService";
+import { isKonvaGroup, isKonvaShape } from "../../core/GUARDS";
 import { fxGetCanvasNodeKind, fxIsCanvasGroupNode } from "../../core/fx.canvas-node-semantics";
 
 export type TDeleteSelectionCanvasRegistry = {
@@ -51,11 +52,12 @@ type TCollectedDeleteData = {
 };
 
 function isSceneNode(portal: TPortalDeleteSelection, node: Node | null | undefined): node is TSceneNode {
-  return Boolean(node) && (node instanceof portal.Group || node instanceof portal.Shape);
+  void portal;
+  return Boolean(node) && (isKonvaGroup(node) || isKonvaShape(node));
 }
 
 function isSceneParent(portal: TPortalDeleteSelection, node: Node | null | undefined): node is Group | Layer {
-  return Boolean(node) && (node instanceof portal.Group || node instanceof portal.Layer);
+  return Boolean(node) && (isKonvaGroup(node) || node instanceof portal.Layer);
 }
 
 function isNodeDescendantOf(node: Node, ancestor: Node) {

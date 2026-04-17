@@ -1,6 +1,7 @@
 import type { IPlugin } from "@vibecanvas/runtime";
 import type { TElement, TGroup } from "@vibecanvas/service-automerge/types/canvas-doc.types";
 import Konva from "konva";
+import { isKonvaGroup, isKonvaShape, isKonvaText } from "../../core/GUARDS";
 import { fxIsCanvasGroupNode } from "../../core/fx.canvas-node-semantics";
 import type { CanvasRegistryService } from "../../services/canvas-registry/CanvasRegistryService";
 import type { CrdtService } from "../../services/crdt/CrdtService";
@@ -55,10 +56,10 @@ function findSceneNodeById(scene: SceneService, id: string | null): TSceneNode |
   }
 
   const node = scene.staticForegroundLayer.findOne((candidate: Konva.Node) => {
-    return (candidate instanceof Konva.Group || candidate instanceof Konva.Shape) && candidate.id() === id;
+    return (isKonvaGroup(candidate) || isKonvaShape(candidate)) && candidate.id() === id;
   });
 
-  if (!(node instanceof Konva.Group) && !(node instanceof Konva.Shape)) {
+  if (!isKonvaGroup(node) && !isKonvaShape(node)) {
     return null;
   }
 
@@ -160,7 +161,7 @@ function sortSceneTopDown(scene: SceneService, canvasRegistry: CanvasRegistrySer
   const semantics = createCanvasSemantics(canvasRegistry);
 
   parent.getChildren()
-    .filter((candidate): candidate is TSceneNode => candidate instanceof Konva.Group || candidate instanceof Konva.Shape)
+    .filter((candidate): candidate is TSceneNode => isKonvaGroup(candidate) || isKonvaShape(candidate))
     .slice()
     .sort((left, right) => {
       return compareByPersistedOrder(
@@ -177,7 +178,7 @@ function sortSceneTopDown(scene: SceneService, canvasRegistry: CanvasRegistrySer
 }
 
 function isAttachedTextNode(node: Konva.Node): node is Konva.Text {
-  return node instanceof Konva.Text
+  return isKonvaText(node)
     && node.name() === ATTACHED_TEXT_NAME
     && typeof node.getAttr("vcContainerId") === "string";
 }
@@ -187,7 +188,7 @@ function keepAttachedTextAboveHosts(scene: SceneService, canvasRegistry: CanvasR
 
   const semantics = createCanvasSemantics(canvasRegistry);
   const orderedChildren = parent.getChildren()
-    .filter((candidate): candidate is TSceneNode => candidate instanceof Konva.Group || candidate instanceof Konva.Shape);
+    .filter((candidate): candidate is TSceneNode => isKonvaGroup(candidate) || isKonvaShape(candidate));
   const attachedTextByHostId = new Map<string, Konva.Text[]>();
   const detached: TSceneNode[] = [];
 

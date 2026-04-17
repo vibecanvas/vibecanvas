@@ -21,6 +21,7 @@ import { txCreateTextCloneDrag } from "./tx.create-text-clone-drag";
 import { txEnterEditMode } from "./tx.enter-edit-mode";
 import { txSetupTextNode } from "./tx.setup-text-node";
 import { txUpdateTextNodeFromElement } from "./tx.update-text-node-from-element";
+import { isKonvaText } from "../../core/GUARDS";
 import { txDeleteSelection } from "../select/tx.delete-selection";
 import { txFinalizeOwnedTransform } from "../../core/tx.finalize-owned-transform";
 import {
@@ -158,7 +159,7 @@ function fxApplyRememberedTextToolStyle(args: {
 function txApplyTextTransform(args: {
   node: Konva.Node;
 }) {
-  return args.node instanceof Konva.Text;
+  return isKonvaText(args.node);
 }
 
 /**
@@ -196,9 +197,9 @@ export function createTextPlugin(): IPlugin<{
 
       const syncThemeTextNodes = () => {
         scene.staticForegroundLayer.find((candidate: Konva.Node) => {
-          return candidate instanceof Konva.Text;
+          return isKonvaText(candidate);
         }).forEach((candidate) => {
-          if (!(candidate instanceof Konva.Text)) {
+          if (!isKonvaText(candidate)) {
             return;
           }
 
@@ -247,9 +248,9 @@ export function createTextPlugin(): IPlugin<{
       const unregisterTextElement = canvasRegistry.registerElement({
         id: "text",
         matchesElement: (element) => element.data.type === "text",
-        matchesNode: (node) => node instanceof Konva.Text,
+        matchesNode: (node) => isKonvaText(node),
         toElement: (node) => {
-          if (!(node instanceof Konva.Text)) {
+          if (!isKonvaText(node)) {
             return null;
           }
 
@@ -268,7 +269,7 @@ export function createTextPlugin(): IPlugin<{
           return createTextNode(theme, element);
         },
         createDragClone: ({ node }) => {
-          if (!(node instanceof Konva.Text)) {
+          if (!isKonvaText(node)) {
             return false;
           }
 
@@ -297,7 +298,7 @@ export function createTextPlugin(): IPlugin<{
           return true;
         },
         attachListeners: (node) => {
-          if (!(node instanceof Konva.Text)) {
+          if (!isKonvaText(node)) {
             return false;
           }
 
@@ -351,7 +352,7 @@ export function createTextPlugin(): IPlugin<{
           };
         },
         afterResize: ({ node, element }) => {
-          if (!(node instanceof Konva.Text) || element.data.type !== "text" || element.data.containerId !== null) {
+          if (!isKonvaText(node) || element.data.type !== "text" || element.data.containerId !== null) {
             return;
           }
 
@@ -362,7 +363,7 @@ export function createTextPlugin(): IPlugin<{
               history,
               applyElement,
               serializeAfterElement: (candidateNode, beforeElement) => {
-                if (!(candidateNode instanceof Konva.Text)) {
+                if (!isKonvaText(candidateNode)) {
                   return null;
                 }
 
@@ -382,7 +383,7 @@ export function createTextPlugin(): IPlugin<{
           };
         },
         afterRotate: ({ node, element }) => {
-          if (!(node instanceof Konva.Text) || element.data.type !== "text" || element.data.containerId !== null) {
+          if (!isKonvaText(node) || element.data.type !== "text" || element.data.containerId !== null) {
             return;
           }
 
@@ -392,7 +393,7 @@ export function createTextPlugin(): IPlugin<{
               history,
               applyElement,
               serializeAfterElement: (candidateNode, beforeElement) => {
-                if (!(candidateNode instanceof Konva.Text)) {
+                if (!isKonvaText(candidateNode)) {
                   return null;
                 }
 
@@ -478,7 +479,7 @@ export function createTextPlugin(): IPlugin<{
           },
         });
         const node = canvasRegistry.createNodeFromElement(element);
-        if (!(node instanceof Konva.Text)) {
+        if (!isKonvaText(node)) {
           return;
         }
 
@@ -513,7 +514,7 @@ export function createTextPlugin(): IPlugin<{
       });
 
       ctx.hooks.elementPointerDoubleClick.tap((event) => {
-        if (!(event.currentTarget instanceof Konva.Text)) {
+        if (!isKonvaText(event.currentTarget)) {
           return false;
         }
 

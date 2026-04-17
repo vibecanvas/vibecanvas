@@ -65,7 +65,7 @@ Do not guess. Use these rules.
 
 ### fn.*.ts
 - ignore `fn.*.test.ts` files
-- exported functions must start with `fx`
+- exported functions must start with `fn`
 - imports must be type-only unless imported module leaf starts with `fn.`, `fx.`, `tx.`, or is exactly `CONSTANTS`
 - `CONSTANTS.ts` imports are allowed for shared local constants
 - no direct use of runtime globals like `window`, `fetch`, `Bun`, `process`, `console`, `globalThis`

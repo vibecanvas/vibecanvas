@@ -2,6 +2,7 @@ import type Konva from "konva";
 import type { CanvasRegistryService } from "../../services/canvas-registry/CanvasRegistryService";
 import type { SceneService } from "../../services/scene/SceneService";
 import type { SelectionService } from "../../services/selection/SelectionService";
+import { isKonvaGroup, isKonvaShape } from "../../core/GUARDS";
 import { fxFilterSelection } from "../../core/fx.filter-selection";
 import { fxIsSceneNode } from "./fn.scene-node";
 
@@ -23,13 +24,13 @@ export function txSyncDraggability(
   });
 
   allSceneNodes.forEach((node) => {
-    if (node.getParent() instanceof portal.Konva.Group) {
+    if (isKonvaGroup(node.getParent())) {
       node.draggable(false);
     }
   });
 
   portal.render.staticForegroundLayer.getChildren().forEach((node) => {
-    if (node instanceof portal.Konva.Group || node instanceof portal.Konva.Shape) {
+    if (isKonvaGroup(node) || isKonvaShape(node)) {
       node.draggable(true);
     }
   });
