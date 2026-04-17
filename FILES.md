@@ -35,42 +35,35 @@ Path rule
 | status | filepath | human comment | oneliner when to use |
 |---|---|---|---|
 | 🤖 | `package.json` |  | Use this when adding or updating root workspace scripts like the functional-core lint command alias. |
+| 🤖 | `scripts/sort-filename.ts` |  | Sort each FILES.md table by filepath without changing section order. |
 
 ## packages/canvas
 prefix: `packages/canvas/src/`
 
 | status | filepath | human comment | oneliner when to use |
 |---|---|---|---|
-| ❓ | `core/GUARDS.ts` |  |  |
+| 🟡 | `automerge.ts` |  | Browser Automerge repo, persisted doc handles, WebSocket sync |
+| 🫠 | `base.css` |  | Global theme tokens, dark mode, baseline element resets |
 | ❓ | `components/Canvas.tsx` |  | Automerge-backed canvas runtime mount, loading, teardown orchestration |
 | ❓ | `components/CanvasContextMenu/index.css` |  | Canvas right-click menu popover styling and item states |
-| ❓ | `components/CanvasContextMenu/index.tsx` |  | Right-click canvas action menu at cursor position |
-| ❓ | `components/CanvasHelp/help.data.ts` |  | Update help shortcuts, sections, and callout copy together |
 | ❓ | `components/CanvasContextMenu/index.css` |  | Canvas help modal layout, overlay, shortcuts, keycap styling |
-| ❓ | `components/CanvasContextMenu/index.tsx` |  | Canvas shortcut help modal with categorized key hints |
 | ❓ | `components/CanvasContextMenu/index.css` |  | Floating canvas recording controls: panel, status, actions, toggle styling |
+| ❓ | `components/CanvasContextMenu/index.tsx` |  | Right-click canvas action menu at cursor position |
+| ❓ | `components/CanvasContextMenu/index.tsx` |  | Canvas shortcut help modal with categorized key hints |
 | ❓ | `components/CanvasContextMenu/index.tsx` |  | Floating recorder panel for capture controls and export |
-| ❓ | `components/FloatingCanvasToolbar/RuntimeToolbar.tsx` |  | Floating toolbar UI: sanitize SVG icons, reflect editor tool state |
-| ❓ | `components/FloatingCanvasToolbar/ToolButton.tsx` |  | Floating toolbar button with active and keyboard shortcut badges |
 | ❓ | `components/CanvasContextMenu/index.tsx` |  | Top-center floating canvas tool picker with collapse/sidebar toggles |
-| ❓ | `components/FloatingCanvasToolbar/styles.css` |  | Floating canvas/runtime toolbar visuals, states, tooltips, keycap hints |
-| ❓ | `components/FloatingCanvasToolbar/toolbar.types.ts` |  | Toolbar tool roster and keyboard shortcut mapping source |
-| ❓ | `components/SelectionStyleMenu/CapPicker.tsx` |  | Arrow endpoint cap style buttons for selection menu |
-| ❓ | `components/SelectionStyleMenu/ColorPicker.tsx` |  | Theme token swatches for fill/stroke selection popover |
-| ❓ | `components/SelectionStyleMenu/FontFamilyPicker.tsx` |  | Text styling panel font family option grid selector |
-| ❓ | `components/SelectionStyleMenu/FontSizePicker.tsx` |  | Text selection font-size preset token picker |
-| ❓ | `components/SelectionStyleMenu/LineTypePicker.tsx` |  | Line style selector buttons for selection formatting |
-| ❓ | `components/SelectionStyleMenu/OpacitySlider.tsx` |  | Opacity drag math, pointer capture, percent display synchronization |
-| ❓ | `components/SelectionStyleMenu/StrokeWidthPicker.tsx` |  | Stroke width option chips inside selection styling menu |
-| ❓ | `components/SelectionStyleMenu/TextAlignPicker.tsx` |  | Text alignment toggle in selection style controls |
-| ❓ | `components/SelectionStyleMenu/VerticalAlignPicker.tsx` |  | Text box vertical alignment toggle buttons |
 | ❓ | `components/CanvasContextMenu/index.tsx` |  | Canvas selection styling popover for shape/text properties |
-| ❓ | `components/SelectionStyleMenu/types.ts` |  | Selection toolbar option catalogs and style value unions |
+| ❓ | `components/CanvasHelp/help.data.ts` |  | Update help shortcuts, sections, and callout copy together |
+| ❓ | `components/file/file.css` |  | File widget layout, centered loading/empty/error state styling |
 | ❓ | `components/file/FileHostedWidget.tsx` |  | Hosted file widget wrapper with missing-transport fallback UI |
 | ❓ | `components/file/FileWidget.tsx` |  | Hosted file widget: watch, preview, edit, autosize, conflict state |
-| ❓ | `components/file/file.css` |  | File widget layout, centered loading/empty/error state styling |
 | ❓ | `components/file/getLanguageExtension.ts` |  | CodeMirror language loading by file extension |
 | ❓ | `components/file/index.ts` |  | file widgets, hosted rendering, content hooks, shared helpers |
+| ❓ | `components/file/index.ts` |  | Filetree UI barrel: widgets, dialog, context, path display |
+| ❓ | `components/file/index.ts` |  | Terminal UI barrel: mounts, widgets, context |
+| ❓ | `components/file/index.ts` |  | Canvas plugin barrel export surface for aggregate imports |
+| ✅ | `components/file/index.ts` |  | Central barrel for canvas service imports |
+| 🟡 | `components/file/index.ts` |  | Package entrypoint: base styles + Canvas export |
 | ❓ | `components/file/useFileContent.ts` |  | Solid signals for file read/save, dirty/loading/error state |
 | ❓ | `components/file/utils.ts` |  | File previews: infer renderer, basename, binary-to-data URL |
 | ❓ | `components/file/viewers/CodeEditor.css` |  | Code editor layout, surface flexing, truncated banner styling |
@@ -81,21 +74,44 @@ prefix: `packages/canvas/src/`
 | ❓ | `components/file/viewers/PdfViewer.tsx` |  | Responsive PDF canvas viewer with paginated rendering |
 | ❓ | `components/file/viewers/PlaceholderViewer.tsx` |  | Missing binary preview with file metadata/deletion state |
 | ❓ | `components/file/viewers/shared.css` |  | Shared empty/error viewer state styling across file preview components |
+| ❓ | `components/filetree/createFiletreeContextLogic.ts` |  | Solid filetree state, drag-move, lazy folders, live watch |
 | ❓ | `components/filetree/FiletreeHostedWidget.tsx` |  | Hosted filetree shell with missing-transport fallback |
 | ❓ | `components/filetree/FiletreeWidget.tsx` |  | Interactive filetree panel with drag-drop, navigation, path picker |
-| ❓ | `components/filetree/PathPickerDialog.tsx` |  | Browse folders and confirm directory selection |
-| ❓ | `components/filetree/createFiletreeContextLogic.ts` |  | Solid filetree state, drag-move, lazy folders, live watch |
-| ❓ | `components/file/index.ts` |  | Filetree UI barrel: widgets, dialog, context, path display |
 | ❓ | `components/filetree/path-display.ts` |  | Home-relative path display with cross-platform separator normalization |
+| ❓ | `components/filetree/PathPickerDialog.tsx` |  | Browse folders and confirm directory selection |
+| ❓ | `components/FloatingCanvasToolbar/RuntimeToolbar.tsx` |  | Floating toolbar UI: sanitize SVG icons, reflect editor tool state |
+| ❓ | `components/FloatingCanvasToolbar/styles.css` |  | Floating canvas/runtime toolbar visuals, states, tooltips, keycap hints |
 | ❓ | `components/FloatingCanvasToolbar/styles.css` |  | Filetree widget and path dialog visual styling |
+| ❓ | `components/FloatingCanvasToolbar/toolbar.types.ts` |  | Toolbar tool roster and keyboard shortcut mapping source |
+| ❓ | `components/FloatingCanvasToolbar/ToolButton.tsx` |  | Floating toolbar button with active and keyboard shortcut badges |
+| ❓ | `components/SelectionStyleMenu/CapPicker.tsx` |  | Arrow endpoint cap style buttons for selection menu |
+| ❓ | `components/SelectionStyleMenu/ColorPicker.tsx` |  | Theme token swatches for fill/stroke selection popover |
+| ❓ | `components/SelectionStyleMenu/FontFamilyPicker.tsx` |  | Text styling panel font family option grid selector |
+| ❓ | `components/SelectionStyleMenu/FontSizePicker.tsx` |  | Text selection font-size preset token picker |
+| ❓ | `components/SelectionStyleMenu/LineTypePicker.tsx` |  | Line style selector buttons for selection formatting |
+| ❓ | `components/SelectionStyleMenu/OpacitySlider.tsx` |  | Opacity drag math, pointer capture, percent display synchronization |
+| ❓ | `components/SelectionStyleMenu/StrokeWidthPicker.tsx` |  | Stroke width option chips inside selection styling menu |
+| ❓ | `components/SelectionStyleMenu/TextAlignPicker.tsx` |  | Text alignment toggle in selection style controls |
+| ❓ | `components/SelectionStyleMenu/types.ts` |  | Selection toolbar option catalogs and style value unions |
+| ✅ | `components/SelectionStyleMenu/types.ts` |  | Canvas registry typings for elements, groups, transform/style hooks |
+| ✅ | `components/SelectionStyleMenu/types.ts` |  | Editor tool registry, draw-draft contracts, state hooks |
+| ✅ | `components/SelectionStyleMenu/types.ts` |  | Shared canvas runtime config, hooks, events, image-service contracts |
+| ❓ | `components/SelectionStyleMenu/VerticalAlignPicker.tsx` |  | Text box vertical alignment toggle buttons |
+| ❓ | `components/terminal/createTerminalContextLogic.ts` |  | Solid terminal lifecycle: mount, reconnect, resize, persisted PTY state |
 | ❓ | `components/terminal/GhosttyTerminalMount.css` |  | Ghostty terminal container sizing inside flex layouts |
 | ❓ | `components/terminal/GhosttyTerminalMount.tsx` |  | Solid Ghostty terminal mount with custom paste/wheel bridging |
 | ❓ | `components/terminal/TerminalHostedWidget.tsx` |  | Hosted terminal wrapper bridging canvas widget lifecycle hooks |
 | ❓ | `components/terminal/TerminalWidget.css` |  | Terminal widget chrome, header, status, unavailable, and error styling |
 | ❓ | `components/terminal/TerminalWidget.tsx` |  | Embeds hosted terminal, focus/reload wiring, clipboard image upload |
-| ❓ | `components/terminal/createTerminalContextLogic.ts` |  | Solid terminal lifecycle: mount, reconnect, resize, persisted PTY state |
-| ❓ | `components/file/index.ts` |  | Terminal UI barrel: mounts, widgets, context |
 | 🟡 | `core/CONSTANTS.ts` |  | Image MIME whitelist and canvas node z-index attribute |
+| ❓ | `core/CONSTANTS.ts` |  | Camera viewport persistence, default framing, zoom bounds guardrails |
+| ❓ | `core/CONSTANTS.ts` |  | Pen defaults: fill, opacity, stroke-width token mapping |
+| ❓ | `core/CONSTANTS.ts` |  | Recorder event schema and CRDT snapshot payload contracts |
+| ❓ | `core/CONSTANTS.ts` |  | Shape1D defaults, tokens, handle geometry, drag snapshot types |
+| ❓ | `core/CONSTANTS.ts` |  | Text plugin typography defaults and preset-token mappings |
+| ✅ | `core/CONSTANTS.ts` |  | Canvas interaction mode switches: hand, select, draw, click-create |
+| ✅ | `core/CONSTANTS.ts` |  | Widget host chrome geometry IDs traffic lights |
+| 🟡 | `core/fn.canvas-node-semantics.ts` |  | too many small functions |
 | ✅ | `core/fn.create-ordered-z-index.ts` |  | Stable lexicographic z-order keys from numeric indices |
 | ✅ | `core/fn.get-node-z-index.ts` |  | Resolve persisted node stacking order attribute safely |
 | 🫠 | `core/fn.image-utils.ts` | mixed pure+impure in fn file | Image upload normalization: mime validation, data URLs, dimensions, source fallback |
@@ -105,17 +121,16 @@ prefix: `packages/canvas/src/`
 | ✅ | `core/fn.text-style.ts` |  | Text sizing/alignment presets and proportional preset scaling |
 | ✅ | `core/fn.world-position.ts` |  | Pointer/world coordinate conversion across parent transforms |
 | ❓ | `core/fx.canvas-node-semantics.ts` |  | Konva semantic node typing: group/element checks, parent ancestry |
-| 🟡 | `core/fn.canvas-node-semantics.ts` |  | too many small functions |
 | ✅ | `core/fx.filter-selection.ts` |  | Nested canvas selection collapsing to deepest live sub-selection |
 | ❓ | `core/fx.node-space.ts` |  | Konva node absolute-to-layer-local coordinate conversion |
 | ❓ | `core/fx.pretext.ts` |  | Pretext line-wrapped text measurement before canvas rendering |
 | ❓ | `core/fx.resolve-selection-style-elements.ts` |  | Resolve style-target elements from selection or focused node |
 | ❓ | `core/fx.resolve-selection-style-text-elements.ts` |  | Selection styling: normalize direct and attached text elements |
 | ❓ | `core/fx.selection-style-element-patch.ts` |  | Selection style edits: clone element, patch text/line/arrow fields |
+| ❓ | `core/GUARDS.ts` |  |  |
 | ❓ | `core/tx.apply-selection-style-change.ts` |  | Selected elements style mutation planning, preview, CRDT commit, undo/redo |
 | ❓ | `core/tx.finalize-owned-transform.ts` |  | Finalize owned-node transform, patch CRDT, record undo/redo history |
 | ❓ | `core/tx.set-node-z-index.ts` |  | Persist custom z-layer ordering on Konva nodes |
-| ❓ | `core/CONSTANTS.ts` |  | Camera viewport persistence, default framing, zoom bounds guardrails |
 | ❓ | `plugins/camera-control/CameraControl.plugin.ts` |  | Pan/zoom plugin with hand-drag overlay and viewport persistence |
 | ✅ | `plugins/camera-control/fn.get-hand-layer-style.ts` |  | Hand tool layer visibility, interactivity, and cursor state |
 | ✅ | `plugins/camera-control/fn.get-pointer-delta.ts` |  | Pointer drag delta for camera pan updates |
@@ -125,15 +140,16 @@ prefix: `packages/canvas/src/`
 | ❓ | `plugins/camera-control/tx.write-camera-state-to-localstorage.ts` |  | Persist per-canvas camera viewport into localStorage safely |
 | ❓ | `plugins/context-menu/ContextMenu.plugin.ts` |  | Right-click hit-testing, selection resolution, Solid canvas menu mounting |
 | ❓ | `plugins/event-listener/EventListener.plugin.ts` |  | Bridge Konva stage and DOM input into runtime hooks |
-| ❓ | `plugins/grid/Grid.plugin.ts` |  | Registers toggleable canvas grid overlay reacting to camera theme resize |
 | ✅ | `plugins/grid/fn.math.ts` |  | Grid spacing and line offsets from zoom/pan |
+| ✅ | `plugins/grid/fn.math.ts` |  | Pen stroke geometry: normalize, serialize, scale, SVG outline generation |
+| ❓ | `plugins/grid/Grid.plugin.ts` |  | Registers toggleable canvas grid overlay reacting to camera theme resize |
 | ❓ | `plugins/grid/tx.draw.ts` |  | Canvas viewport grid rendering: minor/major lines from pan+zoom layout |
-| ❓ | `plugins/group/Group.plugin.ts` |  | Canvas group lifecycle, boundaries, grouping shortcuts, clone-drag orchestration |
 | 🫠 | `plugins/group/fn.get-selection-bounds.ts` | brittle empty-selection edge case | Multi-node selection bounding box from transformed client rects |
 | 🫠 | `plugins/group/fn.scene-node.ts` | bloated args; service-coupled guards | Konva scene node guards, group ancestry, ID lookup |
 | 🫠 | `plugins/group/fn.serialize-subtree-elements.ts` | service read logic in fn file | Group subtree shape nodes to TElement serialization |
 | ✅ | `plugins/group/fn.to-group-patch.ts` |  | Konva group serialization into Automerge patch payload |
 | ❓ | `plugins/group/fx.create-group-boundary.ts` |  | Dashed themed group boundary overlay tracking transformed bounds |
+| ❓ | `plugins/group/Group.plugin.ts` |  | Canvas group lifecycle, boundaries, grouping shortcuts, clone-drag orchestration |
 | ❓ | `plugins/group/tx.create-group-clone-drag.ts` |  | Group duplicate drag preview, subtree re-ID, CRDT commit on drop |
 | ❓ | `plugins/group/tx.group-selection.ts` |  | Groups selected scene nodes with undoable CRDT-backed regrouping |
 | ❓ | `plugins/group/tx.setup-group-node.ts` |  | Group drag lifecycle: selection, clone-alt-drag, CRDT/history sync, metrics |
@@ -144,81 +160,75 @@ prefix: `packages/canvas/src/`
 | ❓ | `plugins/hosted-component/HostedComponent.plugin.ts` |  | Hosted component plugin scaffold wiring required editor scene services |
 | ❓ | `plugins/hosted-component/Todo.md` |  | Widget manager stores widgets; hosted component reacts/render lifecycle |
 | ❓ | `plugins/hosted-component/tx.setup-tool.ts` |  | Repo guardrails: architecture, file conventions, workflow |
-| ❓ | `plugins/image/Image.plugin.ts` |  | Image import, paste/drop, node sync, clone-drag orchestration |
 | ✅ | `plugins/image/fn.create-image-element.ts` |  | Center-placed image element creation from dimensions and source metadata |
 | ✅ | `plugins/image/fn.fit-image-to-viewport.ts` |  | Initial viewport image fit sizing capped to half smaller viewport dimension |
 | ✅ | `plugins/image/fn.to-image-element.ts` |  | Image payload → canonical canvas element with style/data |
+| ❓ | `plugins/image/Image.plugin.ts` |  | Image import, paste/drop, node sync, clone-drag orchestration |
 | ❓ | `plugins/image/tx.clone-backend-file-for-element.ts` |  | Duplicate backend image asset, update node and CRDT URL |
 | ❓ | `plugins/image/tx.create-image-clone-drag.ts` |  | Image clone drag finalizes preview, persistence, undo/redo, selection |
 | ❓ | `plugins/image/tx.insert-image.ts` |  | Image upload insertion with viewport fitting, CRDT, undo/redo |
 | ❓ | `plugins/image/tx.setup-image-listeners.ts` |  | Attach image selection, clone-drag, multi-drag history listeners |
 | ❓ | `plugins/image/tx.update-image-node-from-element.ts` |  | Sync Konva image node from canvas element state |
-| ❓ | `components/file/index.ts` |  | Canvas plugin barrel export surface for aggregate imports |
-| ❓ | `core/CONSTANTS.ts` |  | Pen defaults: fill, opacity, stroke-width token mapping |
-| ❓ | `plugins/pen/Pen.plugin.ts` |  | Pen plugin orchestrates freehand drafting, hydration, drag, clone, transforms |
 | ✅ | `plugins/pen/fn.draft-element.ts` |  | Pen stroke points → draft canvas element with timestamps |
-| ✅ | `plugins/grid/fn.math.ts` |  | Pen stroke geometry: normalize, serialize, scale, SVG outline generation |
 | 🫠 | `plugins/pen/fn.style.ts` | sloppy details; unused strokeWidth arg | Pen style normalization, color-key selection, node-derived style cloning |
-| ❓ | `plugins/shape2d/fx.create-node.ts` |  | Pen element → themed Konva.Path with stroke-derived fill and metadata |
 | ❓ | `plugins/pen/fx.path.ts` |  | Pen path metadata detection and element serialization helpers |
 | ❓ | `plugins/pen/fx.start-draft.ts` |  | Initialize non-interactive pen draft node from first point |
+| ❓ | `plugins/pen/Pen.plugin.ts` |  | Pen plugin orchestrates freehand drafting, hydration, drag, clone, transforms |
 | ❓ | `plugins/pen/tx.clone.ts` |  | Pen stroke duplicate preview drag, finalize CRDT-backed selectable clone |
 | ❓ | `plugins/pen/tx.path.ts` |  | Konva pen node creation/update from themed element strokes |
 | ❓ | `plugins/pen/tx.update-draft.ts` |  | Live pen draft stroke preview updates while drawing |
-| ❓ | `core/CONSTANTS.ts` |  | Recorder event schema and CRDT snapshot payload contracts |
-| ❓ | `plugins/recorder/Recorder.plugin.ts` |  | Dev recorder plugin captures input/CRDT, mounts exportable replay panel |
 | 🫠 | `plugins/recorder/fn.recording.ts` | impure/event shaping living in fn file | Builds normalized recording steps and CRDT snapshots |
+| ❓ | `plugins/recorder/Recorder.plugin.ts` |  | Dev recorder plugin captures input/CRDT, mounts exportable replay panel |
 | ❓ | `plugins/recorder/tx.file.ts` |  | JSON export save flow: picker first, anchor-download fallback |
 | ❓ | `plugins/recorder/tx.mount.ts` |  | Mounts recorder overlay panel onto scene stage |
 | ❓ | `plugins/render-order/RenderOrder.plugin.ts` |  | Canvas context-menu layer ordering for sibling selections |
 | ❓ | `plugins/scene-hydrator/SceneHydrator.plugin.ts` |  | Rehydrate Konva scene from CRDT, preserving selection/editor state |
-| ❓ | `plugins/select/Select.plugin.ts` |  | Canvas selection, marquee drag, delete, drill-down interactions |
 | ✅ | `plugins/select/fn.get-selection-path.ts` |  | Ancestor canvas-node selection path from node to foreground layer |
+| ❓ | `plugins/select/Select.plugin.ts` |  | Canvas selection, marquee drag, delete, drill-down interactions |
 | 🟡 | `plugins/select/tx.delete-selection.ts` | group guard should me moved, needs better guard | Delete selected canvas nodes with undo/redo snapshot restoration |
 | ❓ | `plugins/select/tx.handle-element-pointer-double-click.ts` |  | Double-click drills selection one level deeper along ancestry |
 | ❓ | `plugins/select/tx.handle-element-pointer-down.ts` |  | Element click selection depth cycling, shift-toggle, focus updates |
 | ❓ | `plugins/select/tx.handle-stage-pointer-move.ts` |  | Drag-select updates rectangle, intersects top-layer selectable nodes |
-| ❓ | `plugins/selection-style-menu/SelectionStyleMenu.plugin.ts` |  | Floating selection style popover wiring with Solid, Konva, CRDT commits |
 | ❓ | `plugins/selection-style-menu/fx.mount-selection-style-menu.ts` |  | Selection styling overlay for selected elements and active tools |
-| ❓ | `core/CONSTANTS.ts` |  | Shape1D defaults, tokens, handle geometry, drag snapshot types |
-| ❓ | `plugins/shape1d/Shape1d.plugin.ts` |  | Line/arrow plugin: draft, edit handles, transform/history sync |
+| ❓ | `plugins/selection-style-menu/SelectionStyleMenu.plugin.ts` |  | Floating selection style popover wiring with Solid, Konva, CRDT commits |
 | ✅ | `plugins/shape1d/fn.draft.ts` |  | Shape1d draft and fallback preview element construction |
 | ❓ | `plugins/shape1d/fx.geometry.ts` |  | Shape1D coordinate transforms, insertion midpoints, anchor-drag geometry updates |
 | ❓ | `plugins/shape1d/fx.node.ts` |  | shape1d Konva guards, styling, world-position serialization |
+| ❓ | `plugins/shape1d/Shape1d.plugin.ts` |  | Line/arrow plugin: draft, edit handles, transform/history sync |
 | ❓ | `plugins/shape1d/tx.element.ts` |  | Shape node sync and preview clone creation |
 | ❓ | `plugins/shape1d/tx.history.ts` |  | Shape1d undo/redo for element edits and creation |
 | ❓ | `plugins/shape1d/tx.render.ts` |  | Konva line/arrow node creation, caps, bounds, scene runtime |
 | ❓ | `plugins/shape1d/tx.runtime.ts` |  | Shape drag, clone-drag, multi-select movement, history/CRDT sync |
-| ❓ | `plugins/shape2d/Shape2d.plugin.ts` |  | Shape drawing lifecycle, preview, cloning, attached-text sync |
 | ✅ | `plugins/shape2d/fn.node.ts` |  | Konva node kind resolution via attrs plus runtime class guards |
 | ✅ | `plugins/shape2d/fn.text-host-bounds.ts` |  | Shape text layout bounds for rect, ellipse, diamond |
 | ❓ | `plugins/shape2d/fx.attached-text.ts` |  | Shape-embedded text creation, syncing, persistence, edit-mode handoff |
+| ❓ | `plugins/shape2d/fx.create-node.ts` |  | Pen element → themed Konva.Path with stroke-derived fill and metadata |
 | ❓ | `plugins/shape2d/fx.create-node.ts` |  | Shape element → themed Konva node factory |
-| ❓ | `plugins/text/fx.to-element.ts` |  | Konva shape node → persisted canvas element snapshot |
+| ❓ | `plugins/shape2d/Shape2d.plugin.ts` |  | Shape drawing lifecycle, preview, cloning, attached-text sync |
 | ❓ | `plugins/shape2d/tx.create-clone-drag.ts` |  | Shape clone preview drag, finalize persist, history, linked duplicates |
 | ❓ | `plugins/shape2d/tx.setup-node.ts` |  | Shape node events: selection, clone-drag, multi-drag, CRDT history |
 | ❓ | `plugins/shape2d/tx.update-node-from-element.ts` |  | Syncs shape nodes from element props into Konva scene |
-| ❓ | `core/CONSTANTS.ts` |  | Text plugin typography defaults and preset-token mappings |
-| ❓ | `plugins/text/Text.plugin.ts` |  | Free-text plugin: create, edit, transform, theme-sync, serialize Konva text |
 | ✅ | `plugins/text/fn.compute-text-height.ts` |  | Auto-resizing multiline text node bounding-box height |
 | ✅ | `plugins/text/fn.create-text-element.ts` |  | Creating default persisted text elements from coordinates and timestamps |
 | ❓ | `plugins/text/fx.compute-text-width.ts` |  | Konva multiline text autosize width measurement |
+| ❓ | `plugins/text/fx.to-element.ts` |  | Konva shape node → persisted canvas element snapshot |
 | ❓ | `plugins/text/fx.to-element.ts` |  | Konva text nodes to persisted canvas elements |
+| ❓ | `plugins/text/Text.plugin.ts` |  | Free-text plugin: create, edit, transform, theme-sync, serialize Konva text |
 | ❓ | `plugins/text/tx.create-text-clone-drag.ts` |  | Text drag-duplicate preview committed on drag end |
 | ❓ | `plugins/text/tx.enter-edit-mode.ts` |  | Inline textarea editing for canvas text/shape labels |
 | ❓ | `plugins/text/tx.setup-text-node.ts` |  | Text node pointer hooks, drag sync, alt-clone history |
 | ❓ | `plugins/text/tx.update-text-node-from-element.ts` |  | Existing Konva text node visual sync from text element model |
 | ❓ | `plugins/toolbar/Toolbar.plugin.ts` |  | Runtime toolbar bootstrap: tools, hotkeys, cursor, temporary hand |
-| ❓ | `plugins/transform/Transform.plugin.ts` |  | Selection transform, drag-proxy moves, resize/rotate hooks, history |
 | ❓ | `plugins/transform/fx.proxy-bounds.ts` |  | Transform overlay needs layer-relative rotated shape bounds |
 | ❓ | `plugins/transform/fx.proxy-drag-target.ts` |  | Single selected shape or pen path proxy-drag target |
 | ❓ | `plugins/transform/fx.selection-transform-options.ts` |  | Selection transformer anchors ratio border flip resolution |
+| ❓ | `plugins/transform/Transform.plugin.ts` |  | Selection transform, drag-proxy moves, resize/rotate hooks, history |
 | ❓ | `plugins/transform/tx.dispatch-selection-transform-hooks.ts` |  | Selection-transform hook fanout; aggregate cancel/crdt, track handled nodes |
 | ❓ | `plugins/transform/tx.sync-transformer.ts` |  | Selection or edit-mode changes sync transformer state |
 | ❓ | `plugins/visual-debug/VisualDebug.plugin.ts` |  | On-canvas debug overlay: camera, selection, focused node |
+| ✅ | `runtime.ts` |  | Canvas editor startup wiring services hooks plugins |
 | ❓ | `services/camera/CameraService.ts` |  | Canvas camera pan/zoom viewport state driving scene layers |
 | ❓ | `services/canvas-registry/CanvasRegistryService.ts` |  | Canvas semantic registry: nodes↔elements/groups, lifecycle hooks, selection config |
-| ✅ | `components/SelectionStyleMenu/types.ts` |  | Canvas registry typings for elements, groups, transform/style hooks |
 | 🫠 | `services/canvas-registry/fn-merge-selection-style-menu-configs.ts` | weak merge semantics; convention drift | Combining layered selection-style menu configs across canvas registry |
 | ✅ | `services/canvas-registry/fn.sort-by-priority.ts` |  | Deterministic registry ordering: ascending priority, stable id tiebreak |
 | ❓ | `services/context-menu/ContextMenuService.ts` |  | Right-click canvas/item/selection menus from plugin-provided actions |
@@ -227,25 +237,16 @@ prefix: `packages/canvas/src/`
 | ✅ | `services/crdt/tx.apply-ops.ts` |  | Replay recorded CRDT entity ops into Automerge |
 | ✅ | `services/editor/EditorService.ts` |  | Editor tool state, draft previews, CRDT commits |
 | ✅ | `services/editor/fx.get-canvas-point.ts` |  | Editor tool pointer events → canvas point + pressure |
-| ✅ | `components/SelectionStyleMenu/types.ts` |  | Editor tool registry, draw-draft contracts, state hooks |
 | ✅ | `services/history/HistoryService.ts` |  | Undo/redo stack service for runtime actions |
-| ✅ | `components/file/index.ts` |  | Central barrel for canvas service imports |
 | ✅ | `services/logging/LoggingService.ts` |  | Canvas debug logs gated by per-target localStorage |
 | ❓ | `services/render-order/RenderOrderService.ts` |  | Bundle-aware sibling z-order with history/CRDT sync |
 | ✅ | `services/scene/SceneService.ts` |  | Konva stage lifecycle, layers, container resize hook |
-| ✅ | `core/CONSTANTS.ts` |  | Canvas interaction mode switches: hand, select, draw, click-create |
 | ❓ | `services/selection/SelectionService.ts` |  | canvas selection state, focus, mode, change notifications |
-| ✅ | `core/CONSTANTS.ts` |  | Widget host chrome geometry IDs traffic lights |
-| ✅ | `services/widget/WidgetManagerService.ts` |  | Registers widget tools canvas adapters example widget |
+| 🫠 | `services/widget/fn.to-element.ts` | empty file |  |
 | ✅ | `services/widget/fx.draw-host.ts` |  | Editor draw-tool host draft creation and drag resizing |
 | ✅ | `services/widget/fx.register-tool.ts` |  | Editor tool registration for drawable widget configs |
-| 🫠 | `services/widget/fn.to-element.ts` | empty file |  |
 | ✅ | `services/widget/interface.ts` |  | Widget manager service contracts: hooks, dependencies, tool config |
-| 🟡 | `automerge.ts` |  | Browser Automerge repo, persisted doc handles, WebSocket sync |
-| 🫠 | `base.css` |  | Global theme tokens, dark mode, baseline element resets |
-| 🟡 | `components/file/index.ts` |  | Package entrypoint: base styles + Canvas export |
-| ✅ | `runtime.ts` |  | Canvas editor startup wiring services hooks plugins |
-| ✅ | `components/SelectionStyleMenu/types.ts` |  | Shared canvas runtime config, hooks, events, image-service contracts |
+| ✅ | `services/widget/WidgetManagerService.ts` |  | Registers widget tools canvas adapters example widget |
 
 ## .pi/extensions/functional-core
 **SKIP**
@@ -258,15 +259,13 @@ prefix: `apps/cli/src/`
 
 | status | filepath | human comment | oneliner when to use |
 |---|---|---|---|
-| ❓ | `build-config.ts` |  |  |
-| ❓ | `config.ts` |  |  |
-| ❓ | `hooks.ts` |  |  |
-| ❓ | `main.ts` |  |  |
-| ❓ | `parse-argv.ts` |  |  |
 | ❓ | `AutomergePlugin.ts` |  |  |
-| ❓ | `CliPlugin.ts` |  |  |
 | ❓ | `bootstrap.ts` |  |  |
+| ❓ | `build-config.ts` |  |  |
+| ❓ | `canvas-command.docs.ts` |  |  |
 | ❓ | `canvas-command.examples.ts` |  |  |
+| ❓ | `check-update.ts` |  |  |
+| ❓ | `CliPlugin.ts` |  |  |
 | ❓ | `cmd.canvas.add.ts` |  |  |
 | ❓ | `cmd.canvas.delete.ts` |  |  |
 | ❓ | `cmd.canvas.group.ts` |  |  |
@@ -278,27 +277,29 @@ prefix: `apps/cli/src/`
 | ❓ | `cmd.canvas.ts` |  |  |
 | ❓ | `cmd.canvas.ungroup.ts` |  |  |
 | ❓ | `cmd.upgrade.ts` |  |  |
-| ❓ | `fn.canvas-subcommand-inputs.ts` |  |  |
-| ❓ | `canvas-command.docs.ts` |  |  |
+| ❓ | `config.ts` |  |  |
 | ❓ | `constants.ts` |  |  |
+| ❓ | `FilesystemPlugin.ts` |  |  |
 | ❓ | `fn.build-rpc-link.ts` |  |  |
+| ❓ | `fn.canvas-subcommand-inputs.ts` |  |  |
 | ❓ | `fn.print-command-result.ts` |  |  |
 | ❓ | `fn.resolve-policy.ts` |  |  |
 | ❓ | `fn.should-upgrade.ts` |  |  |
 | ❓ | `fx.canvas.server-discovery.ts` |  |  |
 | ❓ | `fx.dispatch-canvas-command.ts` |  |  |
-| ❓ | `FilesystemPlugin.ts` |  |  |
-| ❓ | `tx.ensure-local-filesystem-row.ts` |  |  |
-| ❓ | `OrpcPlugin.ts` |  |  |
-| ❓ | `orpc.base.ts` |  |  |
-| ❓ | `router.ts` |  |  |
-| ❓ | `PtyPlugin.ts` |  |  |
-| ❓ | `ServerPlugin.ts` |  |  |
-| ❓ | `check-update.ts` |  |  |
+| ❓ | `hooks.ts` |  |  |
 | ❓ | `http.ts` |  |  |
+| ❓ | `main.ts` |  |  |
+| ❓ | `orpc.base.ts` |  |  |
+| ❓ | `OrpcPlugin.ts` |  |  |
+| ❓ | `parse-argv.ts` |  |  |
+| ❓ | `PtyPlugin.ts` |  |  |
 | ❓ | `resolve-paths.ts` |  |  |
+| ❓ | `router.ts` |  |  |
+| ❓ | `ServerPlugin.ts` |  |  |
 | ❓ | `setup-services.ts` |  |  |
 | ❓ | `setup-signals.ts` |  |  |
+| ❓ | `tx.ensure-local-filesystem-row.ts` |  |  |
 
 ## apps/frontend
 prefix: `apps/frontend/src/`
@@ -307,35 +308,35 @@ prefix: `apps/frontend/src/`
 |---|---|---|---|
 | ❓ | `App.module.css` |  |  |
 | ❓ | `App.tsx` |  |  |
-| ❓ | `path-picker-dialog.module.css` |  |  |
-| ❓ | `path-picker-dialog.tsx` |  |  |
-| ❓ | `Toast.module.css` |  |  |
-| ❓ | `Toast.tsx` |  |  |
-| ❓ | `scroll-area.module.css` |  |  |
-| ❓ | `scroll-area.tsx` |  |  |
+| ❓ | `automerge.ts` |  |  |
+| ❓ | `backend.types.ts` |  |  |
+| ❓ | `canvas.tsx` |  |  |
 | ❓ | `CreateCanvasDialog.tsx` |  |  |
 | ❓ | `DeleteCanvasDialog.tsx` |  |  |
+| ❓ | `index.css` |  |  |
+| ❓ | `index.ts` |  |  |
+| ❓ | `index.ts` |  |  |
+| ❓ | `index.tsx` |  |  |
+| ❓ | `orpc-websocket.ts` |  |  |
+| ❓ | `path-display.ts` |  |  |
+| ❓ | `path-picker-dialog.module.css` |  |  |
+| ❓ | `path-picker-dialog.tsx` |  |  |
 | ❓ | `RenameDialog.tsx` |  |  |
+| ❓ | `route-state.module.css` |  |  |
+| ❓ | `scroll-area.module.css` |  |  |
+| ❓ | `scroll-area.tsx` |  |  |
 | ❓ | `Sidebar.module.css` |  |  |
 | ❓ | `Sidebar.tsx` |  |  |
 | ❓ | `SidebarDialog.module.css` |  |  |
 | ❓ | `SidebarItem.module.css` |  |  |
 | ❓ | `SidebarItem.tsx` |  |  |
-| ❓ | `index.ts` |  |  |
-| ❓ | `index.ts` |  |  |
-| ❓ | `index.css` |  |  |
-| ❓ | `index.tsx` |  |  |
-| ❓ | `canvas.tsx` |  |  |
-| ❓ | `welcome.tsx` |  |  |
-| ❓ | `automerge.ts` |  |  |
-| ❓ | `orpc-websocket.ts` |  |  |
+| ❓ | `store.ts` |  |  |
 | ❓ | `theme.memory.test.ts` |  |  |
 | ❓ | `theme.memory.ts` |  |  |
 | ❓ | `theme.ts` |  |  |
-| ❓ | `store.ts` |  |  |
-| ❓ | `route-state.module.css` |  |  |
-| ❓ | `backend.types.ts` |  |  |
-| ❓ | `path-display.ts` |  |  |
+| ❓ | `Toast.module.css` |  |  |
+| ❓ | `Toast.tsx` |  |  |
+| ❓ | `welcome.tsx` |  |  |
 
 ## apps/web
 **SKIP**
@@ -465,6 +466,11 @@ prefix: `packages/canvas-cmds/src/`
 | status | filepath | human comment | oneliner when to use |
 |---|---|---|---|
 | ❓ | `fn.canvas-add-contract.ts` |  |  |
+| ❓ | `fn.canvas.ts` |  |  |
+| ❓ | `fn.conversion.ts` |  |  |
+| ❓ | `fn.group.ts` |  |  |
+| ❓ | `fn.guard.ts` |  |  |
+| ❓ | `fx.canvas.ts` |  |  |
 | ❓ | `fx.cmd.list.ts` |  |  |
 | ❓ | `fx.cmd.query.ts` |  |  |
 | ❓ | `tx.cmd.add.ts` |  |  |
@@ -474,11 +480,6 @@ prefix: `packages/canvas-cmds/src/`
 | ❓ | `tx.cmd.patch.ts` |  |  |
 | ❓ | `tx.cmd.reorder.ts` |  |  |
 | ❓ | `tx.cmd.ungroup.ts` |  |  |
-| ❓ | `fn.canvas.ts` |  |  |
-| ❓ | `fn.conversion.ts` |  |  |
-| ❓ | `fn.group.ts` |  |  |
-| ❓ | `fn.guard.ts` |  |  |
-| ❓ | `fx.canvas.ts` |  |  |
 | ❓ | `types.ts` |  |  |
 
 ## packages/orpc-client
@@ -503,29 +504,29 @@ prefix: `packages/service-automerge/src/`
 | status | filepath | human comment | oneliner when to use |
 |---|---|---|---|
 | ❓ | `AutomergeServer.ts` |  |  |
+| ❓ | `canvas-doc.types.ts` |  |  |
+| ❓ | `canvas-doc.zod.ts` |  |  |
 | ❓ | `IAutomergeService.ts` |  |  |
 | ❓ | `sqlite.adapter.ts` |  |  |
 | ❓ | `websocket.adapter.ts` |  |  |
-| ❓ | `canvas-doc.types.ts` |  |  |
-| ❓ | `canvas-doc.zod.ts` |  |  |
 
 ## packages/service-db
 prefix: `packages/service-db/src/`
 
 | status | filepath | human comment | oneliner when to use |
 |---|---|---|---|
-| ❓ | `fx.get-file.ts` |  |  |
-| ❓ | `index.ts` |  |  |
-| ❓ | `tx.create-file.ts` |  |  |
-| ❓ | `tx.update-canvas.ts` |  |  |
-| ❓ | `IDbService.ts` |  |  |
 | ❓ | `_embedded-migrations.ts` |  |  |
+| ❓ | `fx.get-file.ts` |  |  |
+| ❓ | `fx.migrations.test.ts` |  |  |
 | ❓ | `fx.migrations.ts` |  |  |
-| ❓ | `tx.migrations.ts` |  |  |
+| ❓ | `IDbService.ts` |  |  |
+| ❓ | `index.ts` |  |  |
 | ❓ | `interface.ts` |  |  |
 | ❓ | `schema.ts` |  |  |
-| ❓ | `fx.migrations.test.ts` |  |  |
+| ❓ | `tx.create-file.ts` |  |  |
 | ❓ | `tx.migrations.test.ts` |  |  |
+| ❓ | `tx.migrations.ts` |  |  |
+| ❓ | `tx.update-canvas.ts` |  |  |
 
 ## packages/service-event-publisher
 prefix: `packages/service-event-publisher/src/`
@@ -559,8 +560,6 @@ prefix: `packages/service-theme/src/`
 
 | status | filepath | human comment | oneliner when to use |
 |---|---|---|---|
-| ❓ | `ThemeService.test.ts` |  |  |
-| ❓ | `ThemeService.ts` |  |  |
 | ❓ | `builtins.ts` |  |  |
 | ❓ | `dom.ts` |  |  |
 | ❓ | `index.ts` |  |  |
@@ -570,6 +569,8 @@ prefix: `packages/service-theme/src/`
 | ❓ | `style.sepia.ts` |  |  |
 | ❓ | `style.shared.ts` |  |  |
 | ❓ | `styles.ts` |  |  |
+| ❓ | `ThemeService.test.ts` |  |  |
+| ❓ | `ThemeService.ts` |  |  |
 | ❓ | `types.ts` |  |  |
 
 ## packages/shared-functions
@@ -589,10 +590,10 @@ prefix: `packages/tapable/src/`
 | ✅ | `AsyncParallelHook.ts` |  |  |
 | ✅ | `AsyncSeriesHook.ts` |  |  |
 | ✅ | `AsyncWaterfallHook.ts` |  |  |
-| ✅ | `SyncExitHook.ts` |  |  |
-| ✅ | `SyncHook.ts` |  |  |
 | ✅ | `index.ts` |  |  |
 | ✅ | `interfaces.ts` |  |  |
+| ✅ | `SyncExitHook.ts` |  |  |
+| ✅ | `SyncHook.ts` |  |  |
 
 ## packages/ui
 prefix: `packages/ui/src/`
@@ -604,3 +605,4 @@ prefix: `packages/ui/src/`
 
 ## packages/ui-example
 **SKIP**
+
