@@ -8,11 +8,11 @@ import type { TCapStyle, TFontFamily, TLineType } from "../../components/Selecti
 import { fxResolveSelectionStyleElements } from "../../core/fx.resolve-selection-style-elements";
 import { fxResolveSelectionStyleTextElements } from "../../core/fx.resolve-selection-style-text-elements";
 import {
-  fxGetSelectionStyleMenuSections,
-  fxGetSelectionStyleMenuValues,
-  fxGetSelectionStyleMenuValuesWithOverrides,
-  fxGetSelectionStyleStrokeWidthOptions,
-  fxHasSelectionStylePropertySupport,
+  fnGetSelectionStyleMenuSections,
+  fnGetSelectionStyleMenuValues,
+  fnGetSelectionStyleMenuValuesWithOverrides,
+  fnGetSelectionStyleStrokeWidthOptions,
+  fnHasSelectionStylePropertySupport,
   type TSelectionStyleProperty,
 } from "../../core/fn.selection-style-menu";
 import type { CanvasRegistryService, TCanvasRegistrySelectionStyleConfig } from "../../services/canvas-registry/CanvasRegistryService";
@@ -287,7 +287,7 @@ export function fxMountSelectionStyleMenu(portal: TPortalMountSelectionStyleMenu
     });
 
     const sections = portal.createMemo(() => {
-      return fxGetSelectionStyleMenuSections({
+      return fnGetSelectionStyleMenuSections({
         configs: configs(),
       });
     });
@@ -313,7 +313,7 @@ export function fxMountSelectionStyleMenu(portal: TPortalMountSelectionStyleMenu
     });
 
     const values = portal.createMemo(() => {
-      const resolvedValues = fxGetSelectionStyleMenuValues({
+      const resolvedValues = fnGetSelectionStyleMenuValues({
         elements: elements(),
         textElements: textElements(),
         configs: configs(),
@@ -323,14 +323,14 @@ export function fxMountSelectionStyleMenu(portal: TPortalMountSelectionStyleMenu
         return resolvedValues;
       }
 
-      return fxGetSelectionStyleMenuValuesWithOverrides({
+      return fnGetSelectionStyleMenuValuesWithOverrides({
         values: resolvedValues,
         overrides: fnGetSelectionStyleOverridesFromRememberedStyle(activeToolRememberedValues()),
       });
     });
 
     const strokeWidthOptions = portal.createMemo(() => {
-      return fxGetSelectionStyleStrokeWidthOptions({
+      return fnGetSelectionStyleStrokeWidthOptions({
         configs: configs(),
       });
     });
@@ -370,7 +370,7 @@ export function fxMountSelectionStyleMenu(portal: TPortalMountSelectionStyleMenu
         }
       })();
 
-      if (toolId && fxHasSelectionStylePropertySupport({ config: toolConfig, property })) {
+      if (toolId && fnHasSelectionStylePropertySupport({ config: toolConfig, property })) {
         portal.theme.setRememberedStyle(toolId, { [valueKey]: value } as never);
       }
 

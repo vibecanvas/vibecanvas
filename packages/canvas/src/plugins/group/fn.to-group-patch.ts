@@ -9,7 +9,7 @@ export type TArgsToGroupPatch = {
   fallbackCreatedAt: number;
 };
 
-export function fxToGroupPatch(args: TArgsToGroupPatch): TGroup {
+export function fnToGroupPatch(args: TArgsToGroupPatch): TGroup {
   const parent = args.group.getParent();
   return {
     id: args.group.id(),

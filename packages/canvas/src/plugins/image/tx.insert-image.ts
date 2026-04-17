@@ -6,8 +6,8 @@ import type { HistoryService } from "../../services/history/HistoryService";
 import type { RenderOrderService } from "../../services/render-order/RenderOrderService";
 import type { SceneService } from "../../services/scene/SceneService";
 import type { SelectionService } from "../../services/selection/SelectionService";
-import { fxCreateImageElement } from "./fn.create-image-element";
-import { fxFitImageToViewport } from "./fn.fit-image-to-viewport";
+import { fnCreateImageElement } from "./fn.create-image-element";
+import { fnFitImageToViewport } from "./fn.fit-image-to-viewport";
 
 export type TPortalInsertImage = {
   crdt: CrdtService;
@@ -61,14 +61,14 @@ export async function txInsertImage(
 
     const center = args.point ?? portal.getViewportCenter();
     const viewportSize = portal.getViewportWorldSize();
-    const fittedSize = fxFitImageToViewport({
+    const fittedSize = fnFitImageToViewport({
       viewportWidth: viewportSize.width,
       viewportHeight: viewportSize.height,
       imageWidth: naturalSize.width,
       imageHeight: naturalSize.height,
     });
 
-    const element = fxCreateImageElement({
+    const element = fnCreateImageElement({
       id: portal.createId(),
       center,
       width: fittedSize.width,

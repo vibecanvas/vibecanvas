@@ -18,8 +18,8 @@ import { CanvasMode } from "../../services/selection/CONSTANTS";
 import type { IRuntimeHooks } from "../../runtime";
 import { fxIsCanvasGroupNode } from "../../core/fx.canvas-node-semantics";
 import { txCreateGroupCloneDrag } from "./tx.create-group-clone-drag";
-import { fxIsSceneNode } from "./fn.scene-node";
-import { fxToGroupPatch } from "./fn.to-group-patch";
+import { fnIsSceneNode } from "./fn.scene-node";
+import { fnToGroupPatch } from "./fn.to-group-patch";
 import { txGroupSelection } from "./tx.group-selection";
 import { txSetupGroupNode } from "./tx.setup-group-node";
 import { txSyncDraggability } from "./tx.sync-draggability";
@@ -47,7 +47,7 @@ function createGroupNode(render: SceneService, group: TGroup) {
 
 function sortChildrenByPersistedOrder(render: SceneService, parent: Konva.Layer | Konva.Group) {
   const children = parent.getChildren().filter((node) => {
-    return fxIsSceneNode({ Group: Konva.Group, Shape: Konva.Shape, render, node });
+    return fnIsSceneNode({ Group: Konva.Group, Shape: Konva.Shape, render, node });
   });
 
   children
@@ -244,7 +244,7 @@ export function createGroupPlugin(): IPlugin<{
             return null;
           }
 
-          return fxToGroupPatch({
+          return fnToGroupPatch({
             canvasRegistry,
             group: node,
             getNodeZIndex,

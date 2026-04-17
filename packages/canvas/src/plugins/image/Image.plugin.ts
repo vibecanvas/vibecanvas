@@ -5,11 +5,11 @@ import ImageIcon from "lucide-static/icons/image.svg?raw";
 import Konva from "konva";
 import type { TCloneImage, TDeleteImage, TUploadImage } from "../../runtime";
 import {
-  fxFileToDataUrl,
-  fxGetImageDimensions,
-  fxGetImageSource,
-  fxGetSupportedImageFormat,
-  fxParseDataUrl,
+  fnFileToDataUrl,
+  fnGetImageDimensions,
+  fnGetImageSource,
+  fnGetSupportedImageFormat,
+  fnParseDataUrl,
 } from "../../core/fn.image-utils";
 import type { ContextMenuService } from "../../services/context-menu/ContextMenuService";
 import type { CanvasRegistryService } from "../../services/canvas-registry/CanvasRegistryService";
@@ -25,7 +25,7 @@ import { fxFilterSelection } from "../../core/fx.filter-selection";
 import { fnGetNodeZIndex } from "../../core/fn.get-node-z-index";
 import { fnGetWorldPosition } from "../../core/fn.world-position";
 import { txSetNodeZIndex } from "../../core/tx.set-node-z-index";
-import { fxToImageElement } from "./fn.to-image-element";
+import { fnToImageElement } from "./fn.to-image-element";
 import { txCreateImageCloneDrag } from "./tx.create-image-clone-drag";
 import { txInsertImage } from "./tx.insert-image";
 import { txSetupImageListeners } from "./tx.setup-image-listeners";
@@ -62,7 +62,7 @@ function getNotification(config: {
 
 function getFirstSupportedImageFile(files: Iterable<File> | ArrayLike<File> | null | undefined) {
   return Array.from(files ?? []).find((candidate) => {
-    return fxGetSupportedImageFormat(candidate.type) !== null;
+    return fnGetSupportedImageFormat(candidate.type) !== null;
   });
 }
 
@@ -114,7 +114,7 @@ function syncNodeMetadata(node: Konva.Image, element: TElement) {
   node.setAttr(IMAGE_URL_ATTR, data.url);
   node.setAttr(IMAGE_BASE64_ATTR, data.base64);
   node.setAttr(IMAGE_CROP_ATTR, structuredClone(data.crop));
-  node.setAttr(IMAGE_SOURCE_ATTR, fxGetImageSource({ url: data.url, base64: data.base64 }));
+  node.setAttr(IMAGE_SOURCE_ATTR, fnGetImageSource({ url: data.url, base64: data.base64 }));
   node.setAttr(ELEMENT_CREATED_AT_ATTR, element.createdAt);
 }
 
@@ -152,7 +152,7 @@ function createImageNode(render: SceneService, element: TElement) {
 
   syncNodeMetadata(node, element);
   setNodeZIndex(node, element.zIndex);
-  loadImageIntoNode(node, fxGetImageSource({ url: data.url, base64: data.base64 }));
+  loadImageIntoNode(node, fnGetImageSource({ url: data.url, base64: data.base64 }));
   return node;
 }
 
@@ -160,7 +160,7 @@ function updateImageNodeFromElement(render: SceneService, node: Konva.Image, ele
   return txUpdateImageNodeFromElement({
     setNodeZIndex,
     syncNodeMetadata,
-    getImageSource: fxGetImageSource,
+    getImageSource: fnGetImageSource,
     loadImageIntoNode,
     batchDraw: () => {
       render.staticForegroundLayer.batchDraw();
@@ -191,7 +191,7 @@ function toElement(render: SceneService, canvasRegistry: Pick<CanvasRegistryServ
     naturalHeight: node.height(),
   }) as TImageData["crop"];
 
-  return fxToImageElement({
+  return fnToImageElement({
     id: node.id(),
     x: worldPosition.x,
     y: worldPosition.y,
@@ -281,7 +281,7 @@ export function createImagePlugin(): IPlugin<{
       const updateImageNodeFromElementPortal = {
         setNodeZIndex,
         syncNodeMetadata,
-        getImageSource: fxGetImageSource,
+        getImageSource: fnGetImageSource,
         loadImageIntoNode,
         batchDraw: () => {
           render.staticForegroundLayer.batchDraw();
@@ -379,13 +379,13 @@ export function createImagePlugin(): IPlugin<{
           notification: getNotification(ctx.config),
           createId: () => crypto.randomUUID(),
           now: () => Date.now(),
-          fileToDataUrl: (file) => fxFileToDataUrl({
+          fileToDataUrl: (file) => fnFileToDataUrl({
             createFileReader: () => new FileReader(),
           }, {
             file,
           }),
-          parseDataUrl: fxParseDataUrl,
-          getImageDimensions: (source) => fxGetImageDimensions({
+          parseDataUrl: fnParseDataUrl,
+          getImageDimensions: (source) => fnGetImageDimensions({
             createImage: () => new window.Image(),
           }, {
             src: source,

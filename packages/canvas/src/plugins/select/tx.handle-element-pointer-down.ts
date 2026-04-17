@@ -1,4 +1,4 @@
-import { fxGetSelectionPath } from "./fn.get-selection-path";
+import { fnGetSelectionPath } from "./fn.get-selection-path";
 import type { TCanvasSemanticsEditor } from "../../core/fx.canvas-node-semantics";
 import type { SceneService } from "../../services/scene/SceneService";
 import { fxIsCanvasGroupNode } from "../../core/fx.canvas-node-semantics";
@@ -41,7 +41,7 @@ export function txHandleElementPointerDown(
   portal: TPortalHandleElementPointerDown,
   args: TArgsHandleElementPointerDown,
 ) {
-  const path = fxGetSelectionPath({ render: portal.render, editor: portal.editor, node: args.event.currentTarget });
+  const path = fnGetSelectionPath({ render: portal.render, editor: portal.editor, node: args.event.currentTarget });
   const nextDepth = Math.min(Math.max(portal.selection.selection.length, 1), path.length);
   const nextSelection = path.slice(0, nextDepth);
 

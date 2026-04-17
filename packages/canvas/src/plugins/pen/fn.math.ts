@@ -123,7 +123,7 @@ function getLocalStrokePointsFromPenData(element: Pick<TElement, "data">): TStro
   }));
 }
 
-export function fxGetStrokePathFromPenData(args: {
+export function fnGetStrokePathFromPenData(args: {
   element: Pick<TElement, "data">;
   options?: StrokeOptions;
   getStroke: TGetStroke;
@@ -138,7 +138,7 @@ export function fxGetStrokePathFromPenData(args: {
   });
 }
 
-export function fxCreatePenDataFromStrokePoints(args: {
+export function fnCreatePenDataFromStrokePoints(args: {
   points: TStrokePoint[];
 }): (TPenData & { x: number; y: number }) | null {
   const serialized = serializeStrokePoints(args.points);
@@ -156,7 +156,7 @@ export function fxCreatePenDataFromStrokePoints(args: {
   };
 }
 
-export function fxScalePenDataPoints(args: {
+export function fnScalePenDataPoints(args: {
   points: TPoint2D[];
   scaleX: number;
   scaleY: number;

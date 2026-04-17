@@ -10,7 +10,7 @@ export type TImageViewportSize = {
   height: number;
 };
 
-export function fxFitImageToViewport(args: TArgsFitImageToViewport): TImageViewportSize {
+export function fnFitImageToViewport(args: TArgsFitImageToViewport): TImageViewportSize {
   const maxDimension = Math.min(args.viewportWidth, args.viewportHeight) / 2;
   const aspectRatio = args.imageWidth / args.imageHeight;
 

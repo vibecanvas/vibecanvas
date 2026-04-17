@@ -17,7 +17,7 @@ import type { SceneService } from "../../services/scene/SceneService";
 import type { SelectionService } from "../../services/selection/SelectionService";
 import type { IRuntimeHooks, TElementPointerEvent } from "../../types";
 import { DEFAULT_OPACITY, DEFAULT_STROKE_WIDTH_TOKEN } from "./CONSTANTS";
-import { fxCreatePenDataFromStrokePoints } from "./fn.math";
+import { fnCreatePenDataFromStrokePoints } from "./fn.math";
 import { fxCreatePenNode } from "./fx.create-node";
 import { fxPenPathToElement } from "./fx.path";
 import { txCreatePenCloneDrag } from "./tx.clone";
@@ -43,7 +43,7 @@ function fxCreatePenElementFromDraft(args: {
   points: TEditorToolCanvasPoint[];
   rememberedStyle?: Pick<TThemeRememberedStyle, "strokeColor" | "strokeWidth" | "opacity">;
 }): TElement {
-  const penData = fxCreatePenDataFromStrokePoints({ points: args.points });
+  const penData = fnCreatePenDataFromStrokePoints({ points: args.points });
   if (!penData) {
     throw new Error("Failed to create pen draft data");
   }

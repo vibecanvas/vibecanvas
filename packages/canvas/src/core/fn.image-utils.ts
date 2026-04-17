@@ -17,13 +17,13 @@ export type TPortalGetImageDimensions = {
   createImage: () => HTMLImageElement;
 };
 
-export function fxGetSupportedImageFormat(mimeType: string): TImageUploadFormat | null {
+export function fnGetSupportedImageFormat(mimeType: string): TImageUploadFormat | null {
   return SUPPORTED_IMAGE_FORMATS.has(mimeType as TImageUploadFormat)
     ? (mimeType as TImageUploadFormat)
     : null;
 }
 
-export function fxFileToDataUrl(
+export function fnFileToDataUrl(
   portal: TPortalFileToDataUrl,
   args: TArgsFileToDataUrl,
 ): Promise<string> {
@@ -35,11 +35,11 @@ export function fxFileToDataUrl(
   });
 }
 
-export function fxParseDataUrl(dataUrl: string): { format: TImageUploadFormat; base64: string } | null {
+export function fnParseDataUrl(dataUrl: string): { format: TImageUploadFormat; base64: string } | null {
   const match = dataUrl.match(/^data:([^;]+);base64,(.+)$/);
   if (!match?.[1] || !match[2]) return null;
 
-  const format = fxGetSupportedImageFormat(match[1]);
+  const format = fnGetSupportedImageFormat(match[1]);
   if (!format) return null;
 
   return {
@@ -48,7 +48,7 @@ export function fxParseDataUrl(dataUrl: string): { format: TImageUploadFormat; b
   };
 }
 
-export function fxGetImageDimensions(
+export function fnGetImageDimensions(
   portal: TPortalGetImageDimensions,
   args: TArgsGetImageDimensions,
 ): Promise<{ width: number; height: number }> {
@@ -60,6 +60,6 @@ export function fxGetImageDimensions(
   });
 }
 
-export function fxGetImageSource(args: { url: string | null; base64: string | null }): string | null {
+export function fnGetImageSource(args: { url: string | null; base64: string | null }): string | null {
   return args.url ?? args.base64;
 }

@@ -3,8 +3,8 @@ import type Konva from "konva";
 import { fnGetAbsolutePositionFromWorldPosition, fnGetWorldPosition } from "../../core/fn.world-position";
 import { fxGetCanvasParentGroupId } from "../../core/fx.canvas-node-semantics";
 import { fnGetNodeZIndex } from "../../core/fn.get-node-z-index";
-import { fxCreatePenStyleFromNode } from "./fn.style";
-import { fxScalePenDataPoints } from "./fn.math";
+import { fnCreatePenStyleFromNode } from "./fn.style";
+import { fnScalePenDataPoints } from "./fn.math";
 
 const ELEMENT_DATA_ATTR = "vcElementData";
 const ELEMENT_STYLE_ATTR = "vcElementStyle";
@@ -74,7 +74,7 @@ export function fxPenPathToElement(portal: TPortalFxPenPathToElement, args: TArg
     updatedAt: portal.now(),
     zIndex: fnGetNodeZIndex({ node: args.node }),
     data: structuredClone(baseData),
-    style: fxCreatePenStyleFromNode({
+    style: fnCreatePenStyleFromNode({
       nodeFill: (() => {
         const fill = args.node.fill();
         return typeof fill === "string" ? fill : "";

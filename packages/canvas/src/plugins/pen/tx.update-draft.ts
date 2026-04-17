@@ -3,7 +3,7 @@ import type Konva from "konva";
 import type { StrokeOptions } from "perfect-freehand";
 import type { SceneService } from "../../services/scene/SceneService";
 import type { TEditorToolCanvasPoint } from "src/services/editor/EditorService";
-import { fxCreatePenDraftElement } from "./fn.draft-element";
+import { fnCreatePenDraftElement } from "./fn.draft-element";
 import { txUpdatePenPathFromElement } from "./tx.path";
 
 const DRAFT_POINTS_ATTR = "vcDraftStrokePoints";
@@ -42,7 +42,7 @@ export function txUpdatePenDraft(portal: TPortalTxUpdatePenDraft, args: TArgsTxU
     resolveThemeColor: portal.resolveThemeColor,
   }, {
     node: args.previewNode,
-    element: fxCreatePenDraftElement({
+    element: fnCreatePenDraftElement({
       id: args.previewNode.id(),
       now: args.now,
       points,

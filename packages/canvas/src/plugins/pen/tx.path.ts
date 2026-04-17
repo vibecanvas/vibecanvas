@@ -3,9 +3,9 @@ import type { StrokeOptions } from "perfect-freehand";
 import type { ThemeService, TThemeDefinition } from "@vibecanvas/service-theme";
 import type Konva from "konva";
 import type { SceneService } from "../../services/scene/SceneService";
-import { fxGetStrokePathFromPenData } from "./fn.math";
+import { fnGetStrokePathFromPenData } from "./fn.math";
 import { fxGetPenAbsolutePosition } from "./fx.path";
-import { fxGetPenStrokeWidthFromStyle } from "./fn.style";
+import { fnGetPenStrokeWidthFromStyle } from "./fn.style";
 import { DEFAULT_FILL, DEFAULT_OPACITY } from "./CONSTANTS";
 
 const ELEMENT_DATA_ATTR = "vcElementData";
@@ -38,7 +38,7 @@ function getPenFillFromStyle(portal: TPortalTxCreatePenPathFromElement, element:
 function syncPenMetadata(node: Konva.Path, element: TElement) {
   node.setAttr(ELEMENT_DATA_ATTR, structuredClone(element.data));
   node.setAttr(ELEMENT_STYLE_ATTR, structuredClone(element.style));
-  node.setAttr(PEN_STROKE_WIDTH_ATTR, fxGetPenStrokeWidthFromStyle({ style: element.style }));
+  node.setAttr(PEN_STROKE_WIDTH_ATTR, fnGetPenStrokeWidthFromStyle({ style: element.style }));
   node.setAttr(ELEMENT_CREATED_AT_ATTR, element.createdAt);
 }
 
@@ -52,9 +52,9 @@ export function txCreatePenPathFromElement(portal: TPortalTxCreatePenPathFromEle
     x: args.element.x,
     y: args.element.y,
     rotation: args.element.rotation,
-    data: fxGetStrokePathFromPenData({
+    data: fnGetStrokePathFromPenData({
       element: args.element,
-      options: { size: fxGetPenStrokeWidthFromStyle({ style: args.element.style }) },
+      options: { size: fnGetPenStrokeWidthFromStyle({ style: args.element.style }) },
       getStroke: portal.getStroke,
     }),
     fill: getPenFillFromStyle(portal, args.element),
@@ -85,9 +85,9 @@ export function txUpdatePenPathFromElement(portal: TPortalTxUpdatePenPathFromEle
   args.node.id(args.element.id);
   args.node.absolutePosition(fxGetPenAbsolutePosition({}, { node: args.node, element: args.element }));
   args.node.rotation(args.element.rotation);
-  args.node.data(fxGetStrokePathFromPenData({
+  args.node.data(fnGetStrokePathFromPenData({
     element: args.element,
-    options: { size: fxGetPenStrokeWidthFromStyle({ style: args.element.style }) },
+    options: { size: fnGetPenStrokeWidthFromStyle({ style: args.element.style }) },
     getStroke: portal.getStroke,
   }));
   args.node.fill(getPenFillFromStyle(portal, args.element));

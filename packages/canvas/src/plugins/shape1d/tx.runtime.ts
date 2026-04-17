@@ -9,7 +9,7 @@ import type { SelectionService } from "../../services/selection/SelectionService
 import type { IRuntimeHooks, TElementPointerEvent } from "../../runtime";
 import { fxGetCanvasAncestorGroups, fxGetCanvasNodeKind, fxIsCanvasGroupNode } from "../../core/fx.canvas-node-semantics";
 import { fxFilterSelection } from "../../core/fx.filter-selection";
-import { fxSerializeSubtreeElements } from "../group/fn.serialize-subtree-elements";
+import { fnSerializeSubtreeElements } from "../group/fn.serialize-subtree-elements";
 import type { CanvasRegistryService } from "../../services/canvas-registry/CanvasRegistryService";
 import { type TShape1dNode } from "./CONSTANTS";
 import { fxToPositionPatch, fxToTElement } from "./fx.node";
@@ -70,7 +70,7 @@ function serializeNodeElements(portal: TPortalTxShape1dRuntime, node: Konva.Node
   }
 
   if (kind === "group" && fxIsCanvasGroupNode({}, { editor: portal.canvasRegistry, node })) {
-    return fxSerializeSubtreeElements({
+    return fnSerializeSubtreeElements({
       canvasRegistry: portal.canvasRegistry,
       Shape: portal.Konva.Shape,
       group: node as Konva.Group,

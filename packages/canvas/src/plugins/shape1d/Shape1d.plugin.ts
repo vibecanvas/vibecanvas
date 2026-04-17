@@ -34,7 +34,7 @@ import {
   type TPoint,
   type TShape1dNode,
 } from "./CONSTANTS";
-import { fxCreateDraftElement, fxCreateFallbackPreviewElement } from "./fn.draft";
+import { fnCreateDraftElement, fnCreateFallbackPreviewElement } from "./fn.draft";
 import { fxApplyAnchorDrag, fxGetInsertionPoint, fxLocalPointToWorld } from "./fx.geometry";
 import {
   fxFindShape1dNodeById,
@@ -188,7 +188,7 @@ export function createShape1dPlugin(): IPlugin<{
           return null;
         }
 
-        return fxCreateDraftElement({
+        return fnCreateDraftElement({
           activeTool: tool,
           draftElementId,
           draftStartPoint,
@@ -205,7 +205,7 @@ export function createShape1dPlugin(): IPlugin<{
           return null;
         }
 
-        return fxCreateFallbackPreviewElement({
+        return fnCreateFallbackPreviewElement({
           activeTool: tool,
           draftElementId,
           createId,

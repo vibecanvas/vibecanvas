@@ -8,7 +8,7 @@ export type TPointerDelta = {
   deltaY: number;
 };
 
-export function fxGetPointerDelta(args: TArgsGetPointerDelta): TPointerDelta {
+export function fnGetPointerDelta(args: TArgsGetPointerDelta): TPointerDelta {
   return {
     deltaX: args.nextPointer.x - args.lastPointer.x,
     deltaY: args.nextPointer.y - args.lastPointer.y,

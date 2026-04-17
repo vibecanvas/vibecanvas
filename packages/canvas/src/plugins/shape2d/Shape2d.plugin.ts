@@ -32,7 +32,7 @@ import type { SelectionService } from "../../services/selection/SelectionService
 import type { IRuntimeHooks } from "../../types";
 import { txDeleteSelection } from "../select/tx.delete-selection";
 import { txEnterEditMode } from "../text/tx.enter-edit-mode";
-import { fxGetShape2dNodeType } from "./fn.node";
+import { fnGetShape2dNodeType } from "./fn.node";
 import { fxGetAttachedTextNode, fxOpenAttachedTextEditMode, fxPersistAttachedTextNode, fxSyncAttachedTextNodeToShape } from "./fx.attached-text";
 import { fxCreateShape2dNode } from "./fx.create-node";
 import { fxToShape2dElement } from "./fx.to-element";
@@ -69,7 +69,7 @@ function safeStopDrag(node: Konva.Node) {
 function isShape2dTextHostNode(node: Konva.Node | null | undefined): node is Konva.Shape {
   return Boolean(node)
     && isKonvaShape(node)
-    && fxGetShape2dNodeType({ Rect: Konva.Rect, Line: Konva.Line, Ellipse: Konva.Ellipse, node }) !== null;
+    && fnGetShape2dNodeType({ Rect: Konva.Rect, Line: Konva.Line, Ellipse: Konva.Ellipse, node }) !== null;
 }
 
 function getFocusedShape2dTextHost(canvasRegistry: CanvasRegistryService, selection: SelectionService) {
@@ -450,7 +450,7 @@ export function createShape2dPlugin(): IPlugin<{
         return canvasRegistry.registerElement({
           id: args.id,
           matchesElement: (element) => element.data.type === args.type,
-          matchesNode: (node) => fxGetShape2dNodeType({ Rect: Konva.Rect, Line: Konva.Line, Ellipse: Konva.Ellipse, node }) === args.type,
+          matchesNode: (node) => fnGetShape2dNodeType({ Rect: Konva.Rect, Line: Konva.Line, Ellipse: Konva.Ellipse, node }) === args.type,
           toElement: (node) => toElement(node),
           createNode: (element) => {
             if (element.data.type !== args.type) {
@@ -820,7 +820,7 @@ export function createShape2dPlugin(): IPlugin<{
 
       theme.hooks.change.tap(() => {
         render.staticForegroundLayer.find((candidate: Konva.Node) => {
-          return isKonvaShape(candidate) && fxGetShape2dNodeType({ Rect: Konva.Rect, Line: Konva.Line, Ellipse: Konva.Ellipse, node: candidate }) !== null;
+          return isKonvaShape(candidate) && fnGetShape2dNodeType({ Rect: Konva.Rect, Line: Konva.Line, Ellipse: Konva.Ellipse, node: candidate }) !== null;
         }).forEach((candidate) => {
           if (!isKonvaShape(candidate)) {
             return;

@@ -11,7 +11,7 @@ export type TArgsCreateImageElement = {
   now: number;
 };
 
-export function fxCreateImageElement(args: TArgsCreateImageElement): TElement {
+export function fnCreateImageElement(args: TArgsCreateImageElement): TElement {
   return {
     id: args.id,
     x: args.center.x - args.width / 2,

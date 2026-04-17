@@ -19,7 +19,7 @@ export type TArgsToImageElement = {
   crop: TImageData["crop"];
 };
 
-export function fxToImageElement(args: TArgsToImageElement): TElement {
+export function fnToImageElement(args: TArgsToImageElement): TElement {
   const style: TElementStyle = {
     opacity: args.opacity,
   };

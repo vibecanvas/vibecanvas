@@ -12,7 +12,7 @@ export type TArgsIsSceneNode = {
   node: Node | null | undefined;
 };
 
-export function fxIsSceneNode(args: TArgsIsSceneNode): args is TArgsIsSceneNode & { node: TSceneNode } {
+export function fnIsSceneNode(args: TArgsIsSceneNode): args is TArgsIsSceneNode & { node: TSceneNode } {
   return Boolean(args.node) && (args.node instanceof args.Group || args.node instanceof args.Shape);
 }
 
@@ -23,7 +23,7 @@ export type TArgsIsSceneParent = {
   node: Node | null | undefined;
 };
 
-export function fxIsSceneParent(args: TArgsIsSceneParent): args is TArgsIsSceneParent & { node: Konva.Layer | Konva.Group } {
+export function fnIsSceneParent(args: TArgsIsSceneParent): args is TArgsIsSceneParent & { node: Konva.Layer | Konva.Group } {
   return Boolean(args.node) && (args.node instanceof args.Layer || args.node instanceof args.Group);
 }
 
@@ -34,12 +34,12 @@ export type TArgsFindSceneNodeById = {
   id: string;
 };
 
-export function fxFindSceneNodeById(args: TArgsFindSceneNodeById) {
+export function fnFindSceneNodeById(args: TArgsFindSceneNodeById) {
   const node = args.render.staticForegroundLayer.findOne((candidate: Node) => {
-    return fxIsSceneNode({ Group: args.Group, Shape: args.Shape, render: args.render, node: candidate }) && candidate.id() === args.id;
+    return fnIsSceneNode({ Group: args.Group, Shape: args.Shape, render: args.render, node: candidate }) && candidate.id() === args.id;
   });
 
-  return fxIsSceneNode({ Group: args.Group, Shape: args.Shape, render: args.render, node }) ? node : null;
+  return fnIsSceneNode({ Group: args.Group, Shape: args.Shape, render: args.render, node }) ? node : null;
 }
 
 export type TArgsGetGroupChildren = {
@@ -49,9 +49,9 @@ export type TArgsGetGroupChildren = {
   render: SceneService;
 };
 
-export function fxGetGroupChildren(args: TArgsGetGroupChildren) {
+export function fnGetGroupChildren(args: TArgsGetGroupChildren) {
   return args.group.getChildren().filter((node): node is TSceneNode => {
-    return fxIsSceneNode({ Group: args.Group, Shape: args.Shape, render: args.render, node });
+    return fnIsSceneNode({ Group: args.Group, Shape: args.Shape, render: args.render, node });
   });
 }
 
@@ -62,9 +62,9 @@ export type TArgsGetSelectionGroupParent = {
   selection: TSceneNode[];
 };
 
-export function fxGetSelectionGroupParent(args: TArgsGetSelectionGroupParent) {
+export function fnGetSelectionGroupParent(args: TArgsGetSelectionGroupParent) {
   const firstParent = args.selection[0]?.getParent();
-  if (!fxIsSceneParent({ Group: args.Group, Layer: args.Layer, render: args.render, node: firstParent })) {
+  if (!fnIsSceneParent({ Group: args.Group, Layer: args.Layer, render: args.render, node: firstParent })) {
     return null;
   }
 

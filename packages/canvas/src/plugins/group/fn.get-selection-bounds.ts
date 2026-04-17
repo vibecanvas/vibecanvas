@@ -4,7 +4,7 @@ export type TArgsGetSelectionBounds = {
   selection: TSceneNode[];
 };
 
-export function fxGetSelectionBounds(args: TArgsGetSelectionBounds) {
+export function fnGetSelectionBounds(args: TArgsGetSelectionBounds) {
   const boxes = args.selection.map((node) => {
     return node.getClientRect({
       skipTransform: false,

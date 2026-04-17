@@ -6,7 +6,7 @@ import { fnCreateShape2dElement } from "../../core/fn.shape2d";
 import { fnGetWorldPosition } from "../../core/fn.world-position";
 import type { CanvasRegistryService } from "../../services/canvas-registry/CanvasRegistryService";
 import type { SceneService } from "../../services/scene/SceneService";
-import { fxGetShape2dNodeType } from "./fn.node";
+import { fnGetShape2dNodeType } from "./fn.node";
 
 const ELEMENT_STYLE_ATTR = "vcElementStyle";
 
@@ -59,7 +59,7 @@ function getDiamondBaseSize(node: Konva.Line) {
 }
 
 export function fxToShape2dElement(portal: TPortalToShape2dElement, args: TArgsToShape2dElement) {
-  const type = fxGetShape2dNodeType({ Rect: portal.Rect, Line: portal.Line, Ellipse: portal.Ellipse, node: args.node });
+  const type = fnGetShape2dNodeType({ Rect: portal.Rect, Line: portal.Line, Ellipse: portal.Ellipse, node: args.node });
   if (!type) {
     return null;
   }

@@ -1,4 +1,4 @@
-import { fxGetSelectionPath } from "./fn.get-selection-path";
+import { fnGetSelectionPath } from "./fn.get-selection-path";
 import type { TCanvasSemanticsEditor } from "../../core/fx.canvas-node-semantics";
 import type { SceneService } from "../../services/scene/SceneService";
 import type { SelectionService } from "../../services/selection/SelectionService";
@@ -44,7 +44,7 @@ export function txHandleElementPointerDoubleClick(
   portal: TPortalHandleElementPointerDoubleClick,
   args: TArgsHandleElementPointerDoubleClick,
 ) {
-  const path = fxGetSelectionPath({ render: portal.render, editor: portal.editor, node: args.event.currentTarget });
+  const path = fnGetSelectionPath({ render: portal.render, editor: portal.editor, node: args.event.currentTarget });
 
   if (!isSelectionPathPrefix(portal.selection.selection, path)) {
     return false;

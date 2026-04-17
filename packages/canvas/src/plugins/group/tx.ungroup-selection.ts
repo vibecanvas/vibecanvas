@@ -6,9 +6,9 @@ import type { HistoryService } from "../../services/history/HistoryService";
 import type { SceneService } from "../../services/scene/SceneService";
 import type { SelectionService } from "../../services/selection/SelectionService";
 import { fxGetCanvasNodeKind, fxIsCanvasGroupNode } from "../../core/fx.canvas-node-semantics";
-import { fxGetSelectionBounds } from "./fn.get-selection-bounds";
-import { fxFindSceneNodeById, fxGetGroupChildren, fxGetSelectionGroupParent, fxIsSceneParent, type TSceneNode } from "./fn.scene-node";
-import { fxToGroupPatch } from "./fn.to-group-patch";
+import { fnGetSelectionBounds } from "./fn.get-selection-bounds";
+import { fnFindSceneNodeById, fnGetGroupChildren, fnGetSelectionGroupParent, fnIsSceneParent, type TSceneNode } from "./fn.scene-node";
+import { fnToGroupPatch } from "./fn.to-group-patch";
 
 export type TPortalUngroupSelection = {
   Group: typeof Konva.Group;
@@ -39,12 +39,12 @@ export function txUngroupSelection(
   }
 
   const parentNode = group.getParent();
-  if (!fxIsSceneParent({ Group: portal.Group, Layer: portal.Layer, render: portal.render, node: parentNode })) {
+  if (!fnIsSceneParent({ Group: portal.Group, Layer: portal.Layer, render: portal.render, node: parentNode })) {
     return;
   }
 
   const parent = parentNode as Konva.Group | Konva.Layer;
-  const children = fxGetGroupChildren({ Group: portal.Group, Shape: portal.Shape, group, render: portal.render });
+  const children = fnGetGroupChildren({ Group: portal.Group, Shape: portal.Shape, group, render: portal.render });
   const childIds = children.map((child) => child.id());
   const groupPatch = portal.canvasRegistry.toGroup(group);
   const elementPatches: TElement[] = [];
@@ -96,26 +96,26 @@ export function txUngroupSelection(
     label: "ungroup",
     undo() {
       const currentNodes = childIds
-        .map((id) => fxFindSceneNodeById({ Group: portal.Group, Shape: portal.Shape, render: portal.render, id }))
+        .map((id) => fnFindSceneNodeById({ Group: portal.Group, Shape: portal.Shape, render: portal.render, id }))
         .filter((node): node is TSceneNode => node !== null);
 
       if (currentNodes.length !== childIds.length) {
         return;
       }
 
-      const currentParent = fxGetSelectionGroupParent({ Group: portal.Group, Layer: portal.Layer, render: portal.render, selection: currentNodes });
+      const currentParent = fnGetSelectionGroupParent({ Group: portal.Group, Layer: portal.Layer, render: portal.render, selection: currentNodes });
       if (!currentParent) {
         return;
       }
 
       const recreated = portal.setupNode(portal.createGroupNode(groupPatch));
       currentParent.add(recreated);
-      const bounds = fxGetSelectionBounds({ selection: currentNodes });
+      const bounds = fnGetSelectionBounds({ selection: currentNodes });
       recreated.position({ x: bounds.x, y: bounds.y });
       recreated.setAttr("width", bounds.width);
       recreated.setAttr("height", bounds.height);
 
-      fxToGroupPatch({
+      fnToGroupPatch({
         canvasRegistry: portal.canvasRegistry,
         group: recreated,
         getNodeZIndex: portal.getNodeZIndex,
@@ -143,15 +143,15 @@ export function txUngroupSelection(
       portal.render.staticForegroundLayer.batchDraw();
     },
     redo() {
-      const currentGroupNode = fxFindSceneNodeById({ Group: portal.Group, Shape: portal.Shape, render: portal.render, id: groupPatch.id });
+      const currentGroupNode = fnFindSceneNodeById({ Group: portal.Group, Shape: portal.Shape, render: portal.render, id: groupPatch.id });
       if (!fxIsCanvasGroupNode({}, { editor: portal.canvasRegistry, node: currentGroupNode })) {
         return;
       }
 
       const currentGroup = currentGroupNode as Konva.Group;
-      const redoChildren = fxGetGroupChildren({ Group: portal.Group, Shape: portal.Shape, group: currentGroup, render: portal.render });
+      const redoChildren = fnGetGroupChildren({ Group: portal.Group, Shape: portal.Shape, group: currentGroup, render: portal.render });
       const redoParentNode = currentGroup.getParent();
-      if (!fxIsSceneParent({ Group: portal.Group, Layer: portal.Layer, render: portal.render, node: redoParentNode })) {
+      if (!fnIsSceneParent({ Group: portal.Group, Layer: portal.Layer, render: portal.render, node: redoParentNode })) {
         return;
       }
 

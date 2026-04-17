@@ -3,7 +3,7 @@ import type { TShape2dElementType } from "../../core/fn.shape2d";
 
 export type TShape2dNode = Konva.Rect | Konva.Line | Konva.Ellipse;
 
-export function fxGetShape2dNodeType(args: {
+export function fnGetShape2dNodeType(args: {
   Rect: typeof Konva.Rect;
   Line: typeof Konva.Line;
   Ellipse: typeof Konva.Ellipse;

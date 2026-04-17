@@ -8,7 +8,7 @@ import type { LoggingService } from "../../services/logging/LoggingService";
 import type { SceneService } from "../../services/scene/SceneService";
 import type { SelectionService } from "../../services/selection/SelectionService";
 import type { IRuntimeHooks, TElementPointerEvent } from "../../runtime";
-import { fxSerializeSubtreeElements } from "./fn.serialize-subtree-elements";
+import { fnSerializeSubtreeElements } from "./fn.serialize-subtree-elements";
 
 type TGroupDragMetrics = {
   startedAt: number;
@@ -231,7 +231,7 @@ export function txSetupGroupNode(
       return;
     }
 
-    beforeElements = fxSerializeSubtreeElements({
+    beforeElements = fnSerializeSubtreeElements({
       canvasRegistry: portal.canvasRegistry,
       Shape: portal.Shape,
       group: args.group,
@@ -296,7 +296,7 @@ export function txSetupGroupNode(
       dragMetrics.boundaryMs += portal.now() - boundaryStartedAt;
 
       const serializeStartedAt = portal.now();
-      const elements = fxSerializeSubtreeElements({
+      const elements = fnSerializeSubtreeElements({
         canvasRegistry: portal.canvasRegistry,
         Shape: portal.Shape,
         group: args.group,
@@ -308,7 +308,7 @@ export function txSetupGroupNode(
     }
 
     portal.refreshBoundaries();
-    throttledPatch(fxSerializeSubtreeElements({
+    throttledPatch(fnSerializeSubtreeElements({
       canvasRegistry: portal.canvasRegistry,
       Shape: portal.Shape,
       group: args.group,
@@ -327,7 +327,7 @@ export function txSetupGroupNode(
       return;
     }
 
-    const afterElements = fxSerializeSubtreeElements({
+    const afterElements = fnSerializeSubtreeElements({
       canvasRegistry: portal.canvasRegistry,
       Shape: portal.Shape,
       group: args.group,

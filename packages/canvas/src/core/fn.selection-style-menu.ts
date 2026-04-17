@@ -92,7 +92,7 @@ function getMergedValues(configs: TCanvasRegistrySelectionStyleConfig[]) {
 }
 
 
-export function fxHasSelectionStylePropertySupport(args: {
+export function fnHasSelectionStylePropertySupport(args: {
   config: TCanvasRegistrySelectionStyleConfig | null | undefined;
   property: TSelectionStyleProperty;
 }) {
@@ -100,7 +100,7 @@ export function fxHasSelectionStylePropertySupport(args: {
   return args.config?.sections?.[sectionKey] === true;
 }
 
-export function fxGetSelectionStyleStrokeColorKey(element: TElement): "strokeColor" | "backgroundColor" {
+export function fnGetSelectionStyleStrokeColorKey(element: TElement): "strokeColor" | "backgroundColor" {
   if ((element.data.type === "pen" || LINE_TYPES.has(element.data.type))
     && typeof element.style.strokeColor !== "string"
     && typeof element.style.backgroundColor === "string") {
@@ -110,13 +110,13 @@ export function fxGetSelectionStyleStrokeColorKey(element: TElement): "strokeCol
   return "strokeColor";
 }
 
-export function fxGetSelectionStyleMenuSections(args: {
+export function fnGetSelectionStyleMenuSections(args: {
   configs: TCanvasRegistrySelectionStyleConfig[];
 }): TSelectionStyleMenuSections {
   return getMergedSections(args.configs);
 }
 
-export function fxGetSelectionStyleStrokeWidthOptions(args: {
+export function fnGetSelectionStyleStrokeWidthOptions(args: {
   configs: TCanvasRegistrySelectionStyleConfig[];
 }): TStrokeWidthOption[] | undefined {
   const options = args.configs.flatMap((config) => config.strokeWidthOptions ?? []);
@@ -134,7 +134,7 @@ export function fxGetSelectionStyleStrokeWidthOptions(args: {
   return [...deduped.values()];
 }
 
-export function fxGetSelectionStyleMenuValues(args: {
+export function fnGetSelectionStyleMenuValues(args: {
   elements: TElement[];
   textElements: TElement[];
   configs: TCanvasRegistrySelectionStyleConfig[];
@@ -182,7 +182,7 @@ export function fxGetSelectionStyleMenuValues(args: {
   };
 }
 
-export function fxGetSelectionStyleMenuValuesWithOverrides(args: {
+export function fnGetSelectionStyleMenuValuesWithOverrides(args: {
   values: TSelectionStyleMenuValues;
   overrides: Partial<TSelectionStyleMenuValues>;
 }): TSelectionStyleMenuValues {

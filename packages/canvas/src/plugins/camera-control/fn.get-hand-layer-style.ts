@@ -9,7 +9,7 @@ export type THandLayerStyle = {
   cursor: string;
 };
 
-export function fxGetHandLayerStyle(args: TArgsGetHandLayerStyle): THandLayerStyle {
+export function fnGetHandLayerStyle(args: TArgsGetHandLayerStyle): THandLayerStyle {
   const display = args.isHandTool ? "block" : "none";
   const pointerEvents = args.isHandTool ? "auto" : "none";
   const cursor = args.isHandDragging ? "grabbing" : args.isHandTool ? "grab" : "default";

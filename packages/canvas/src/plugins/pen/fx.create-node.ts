@@ -3,8 +3,8 @@ import type { ThemeService, TThemeDefinition } from "@vibecanvas/service-theme";
 import type Konva from "konva";
 import type { StrokeOptions } from "perfect-freehand";
 import { DEFAULT_FILL, DEFAULT_OPACITY } from "./CONSTANTS";
-import { fxGetStrokePathFromPenData } from "./fn.math";
-import { fxGetPenStrokeWidthFromStyle } from "./fn.style";
+import { fnGetStrokePathFromPenData } from "./fn.math";
+import { fnGetPenStrokeWidthFromStyle } from "./fn.style";
 
 const ELEMENT_DATA_ATTR = "vcElementData";
 const ELEMENT_STYLE_ATTR = "vcElementStyle";
@@ -38,13 +38,13 @@ export function fxCreatePenNode(portal: TPortalFxCreatePenNode, args: TArgsFxCre
     return null;
   }
 
-  const strokeWidth = fxGetPenStrokeWidthFromStyle({ style: args.element.style });
+  const strokeWidth = fnGetPenStrokeWidthFromStyle({ style: args.element.style });
   const node = new portal.Path({
     id: args.element.id,
     x: args.element.x,
     y: args.element.y,
     rotation: args.element.rotation,
-    data: fxGetStrokePathFromPenData({
+    data: fnGetStrokePathFromPenData({
       element: args.element,
       options: { size: strokeWidth },
       getStroke: portal.getStroke,

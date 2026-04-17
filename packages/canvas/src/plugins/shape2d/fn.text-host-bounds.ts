@@ -26,7 +26,7 @@ function getDiamondSize(node: Konva.Line) {
   };
 }
 
-export function fxGetShapeTextHostBounds(args: TArgsGetShapeTextHostBounds) {
+export function fnGetShapeTextHostBounds(args: TArgsGetShapeTextHostBounds) {
   const scaleX = Math.abs(args.node.scaleX());
   const scaleY = Math.abs(args.node.scaleY());
 

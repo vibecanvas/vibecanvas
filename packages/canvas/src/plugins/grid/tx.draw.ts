@@ -1,4 +1,4 @@
-import { fxGetGridLayout } from "./fn.math";
+import { fnGetGridLayout } from "./fn.math";
 
 type TGridDrawContext = {
   beginPath(): void;
@@ -24,7 +24,7 @@ export type TArgsDrawGrid = {
 };
 
 export function txDrawGrid(portal: TPortalDrawGrid, args: TArgsDrawGrid) {
-  const layout = fxGetGridLayout({
+  const layout = fnGetGridLayout({
     zoom: args.zoom,
     x: args.x,
     y: args.y,

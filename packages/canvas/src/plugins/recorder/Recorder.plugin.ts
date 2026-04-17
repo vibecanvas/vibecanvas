@@ -7,15 +7,15 @@ import type { IRuntimeHooks, TMouseEvent, TPointerEvent } from "../../runtime";
 import { render as renderSolid } from "solid-js/web";
 import { CanvasRecorder } from "../../components/CanvasRecorder";
 import {
-  fxCanExportRecording,
-  fxCreateDragStep,
-  fxCreateEmptyRecording,
-  fxCreateKeyStep,
-  fxCreateOpsCrdtOp,
-  fxCreatePointerMoveStep,
-  fxCreatePointerStep,
-  fxCreateStartedRecording,
-  fxCreateWheelStep,
+  fnCanExportRecording,
+  fnCreateDragStep,
+  fnCreateEmptyRecording,
+  fnCreateKeyStep,
+  fnCreateOpsCrdtOp,
+  fnCreatePointerMoveStep,
+  fnCreatePointerStep,
+  fnCreateStartedRecording,
+  fnCreateWheelStep,
 } from "./fn.recording";
 import { txSaveJsonFile } from "./tx.file";
 import { txMountRecorderPanel } from "./tx.mount";
@@ -55,7 +55,7 @@ function createRecorderState(): TRecorderState {
     recording: false,
     reducedEvents: REDUCED_EVENTS,
     pointerPressed: false,
-    recordingData: fxCreateEmptyRecording({ reducedEvents: REDUCED_EVENTS }),
+    recordingData: fnCreateEmptyRecording({ reducedEvents: REDUCED_EVENTS }),
     restoreCrdtWrite: null,
     restoreNodeFire: null,
     open,
@@ -79,7 +79,7 @@ function txSyncUi(state: TRecorderState) {
   state.setStepCount(state.recordingData.steps.length);
   state.setOpCount(state.recordingData.crdtOps.length);
   state.setReducedEventsSignal(state.reducedEvents);
-  state.setCanExport(fxCanExportRecording({ recording: state.recordingData }));
+  state.setCanExport(fnCanExportRecording({ recording: state.recordingData }));
 }
 
 function txPushStep(state: TRecorderState, step: TStep) {
@@ -93,7 +93,7 @@ function txPushCrdtOp(state: TRecorderState, op: TCrdtOp) {
 }
 
 function txStartRecording(state: TRecorderState, crdt: CrdtService) {
-  state.recordingData = fxCreateStartedRecording({
+  state.recordingData = fnCreateStartedRecording({
     crdt,
     reducedEvents: state.reducedEvents,
     now: Date.now(),
@@ -109,7 +109,7 @@ function txStopRecording(state: TRecorderState) {
 
 function txClearRecording(state: TRecorderState) {
   state.recording = false;
-  state.recordingData = fxCreateEmptyRecording({ reducedEvents: state.reducedEvents });
+  state.recordingData = fnCreateEmptyRecording({ reducedEvents: state.reducedEvents });
   txSyncUi(state);
 }
 
@@ -178,7 +178,7 @@ function txRecordPointerEvent(state: TRecorderState, render: SceneService, event
 
   txPushStep(
     state,
-    fxCreatePointerStep({ render, eventName, event }),
+    fnCreatePointerStep({ render, eventName, event }),
   );
 }
 
@@ -187,7 +187,7 @@ function txRecordKeyEvent(state: TRecorderState, eventName: "keydown" | "keyup",
     return;
   }
 
-  txPushStep(state, fxCreateKeyStep({ eventName, event }));
+  txPushStep(state, fnCreateKeyStep({ eventName, event }));
 }
 
 function txRecordDragEvent(state: TRecorderState, render: SceneService, eventName: "dragstart" | "dragmove" | "dragend", event: TMouseEvent) {
@@ -197,7 +197,7 @@ function txRecordDragEvent(state: TRecorderState, render: SceneService, eventNam
 
   txPushStep(
     state,
-    fxCreateDragStep({ render, eventName, event }),
+    fnCreateDragStep({ render, eventName, event }),
   );
 }
 
@@ -251,7 +251,7 @@ function setupHookCapture(args: { state: TRecorderState; render: SceneService; h
       return;
     }
 
-    txPushStep(args.state, fxCreatePointerMoveStep({ render: args.render, event }));
+    txPushStep(args.state, fnCreatePointerMoveStep({ render: args.render, event }));
   });
 
   args.hooks.pointerWheel.tap((event) => {
@@ -259,7 +259,7 @@ function setupHookCapture(args: { state: TRecorderState; render: SceneService; h
       return;
     }
 
-    txPushStep(args.state, fxCreateWheelStep({ render: args.render, event }));
+    txPushStep(args.state, fnCreateWheelStep({ render: args.render, event }));
   });
 
   args.hooks.keydown.tap((event) => {
@@ -281,7 +281,7 @@ function setupCrdtCapture(args: { state: TRecorderState; crdt: CrdtService }) {
 
     txPushCrdtOp(
       args.state,
-      fxCreateOpsCrdtOp({
+      fnCreateOpsCrdtOp({
         ops: ops as Array<Record<string, unknown>>,
       }),
     );

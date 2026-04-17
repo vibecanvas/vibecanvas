@@ -14,8 +14,8 @@ import type { RenderOrderService } from "../../services/render-order/RenderOrder
 import type { SceneService } from "../../services/scene/SceneService";
 import type { TCanvasTransformAnchor, SelectionService, CanvasRegistryService } from "../../services";
 import { CanvasMode } from "../../services/selection/CONSTANTS";
-import type { IRuntimeHooks } from "../../runtime";
-import { fxCreateTextElement } from "./fn.create-text-element";
+import type { IRuntimeHooks } from "../../types";
+import { fnCreateTextElement } from "./fn.create-text-element";
 import { fxToElement } from "./fx.to-element";
 import { txCreateTextCloneDrag } from "./tx.create-text-clone-drag";
 import { txEnterEditMode } from "./tx.enter-edit-mode";
@@ -425,7 +425,7 @@ export function createTextPlugin(): IPlugin<{
           priority: 300,
           onSelect: () => {
             selection.setSelection(activeSelection);
-            txDeleteSelection({ Group: Konva.Group, Shape: Konva.Shape, Layer: Konva.Layer, canvasRegistry, crdt, history, render: scene, renderOrder, selection }, {});
+            txDeleteSelection({ canvasRegistry, crdt, history, render: scene, renderOrder, selection }, {});
           },
         }];
       });
@@ -461,7 +461,7 @@ export function createTextPlugin(): IPlugin<{
 
         const timestamp = now();
         const element = fxApplyRememberedTextToolStyle({
-          element: fxCreateTextElement({
+          element: fnCreateTextElement({
             id: createId(),
             x: pointer.x,
             y: pointer.y,

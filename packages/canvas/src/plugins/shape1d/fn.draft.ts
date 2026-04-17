@@ -8,7 +8,7 @@ import {
   type TShape1dTool,
 } from "./CONSTANTS";
 
-function fxGetShape1dStyleDefaults(args: {
+function fnGetShape1dStyleDefaults(args: {
   rememberedStyle?: {
     strokeColor?: string;
     strokeWidth?: string;
@@ -28,7 +28,7 @@ function fxGetShape1dStyleDefaults(args: {
   } as const;
 }
 
-export function fxCreateFallbackPreviewElement(args: {
+export function fnCreateFallbackPreviewElement(args: {
   activeTool: TShape1dTool;
   draftElementId: string | null;
   createId: () => string;
@@ -43,7 +43,7 @@ export function fxCreateFallbackPreviewElement(args: {
   };
 }) {
   const timestamp = args.now();
-  const defaults = fxGetShape1dStyleDefaults({ rememberedStyle: args.rememberedStyle });
+  const defaults = fnGetShape1dStyleDefaults({ rememberedStyle: args.rememberedStyle });
 
   return {
     id: args.draftElementId ?? args.createId(),
@@ -72,7 +72,7 @@ export function fxCreateFallbackPreviewElement(args: {
   } satisfies TElement;
 }
 
-export function fxCreateDraftElement(args: {
+export function fnCreateDraftElement(args: {
   activeTool: TShape1dTool;
   draftElementId: string | null;
   draftStartPoint: TPoint | null;
@@ -101,7 +101,7 @@ export function fxCreateDraftElement(args: {
   }
 
   const timestamp = args.now();
-  const defaults = fxGetShape1dStyleDefaults({ rememberedStyle: args.rememberedStyle });
+  const defaults = fnGetShape1dStyleDefaults({ rememberedStyle: args.rememberedStyle });
   return {
     id: args.draftElementId ?? args.createId(),
     x: startX,

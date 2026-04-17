@@ -3,7 +3,7 @@ import type { Node } from "konva/lib/Node";
 import type { Shape, ShapeConfig } from "konva/lib/Shape";
 import type { TCanvasSemanticsEditor } from "../../core/fx.canvas-node-semantics";
 import type { SceneService } from "../../services/scene/SceneService";
-import { fxIsCanvasNode } from "../../core/fx.canvas-node-semantics";
+import { fnIsCanvasNode } from "../../core/fx.canvas-node-semantics";
 
 export type TArgsGetSelectionPath = {
   render: SceneService;
@@ -11,12 +11,12 @@ export type TArgsGetSelectionPath = {
   node: Group | Shape<ShapeConfig>;
 };
 
-export function fxGetSelectionPath(args: TArgsGetSelectionPath) {
+export function fnGetSelectionPath(args: TArgsGetSelectionPath) {
   const path: Array<Group | Shape<ShapeConfig>> = [];
   let current: Node | null = args.node;
 
   while (current && current !== args.render.staticForegroundLayer) {
-    if (fxIsCanvasNode({}, { editor: args.editor, node: current })) {
+    if (fnIsCanvasNode({}, { editor: args.editor, node: current })) {
       path.push(current as Group | Shape<ShapeConfig>);
     }
 

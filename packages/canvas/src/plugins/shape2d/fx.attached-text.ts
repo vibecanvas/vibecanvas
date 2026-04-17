@@ -9,7 +9,7 @@ import type { EditorService } from "../../services/editor/EditorService";
 import type { RenderOrderService } from "../../services/render-order/RenderOrderService";
 import type { SceneService } from "../../services/scene/SceneService";
 import type { SelectionService } from "../../services/selection/SelectionService";
-import { fxGetShapeTextHostBounds } from "./fn.text-host-bounds";
+import { fnGetShapeTextHostBounds } from "./fn.text-host-bounds";
 import {
   DEFAULT_ATTACHED_TEXT_ALIGN,
   DEFAULT_ATTACHED_TEXT_VERTICAL_ALIGN,
@@ -64,7 +64,7 @@ function getTextNode(portal: TPortalAttachedText, containerId: string) {
 }
 
 function createAttachedTextElement(portal: TPortalAttachedText, shapeNode: Konva.Shape): TElement {
-  const bounds = fxGetShapeTextHostBounds({
+  const bounds = fnGetShapeTextHostBounds({
     Rect: portal.Konva.Rect,
     Ellipse: portal.Konva.Ellipse,
     Line: portal.Konva.Line,
@@ -138,7 +138,7 @@ export function fxGetAttachedTextNode(portal: TPortalAttachedText, args: TArgsGe
 }
 
 export function fxSyncAttachedTextNodeToShape(portal: TPortalAttachedText, args: TArgsSyncAttachedTextNodeToShape) {
-  const bounds = fxGetShapeTextHostBounds({
+  const bounds = fnGetShapeTextHostBounds({
     Rect: portal.Konva.Rect,
     Ellipse: portal.Konva.Ellipse,
     Line: portal.Konva.Line,

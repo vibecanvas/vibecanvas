@@ -11,11 +11,11 @@ export type TGridLayout = {
   majorScreenSize: number;
 };
 
-export function fxNormalizeOffset(value: number, spacing: number) {
+export function fnNormalizeOffset(value: number, spacing: number) {
   return ((value % spacing) + spacing) % spacing;
 }
 
-export function fxGetGridWorldSize(scale: number) {
+export function fnGetGridWorldSize(scale: number) {
   let worldSize = BASE_GRID_SIZE;
   let screenSpacing = worldSize * scale;
 
@@ -32,18 +32,18 @@ export function fxGetGridWorldSize(scale: number) {
   return worldSize;
 }
 
-export function fxGetGridLayout(args: { zoom: number; x: number; y: number }): TGridLayout {
-  const minorWorldSize = fxGetGridWorldSize(args.zoom);
+export function fnGetGridLayout(args: { zoom: number; x: number; y: number }): TGridLayout {
+  const minorWorldSize = fnGetGridWorldSize(args.zoom);
   const majorWorldSize = minorWorldSize * 4;
   const minorScreenSize = minorWorldSize * args.zoom;
   const majorScreenSize = majorWorldSize * args.zoom;
 
   return {
-    minorStartX: fxNormalizeOffset(args.x, minorScreenSize),
-    minorStartY: fxNormalizeOffset(args.y, minorScreenSize),
+    minorStartX: fnNormalizeOffset(args.x, minorScreenSize),
+    minorStartY: fnNormalizeOffset(args.y, minorScreenSize),
     minorScreenSize,
-    majorStartX: fxNormalizeOffset(args.x, majorScreenSize),
-    majorStartY: fxNormalizeOffset(args.y, majorScreenSize),
+    majorStartX: fnNormalizeOffset(args.x, majorScreenSize),
+    majorStartY: fnNormalizeOffset(args.y, majorScreenSize),
     majorScreenSize,
   };
 }

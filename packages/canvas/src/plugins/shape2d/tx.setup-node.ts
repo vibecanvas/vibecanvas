@@ -7,7 +7,7 @@ import type { CrdtService } from "../../services/crdt/CrdtService";
 import type { HistoryService } from "../../services/history/HistoryService";
 import type { SceneService } from "../../services/scene/SceneService";
 import type { SelectionService } from "../../services/selection/SelectionService";
-import { fxSerializeSubtreeElements } from "../group/fn.serialize-subtree-elements";
+import { fnSerializeSubtreeElements } from "../group/fn.serialize-subtree-elements";
 
 export type TPortalSetupShape2dNode = {
   Group: typeof Konva.Group;
@@ -66,7 +66,7 @@ function serializeNodeElements(portal: TPortalSetupShape2dNode, node: Konva.Node
   }
 
   if (kind === "group" && fxIsCanvasGroupNode({}, { editor: portal.canvasRegistry, node })) {
-    return fxSerializeSubtreeElements({
+    return fnSerializeSubtreeElements({
       canvasRegistry: portal.canvasRegistry,
       Shape: portal.Shape,
       group: node as Konva.Group,

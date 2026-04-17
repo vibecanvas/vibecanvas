@@ -2,8 +2,8 @@ import type Konva from "konva";
 import { fxResolveSelectionStyleElements } from "./fx.resolve-selection-style-elements";
 import { fxResolveSelectionStyleTextElements } from "./fx.resolve-selection-style-text-elements";
 import {
-  fxGetSelectionStyleStrokeColorKey,
-  fxHasSelectionStylePropertySupport,
+  fnGetSelectionStyleStrokeColorKey,
+  fnHasSelectionStylePropertySupport,
   type TSelectionStyleProperty,
 } from "./fn.selection-style-menu";
 import {
@@ -107,7 +107,7 @@ export function txCreateSelectionStyleChangePlan(
   const supplementalBeforeElements = new Map<string, TElement>();
   const afterElements = targetElements.flatMap((element) => {
     const config = portal.canvasRegistry.getSelectionStyleMenuConfigByElement({ element });
-    if (!fxHasSelectionStylePropertySupport({ config, property: args.property })) {
+    if (!fnHasSelectionStylePropertySupport({ config, property: args.property })) {
       return [];
     }
 
@@ -117,7 +117,7 @@ export function txCreateSelectionStyleChangePlan(
 
     if (args.property === "stroke" && typeof args.value === "string") {
       if (element.data.type === "pen" || element.data.type === "line" || element.data.type === "arrow") {
-        const colorKey = fxGetSelectionStyleStrokeColorKey(element);
+        const colorKey = fnGetSelectionStyleStrokeColorKey(element);
         return [fxCloneElementWithSelectionStyle({ now: portal.now }, { element, style: { [colorKey]: args.value } })];
       }
 
@@ -128,7 +128,7 @@ export function txCreateSelectionStyleChangePlan(
         const attachedTextConfig = attachedTextElement
           ? portal.canvasRegistry.getSelectionStyleMenuConfigByElement({ element: attachedTextElement })
           : null;
-        if (attachedTextElement?.data.type === "text" && fxHasSelectionStylePropertySupport({ config: attachedTextConfig, property: args.property })) {
+        if (attachedTextElement?.data.type === "text" && fnHasSelectionStylePropertySupport({ config: attachedTextConfig, property: args.property })) {
           supplementalBeforeElements.set(attachedTextElement.id, structuredClone(attachedTextElement));
           patches.push(fxCloneElementWithSelectionStyle({ now: portal.now }, { element: attachedTextElement, style: { strokeColor: args.value } }));
         }

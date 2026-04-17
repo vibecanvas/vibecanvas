@@ -6,7 +6,7 @@ import { txUpdateTextNodeFromElement } from "./tx.update-text-node-from-element"
 import { fxMeasureTextLayout } from "../../core/fx.pretext";
 import { fnIsShape2dElementType } from "../../core/fn.shape2d";
 import type { TElement, TTextData } from "@vibecanvas/service-automerge/types/canvas-doc.types";
-import { fxGetShapeTextHostBounds } from "../shape2d/fn.text-host-bounds";
+import { fnGetShapeTextHostBounds } from "../shape2d/fn.text-host-bounds";
 import type { layoutWithLines, prepareWithSegments } from "@chenglou/pretext";
 import type { ThemeService } from "@vibecanvas/service-theme";
 import type { CameraService } from "../../services/camera/CameraService";
@@ -213,7 +213,7 @@ export function txEnterEditMode(portal: TPortalEnterEditMode, args: TArgsEnterEd
     }
 
     const hostBounds = attachedHostNode
-      ? fxGetShapeTextHostBounds({
+      ? fnGetShapeTextHostBounds({
           Rect: portal.Konva.Rect,
           Ellipse: portal.Konva.Ellipse,
           Line: portal.Konva.Line,
@@ -390,7 +390,7 @@ export function txEnterEditMode(portal: TPortalEnterEditMode, args: TArgsEnterEd
         args.node.height(Math.max(originalData.h, worldHeight));
       }
 
-      const nextBounds = fxGetShapeTextHostBounds({
+      const nextBounds = fnGetShapeTextHostBounds({
         Rect: portal.Konva.Rect,
         Ellipse: portal.Konva.Ellipse,
         Line: portal.Konva.Line,

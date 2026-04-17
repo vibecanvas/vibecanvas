@@ -1,6 +1,6 @@
 import type { TCameraViewport } from "../../services/camera/CameraService";
 import { CAMERA_VIEWPORTS_LOCAL_STORAGE_KEY } from "./CONSTANTS";
-import { fxNormalizeCameraState } from "./fn.normalize-camera-state";
+import { fnNormalizeCameraState } from "./fn.normalize-camera-state";
 
 export type TPortalReadCameraState = {
   storage: Pick<Storage, "getItem"> | null;
@@ -25,15 +25,15 @@ export function fxReadCameraStateFromLocalStorage(portal: TPortalReadCameraState
 
     const storedViewports = JSON.parse(rawValue) as TStoredCameraViewportMap | null;
     if (!storedViewports || typeof storedViewports !== "object") {
-      return fxNormalizeCameraState({ value: null });
+      return fnNormalizeCameraState({ value: null });
     }
 
     if (!(args.canvasId in storedViewports)) {
       return null;
     }
 
-    return fxNormalizeCameraState({ value: storedViewports[args.canvasId] });
+    return fnNormalizeCameraState({ value: storedViewports[args.canvasId] });
   } catch {
-    return fxNormalizeCameraState({ value: null });
+    return fnNormalizeCameraState({ value: null });
   }
 }

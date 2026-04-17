@@ -14,7 +14,7 @@ export type TArgsCreateTextElement = {
   updatedAt: number;
 };
 
-export function fxCreateTextElement(args: TArgsCreateTextElement) {
+export function fnCreateTextElement(args: TArgsCreateTextElement) {
   return {
     id: args.id,
     x: args.x,

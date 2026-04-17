@@ -3,8 +3,8 @@ import type { CameraService } from "../../services/camera/CameraService";
 import type { SceneService } from "../../services/scene/SceneService";
 import type { IRuntimeHooks } from "../../runtime";
 import { fxReadCameraStateFromLocalStorage } from "./fx.read-camera-state-from-localstorage";
-import { fxGetHandLayerStyle } from "./fn.get-hand-layer-style";
-import { fxGetPointerDelta } from "./fn.get-pointer-delta";
+import { fnGetHandLayerStyle } from "./fn.get-hand-layer-style";
+import { fnGetPointerDelta } from "./fn.get-pointer-delta";
 import { txSyncHandLayer } from "./tx.sync-hand-layer";
 import { txWriteCameraStateToLocalStorage } from "./tx.write-camera-state-to-localstorage";
 
@@ -43,7 +43,7 @@ export function createCameraControlPlugin(): IPlugin<{
     lastPointer = null;
 
     if (handLayer) {
-      const style = fxGetHandLayerStyle({
+      const style = fnGetHandLayerStyle({
         isHandTool: isHandTool(),
         isHandDragging,
       });
@@ -69,7 +69,7 @@ export function createCameraControlPlugin(): IPlugin<{
       resetHandState();
     }
 
-    const style = fxGetHandLayerStyle({
+    const style = fnGetHandLayerStyle({
       isHandTool: handMode,
       isHandDragging,
     });
@@ -135,7 +135,7 @@ export function createCameraControlPlugin(): IPlugin<{
           event.preventDefault();
 
           const nextPointer = { x: event.clientX, y: event.clientY };
-          const { deltaX, deltaY } = fxGetPointerDelta({
+          const { deltaX, deltaY } = fnGetPointerDelta({
             lastPointer,
             nextPointer,
           });

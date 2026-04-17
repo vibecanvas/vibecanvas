@@ -10,7 +10,7 @@ export type TArgsSerializeSubtreeElements = {
   group: Konva.Group;
 };
 
-export function fxSerializeSubtreeElements(args: TArgsSerializeSubtreeElements) {
+export function fnSerializeSubtreeElements(args: TArgsSerializeSubtreeElements) {
   return args.group.find((node: Node) => node instanceof args.Shape)
     .map((node) => args.canvasRegistry.toElement(node))
     .filter((element): element is TElement => element !== null);

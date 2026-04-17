@@ -17,7 +17,7 @@ function clampZoom(zoom: number) {
   return Math.min(MAX_CAMERA_ZOOM, Math.max(MIN_CAMERA_ZOOM, zoom));
 }
 
-export function fxNormalizeCameraState(args: TArgsNormalizeCameraState): TCameraViewport {
+export function fnNormalizeCameraState(args: TArgsNormalizeCameraState): TCameraViewport {
   if (!isRecord(args.value)) {
     return { ...DEFAULT_CAMERA_VIEWPORT };
   }
