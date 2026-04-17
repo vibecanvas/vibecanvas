@@ -15,6 +15,7 @@ Rules:
 - edit slop -> keep s
 - never add clean or minor by yourself
 - entries are grouped by apps/packages
+- no test files
 
 Legend
  - ❓ unreviewed
@@ -552,7 +553,12 @@ prefix: `packages/shared-functions/src/`
 
 | status | filepath | human comment | oneliner when to use |
 |---|---|---|---|
-| ❓ | `fn.xdg-paths.test.ts` |  |  |
+| ✅ | `functional/fn.compose.ts` |  | Right-to-left function composition helper |
+| ✅ | `functional/fn.curry.ts` |  | Curry helper preserving this across partial calls |
+| ✅ | `functional/fn.debounce.ts` |  | Debounce helper with injected timer portal |
+| ✅ | `functional/fn.memoize.ts` |  | Memoize pure function results by serialized args |
+| ✅ | `functional/fn.pipe.ts` |  | Left-to-right value pipeline helper |
+| ✅ | `functional/fn.throttle.ts` |  | Throttle helper with injected timer portal |
 | ❓ | `fn.xdg-paths.ts` |  |  |
 | ❓ | `tx.config-path.ts` |  |  |
 
