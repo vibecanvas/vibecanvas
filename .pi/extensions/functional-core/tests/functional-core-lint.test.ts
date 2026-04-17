@@ -2,7 +2,7 @@ import { afterEach, describe, expect, test } from "bun:test"
 import path from "node:path"
 import { mkdtemp, mkdir, rm } from "node:fs/promises"
 import { tmpdir } from "node:os"
-import { formatLintReport, lintFunctionalCorePaths, parseArgs } from "./functional-core-lint"
+import { formatLintReport, lintFunctionalCorePaths, parseArgs } from "../functional-core-lint"
 
 const tempDirs: string[] = []
 

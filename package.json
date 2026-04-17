@@ -38,7 +38,7 @@
     "publish:npm": "bun run scripts/publish-npm.ts",
     "release:github": "bun run scripts/release.ts",
     "version:update": "bun run scripts/update-version.ts",
-    "lint:functional-core": "bun run scripts/functional-core-lint.ts",
+    "lint:functional-core": "bun run .pi/extensions/functional-core/functional-core-lint.ts",
     "dev": "bun run --parallel --filter '*' dev",
     "client:dev": "cd apps/frontend && bun run dev",
     "server:dev": "cd apps/cli && bun run --watch src/main.ts serve",

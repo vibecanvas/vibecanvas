@@ -3,9 +3,9 @@
 import path from "node:path"
 import { lstat, readdir } from "node:fs/promises"
 import { fileURLToPath } from "node:url"
-import { FN_CHECK_RULES, isFnFilePath, validateFnFileContent } from "../.pi/extensions/functional-core/fn-check"
-import { FX_CHECK_RULES, isFxFilePath, validateFxFileContent } from "../.pi/extensions/functional-core/fx-check"
-import { TX_CHECK_RULES, isTxFilePath, validateTxFileContent } from "../.pi/extensions/functional-core/tx-check"
+import { FN_CHECK_RULES, isFnFilePath, validateFnFileContent } from "./fn-check"
+import { FX_CHECK_RULES, isFxFilePath, validateFxFileContent } from "./fx-check"
+import { TX_CHECK_RULES, isTxFilePath, validateTxFileContent } from "./tx-check"
 
 type TParsedArgs =
   | {
@@ -33,9 +33,9 @@ type TLintResult = {
 
 const HELP_TEXT = [
   "Usage:",
-  "  bun run scripts/functional-core-lint.ts",
-  "  bun run scripts/functional-core-lint.ts <subpath> [more-subpaths...]",
-  "  bun run scripts/functional-core-lint.ts --help",
+  "  bun run .pi/extensions/functional-core/functional-core-lint.ts",
+  "  bun run .pi/extensions/functional-core/functional-core-lint.ts <subpath> [more-subpaths...]",
+  "  bun run .pi/extensions/functional-core/functional-core-lint.ts --help",
   "",
   "Notes:",
   "- no args: lint all fn.*, fx.*, and tx.* files in the repo",
@@ -246,7 +246,7 @@ async function main() {
     return
   }
 
-  const rootDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..")
+  const rootDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../..")
   const result = await lintFunctionalCorePaths(rootDir, args.subpaths)
   console.log(formatLintReport(result))
 
