@@ -23,11 +23,18 @@ const TX_FILE_RE = /^tx\..+\.ts$/;
 const TX_TEST_FILE_RE = /^tx\..+\.test\.ts$/;
 const ALLOWED_RUNTIME_IMPORT_RE = /^(fn|fx|tx)\..+$/;
 const ALLOWED_CONSTANT_LIKE_IMPORT_NAME_RE = /^[A-Z0-9_]+$/;
-const TX_CHECK_RULES = [
+const INSTANCEOF_GUARDS_INLINE_ADVICE =
+  " Use `GUARDS.ts` when this runtime import is only needed for `instanceof` or identity checks.";
+const INSTANCEOF_GUARDS_BLOCK_NOTE = [
+  "instanceof note:",
+  "- if you need runtime class/value imports for `instanceof` or identity checks, move that logic into `GUARDS.ts` and import the guard from there",
+  "- `GUARDS.ts` runtime imports are allowed from fn.*, fx.*, and tx.* files",
+].join("\n");
+export const TX_CHECK_RULES = [
   "ignore tx.*.test.ts files",
   "exported functions must start with tx",
-  "imports must be type-only unless imported module leaf starts with fn., fx., or tx., is exactly CONSTANTS, or the imported runtime binding name is UPPER_CASE / underscore style",
-  "CONSTANTS.ts imports are allowed for shared local constants",
+  "imports must be type-only unless imported module leaf starts with fn., fx., or tx., is exactly CONSTANTS or GUARDS, or the imported runtime binding name is UPPER_CASE / underscore style",
+  "CONSTANTS.ts and GUARDS.ts imports are allowed for shared local constants and runtime guards",
   "UPPER_CASE runtime value imports like THEME_STROKE_WIDTH_VALUE_MAP are allowed from any module",
   "no direct use of runtime globals like window, fetch, Bun, process, console, globalThis",
   "do not export classes or other runtime values; only functions and types",
@@ -37,7 +44,7 @@ const TX_CHECK_RULES = [
   "TPortal may hold side effects and mutable services objects",
   "TArgs is usually serializable payload data",
   "tx is for impure writes; use brain and prefer tx when code changes external world state",
-  "tx may runtime-import fn.*, fx.*, tx.*, and CONSTANTS",
+  "tx may runtime-import fn.*, fx.*, tx.*, CONSTANTS, and GUARDS",
 ] as const;
 function stripToolPathPrefix(filePath: string): string {
   return filePath.startsWith("@") ? filePath.slice(1) : filePath;
@@ -47,7 +54,7 @@ function resolveToolPath(cwd: string, filePath: string): string {
   return path.resolve(cwd, stripToolPathPrefix(filePath));
 }
 
-function isTxFilePath(filePath: string): boolean {
+export function isTxFilePath(filePath: string): boolean {
   const baseName = path.basename(stripToolPathPrefix(filePath));
   if (TX_TEST_FILE_RE.test(baseName)) return false;
   return TX_FILE_RE.test(baseName);
@@ -61,6 +68,10 @@ function getModuleLeaf(modulePath: string): string {
 
 function isAllowedConstantsImport(modulePath: string): boolean {
   return getModuleLeaf(modulePath) === "CONSTANTS";
+}
+
+function isAllowedGuardsImport(modulePath: string): boolean {
+  return getModuleLeaf(modulePath) === "GUARDS";
 }
 
 function isAllowedRuntimeImport(modulePath: string): boolean {
@@ -243,6 +254,10 @@ function maskCommentsAndStrings(content: string): string {
   return result;
 }
 
+function hasInstanceofUsage(content: string): boolean {
+  return /\binstanceof\b/.test(maskCommentsAndStrings(content));
+}
+
 function splitNamedSpecifiers(text: string): string[] {
   return text
     .split(",")
@@ -253,6 +268,7 @@ function splitNamedSpecifiers(text: string): string[] {
 function validateImports(content: string): string[] {
   const errors: string[] = [];
   const clean = maskComments(content);
+  const usesInstanceof = hasInstanceofUsage(content);
   const importRe = /(^|\n)\s*import\s+([\s\S]*?)\s+from\s+(['"])(.*?)\3\s*;?/g;
 
   for (const match of clean.matchAll(importRe)) {
@@ -260,10 +276,12 @@ function validateImports(content: string): string[] {
     const modulePath = match[4] ?? "";
     const start = (match.index ?? 0) + (match[1]?.length ?? 0);
     const line = getLineNumber(clean, start);
+    const instanceofAdvice = usesInstanceof ? INSTANCEOF_GUARDS_INLINE_ADVICE : "";
 
     if (!clause || clause.startsWith("type ")) continue;
     if (isAllowedRuntimeImport(modulePath)) continue;
     if (isAllowedConstantsImport(modulePath)) continue;
+    if (isAllowedGuardsImport(modulePath)) continue;
 
     const namedMatch = clause.match(/\{([\s\S]*)\}/);
     const beforeNamed = namedMatch ? clause.slice(0, namedMatch.index).replace(/,/g, "").trim() : clause;
@@ -273,14 +291,14 @@ function validateImports(content: string): string[] {
     if (hasDefaultImport) {
       const defaultImportName = beforeNamed.split(/\s+/).find(Boolean) ?? "";
       if (!isAllowedConstantLikeImportName(defaultImportName)) {
-        errors.push(`line ${line}: runtime default import from \"${modulePath}\" not allowed in tx.*.ts`);
+        errors.push(`line ${line}: runtime default import from \"${modulePath}\" not allowed in tx.*.ts${instanceofAdvice}`);
       }
     }
 
     if (hasNamespaceImport) {
       const namespaceImportName = clause.match(/\*\s+as\s+([A-Za-z_$][\w$]*)/)?.[1] ?? "";
       if (!isAllowedConstantLikeImportName(namespaceImportName)) {
-        errors.push(`line ${line}: runtime namespace import from \"${modulePath}\" not allowed in tx.*.ts`);
+        errors.push(`line ${line}: runtime namespace import from \"${modulePath}\" not allowed in tx.*.ts${instanceofAdvice}`);
       }
     }
 
@@ -290,7 +308,7 @@ function validateImports(content: string): string[] {
         const importedName = specifier.split(/\s+as\s+/i).at(-1) ?? specifier;
         if (isAllowedConstantLikeImportName(importedName)) continue;
         errors.push(
-          `line ${line}: runtime import \"${importedName.trim()}\" from \"${modulePath}\" not allowed in tx.*.ts`,
+          `line ${line}: runtime import \"${importedName.trim()}\" from \"${modulePath}\" not allowed in tx.*.ts${instanceofAdvice}`,
         );
       }
     }
@@ -503,7 +521,7 @@ function validateTxFunctionParams(content: string): string[] {
   return errors;
 }
 
-function validateTxFileContent(filePath: string, content: string): string[] {
+export function validateTxFileContent(filePath: string, content: string): string[] {
   return [
     ...validateImports(content),
     ...validateExports(content),
@@ -513,11 +531,14 @@ function validateTxFileContent(filePath: string, content: string): string[] {
 }
 
 
-function formatViolations(filePath: string, violations: string[]): string {
+function formatViolations(filePath: string, violations: string[], content: string): string {
+  const instanceofNote = hasInstanceofUsage(content) ? [INSTANCEOF_GUARDS_BLOCK_NOTE] : [];
+
   return [
     `tx-check blocked ${filePath}`,
     "what went wrong:",
     ...violations.map((violation) => `- ${violation}`),
+    ...instanceofNote,
     RUNTIME_GLOBAL_BLOCK_NOTE,
     "rules:",
     ...TX_CHECK_RULES.map((rule) => `- ${rule}`),
@@ -593,7 +614,7 @@ export default function txCheckExtension(pi: ExtensionAPI) {
       return undefined;
     }
 
-    const reason = formatViolations(input.path, violations);
+    const reason = formatViolations(input.path, violations, nextContent);
     if (ctx.hasUI) {
       ctx.ui.notify(`tx-check blocked ${input.path}`, "warning");
     }
