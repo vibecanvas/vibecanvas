@@ -180,7 +180,7 @@ function toElement(render: SceneService, canvasRegistry: Pick<CanvasRegistryServ
   const layer = node.getLayer();
   const layerScaleX = layer?.scaleX() ?? 1;
   const layerScaleY = layer?.scaleY() ?? 1;
-  const parentGroupId = fnGetCanvasParentGroupId({ editor: canvasRegistry, node });
+  const parentGroupId = fnGetCanvasParentGroupId(node);
 
   const crop = structuredClone(node.getAttr(IMAGE_CROP_ATTR) ?? {
     x: 0,
@@ -409,7 +409,7 @@ export function createImagePlugin(): IPlugin<{
           priority: 300,
           onSelect: () => {
             selection.setSelection(activeSelection);
-            txDeleteSelection({ Group: Konva.Group, Shape: Konva.Shape, Layer: Konva.Layer, canvasRegistry, crdt, history, render, renderOrder, selection }, {});
+            txDeleteSelection({ canvasRegistry, crdt, history, render, renderOrder, selection }, {});
           },
         }];
       });

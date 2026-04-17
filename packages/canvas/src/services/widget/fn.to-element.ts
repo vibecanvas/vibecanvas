@@ -23,7 +23,7 @@ export function toElement(args: TArgs) {
     data,
     style: {},
     locked: false,
-    parentGroupId: fnGetCanvasParentGroupId({ node: args.node,  }),
+    parentGroupId: fnGetCanvasParentGroupId(args.node),
     rotation: args.node.rotation(),
     x: args.node.x(),
     y: args.node.y(),

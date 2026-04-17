@@ -107,7 +107,7 @@ export function fxToPositionPatch(portal: TPortalFxToPositionPatch, args: TArgsF
     id: args.node.id(),
     x: worldPosition.x,
     y: worldPosition.y,
-    parentGroupId: fnGetCanvasParentGroupId({ editor: portal.editor, node: args.node }),
+    parentGroupId: fnGetCanvasParentGroupId(args.node),
     updatedAt: portal.now(),
   } satisfies Pick<TElement, "id" | "x" | "y" | "parentGroupId" | "updatedAt">;
 }
@@ -150,7 +150,7 @@ export function fxToTElement(portal: TPortalFxToTElement, args: TArgsFxToTElemen
     bindings: [],
     createdAt: Number(args.node.getAttr(ELEMENT_CREATED_AT_ATTR) ?? now),
     locked: false,
-    parentGroupId: fnGetCanvasParentGroupId({ editor: portal.editor, node: args.node }),
+    parentGroupId: fnGetCanvasParentGroupId(args.node),
     updatedAt: now,
     zIndex: typeof args.node.getAttr("vcZIndex") === "string" ? args.node.getAttr("vcZIndex") : "",
     data: structuredClone(baseData),

@@ -26,7 +26,7 @@ export function fxToElement(portal: TPortalToElement, args: TArgsToElement) {
   const layer = args.node.getLayer();
   const layerScaleX = layer?.scaleX() ?? 1;
   const layerScaleY = layer?.scaleY() ?? 1;
-  const parentGroupId = fnGetCanvasParentGroupId({ editor: portal.editor, node: args.node });
+  const parentGroupId = fnGetCanvasParentGroupId(args.node);
 
   const baseStyle = structuredClone((args.node.getAttr(ELEMENT_STYLE_ATTR) as TElementStyle | undefined) ?? {});
 

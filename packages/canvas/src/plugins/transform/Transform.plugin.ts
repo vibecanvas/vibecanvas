@@ -95,7 +95,7 @@ function normalizeSelectedGroupTransforms(nodes: Konva.Node[]) {
  */
 function refreshSelectedGroups(canvasRegistry: CanvasRegistryService, selection: SelectionService) {
   selection.selection.forEach((node) => {
-    if (fnIsCanvasGroupNode({ editor: canvasRegistry, node })) {
+    if (fnIsCanvasGroupNode(node)) {
       node.fire("transform");
     }
   });

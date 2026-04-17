@@ -85,7 +85,7 @@ function createAttachedTextElement(portal: TPortalAttachedText, shapeNode: Konva
     scaleY: 1,
     bindings: [],
     locked: false,
-    parentGroupId: fnGetCanvasParentGroupId({ editor: portal.canvasRegistry, node: shapeNode }),
+    parentGroupId: fnGetCanvasParentGroupId(shapeNode),
     zIndex: "",
     createdAt: now,
     updatedAt: now,

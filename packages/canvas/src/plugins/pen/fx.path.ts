@@ -58,7 +58,7 @@ export function fxPenPathToElement(portal: TPortalFxPenPathToElement, args: TArg
     absolutePosition: args.node.absolutePosition(),
     parentTransform: args.node.getLayer()?.getAbsoluteTransform() ?? null,
   });
-  const parentGroupId = fnGetCanvasParentGroupId({ editor: portal.editor, node: args.node });
+  const parentGroupId = fnGetCanvasParentGroupId(args.node);
 
   return {
     id: args.node.id(),

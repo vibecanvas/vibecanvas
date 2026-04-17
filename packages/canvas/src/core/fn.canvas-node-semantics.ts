@@ -5,7 +5,7 @@ import { isKonvaGroup } from "./GUARDS";
 
 export type TCanvasSemanticsEditor = {
   toElement?(node: Konva.Node): unknown;
-  toGroup(node: Konva.Node): unknown;s
+  toGroup(node: Konva.Node): unknown;
 };
 
 export type TCanvasNode = Konva.Group | Shape<ShapeConfig>;
@@ -28,15 +28,8 @@ export function fnIsCanvasNode(
   return fnGetCanvasNodeKind(node) !== null;
 }
 
-export type TArgsIsCanvasGroupNode = {
-  editor: TCanvasSemanticsEditor;
-  node: Konva.Node | null | undefined;
-};
-
-export function fnIsCanvasGroupNode(
-  args: TArgsIsCanvasGroupNode,
-): args is TArgsIsCanvasGroupNode & { node: Konva.Group } {
-  return fnGetCanvasNodeKind(args) === "group";
+export function fnIsCanvasGroupNode( node: Konva.Node, ): node is Konva.Group {
+  return fnGetCanvasNodeKind(node) === "group";
 }
 
 export type TArgsIsCanvasElementHostNode = {
@@ -44,21 +37,14 @@ export type TArgsIsCanvasElementHostNode = {
   node: Konva.Node | null | undefined;
 };
 
-export function fnIsCanvasElementHostNode(
-  args: TArgsIsCanvasElementHostNode,
-): args is TArgsIsCanvasElementHostNode & { node: TCanvasNode } {
-  return fnGetCanvasNodeKind(args) === "element";
+export function fnIsCanvasElementHostNode( node: Konva.Node, ): node is TCanvasNode {
+  return fnGetCanvasNodeKind(node) === "element";
 }
 
-export type TArgsGetCanvasParentGroupId = {
-  editor: TCanvasSemanticsEditor;
-  node: Konva.Node | null | undefined;
-};
-
-export function fnGetCanvasParentGroupId(args: TArgsGetCanvasParentGroupId) {
-  const parent = args.node?.getParent();
+export function fnGetCanvasParentGroupId(node: Konva.Node | null | undefined) {
+  const parent = node?.getParent();
   if (!parent)  return null;
-  if (!fnIsCanvasGroupNode({ editor: args.editor, node: parent })) return null;
+  if (!fnIsCanvasGroupNode(parent)) return null;
 
   return parent.id();
 }
@@ -73,7 +59,7 @@ export function fnGetCanvasAncestorGroups(args: TArgsGetCanvasAncestorGroups) {
   let current = args.node?.getParent() ?? null;
 
   while (current) {
-    if (isKonvaGroup(current) && fnIsCanvasGroupNode({ editor: args.editor, node: current })) {
+    if (isKonvaGroup(current) && fnIsCanvasGroupNode(current)) {
       groups.push(current);
     }
 

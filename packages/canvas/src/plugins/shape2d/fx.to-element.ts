@@ -109,7 +109,7 @@ export function fxToShape2dElement(portal: TPortalToShape2dElement, args: TArgsT
     height,
     createdAt,
     updatedAt,
-    parentGroupId: fnGetCanvasParentGroupId({ editor: portal.canvasRegistry, node }),
+    parentGroupId: fnGetCanvasParentGroupId(node),
     zIndex: fnGetNodeZIndex({ node }),
     style: getNodeStyle(node),
   }) satisfies TElement;

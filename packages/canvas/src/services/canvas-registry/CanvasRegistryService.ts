@@ -292,7 +292,7 @@ export class CanvasRegistryService implements IService<TCanvasRegistryServiceHoo
    */
   createDragClone(args: {
     node: Konva.Node;
-    selection: Array<Konva.Group | Konva.Shape>;
+    selection: Konva.Node[]
   }) {
     const definitions = this.getMatchingElementDefinitionsByNode(args.node);
     if (definitions.length === 0) {

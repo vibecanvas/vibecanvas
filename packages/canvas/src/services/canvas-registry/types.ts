@@ -31,14 +31,14 @@ export type TCanvasRegistryMoveArgs = {
   node: Konva.Node;
   element: TElement;
   pointer: { x: number; y: number } | null;
-  selection: Array<Konva.Group | Konva.Shape>;
+  selection: Konva.Node[];
 };
 
 export type TCanvasRegistryRotateArgs = {
   node: Konva.Node;
   element: TElement;
   rotation: number;
-  selection: Array<Konva.Group | Konva.Shape>;
+  selection: Konva.Node[];
 };
 
 export type TCanvasRegistryResizeArgs = {
@@ -46,7 +46,7 @@ export type TCanvasRegistryResizeArgs = {
   element: TElement;
   pointer: { x: number; y: number } | null;
   anchors: TCanvasTransformAnchor[];
-  selection: Array<Konva.Group | Konva.Shape>;
+  selection: Konva.Node[];
 };
 
 export type TCanvasRegistrySelectionStyleSections = {
