@@ -1,4 +1,4 @@
-import type { TElement, TElementData } from '@vibecanvas/service-automerge/types/canvas-doc.types'
+import type { TElement, TElementData, TWidgetData } from '@vibecanvas/service-automerge/types/canvas-doc.types'
 import type { ThemeService } from '@vibecanvas/service-theme'
 import type Konva from 'konva'
 import type { TEditorToolDrawCreateStartDraftArgs, TEditorToolDrawCreateUpdateDraftArgs } from '../editor/EditorService'
@@ -8,6 +8,7 @@ import {
   WIDGET_HOST_CLOSE_BUTTON_ID,
   WIDGET_HOST_DIVIDER_HEIGHT,
   WIDGET_HOST_DIVIDER_ID,
+  WIDGET_HOST_ELEMENT_DATA_ATTR,
   WIDGET_HOST_HEADER_HEIGHT,
   WIDGET_HOST_HEADER_ID,
   WIDGET_HOST_MAXIMIZE_BUTTON_ID,
@@ -53,7 +54,7 @@ type TArgsUpdateHost = TEditorToolDrawCreateUpdateDraftArgs
 
 export function fxUpdateHost(portal: TPortalUpdateHost, args: TArgsUpdateHost) {
   const border = portal.group.findOne(`#${WIDGET_HOST_BORDER_ID}`)
-  const header = portal.group.findOne(`#${WIDGET_HOST_HEADER_ID}`)
+  const header = portal.group.findOne(`#${WIDGET_HOST_HEADER_ID}-group`)
   const body = portal.group.findOne(`#${WIDGET_HOST_BODY_ID}`)
   const divider = portal.group.findOne(`#${WIDGET_HOST_DIVIDER_ID}`)
   const closeButton = portal.group.findOne(`#${WIDGET_HOST_CLOSE_BUTTON_ID}`)
@@ -96,6 +97,14 @@ export function fxUpdateHost(portal: TPortalUpdateHost, args: TArgsUpdateHost) {
   body.width(width)
   body.height(bodyHeight)
   body.fill(hostThemeColors.bodyFill)
+
+  const widgetData = portal.group.getAttr(WIDGET_HOST_ELEMENT_DATA_ATTR) as TWidgetData | undefined
+  if (widgetData?.type === 'widget') {
+    widgetData.w = width
+    widgetData.h = WIDGET_HOST_HEADER_HEIGHT + bodyHeight
+    widgetData.expanded = bodyHeight > 0
+    portal.group.setAttr(WIDGET_HOST_ELEMENT_DATA_ATTR, widgetData)
+  }
 
   if (closeButton instanceof portal.konva.Circle) {
     closeButton.fill(hostThemeColors.closeButtonFill)

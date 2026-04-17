@@ -20,7 +20,7 @@ import {
   WIDGET_HOST_WINDOW_CORNER_RADIUS,
   WIDGET_HOST_WINDOW_STROKE_WIDTH,
 } from './CONSTANTS';
-import { THostThemeColors } from "./types";
+import type { THostThemeColors } from "./types";
 
 
 function createHeader(konva: typeof Konva, colors: THostThemeColors) {
@@ -113,24 +113,47 @@ function createBody(konva: typeof Konva, colors: THostThemeColors) {
 }
 
 export function fnCreateWidgetNode(konva: typeof Konva, colors: THostThemeColors, element: TElement) {
-  if(element.data.type !== 'widget') return null
+  if (element.data.type !== 'widget') return null
+
+  const width = Math.max(WIDGET_HOST_MIN_WIDTH, element.data.w)
+  const height = Math.max(WIDGET_HOST_HEADER_HEIGHT, element.data.h)
+  const bodyHeight = Math.max(0, height - WIDGET_HOST_HEADER_HEIGHT)
+  const dividerWidth = Math.max(0, width - WIDGET_HOST_WINDOW_STROKE_WIDTH * 2)
 
   const group = new konva.Group({
     x: element.x,
     y: element.y,
-    width: WIDGET_HOST_MIN_WIDTH,
-    height: WIDGET_HOST_HEADER_HEIGHT,
+    width,
+    height,
   })
 
   const body = createBody(konva, colors)
-  const header = createHeader(konva, colors)
+  body.width(width)
+  body.height(bodyHeight)
 
+  const header = createHeader(konva, colors)
+  const border = header.findOne(`#${WIDGET_HOST_BORDER_ID}`)
+  const headerBackground = header.findOne(`#${WIDGET_HOST_HEADER_ID}`)
+  const divider = header.findOne(`#${WIDGET_HOST_DIVIDER_ID}`)
+
+  if (border) {
+    border.width(width)
+    border.height(height)
+  }
+
+  if (headerBackground) {
+    headerBackground.width(width)
+    headerBackground.height(WIDGET_HOST_HEADER_HEIGHT)
+  }
+
+  if (divider) {
+    divider.width(dividerWidth)
+  }
 
   group.add(body)
   group.add(header)
-  // --- DRAW END, ATTACH ATTRIBUTES
   group.setAttr(WIDGET_HOST_ELEMENT_DATA_ATTR, element.data)
-  group.setAttr(WIDGET_HOST_ELEMENT_STYLE_ATTR, {}) // style is fixed. no need for customization
+  group.setAttr(WIDGET_HOST_ELEMENT_STYLE_ATTR, {})
 
   return group
 }
