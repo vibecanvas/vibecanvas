@@ -23,6 +23,8 @@ const FX_FILE_RE = /^fx\..+\.ts$/;
 const FX_TEST_FILE_RE = /^fx\..+\.test\.ts$/;
 const ALLOWED_RUNTIME_IMPORT_RE = /^(fn|fx)\..+$/;
 const ALLOWED_CONSTANT_LIKE_IMPORT_NAME_RE = /^[A-Z0-9_]+$/;
+const TYPE_IMPORT_INLINE_ADVICE =
+  " If this is a type or interface, you probably want `import type`.";
 const INSTANCEOF_GUARDS_INLINE_ADVICE =
   " Use `GUARDS.ts` when this runtime import is only needed for `instanceof` or identity checks.";
 const INSTANCEOF_GUARDS_BLOCK_NOTE = [
@@ -324,14 +326,14 @@ function validateImports(content: string): string[] {
     if (hasDefaultImport) {
       const defaultImportName = beforeNamed.split(/\s+/).find(Boolean) ?? "";
       if (!isAllowedConstantLikeImportName(defaultImportName)) {
-        errors.push(`line ${line}: runtime default import from \"${modulePath}\" not allowed in fx.*.ts.${advice}`);
+        errors.push(`line ${line}: runtime default import from \"${modulePath}\" not allowed in fx.*.ts.${TYPE_IMPORT_INLINE_ADVICE}${advice}`);
       }
     }
 
     if (hasNamespaceImport) {
       const namespaceImportName = clause.match(/\*\s+as\s+([A-Za-z_$][\w$]*)/)?.[1] ?? "";
       if (!isAllowedConstantLikeImportName(namespaceImportName)) {
-        errors.push(`line ${line}: runtime namespace import from \"${modulePath}\" not allowed in fx.*.ts.${advice}`);
+        errors.push(`line ${line}: runtime namespace import from \"${modulePath}\" not allowed in fx.*.ts.${TYPE_IMPORT_INLINE_ADVICE}${advice}`);
       }
     }
 
@@ -341,7 +343,7 @@ function validateImports(content: string): string[] {
         const importedName = specifier.split(/\s+as\s+/i).at(-1) ?? specifier;
         if (isAllowedConstantLikeImportName(importedName)) continue;
         errors.push(
-          `line ${line}: runtime import \"${importedName.trim()}\" from \"${modulePath}\" not allowed in fx.*.ts.${advice}`,
+          `line ${line}: runtime import \"${importedName.trim()}\" from \"${modulePath}\" not allowed in fx.*.ts.${TYPE_IMPORT_INLINE_ADVICE}${advice}`,
         );
       }
     }
