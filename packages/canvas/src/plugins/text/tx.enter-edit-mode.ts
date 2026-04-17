@@ -1,22 +1,22 @@
-import { fxComputeTextHeight } from "./fn.compute-text-height";
-import { fxComputeTextWidth } from "./fx.compute-text-width";
-import { DEFAULT_TEXT_LINE_HEIGHT } from "./CONSTANTS";
-import { fxToElement } from "./fx.to-element";
-import { txUpdateTextNodeFromElement } from "./tx.update-text-node-from-element";
-import { fxMeasureTextLayout } from "../../core/fx.pretext";
-import { fnIsShape2dElementType } from "../../core/fn.shape2d";
-import type { TElement, TTextData } from "@vibecanvas/service-automerge/types/canvas-doc.types";
-import { fnGetShapeTextHostBounds } from "../shape2d/fn.text-host-bounds";
 import type { layoutWithLines, prepareWithSegments } from "@chenglou/pretext";
+import type { TElement, TTextData } from "@vibecanvas/service-automerge/types/canvas-doc.types";
 import type { ThemeService } from "@vibecanvas/service-theme";
+import type Konva from "konva";
+import { fnIsShape2dElementType } from "../../core/fn.shape2d";
+import { fxMeasureTextLayout } from "../../core/fx.pretext";
 import type { CameraService } from "../../services/camera/CameraService";
+import type { CanvasRegistryService } from "../../services/canvas-registry/CanvasRegistryService";
 import type { CrdtService } from "../../services/crdt/CrdtService";
 import type { EditorService } from "../../services/editor/EditorService";
 import type { HistoryService } from "../../services/history/HistoryService";
 import type { SceneService } from "../../services/scene/SceneService";
 import type { SelectionService } from "../../services/selection/SelectionService";
-import type { CanvasRegistryService } from "../../services/canvas-registry/CanvasRegistryService";
-import type Konva from "konva";
+import { fnGetShapeTextHostBounds } from "../shape2d/fn.text-host-bounds";
+import { DEFAULT_TEXT_LINE_HEIGHT } from "./CONSTANTS";
+import { fnComputeTextHeight } from "./fn.compute-text-height";
+import { fxComputeTextWidth } from "./fx.compute-text-width";
+import { fxToElement } from "./fx.to-element";
+import { txUpdateTextNodeFromElement } from "./tx.update-text-node-from-element";
 
 export type TPortalEnterEditMode = {
   Konva: typeof Konva;
@@ -410,7 +410,7 @@ export function txEnterEditMode(portal: TPortalEnterEditMode, args: TArgsEnterEd
         width: worldWidth,
       });
       const computedWidth = fxComputeTextWidth({ document: portal.document }, { node: args.node, text: textToSet });
-      const computedHeight = fxComputeTextHeight({
+      const computedHeight = fnComputeTextHeight({
         fontSize: args.node.fontSize(),
         lineHeight: DEFAULT_TEXT_LINE_HEIGHT,
         padding: args.node.padding(),

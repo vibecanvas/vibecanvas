@@ -47,7 +47,7 @@ function createGroupNode(render: SceneService, group: TGroup) {
 
 function sortChildrenByPersistedOrder(render: SceneService, parent: Konva.Layer | Konva.Group) {
   const children = parent.getChildren().filter((node) => {
-    return fnIsSceneNode({ Group: Konva.Group, Shape: Konva.Shape, render, node });
+    return fnIsSceneNode({ render, node });
   });
 
   children
@@ -196,7 +196,7 @@ export function createGroupPlugin(): IPlugin<{
 
       contextMenu.registerProvider("group", ({ scope, activeSelection }) => {
         const selectedGroups = [...activeSelection].reverse().filter((node): node is Konva.Group => {
-          return fnIsCanvasGroupNode({ editor: canvasRegistry, node });
+          return fnIsCanvasGroupNode(node);
         });
 
         const actions = [] as Array<{

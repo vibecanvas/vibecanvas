@@ -36,7 +36,10 @@ function filterSelection(
 ): TContextMenuNode[] {
   void scene;
 
-  let subSelection = selection.find((node) => fnIsCanvasGroupNode({ editor: canvasRegistry, node: node.getParent() }));
+  let subSelection = selection.find((node) => {
+    const parent = node.getParent();
+    return parent && fnIsCanvasGroupNode(parent);
+  });
   if (!subSelection) {
     return selection.filter((node): node is TContextMenuNode => {
       return fnIsCanvasNode(node) && node.getStage() !== null;
@@ -111,7 +114,10 @@ function resolveSelection(
   const path = getSelectionPath(scene, canvasRegistry, target);
   const topLevelNode = path[0];
   const isFlatMultiSelect = currentSelection.length > 1
-    && !currentSelection.some((node) => fnIsCanvasGroupNode({ editor: canvasRegistry, node: node.getParent() }));
+    && !currentSelection.some((node) => {
+      const parent = node.getParent();
+      return parent && fnIsCanvasGroupNode(parent);
+    });
 
   if (isFlatMultiSelect && topLevelNode && currentSelection.includes(topLevelNode)) {
     return currentSelection;

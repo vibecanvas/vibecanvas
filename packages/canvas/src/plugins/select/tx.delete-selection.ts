@@ -98,7 +98,7 @@ function sortSceneTopDown(portal: TPortalDeleteSelection, parent: Group | Layer)
   portal.renderOrder.sortChildren(parent);
 
   parent.getChildren().forEach((child: Node) => {
-    if (!fnIsCanvasGroupNode({ editor: portal.canvasRegistry, node: child })) {
+    if (!fnIsCanvasGroupNode(child)) {
       return;
     }
 
@@ -123,9 +123,9 @@ function collectDeleteSnapshot(portal: TPortalDeleteSelection, roots: TSceneNode
     visitedNodeIds.add(node.id());
     visitedNodes.push(node);
 
-    const kind = fnGetCanvasNodeKind({ editor: portal.canvasRegistry, node });
+    const kind = fnGetCanvasNodeKind(node);
     if (kind === "group") {
-      if (!fnIsCanvasGroupNode({ editor: portal.canvasRegistry, node })) {
+      if (!fnIsCanvasGroupNode(node)) {
         didFail = true;
         return;
       }
@@ -190,7 +190,7 @@ function collectDeleteSnapshot(portal: TPortalDeleteSelection, roots: TSceneNode
           return false;
         }
 
-        if (!fnIsCanvasGroupNode({ editor: portal.canvasRegistry, node: candidate })) {
+        if (!fnIsCanvasGroupNode(candidate)) {
           return false;
         }
 
@@ -220,8 +220,9 @@ function restoreDeleteSnapshot(portal: TPortalDeleteSelection, snapshot: TDelete
 
       if (
         group.parentGroupId !== null
+        && parentNode
         && !createdGroups.has(group.parentGroupId)
-        && !fnIsCanvasGroupNode({ editor: portal.canvasRegistry, node: parentNode })
+        && !fnIsCanvasGroupNode(parentNode)
       ) {
         continue;
       }

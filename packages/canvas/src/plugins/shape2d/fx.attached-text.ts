@@ -117,7 +117,7 @@ function fxCreateAttachedTextNode(portal: TPortalAttachedText, args: TArgsGetAtt
 
   fxSyncAttachedTextNodeToShape(portal, { shapeNode: args.shapeNode, textNode: node });
   const parentNode = args.shapeNode.getParent();
-  const parent = parentNode instanceof portal.Konva.Layer || fnIsCanvasGroupNode({ editor: portal.canvasRegistry, node: parentNode })
+  const parent = parentNode && fnIsCanvasGroupNode(parentNode)
     ? parentNode
     : portal.scene.staticForegroundLayer;
   if (!(parent instanceof portal.Konva.Layer) && !(parent instanceof portal.Konva.Group)) {

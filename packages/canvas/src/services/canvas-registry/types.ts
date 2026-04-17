@@ -88,19 +88,19 @@ export type TCanvasRegistrySelectionStyleArgs = {
 
 type TCanvasRegistryToElement = (node: Konva.Node) => TElement | null;
 type TCanvasRegistryAfterToElement = (args: { node: Konva.Node; element: TElement }) => TElement | void;
-type TCanvasRegistryCreateNode = (element: TElement) => Konva.Group | Konva.Shape | null;
-type TCanvasRegistryAfterCreateNode = (args: { element: TElement; node: Konva.Group | Konva.Shape }) => void;
+type TCanvasRegistryCreateNode = (element: TElement) => Konva.Node | null;
+type TCanvasRegistryAfterCreateNode = (args: { element: TElement; node: Konva.Node }) => void;
 type TCanvasRegistryAttachListeners = (node: Konva.Node) => boolean | void;
 type TCanvasRegistryUpdateElement = (element: TElement) => boolean | void;
 type TCanvasRegistryCreateDragClone = (args: {
   node: Konva.Node;
-  selection: Array<Konva.Group | Konva.Shape>;
+  selection: Array<Konva.Node>;
 }) => boolean | void;
 type TCanvasRegistryGetSelectionStyleMenu = (args: TCanvasRegistrySelectionStyleArgs) => TCanvasRegistrySelectionStyleConfig | null | void;
 type TCanvasRegistryGetTransformOptions = (args: {
   node: Konva.Node;
   element: TElement;
-  selection: Array<Konva.Group | Konva.Shape>;
+  selection: Array<Konva.Node>;
 }) => TCanvasRegistryTransformOptions | void;
 type TCanvasRegistryMoveHook = (args: TCanvasRegistryMoveArgs) => TCanvasRegistryTransformHookResult | void;
 type TCanvasRegistryRotateHook = (args: TCanvasRegistryRotateArgs) => TCanvasRegistryTransformHookResult | void;

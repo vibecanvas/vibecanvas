@@ -50,22 +50,24 @@ function applyElement(portal: TPortalSetupShape2dNode, element: TElement) {
     return;
   }
 
-  fnGetCanvasAncestorGroups({
-    editor: portal.canvasRegistry,
-    node: findSceneNodeById(portal, element.id),
-  }).forEach((group) => {
+  const node = findSceneNodeById(portal, element.id);
+  if (!node) {
+    return;
+  }
+
+  fnGetCanvasAncestorGroups(node).forEach((group) => {
     group.fire("transform");
   });
 }
 
 function serializeNodeElements(portal: TPortalSetupShape2dNode, node: Konva.Node) {
-  const kind = fnGetCanvasNodeKind({ editor: portal.canvasRegistry, node });
+  const kind = fnGetCanvasNodeKind(node);
   if (kind === "element") {
     const element = portal.canvasRegistry.toElement(node);
     return element ? [structuredClone(element)] : [];
   }
 
-  if (kind === "group" && fnIsCanvasGroupNode({ editor: portal.canvasRegistry, node })) {
+  if (kind === "group" && fnIsCanvasGroupNode(node)) {
     return fnSerializeSubtreeElements({
       canvasRegistry: portal.canvasRegistry,
       Shape: portal.Shape,

@@ -79,8 +79,8 @@ function registerSubtree(
     }
 
     if (
-      fnIsCanvasGroupNode({ editor: portal.canvasRegistry, node: sourceChild })
-      && fnIsCanvasGroupNode({ editor: portal.canvasRegistry, node: cloneChild })
+      fnIsCanvasGroupNode(sourceChild)
+      && fnIsCanvasGroupNode(cloneChild)
     ) {
       registerSubtree(portal, {
         sourceGroup: sourceChild as Konva.Group,
@@ -91,7 +91,7 @@ function registerSubtree(
       return;
     }
 
-    if (fnGetCanvasNodeKind({ editor: portal.canvasRegistry, node: cloneChild }) === null) {
+    if (fnGetCanvasNodeKind(cloneChild) === null) {
       return;
     }
 

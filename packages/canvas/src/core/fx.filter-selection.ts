@@ -21,7 +21,8 @@ export function fxFilterSelection(
       return node.getParent() instanceof portal.Konva.Group;
     }
 
-    return fnIsCanvasGroupNode({ editor: args.editor, node: node.getParent() });
+    const parent = node.getParent();
+    return parent && fnIsCanvasGroupNode(parent);
   });
 
   if (!subSelection) {

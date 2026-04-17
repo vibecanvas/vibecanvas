@@ -19,7 +19,7 @@ export type TPortalSetupImageListeners = {
   hooks: IRuntimeHooks;
   startDragClone: (args: {
     node: Konva.Node;
-    selection: Array<Konva.Group | Konva.Shape>;
+    selection: Konva.Node[];
   }) => boolean;
   applyElement: (element: TElement) => void;
   updateImageNodeFromElementPortal: TPortalUpdateImageNodeFromElement;
@@ -48,10 +48,7 @@ export function txSetupImageListeners(
       element,
     });
 
-    fnGetCanvasAncestorGroups({
-      editor: portal.canvasRegistry,
-      node: args.node,
-    }).forEach((group) => {
+    fnGetCanvasAncestorGroups(args.node).forEach((group) => {
       group.fire("transform");
     });
   };

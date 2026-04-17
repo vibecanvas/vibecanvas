@@ -311,7 +311,11 @@ export function createImagePlugin(): IPlugin<{
         const node = render.staticForegroundLayer.findOne((candidate: Konva.Node) => {
           return candidate.id() === element.id;
         });
-        fnGetCanvasAncestorGroups({ editor: canvasRegistry, node }).forEach((group) => {
+        if (!node) {
+          return;
+        }
+
+        fnGetCanvasAncestorGroups(node).forEach((group) => {
           group.fire("transform");
         });
         render.staticForegroundLayer.batchDraw();

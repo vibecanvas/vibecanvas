@@ -128,7 +128,7 @@ function loadElementsTopDown(args: {
   const semantics = createCanvasSemantics(args.canvasRegistry);
   const groupsById = new Map(
     args.scene.staticForegroundLayer.find((candidate: Konva.Node) => {
-      return fnIsCanvasGroupNode({ editor: semantics, node: candidate });
+      return fnIsCanvasGroupNode(candidate);
     }).map((candidate) => [candidate.id(), candidate as Konva.Group]),
   );
   const invalidElementIds: string[] = [];
@@ -151,7 +151,9 @@ function loadElementsTopDown(args: {
       return;
     }
 
-    parent.add(node);
+    if (isKonvaGroup(node) || isKonvaShape(node)) {
+      parent.add(node);
+    }
   });
 
   return invalidElementIds;
@@ -171,7 +173,7 @@ function sortSceneTopDown(scene: SceneService, canvasRegistry: CanvasRegistrySer
     })
     .forEach((child, index) => {
       child.zIndex(index);
-      if (fnIsCanvasGroupNode({ editor: semantics, node: child })) {
+      if (fnIsCanvasGroupNode(child)) {
         sortSceneTopDown(scene, canvasRegistry, child as Konva.Group);
       }
     });
@@ -193,7 +195,7 @@ function keepAttachedTextAboveHosts(scene: SceneService, canvasRegistry: CanvasR
   const detached: TSceneNode[] = [];
 
   orderedChildren.forEach((child) => {
-    if (fnIsCanvasGroupNode({ editor: semantics, node: child })) {
+    if (fnIsCanvasGroupNode(child)) {
       keepAttachedTextAboveHosts(scene, canvasRegistry, child as Konva.Group);
       detached.push(child);
       return;
@@ -213,7 +215,7 @@ function keepAttachedTextAboveHosts(scene: SceneService, canvasRegistry: CanvasR
   const nextChildren: TSceneNode[] = [];
   detached.forEach((child) => {
     nextChildren.push(child);
-    if (fnIsCanvasGroupNode({ editor: semantics, node: child })) {
+    if (fnIsCanvasGroupNode(child)) {
       return;
     }
 

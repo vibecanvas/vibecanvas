@@ -66,7 +66,10 @@ export function txHandleElementPointerDown(
 
   const topLevelNode = path[0];
   const isFlatMultiSelect = portal.selection.selection.length > 1
-    && !portal.selection.selection.some((node) => fnIsCanvasGroupNode({ editor: portal.editor, node: node.getParent() }));
+    && !portal.selection.selection.some((node) => {
+      const parent = node.getParent()
+      return parent && fnIsCanvasGroupNode(parent)
+    });
 
   if (isFlatMultiSelect && topLevelNode && portal.selection.selection.includes(topLevelNode)) {
     applyFocusedNode(portal, { node: topLevelNode });

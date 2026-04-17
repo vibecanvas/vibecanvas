@@ -26,7 +26,7 @@ export function txSyncGroupBoundaries(
   const markedToRemove = new Set(portal.boundaries.keys());
 
   portal.selection.selection
-    .filter((node): node is Konva.Group => fnIsCanvasGroupNode({ editor: portal.canvasRegistry, node }))
+    .filter((node): node is Konva.Group => fnIsCanvasGroupNode(node))
     .forEach((group) => {
       const boundary = portal.boundaries.get(group.id()) ?? portal.createGroupBoundary(group);
       boundary.syncTheme();

@@ -28,14 +28,9 @@ export function fnIsCanvasNode(
   return fnGetCanvasNodeKind(node) !== null;
 }
 
-export function fnIsCanvasGroupNode( node: Konva.Node, ): node is Konva.Group {
+export function fnIsCanvasGroupNode( node: Konva.Node ): node is Konva.Group {
   return fnGetCanvasNodeKind(node) === "group";
 }
-
-export type TArgsIsCanvasElementHostNode = {
-  editor: TCanvasSemanticsEditor;
-  node: Konva.Node | null | undefined;
-};
 
 export function fnIsCanvasElementHostNode( node: Konva.Node, ): node is TCanvasNode {
   return fnGetCanvasNodeKind(node) === "element";
@@ -49,14 +44,9 @@ export function fnGetCanvasParentGroupId(node: Konva.Node | null | undefined) {
   return parent.id();
 }
 
-export type TArgsGetCanvasAncestorGroups = {
-  editor: TCanvasSemanticsEditor;
-  node: Konva.Node | null | undefined;
-};
-
-export function fnGetCanvasAncestorGroups(args: TArgsGetCanvasAncestorGroups) {
+export function fnGetCanvasAncestorGroups(node: Konva.Node) {
   const groups: Konva.Group[] = [];
-  let current = args.node?.getParent() ?? null;
+  let current = node.getParent() ?? null;
 
   while (current) {
     if (isKonvaGroup(current) && fnIsCanvasGroupNode(current)) {

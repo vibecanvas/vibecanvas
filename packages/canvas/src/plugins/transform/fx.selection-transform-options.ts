@@ -34,7 +34,7 @@ type TArgsFxGetSelectionTransformOptions = {
 
 export function fxGetSelectionTransformOptions(portal: TPortalFxGetSelectionTransformOptions, args: TArgsFxGetSelectionTransformOptions) {
   const isSingleGroupSelection = args.selection.length === 1
-    && fnIsCanvasGroupNode({ editor: portal.canvasRegistry, node: args.selection[0] });
+    && fnIsCanvasGroupNode(args.selection[0]);
   const isMultiSelection = args.selection.length > 1;
   const hasTextOnly = args.selection.length > 0 && args.selection.every((node) => node instanceof portal.Konva.Text);
   const hasShape1dOnly = args.selection.length > 0 && args.selection.every((node) => fxIsShape1dNode({ Shape: portal.Konva.Shape }, { node }));
