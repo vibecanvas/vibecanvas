@@ -32,12 +32,12 @@ function refreshCloneSubtree(
   clone.setAttr("vcGroupNodeSetup", false);
 
   clone.getChildren().forEach((node) => {
-    if (fnIsCanvasGroupNode({ editor: portal.canvasRegistry, node })) {
+    if (fnIsCanvasGroupNode(node)) {
       refreshCloneSubtree(portal, node as Konva.Group);
       return;
     }
 
-    const kind = fnGetCanvasNodeKind({ editor: portal.canvasRegistry, node });
+    const kind = fnGetCanvasNodeKind(node);
     if (kind !== null) {
       node.id(portal.createId());
     }

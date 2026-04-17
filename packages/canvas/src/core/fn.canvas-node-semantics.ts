@@ -5,49 +5,27 @@ import { isKonvaGroup } from "./GUARDS";
 
 export type TCanvasSemanticsEditor = {
   toElement?(node: Konva.Node): unknown;
-  toGroup(node: Konva.Node): unknown;
+  toGroup(node: Konva.Node): unknown;s
 };
 
 export type TCanvasNode = Konva.Group | Shape<ShapeConfig>;
 export type TCanvasNodeKind = "group" | "element";
 
-export type TArgsGetCanvasNodeKind = {
-  editor: TCanvasSemanticsEditor;
-  node: Konva.Node | null | undefined;
-};
-// TODO: remove editor dependency
-export function fnGetCanvasNodeKind(args: TArgsGetCanvasNodeKind): TCanvasNodeKind | null {
-  if (!args.node) {
+export function fnGetCanvasNodeKind(node: Konva.Node): TCanvasNodeKind | null {
+  if (!node) {
     return null;
   }
-  const kind = args.node.getAttr(VC_NODE_KIND_ATTR);
+  const kind = node.getAttr(VC_NODE_KIND_ATTR);
   if (!kind) {
     return null;
   }
-  if (kind) {
-    return kind as TCanvasNodeKind;
-  }
-
-  if (args.editor.toGroup(args.node)) {
-    return "group";
-  }
-
-  if (args.editor.toElement?.(args.node)) {
-    return "element";
-  }
-
-  return null;
+  return kind as TCanvasNodeKind;
 }
 
-export type TArgsIsCanvasNode = {
-  editor: TCanvasSemanticsEditor;
-  node: Konva.Node | null | undefined;
-};
-
 export function fnIsCanvasNode(
-  args: TArgsIsCanvasNode,
-): args is TArgsIsCanvasNode & { node: TCanvasNode } {
-  return fnGetCanvasNodeKind(args) !== null;
+  node: Konva.Node,
+): node is TCanvasNode {
+  return fnGetCanvasNodeKind(node) !== null;
 }
 
 export type TArgsIsCanvasGroupNode = {

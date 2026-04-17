@@ -2,8 +2,8 @@ import type { Group } from "konva/lib/Group";
 import type { Node } from "konva/lib/Node";
 import type { Shape, ShapeConfig } from "konva/lib/Shape";
 import type { TCanvasSemanticsEditor } from "../../core/fn.canvas-node-semantics";
-import type { SceneService } from "../../services/scene/SceneService";
 import { fnIsCanvasNode } from "../../core/fn.canvas-node-semantics";
+import type { SceneService } from "../../services/scene/SceneService";
 
 export type TArgsGetSelectionPath = {
   render: SceneService;
@@ -16,7 +16,7 @@ export function fnGetSelectionPath(args: TArgsGetSelectionPath) {
   let current: Node | null = args.node;
 
   while (current && current !== args.render.staticForegroundLayer) {
-    if (fnIsCanvasNode({ editor: args.editor, node: current })) {
+    if (fnIsCanvasNode(current)) {
       path.push(current as Group | Shape<ShapeConfig>);
     }
 
