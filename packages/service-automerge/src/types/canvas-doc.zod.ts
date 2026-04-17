@@ -118,8 +118,9 @@ export const zWidgetData = z.object({
   kind: z.string(),
   w: z.number(),
   h: z.number(),
+  expanded: z.boolean(),
   window: z.enum(['contained', 'minimized', 'fullscreen']),
-  payload: z.any()
+  payload: z.record(z.string(), z.any())
 });
 
 /**
