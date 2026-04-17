@@ -209,6 +209,7 @@ export class EditorService implements IService<TEditorServiceHooks>, IStartableS
   }
 
   private clearPreviewState() {
+    this.previewNode?.destroy()
     this.previewOrigin = null;
     this.previewNode = null;
   }
@@ -225,22 +226,21 @@ export class EditorService implements IService<TEditorServiceHooks>, IStartableS
     }
 
     const previewNode = this.previewNode;
+    previewNode.id(crypto.randomUUID())
     const element = this.canvasRegistry.toElement(previewNode);
     if (!element) {
       this.abortPreview();
       return;
     }
-    element.id = crypto.randomUUID()
-    previewNode.moveTo(this.sceneService.staticForegroundLayer);
-    this.canvasRegistry.attachListeners(previewNode);
+    const newNode: Konva.Node = previewNode.clone()
+    newNode.moveTo(this.sceneService.staticForegroundLayer)
+    this.canvasRegistry.attachListeners(newNode);
     const builder = this.crdt.build();
     builder.patchElement(element.id, element);
     builder.commit();
-    this.selection.setSelection([previewNode]);
-    this.selection.setFocusedNode(previewNode);
+    this.selection.setSelection([newNode]);
+    this.selection.setFocusedNode(newNode);
     this.clearPreviewState();
-    this.sceneService.dynamicLayer.batchDraw();
-    this.sceneService.staticForegroundLayer.batchDraw();
   }
 
   /**
