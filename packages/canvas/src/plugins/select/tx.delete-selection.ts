@@ -15,7 +15,7 @@ export type TDeleteSelectionCanvasRegistry = {
   toElement(node: Node): TElement | null;
   toGroup(node: Node): TGroup | null;
   createNodeFromGroup(group: TGroup): Group | null;
-  createNodeFromElement(element: TElement): Group | Shape<ShapeConfig> | null;
+  createNodeFromElement(element: TElement): Node | null;
 };
 
 export type TPortalDeleteSelection = {
@@ -259,7 +259,9 @@ function restoreDeleteSnapshot(portal: TPortalDeleteSelection, snapshot: TDelete
       return;
     }
 
-    parent.add(node);
+    if (isKonvaGroup(node) || isKonvaShape(node)) {
+      parent.add(node);
+    }
   });
 
   const builder = portal.crdt.build();
