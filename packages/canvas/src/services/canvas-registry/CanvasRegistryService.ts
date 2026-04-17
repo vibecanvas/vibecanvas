@@ -5,6 +5,8 @@ import { SyncHook } from "@vibecanvas/tapable";
 import type Konva from "konva";
 import { fnMergeSelectionStyleMenuConfigs } from "./fn-merge-selection-style-menu-configs";
 import { fnSortByPriority } from "./fn.sort-by-priority";
+import { VC_NODE_KIND_ATTR } from "../../core/CONSTANTS";
+import type { TCanvasNodeKind } from "../../core/fn.canvas-node-semantics";
 import type {
   TCanvasNodeType, TCanvasRegistryElementDefinition, TCanvasRegistryGroupDefinition,
   TCanvasRegistryServiceHooks, TCanvasRegistryTransformOptions
@@ -142,12 +144,13 @@ export class CanvasRegistryService implements IService<TCanvasRegistryServiceHoo
       return null;
     }
 
-    return definition.toGroup(node);
+    return definition.toGroup(node)
   }
 
   /**
    * Resolves the persisted type for one runtime node.
    * Returns "group" for group nodes, otherwise returns element.data.type.
+   * @deprecated use fnGetCanvasNodeKind
    */
   getNodeType(node: Konva.Node): TCanvasNodeType | null {
     if (this.toGroup(node)) {
@@ -233,6 +236,7 @@ export class CanvasRegistryService implements IService<TCanvasRegistryServiceHoo
       definition.attachListeners?.(node);
     }
 
+    node.setAttr(VC_NODE_KIND_ATTR, 'element' as TCanvasNodeKind);
     return node;
   }
 
@@ -248,6 +252,7 @@ export class CanvasRegistryService implements IService<TCanvasRegistryServiceHoo
       }
 
       definition.attachListeners?.(node);
+      node.setAttr(VC_NODE_KIND_ATTR, 'group' as TCanvasNodeKind);
       return node;
     }
 

@@ -8,3 +8,4 @@ export const SUPPORTED_IMAGE_FORMATS = new Set<TImageUploadFormat>([
 ]);
 
 export const VC_Z_INDEX_ATTR = "vcZIndex";
+export const VC_NODE_KIND_ATTR = "vcNodeKind";

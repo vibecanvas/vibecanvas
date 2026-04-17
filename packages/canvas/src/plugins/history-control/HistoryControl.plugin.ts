@@ -1,6 +1,6 @@
 import type { IPlugin } from "@vibecanvas/runtime";
 import type { HistoryService } from "../../services/history/HistoryService";
-import type { IRuntimeHooks } from "../../runtime";
+import type { IRuntimeHooks } from "../../types";
 
 /**
  * Handles keyboard shortcuts for undo and redo.

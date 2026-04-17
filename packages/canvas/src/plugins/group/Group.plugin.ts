@@ -15,7 +15,7 @@ import type { RenderOrderService } from "../../services/render-order/RenderOrder
 import type { SceneService } from "../../services/scene/SceneService";
 import type { SelectionService } from "../../services/selection/SelectionService";
 import { CanvasMode } from "../../services/selection/CONSTANTS";
-import type { IRuntimeHooks } from "../../runtime";
+import type { IRuntimeHooks } from "../../types";
 import { fnIsCanvasGroupNode } from "../../core/fn.canvas-node-semantics";
 import { txCreateGroupCloneDrag } from "./tx.create-group-clone-drag";
 import { fnIsSceneNode } from "./fn.scene-node";

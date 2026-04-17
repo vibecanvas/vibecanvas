@@ -7,7 +7,7 @@ import type { HistoryService } from "../../services/history/HistoryService";
 import type { LoggingService } from "../../services/logging/LoggingService";
 import type { SceneService } from "../../services/scene/SceneService";
 import type { SelectionService } from "../../services/selection/SelectionService";
-import type { IRuntimeHooks, TElementPointerEvent } from "../../runtime";
+import type { IRuntimeHooks, TElementPointerEvent } from "../../types";
 import { fnSerializeSubtreeElements } from "./fn.serialize-subtree-elements";
 
 type TGroupDragMetrics = {
