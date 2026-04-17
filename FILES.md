@@ -24,9 +24,15 @@ Legend
  - 🟡 minor
 
 
+## root
+| status | human comment | filename | oneliner when to use | filepath |
+|---|---|---|---|---|
+| 🤖 |  | package.json | Use this when adding or updating root workspace scripts like the functional-core lint command alias. | `package.json` |
+
 ## packages/canvas
 | status | human comment | filename | oneliner when to use | filepath |
 |---|---|---|---|---|
+| ❓ |  | GUARDS.ts |  | `packages/canvas/src/core/GUARDS.ts` |
 | ❓ |  | Canvas.tsx | Automerge-backed canvas runtime mount, loading, teardown orchestration | `packages/canvas/src/components/Canvas.tsx` |
 | ❓ |  | index.css | Canvas right-click menu popover styling and item states | `packages/canvas/src/components/CanvasContextMenu/index.css` |
 | ❓ |  | index.tsx | Right-click canvas action menu at cursor position | `packages/canvas/src/components/CanvasContextMenu/index.tsx` |
@@ -245,3 +251,338 @@ Legend
 | ❓ |  | blocked-tool-log.test.ts | Use this when verifying the blocked-tool logging helper writes JSONL entries correctly. | `.pi/extensions/functional-core/tests/blocked-tool-log.test.ts` |
 | ❓ |  | edit-preview.test.ts | Use this when verifying edit previews apply ordered replacements the same way the extension expects. | `.pi/extensions/functional-core/tests/edit-preview.test.ts` |
 | ❓ |  | runtime-global-usage.test.ts | Use this when verifying the runtime-global checker allows injected access and blocks direct globals. | `.pi/extensions/functional-core/tests/runtime-global-usage.test.ts` |
+
+## scripts
+| status | human comment | filename | oneliner when to use | filepath |
+|---|---|---|---|---|
+| 🤖 |  | functional-core-lint.ts | Use this when linting repo fn.*, fx.*, and tx.* files from the CLI with optional repo-relative subpaths and grouped error output. | `scripts/functional-core-lint.ts` |
+| 🤖 |  | functional-core-lint.test.ts | Use this when verifying the functional-core lint script parses args, ignores skipped directories, and formats grouped reports. | `scripts/functional-core-lint.test.ts` |
+
+## apps/cli
+| status | human comment | filename | oneliner when to use | filepath |
+|---|---|---|---|---|
+| ❓ |  | build-config.ts |  | `apps/cli/src/build-config.ts` |
+| ❓ |  | config.ts |  | `apps/cli/src/config.ts` |
+| ❓ |  | hooks.ts |  | `apps/cli/src/hooks.ts` |
+| ❓ |  | main.ts |  | `apps/cli/src/main.ts` |
+| ❓ |  | parse-argv.ts |  | `apps/cli/src/parse-argv.ts` |
+| ❓ |  | AutomergePlugin.ts |  | `apps/cli/src/plugins/automerge/AutomergePlugin.ts` |
+| ❓ |  | CliPlugin.ts |  | `apps/cli/src/plugins/cli/CliPlugin.ts` |
+| ❓ |  | bootstrap.ts |  | `apps/cli/src/plugins/cli/bootstrap.ts` |
+| ❓ |  | canvas-command.examples.ts |  | `apps/cli/src/plugins/cli/canvas-command.examples.ts` |
+| ❓ |  | cmd.canvas.add.ts |  | `apps/cli/src/plugins/cli/cmds/cmd.canvas.add.ts` |
+| ❓ |  | cmd.canvas.delete.ts |  | `apps/cli/src/plugins/cli/cmds/cmd.canvas.delete.ts` |
+| ❓ |  | cmd.canvas.group.ts |  | `apps/cli/src/plugins/cli/cmds/cmd.canvas.group.ts` |
+| ❓ |  | cmd.canvas.list.ts |  | `apps/cli/src/plugins/cli/cmds/cmd.canvas.list.ts` |
+| ❓ |  | cmd.canvas.move.ts |  | `apps/cli/src/plugins/cli/cmds/cmd.canvas.move.ts` |
+| ❓ |  | cmd.canvas.patch.ts |  | `apps/cli/src/plugins/cli/cmds/cmd.canvas.patch.ts` |
+| ❓ |  | cmd.canvas.query.ts |  | `apps/cli/src/plugins/cli/cmds/cmd.canvas.query.ts` |
+| ❓ |  | cmd.canvas.reorder.ts |  | `apps/cli/src/plugins/cli/cmds/cmd.canvas.reorder.ts` |
+| ❓ |  | cmd.canvas.ts |  | `apps/cli/src/plugins/cli/cmds/cmd.canvas.ts` |
+| ❓ |  | cmd.canvas.ungroup.ts |  | `apps/cli/src/plugins/cli/cmds/cmd.canvas.ungroup.ts` |
+| ❓ |  | cmd.upgrade.ts |  | `apps/cli/src/plugins/cli/cmds/cmd.upgrade.ts` |
+| ❓ |  | fn.canvas-subcommand-inputs.ts |  | `apps/cli/src/plugins/cli/cmds/fn.canvas-subcommand-inputs.ts` |
+| ❓ |  | canvas-command.docs.ts |  | `apps/cli/src/plugins/cli/core/canvas-command.docs.ts` |
+| ❓ |  | constants.ts |  | `apps/cli/src/plugins/cli/core/constants.ts` |
+| ❓ |  | fn.build-rpc-link.ts |  | `apps/cli/src/plugins/cli/core/fn.build-rpc-link.ts` |
+| ❓ |  | fn.print-command-result.ts |  | `apps/cli/src/plugins/cli/core/fn.print-command-result.ts` |
+| ❓ |  | fn.resolve-policy.ts |  | `apps/cli/src/plugins/cli/core/fn.resolve-policy.ts` |
+| ❓ |  | fn.should-upgrade.ts |  | `apps/cli/src/plugins/cli/core/fn.should-upgrade.ts` |
+| ❓ |  | fx.canvas.server-discovery.ts |  | `apps/cli/src/plugins/cli/core/fx.canvas.server-discovery.ts` |
+| ❓ |  | fx.dispatch-canvas-command.ts |  | `apps/cli/src/plugins/cli/core/fx.dispatch-canvas-command.ts` |
+| ❓ |  | FilesystemPlugin.ts |  | `apps/cli/src/plugins/filesystem/FilesystemPlugin.ts` |
+| ❓ |  | tx.ensure-local-filesystem-row.ts |  | `apps/cli/src/plugins/filesystem/tx.ensure-local-filesystem-row.ts` |
+| ❓ |  | OrpcPlugin.ts |  | `apps/cli/src/plugins/orpc/OrpcPlugin.ts` |
+| ❓ |  | orpc.base.ts |  | `apps/cli/src/plugins/orpc/orpc.base.ts` |
+| ❓ |  | router.ts |  | `apps/cli/src/plugins/orpc/router.ts` |
+| ❓ |  | PtyPlugin.ts |  | `apps/cli/src/plugins/pty/PtyPlugin.ts` |
+| ❓ |  | ServerPlugin.ts |  | `apps/cli/src/plugins/server/ServerPlugin.ts` |
+| ❓ |  | check-update.ts |  | `apps/cli/src/plugins/server/check-update.ts` |
+| ❓ |  | http.ts |  | `apps/cli/src/plugins/server/http.ts` |
+| ❓ |  | resolve-paths.ts |  | `apps/cli/src/resolve-paths.ts` |
+| ❓ |  | setup-services.ts |  | `apps/cli/src/setup-services.ts` |
+| ❓ |  | setup-signals.ts |  | `apps/cli/src/setup-signals.ts` |
+
+## apps/frontend
+| status | human comment | filename | oneliner when to use | filepath |
+|---|---|---|---|---|
+| ❓ |  | App.module.css |  | `apps/frontend/src/App.module.css` |
+| ❓ |  | App.tsx |  | `apps/frontend/src/App.tsx` |
+| ❓ |  | path-picker-dialog.module.css |  | `apps/frontend/src/components/path-picker-dialog.module.css` |
+| ❓ |  | path-picker-dialog.tsx |  | `apps/frontend/src/components/path-picker-dialog.tsx` |
+| ❓ |  | Toast.module.css |  | `apps/frontend/src/components/ui/Toast.module.css` |
+| ❓ |  | Toast.tsx |  | `apps/frontend/src/components/ui/Toast.tsx` |
+| ❓ |  | scroll-area.module.css |  | `apps/frontend/src/components/ui/scroll-area.module.css` |
+| ❓ |  | scroll-area.tsx |  | `apps/frontend/src/components/ui/scroll-area.tsx` |
+| ❓ |  | CreateCanvasDialog.tsx |  | `apps/frontend/src/feature/sidebar/components/CreateCanvasDialog.tsx` |
+| ❓ |  | DeleteCanvasDialog.tsx |  | `apps/frontend/src/feature/sidebar/components/DeleteCanvasDialog.tsx` |
+| ❓ |  | RenameDialog.tsx |  | `apps/frontend/src/feature/sidebar/components/RenameDialog.tsx` |
+| ❓ |  | Sidebar.module.css |  | `apps/frontend/src/feature/sidebar/components/Sidebar.module.css` |
+| ❓ |  | Sidebar.tsx |  | `apps/frontend/src/feature/sidebar/components/Sidebar.tsx` |
+| ❓ |  | SidebarDialog.module.css |  | `apps/frontend/src/feature/sidebar/components/SidebarDialog.module.css` |
+| ❓ |  | SidebarItem.module.css |  | `apps/frontend/src/feature/sidebar/components/SidebarItem.module.css` |
+| ❓ |  | SidebarItem.tsx |  | `apps/frontend/src/feature/sidebar/components/SidebarItem.tsx` |
+| ❓ |  | index.ts |  | `apps/frontend/src/feature/sidebar/components/index.ts` |
+| ❓ |  | index.ts |  | `apps/frontend/src/feature/sidebar/index.ts` |
+| ❓ |  | index.css |  | `apps/frontend/src/index.css` |
+| ❓ |  | index.tsx |  | `apps/frontend/src/index.tsx` |
+| ❓ |  | canvas.tsx |  | `apps/frontend/src/pages/canvas.tsx` |
+| ❓ |  | welcome.tsx |  | `apps/frontend/src/pages/welcome.tsx` |
+| ❓ |  | automerge.ts |  | `apps/frontend/src/services/automerge.ts` |
+| ❓ |  | orpc-websocket.ts |  | `apps/frontend/src/services/orpc-websocket.ts` |
+| ❓ |  | theme.memory.test.ts |  | `apps/frontend/src/services/theme.memory.test.ts` |
+| ❓ |  | theme.memory.ts |  | `apps/frontend/src/services/theme.memory.ts` |
+| ❓ |  | theme.ts |  | `apps/frontend/src/services/theme.ts` |
+| ❓ |  | store.ts |  | `apps/frontend/src/store.ts` |
+| ❓ |  | route-state.module.css |  | `apps/frontend/src/styles/route-state.module.css` |
+| ❓ |  | backend.types.ts |  | `apps/frontend/src/types/backend.types.ts` |
+| ❓ |  | path-display.ts |  | `apps/frontend/src/utils/path-display.ts` |
+
+## apps/web
+| status | human comment | filename | oneliner when to use | filepath |
+|---|---|---|---|---|
+| ❓ |  | CommandTabs.tsx |  | `apps/web/src/components/CommandTabs.tsx` |
+| ❓ |  | faq.mdx |  | `apps/web/src/content/docs/faq.mdx` |
+| ❓ |  | getting-started.mdx |  | `apps/web/src/content/docs/getting-started.mdx` |
+| ❓ |  | installation.mdx |  | `apps/web/src/content/docs/installation.mdx` |
+| ❓ |  | content.config.ts |  | `apps/web/src/content.config.ts` |
+| ❓ |  | env.d.ts |  | `apps/web/src/env.d.ts` |
+| ❓ |  | BaseLayout.astro |  | `apps/web/src/layouts/BaseLayout.astro` |
+| ❓ |  | DocsLayout.astro |  | `apps/web/src/layouts/DocsLayout.astro` |
+| ❓ |  | [...slug].astro |  | `apps/web/src/pages/docs/[...slug].astro` |
+| ❓ |  | index.astro |  | `apps/web/src/pages/docs/index.astro` |
+| ❓ |  | index.astro |  | `apps/web/src/pages/index.astro` |
+| ❓ |  | global.css |  | `apps/web/src/styles/global.css` |
+
+## packages/api-canvas
+| status | human comment | filename | oneliner when to use | filepath |
+|---|---|---|---|---|
+| ❓ |  | api.create-canvas.ts |  | `packages/api-canvas/src/api.create-canvas.ts` |
+| ❓ |  | api.get-canvas.ts |  | `packages/api-canvas/src/api.get-canvas.ts` |
+| ❓ |  | api.list-canvas.ts |  | `packages/api-canvas/src/api.list-canvas.ts` |
+| ❓ |  | api.remove-canvas.ts |  | `packages/api-canvas/src/api.remove-canvas.ts` |
+| ❓ |  | api.update-canvas.ts |  | `packages/api-canvas/src/api.update-canvas.ts` |
+| ❓ |  | contract.ts |  | `packages/api-canvas/src/contract.ts` |
+| ❓ |  | handlers.ts |  | `packages/api-canvas/src/handlers.ts` |
+| ❓ |  | orpc.ts |  | `packages/api-canvas/src/orpc.ts` |
+| ❓ |  | types.ts |  | `packages/api-canvas/src/types.ts` |
+
+## packages/api-canvas-cmd
+| status | human comment | filename | oneliner when to use | filepath |
+|---|---|---|---|---|
+| ❓ |  | api.cmd.add.ts |  | `packages/api-canvas-cmd/src/api.cmd.add.ts` |
+| ❓ |  | api.cmd.delete.ts |  | `packages/api-canvas-cmd/src/api.cmd.delete.ts` |
+| ❓ |  | api.cmd.group.ts |  | `packages/api-canvas-cmd/src/api.cmd.group.ts` |
+| ❓ |  | api.cmd.list.ts |  | `packages/api-canvas-cmd/src/api.cmd.list.ts` |
+| ❓ |  | api.cmd.move.ts |  | `packages/api-canvas-cmd/src/api.cmd.move.ts` |
+| ❓ |  | api.cmd.patch.ts |  | `packages/api-canvas-cmd/src/api.cmd.patch.ts` |
+| ❓ |  | api.cmd.query.ts |  | `packages/api-canvas-cmd/src/api.cmd.query.ts` |
+| ❓ |  | api.cmd.reorder.ts |  | `packages/api-canvas-cmd/src/api.cmd.reorder.ts` |
+| ❓ |  | api.cmd.ungroup.ts |  | `packages/api-canvas-cmd/src/api.cmd.ungroup.ts` |
+| ❓ |  | cmd.context.ts |  | `packages/api-canvas-cmd/src/cmd.context.ts` |
+| ❓ |  | cmd.error.ts |  | `packages/api-canvas-cmd/src/cmd.error.ts` |
+| ❓ |  | contract.ts |  | `packages/api-canvas-cmd/src/contract.ts` |
+| ❓ |  | handlers.ts |  | `packages/api-canvas-cmd/src/handlers.ts` |
+| ❓ |  | orpc.ts |  | `packages/api-canvas-cmd/src/orpc.ts` |
+| ❓ |  | types.ts |  | `packages/api-canvas-cmd/src/types.ts` |
+
+## packages/api-db
+| status | human comment | filename | oneliner when to use | filepath |
+|---|---|---|---|---|
+| ❓ |  | api.db-events.ts |  | `packages/api-db/src/api.db-events.ts` |
+| ❓ |  | contract.ts |  | `packages/api-db/src/contract.ts` |
+| ❓ |  | handlers.ts |  | `packages/api-db/src/handlers.ts` |
+| ❓ |  | orpc.ts |  | `packages/api-db/src/orpc.ts` |
+| ❓ |  | types.ts |  | `packages/api-db/src/types.ts` |
+
+## packages/api-file
+| status | human comment | filename | oneliner when to use | filepath |
+|---|---|---|---|---|
+| ❓ |  | api.clone-file.ts |  | `packages/api-file/src/api.clone-file.ts` |
+| ❓ |  | api.put-file.ts |  | `packages/api-file/src/api.put-file.ts` |
+| ❓ |  | api.remove-file.ts |  | `packages/api-file/src/api.remove-file.ts` |
+| ❓ |  | contract.ts |  | `packages/api-file/src/contract.ts` |
+| ❓ |  | fn.file-storage.ts |  | `packages/api-file/src/core/fn.file-storage.ts` |
+| ❓ |  | fx.file-tree.ts |  | `packages/api-file/src/core/fx.file-tree.ts` |
+| ❓ |  | handlers.ts |  | `packages/api-file/src/handlers.ts` |
+| ❓ |  | orpc.ts |  | `packages/api-file/src/orpc.ts` |
+| ❓ |  | types.ts |  | `packages/api-file/src/types.ts` |
+
+## packages/api-filesystem
+| status | human comment | filename | oneliner when to use | filepath |
+|---|---|---|---|---|
+| ❓ |  | api.files-filesystem.test.ts |  | `packages/api-filesystem/src/api.files-filesystem.test.ts` |
+| ❓ |  | api.files-filesystem.ts |  | `packages/api-filesystem/src/api.files-filesystem.ts` |
+| ❓ |  | api.home-filesystem.ts |  | `packages/api-filesystem/src/api.home-filesystem.ts` |
+| ❓ |  | api.inspect-filesystem.ts |  | `packages/api-filesystem/src/api.inspect-filesystem.ts` |
+| ❓ |  | api.keepalive-watch-filesystem.ts |  | `packages/api-filesystem/src/api.keepalive-watch-filesystem.ts` |
+| ❓ |  | api.list-filesystem.ts |  | `packages/api-filesystem/src/api.list-filesystem.ts` |
+| ❓ |  | api.list-registered-filesystems.ts |  | `packages/api-filesystem/src/api.list-registered-filesystems.ts` |
+| ❓ |  | api.move-filesystem.ts |  | `packages/api-filesystem/src/api.move-filesystem.ts` |
+| ❓ |  | api.read-filesystem.ts |  | `packages/api-filesystem/src/api.read-filesystem.ts` |
+| ❓ |  | api.unwatch-filesystem.ts |  | `packages/api-filesystem/src/api.unwatch-filesystem.ts` |
+| ❓ |  | api.watch-filesystem.ts |  | `packages/api-filesystem/src/api.watch-filesystem.ts` |
+| ❓ |  | api.write-filesystem.ts |  | `packages/api-filesystem/src/api.write-filesystem.ts` |
+| ❓ |  | contract.ts |  | `packages/api-filesystem/src/contract.ts` |
+| ❓ |  | fn.create-filesystem-error.ts |  | `packages/api-filesystem/src/core/fn.create-filesystem-error.ts` |
+| ❓ |  | fn.detect-file-kind.ts |  | `packages/api-filesystem/src/core/fn.detect-file-kind.ts` |
+| ❓ |  | fn.detect-mime.ts |  | `packages/api-filesystem/src/core/fn.detect-mime.ts` |
+| ❓ |  | fn.to-api-filesystem-error.ts |  | `packages/api-filesystem/src/core/fn.to-api-filesystem-error.ts` |
+| ❓ |  | fx.resolve-filesystem-id.ts |  | `packages/api-filesystem/src/core/fx.resolve-filesystem-id.ts` |
+| ❓ |  | handlers.ts |  | `packages/api-filesystem/src/handlers.ts` |
+| ❓ |  | orpc.ts |  | `packages/api-filesystem/src/orpc.ts` |
+| ❓ |  | types.ts |  | `packages/api-filesystem/src/types.ts` |
+
+## packages/api-notification
+| status | human comment | filename | oneliner when to use | filepath |
+|---|---|---|---|---|
+| ❓ |  | api.notification-events.ts |  | `packages/api-notification/src/api.notification-events.ts` |
+| ❓ |  | contract.ts |  | `packages/api-notification/src/contract.ts` |
+| ❓ |  | handlers.ts |  | `packages/api-notification/src/handlers.ts` |
+| ❓ |  | orpc.ts |  | `packages/api-notification/src/orpc.ts` |
+| ❓ |  | types.ts |  | `packages/api-notification/src/types.ts` |
+
+## packages/api-pty
+| status | human comment | filename | oneliner when to use | filepath |
+|---|---|---|---|---|
+| ❓ |  | api.create-pty.ts |  | `packages/api-pty/src/api.create-pty.ts` |
+| ❓ |  | api.get-pty.ts |  | `packages/api-pty/src/api.get-pty.ts` |
+| ❓ |  | api.list-pty.ts |  | `packages/api-pty/src/api.list-pty.ts` |
+| ❓ |  | api.remove-pty.ts |  | `packages/api-pty/src/api.remove-pty.ts` |
+| ❓ |  | api.update-pty.ts |  | `packages/api-pty/src/api.update-pty.ts` |
+| ❓ |  | api.upload-image.test.ts |  | `packages/api-pty/src/api.upload-image.test.ts` |
+| ❓ |  | api.upload-image.ts |  | `packages/api-pty/src/api.upload-image.ts` |
+| ❓ |  | contract.ts |  | `packages/api-pty/src/contract.ts` |
+| ❓ |  | fn.extension-from-pty-image-format.ts |  | `packages/api-pty/src/core/fn.extension-from-pty-image-format.ts` |
+| ❓ |  | fx.resolve-filesystem-id.ts |  | `packages/api-pty/src/core/fx.resolve-filesystem-id.ts` |
+| ❓ |  | handlers.ts |  | `packages/api-pty/src/handlers.ts` |
+| ❓ |  | orpc.ts |  | `packages/api-pty/src/orpc.ts` |
+| ❓ |  | types.ts |  | `packages/api-pty/src/types.ts` |
+
+## packages/canvas-cmds
+| status | human comment | filename | oneliner when to use | filepath |
+|---|---|---|---|---|
+| ❓ |  | fn.canvas-add-contract.ts |  | `packages/canvas-cmds/src/cmds/fn.canvas-add-contract.ts` |
+| ❓ |  | fx.cmd.list.ts |  | `packages/canvas-cmds/src/cmds/fx.cmd.list.ts` |
+| ❓ |  | fx.cmd.query.ts |  | `packages/canvas-cmds/src/cmds/fx.cmd.query.ts` |
+| ❓ |  | tx.cmd.add.ts |  | `packages/canvas-cmds/src/cmds/tx.cmd.add.ts` |
+| ❓ |  | tx.cmd.delete.ts |  | `packages/canvas-cmds/src/cmds/tx.cmd.delete.ts` |
+| ❓ |  | tx.cmd.group.ts |  | `packages/canvas-cmds/src/cmds/tx.cmd.group.ts` |
+| ❓ |  | tx.cmd.move.ts |  | `packages/canvas-cmds/src/cmds/tx.cmd.move.ts` |
+| ❓ |  | tx.cmd.patch.ts |  | `packages/canvas-cmds/src/cmds/tx.cmd.patch.ts` |
+| ❓ |  | tx.cmd.reorder.ts |  | `packages/canvas-cmds/src/cmds/tx.cmd.reorder.ts` |
+| ❓ |  | tx.cmd.ungroup.ts |  | `packages/canvas-cmds/src/cmds/tx.cmd.ungroup.ts` |
+| ❓ |  | fn.canvas.ts |  | `packages/canvas-cmds/src/core/fn.canvas.ts` |
+| ❓ |  | fn.conversion.ts |  | `packages/canvas-cmds/src/core/fn.conversion.ts` |
+| ❓ |  | fn.group.ts |  | `packages/canvas-cmds/src/core/fn.group.ts` |
+| ❓ |  | fn.guard.ts |  | `packages/canvas-cmds/src/core/fn.guard.ts` |
+| ❓ |  | fx.canvas.ts |  | `packages/canvas-cmds/src/core/fx.canvas.ts` |
+| ❓ |  | types.ts |  | `packages/canvas-cmds/src/types.ts` |
+
+## packages/orpc-client
+| status | human comment | filename | oneliner when to use | filepath |
+|---|---|---|---|---|
+| ❓ |  | index.ts |  | `packages/orpc-client/src/index.ts` |
+
+## packages/runtime
+| status | human comment | filename | oneliner when to use | filepath |
+|---|---|---|---|---|
+| ✅ |  | create-runtime.ts |  | `packages/runtime/src/create-runtime.ts` |
+| ✅ |  | index.ts |  | `packages/runtime/src/index.ts` |
+| ✅ |  | interface.ts |  | `packages/runtime/src/interface.ts` |
+
+## packages/service-automerge
+| status | human comment | filename | oneliner when to use | filepath |
+|---|---|---|---|---|
+| ❓ |  | AutomergeServer.ts |  | `packages/service-automerge/src/AutomergeServer.ts` |
+| ❓ |  | IAutomergeService.ts |  | `packages/service-automerge/src/IAutomergeService.ts` |
+| ❓ |  | sqlite.adapter.ts |  | `packages/service-automerge/src/adapters/sqlite.adapter.ts` |
+| ❓ |  | websocket.adapter.ts |  | `packages/service-automerge/src/adapters/websocket.adapter.ts` |
+| ❓ |  | canvas-doc.types.ts |  | `packages/service-automerge/src/types/canvas-doc.types.ts` |
+| ❓ |  | canvas-doc.zod.ts |  | `packages/service-automerge/src/types/canvas-doc.zod.ts` |
+
+## packages/service-db
+| status | human comment | filename | oneliner when to use | filepath |
+|---|---|---|---|---|
+| ❓ |  | fx.get-file.ts |  | `packages/service-db/src/DbServiceBunSqlite/fx.get-file.ts` |
+| ❓ |  | index.ts |  | `packages/service-db/src/DbServiceBunSqlite/index.ts` |
+| ❓ |  | tx.create-file.ts |  | `packages/service-db/src/DbServiceBunSqlite/tx.create-file.ts` |
+| ❓ |  | tx.update-canvas.ts |  | `packages/service-db/src/DbServiceBunSqlite/tx.update-canvas.ts` |
+| ❓ |  | IDbService.ts |  | `packages/service-db/src/IDbService.ts` |
+| ❓ |  | _embedded-migrations.ts |  | `packages/service-db/src/_embedded-migrations.ts` |
+| ❓ |  | fx.migrations.ts |  | `packages/service-db/src/core/fx.migrations.ts` |
+| ❓ |  | tx.migrations.ts |  | `packages/service-db/src/core/tx.migrations.ts` |
+| ❓ |  | interface.ts |  | `packages/service-db/src/interface.ts` |
+| ❓ |  | schema.ts |  | `packages/service-db/src/schema.ts` |
+| ❓ |  | fx.migrations.test.ts |  | `packages/service-db/src/tests/core/fx.migrations.test.ts` |
+| ❓ |  | tx.migrations.test.ts |  | `packages/service-db/src/tests/core/tx.migrations.test.ts` |
+
+## packages/service-event-publisher
+| status | human comment | filename | oneliner when to use | filepath |
+|---|---|---|---|---|
+| ❓ |  | EventPublisherService.ts |  | `packages/service-event-publisher/src/EventPublisherService.ts` |
+| ❓ |  | IEventPublisherService.ts |  | `packages/service-event-publisher/src/IEventPublisherService.ts` |
+
+## packages/service-filesystem
+| status | human comment | filename | oneliner when to use | filepath |
+|---|---|---|---|---|
+| ❓ |  | FilesystemServiceNode.test.ts |  | `packages/service-filesystem/src/FilesystemServiceNode.test.ts` |
+| ❓ |  | FilesystemServiceNode.ts |  | `packages/service-filesystem/src/FilesystemServiceNode.ts` |
+| ❓ |  | IFilesystemService.ts |  | `packages/service-filesystem/src/IFilesystemService.ts` |
+| ❓ |  | types.ts |  | `packages/service-filesystem/src/types.ts` |
+
+## packages/service-pty
+| status | human comment | filename | oneliner when to use | filepath |
+|---|---|---|---|---|
+| ❓ |  | IPtyService.ts |  | `packages/service-pty/src/IPtyService.ts` |
+| ❓ |  | PtyServiceBunPty.ts |  | `packages/service-pty/src/PtyServiceBunPty.ts` |
+| ❓ |  | types.ts |  | `packages/service-pty/src/types.ts` |
+
+## packages/service-theme
+| status | human comment | filename | oneliner when to use | filepath |
+|---|---|---|---|---|
+| ❓ |  | ThemeService.test.ts |  | `packages/service-theme/src/ThemeService.test.ts` |
+| ❓ |  | ThemeService.ts |  | `packages/service-theme/src/ThemeService.ts` |
+| ❓ |  | builtins.ts |  | `packages/service-theme/src/builtins.ts` |
+| ❓ |  | dom.ts |  | `packages/service-theme/src/dom.ts` |
+| ❓ |  | index.ts |  | `packages/service-theme/src/index.ts` |
+| ❓ |  | style.dark.ts |  | `packages/service-theme/src/style.dark.ts` |
+| ❓ |  | style.graphite.ts |  | `packages/service-theme/src/style.graphite.ts` |
+| ❓ |  | style.light.ts |  | `packages/service-theme/src/style.light.ts` |
+| ❓ |  | style.sepia.ts |  | `packages/service-theme/src/style.sepia.ts` |
+| ❓ |  | style.shared.ts |  | `packages/service-theme/src/style.shared.ts` |
+| ❓ |  | styles.ts |  | `packages/service-theme/src/styles.ts` |
+| ❓ |  | types.ts |  | `packages/service-theme/src/types.ts` |
+
+## packages/shared-functions
+| status | human comment | filename | oneliner when to use | filepath |
+|---|---|---|---|---|
+| ❓ |  | fn.xdg-paths.test.ts |  | `packages/shared-functions/src/vibecanvas-config/fn.xdg-paths.test.ts` |
+| ❓ |  | fn.xdg-paths.ts |  | `packages/shared-functions/src/vibecanvas-config/fn.xdg-paths.ts` |
+| ❓ |  | tx.config-path.ts |  | `packages/shared-functions/src/vibecanvas-config/tx.config-path.ts` |
+
+## packages/tapable
+| status | human comment | filename | oneliner when to use | filepath |
+|---|---|---|---|---|
+| ✅ |  | AsyncParallelHook.ts |  | `packages/tapable/src/AsyncParallelHook.ts` |
+| ✅ |  | AsyncSeriesHook.ts |  | `packages/tapable/src/AsyncSeriesHook.ts` |
+| ✅ |  | AsyncWaterfallHook.ts |  | `packages/tapable/src/AsyncWaterfallHook.ts` |
+| ✅ |  | SyncExitHook.ts |  | `packages/tapable/src/SyncExitHook.ts` |
+| ✅ |  | SyncHook.ts |  | `packages/tapable/src/SyncHook.ts` |
+| ✅ |  | index.ts |  | `packages/tapable/src/index.ts` |
+| ✅ |  | interfaces.ts |  | `packages/tapable/src/interfaces.ts` |
+
+## packages/ui
+| status | human comment | filename | oneliner when to use | filepath |
+|---|---|---|---|---|
+| ❓ |  | index.ts |  | `packages/ui/src/index.ts` |
+| ❓ |  | prepare-sandbox-source.ts |  | `packages/ui/src/prepare-sandbox-source.ts` |
+
+## packages/ui-example
+| status | human comment | filename | oneliner when to use | filepath |
+|---|---|---|---|---|
+| ❓ |  | UserCard.ts |  | `packages/ui-example/src/UserCard.ts` |
+| ❓ |  | UserName.ts |  | `packages/ui-example/src/UserName.ts` |
+| ❓ |  | index.ts |  | `packages/ui-example/src/index.ts` |
+| ❓ |  | main.css |  | `packages/ui-example/src/main.css` |
+| ❓ |  | main.ts |  | `packages/ui-example/src/main.ts` |
