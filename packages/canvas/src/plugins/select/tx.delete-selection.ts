@@ -1,16 +1,15 @@
 import type { TElement, TGroup } from "@vibecanvas/service-automerge/types/canvas-doc.types";
-import type Konva from "konva";
 import type { Group } from "konva/lib/Group";
 import type { Layer } from "konva/lib/Layer";
 import type { Node } from "konva/lib/Node";
 import type { Shape, ShapeConfig } from "konva/lib/Shape";
+import { isKonvaGroup, isKonvaLayer, isKonvaShape } from "../../core/GUARDS";
+import { fxGetCanvasNodeKind, fxIsCanvasGroupNode } from "../../core/fx.canvas-node-semantics";
 import type { CrdtService } from "../../services/crdt/CrdtService";
 import type { HistoryService } from "../../services/history/HistoryService";
 import type { RenderOrderService } from "../../services/render-order/RenderOrderService";
 import type { SceneService } from "../../services/scene/SceneService";
 import type { SelectionService } from "../../services/selection/SelectionService";
-import { isKonvaGroup, isKonvaShape } from "../../core/GUARDS";
-import { fxGetCanvasNodeKind, fxIsCanvasGroupNode } from "../../core/fx.canvas-node-semantics";
 
 export type TDeleteSelectionCanvasRegistry = {
   toElement(node: Node): TElement | null;
@@ -20,9 +19,6 @@ export type TDeleteSelectionCanvasRegistry = {
 };
 
 export type TPortalDeleteSelection = {
-  Group: typeof Konva.Group;
-  Shape: typeof Konva.Shape;
-  Layer: typeof Konva.Layer;
   canvasRegistry: TDeleteSelectionCanvasRegistry;
   crdt: CrdtService;
   history: HistoryService;
@@ -57,7 +53,7 @@ function isSceneNode(portal: TPortalDeleteSelection, node: Node | null | undefin
 }
 
 function isSceneParent(portal: TPortalDeleteSelection, node: Node | null | undefined): node is Group | Layer {
-  return Boolean(node) && (isKonvaGroup(node) || node instanceof portal.Layer);
+  return Boolean(node) && (isKonvaGroup(node) || isKonvaLayer(node));
 }
 
 function isNodeDescendantOf(node: Node, ancestor: Node) {

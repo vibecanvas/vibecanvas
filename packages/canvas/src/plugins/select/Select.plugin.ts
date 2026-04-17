@@ -2,15 +2,15 @@ import type { IPlugin } from "@vibecanvas/runtime";
 import type { ThemeService } from "@vibecanvas/service-theme";
 import Konva from "konva";
 import type { Node } from "konva/lib/Node";
-import type { ContextMenuService } from "../../services/context-menu/ContextMenuService";
 import type { CanvasRegistryService } from "../../services/canvas-registry/CanvasRegistryService";
+import type { ContextMenuService } from "../../services/context-menu/ContextMenuService";
 import type { CrdtService } from "../../services/crdt/CrdtService";
 import type { HistoryService } from "../../services/history/HistoryService";
 import type { RenderOrderService } from "../../services/render-order/RenderOrderService";
 import type { SceneService } from "../../services/scene/SceneService";
-import type { SelectionService } from "../../services/selection/SelectionService";
-import type { IRuntimeHooks } from "../../runtime";
 import { CanvasMode } from "../../services/selection/CONSTANTS";
+import type { SelectionService } from "../../services/selection/SelectionService";
+import type { IRuntimeHooks } from "../../types";
 import { txDeleteSelection } from "./tx.delete-selection";
 import { txHandleElementPointerDoubleClick } from "./tx.handle-element-pointer-double-click";
 import { txHandleElementPointerDown } from "./tx.handle-element-pointer-down";
@@ -133,7 +133,7 @@ export function createSelectPlugin(): IPlugin<{
           priority: 300,
           onSelect: () => {
             selection.setSelection(activeSelection);
-            txDeleteSelection({ Group: Konva.Group, Shape: Konva.Shape, Layer: Konva.Layer, canvasRegistry, crdt, history, render, renderOrder, selection }, {});
+            txDeleteSelection({ canvasRegistry, crdt, history, render, renderOrder, selection }, {});
           },
         }];
       });
@@ -237,7 +237,7 @@ export function createSelectPlugin(): IPlugin<{
 
         event.preventDefault();
         event.stopPropagation();
-        txDeleteSelection({ Group: Konva.Group, Shape: Konva.Shape, Layer: Konva.Layer, canvasRegistry, crdt, history, render, renderOrder, selection }, {});
+        txDeleteSelection({ canvasRegistry, crdt, history, render, renderOrder, selection }, {});
       });
 
       ctx.hooks.destroy.tap(() => {

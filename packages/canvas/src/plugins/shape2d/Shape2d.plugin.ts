@@ -1,25 +1,24 @@
-import { throttle } from "@solid-primitives/scheduled";
 import { layoutWithLines, prepareWithSegments } from "@chenglou/pretext";
+import { throttle } from "@solid-primitives/scheduled";
 import type { IPlugin } from "@vibecanvas/runtime";
 import type { TElement } from "@vibecanvas/service-automerge/types/canvas-doc.types";
 import type { ThemeService } from "@vibecanvas/service-theme";
+import Konva from "konva";
 import Circle from "lucide-static/icons/circle.svg?raw";
 import Diamond from "lucide-static/icons/diamond.svg?raw";
 import Square from "lucide-static/icons/square.svg?raw";
-import Konva from "konva";
 import { isKonvaGroup, isKonvaShape, isKonvaText } from "../../core/GUARDS";
-import { fxFilterSelection } from "../../core/fx.filter-selection";
 import {
-  fnCreateShape2dElement,
-  fnGetShape2dDraftBounds,
-  fnGetShape2dElementTypeFromTool,
-  fnIsShape2dElementType,
-  fnIsShape2dToolId,
-  type TShape2dElementType,
-  type TShape2dToolId,
+    fnCreateShape2dElement,
+    fnGetShape2dDraftBounds,
+    fnGetShape2dElementTypeFromTool,
+    fnIsShape2dElementType,
+    fnIsShape2dToolId,
+    type TShape2dElementType,
+    type TShape2dToolId,
 } from "../../core/fn.shape2d";
+import { fxFilterSelection } from "../../core/fx.filter-selection";
 import { txSetNodeZIndex } from "../../core/tx.set-node-z-index";
-import type { IRuntimeHooks } from "../../runtime";
 import type { CameraService } from "../../services/camera/CameraService";
 import type { CanvasRegistryService } from "../../services/canvas-registry/CanvasRegistryService";
 import type { ContextMenuService } from "../../services/context-menu/ContextMenuService";
@@ -28,14 +27,15 @@ import type { EditorService } from "../../services/editor/EditorService";
 import type { HistoryService } from "../../services/history/HistoryService";
 import type { RenderOrderService } from "../../services/render-order/RenderOrderService";
 import type { SceneService } from "../../services/scene/SceneService";
-import type { SelectionService } from "../../services/selection/SelectionService";
 import { CanvasMode } from "../../services/selection/CONSTANTS";
+import type { SelectionService } from "../../services/selection/SelectionService";
+import type { IRuntimeHooks } from "../../types";
 import { txDeleteSelection } from "../select/tx.delete-selection";
 import { txEnterEditMode } from "../text/tx.enter-edit-mode";
+import { fxGetShape2dNodeType } from "./fn.node";
 import { fxGetAttachedTextNode, fxOpenAttachedTextEditMode, fxPersistAttachedTextNode, fxSyncAttachedTextNodeToShape } from "./fx.attached-text";
 import { fxCreateShape2dNode } from "./fx.create-node";
 import { fxToShape2dElement } from "./fx.to-element";
-import { fxGetShape2dNodeType } from "./fn.node";
 import { txCreateShape2dCloneDrag } from "./tx.create-clone-drag";
 import { txSetupShape2dNode } from "./tx.setup-node";
 import { txUpdateShape2dNodeFromElement } from "./tx.update-node-from-element";
@@ -487,7 +487,7 @@ export function createShape2dPlugin(): IPlugin<{
           priority: 300,
           onSelect: () => {
             selection.setSelection(activeSelection);
-            txDeleteSelection({ Group: Konva.Group, Shape: Konva.Shape, Layer: Konva.Layer, canvasRegistry, crdt, history, render, renderOrder, selection }, {});
+            txDeleteSelection({ canvasRegistry, crdt, history, render, renderOrder, selection }, {});
           },
         }];
       });

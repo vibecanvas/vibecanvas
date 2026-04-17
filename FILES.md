@@ -96,7 +96,7 @@ Legend
 | ✅ |  | fn.text-style.ts | Text sizing/alignment presets and proportional preset scaling | `packages/canvas/src/core/fn.text-style.ts` |
 | ✅ |  | fn.world-position.ts | Pointer/world coordinate conversion across parent transforms | `packages/canvas/src/core/fn.world-position.ts` |
 | ❓ |  | fx.canvas-node-semantics.ts | Konva semantic node typing: group/element checks, parent ancestry | `packages/canvas/src/core/fx.canvas-node-semantics.ts` |
-| ❓ |  | fx.filter-selection.ts | Nested canvas selection collapsing to deepest live sub-selection | `packages/canvas/src/core/fx.filter-selection.ts` |
+| ✅ |  | fx.filter-selection.ts | Nested canvas selection collapsing to deepest live sub-selection | `packages/canvas/src/core/fx.filter-selection.ts` |
 | ❓ |  | fx.node-space.ts | Konva node absolute-to-layer-local coordinate conversion | `packages/canvas/src/core/fx.node-space.ts` |
 | ❓ |  | fx.pretext.ts | Pretext line-wrapped text measurement before canvas rendering | `packages/canvas/src/core/fx.pretext.ts` |
 | ❓ |  | fx.resolve-selection-style-elements.ts | Resolve style-target elements from selection or focused node | `packages/canvas/src/core/fx.resolve-selection-style-elements.ts` |
@@ -164,7 +164,7 @@ Legend
 | ❓ |  | SceneHydrator.plugin.ts | Rehydrate Konva scene from CRDT, preserving selection/editor state | `packages/canvas/src/plugins/scene-hydrator/SceneHydrator.plugin.ts` |
 | ❓ |  | Select.plugin.ts | Canvas selection, marquee drag, delete, drill-down interactions | `packages/canvas/src/plugins/select/Select.plugin.ts` |
 | ✅ |  | fn.get-selection-path.ts | Ancestor canvas-node selection path from node to foreground layer | `packages/canvas/src/plugins/select/fn.get-selection-path.ts` |
-| ❓ |  | tx.delete-selection.ts | Delete selected canvas nodes with undo/redo snapshot restoration | `packages/canvas/src/plugins/select/tx.delete-selection.ts` |
+| 🟡 | group guard should me moved, needs better guard  | tx.delete-selection.ts | Delete selected canvas nodes with undo/redo snapshot restoration | `packages/canvas/src/plugins/select/tx.delete-selection.ts` |
 | ❓ |  | tx.handle-element-pointer-double-click.ts | Double-click drills selection one level deeper along ancestry | `packages/canvas/src/plugins/select/tx.handle-element-pointer-double-click.ts` |
 | ❓ |  | tx.handle-element-pointer-down.ts | Element click selection depth cycling, shift-toggle, focus updates | `packages/canvas/src/plugins/select/tx.handle-element-pointer-down.ts` |
 | ❓ |  | tx.handle-stage-pointer-move.ts | Drag-select updates rectangle, intersects top-layer selectable nodes | `packages/canvas/src/plugins/select/tx.handle-stage-pointer-move.ts` |

@@ -1,5 +1,9 @@
 import Konva from 'konva';
 
+export function isKonvaLayer(node: unknown): node is Konva.Layer {
+  return node instanceof Konva.Layer;
+}
+
 export function isKonvaGroup(node: unknown): node is Konva.Group {
   return node instanceof Konva.Group;
 }

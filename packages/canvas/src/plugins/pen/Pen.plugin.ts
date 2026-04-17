@@ -1,27 +1,27 @@
+import { throttle } from "@solid-primitives/scheduled";
 import type { IPlugin } from "@vibecanvas/runtime";
 import type { TElement } from "@vibecanvas/service-automerge/types/canvas-doc.types";
+import { resolveThemeColor, type ThemeService, type TThemeRememberedStyle } from "@vibecanvas/service-theme";
 import Konva from "konva";
 import Pencil from "lucide-static/icons/pencil.svg?raw";
-import { throttle } from "@solid-primitives/scheduled";
-import { resolveThemeColor, type ThemeService, type TThemeRememberedStyle } from "@vibecanvas/service-theme";
-import { PEN_STROKE_WIDTHS } from "../../components/SelectionStyleMenu/types";
 import { getStroke } from "perfect-freehand";
-import type { IRuntimeHooks, TElementPointerEvent } from "../../runtime";
+import { EditorService, type TEditorToolCanvasPoint } from "src/services/editor/EditorService";
+import { PEN_STROKE_WIDTHS } from "../../components/SelectionStyleMenu/types";
+import { isKonvaPath } from "../../core/GUARDS";
+import { txFinalizeOwnedTransform } from "../../core/tx.finalize-owned-transform";
 import type { CanvasRegistryService, TCanvasTransformAnchor } from "../../services";
 import type { CrdtService } from "../../services/crdt/CrdtService";
 import type { HistoryService } from "../../services/history/HistoryService";
 import type { RenderOrderService } from "../../services/render-order/RenderOrderService";
 import type { SceneService } from "../../services/scene/SceneService";
 import type { SelectionService } from "../../services/selection/SelectionService";
-import { fxPenPathToElement } from "./fx.path";
+import type { IRuntimeHooks, TElementPointerEvent } from "../../types";
+import { DEFAULT_OPACITY, DEFAULT_STROKE_WIDTH_TOKEN } from "./CONSTANTS";
 import { fxCreatePenDataFromStrokePoints } from "./fn.math";
-import { EditorService, type TEditorToolCanvasPoint } from "src/services/editor/EditorService";
-import { DEFAULT_OPACITY, DEFAULT_STROKE_WIDTH, DEFAULT_STROKE_WIDTH_TOKEN } from "./CONSTANTS";
 import { fxCreatePenNode } from "./fx.create-node";
+import { fxPenPathToElement } from "./fx.path";
 import { txCreatePenCloneDrag } from "./tx.clone";
 import { txUpdatePenPathFromElement } from "./tx.path";
-import { isKonvaPath } from "../../core/GUARDS";
-import { txFinalizeOwnedTransform } from "../../core/tx.finalize-owned-transform";
 
 const DEFAULT_PEN_COLOR_TOKEN = "@base/900";
 const DRAFT_POINTS_ATTR = "vcDraftStrokePoints";
@@ -153,7 +153,7 @@ function txUpdatePenDraftNode(args: {
 function txUpdatePenDraft(args: {
   render: SceneService;
   theme: ThemeService;
-  previewNode: Konva.Shape;
+  previewNode: Konva.Node;
   point: TEditorToolCanvasPoint;
   now: number;
   rememberedStyle?: Pick<TThemeRememberedStyle, "strokeColor" | "strokeWidth" | "opacity">;

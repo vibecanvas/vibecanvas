@@ -9,7 +9,7 @@ export type TPortalFilterSelection = {
 
 export type TArgsFilterSelection = {
   editor?: TCanvasSemanticsEditor;
-  selection: Array<Group | Shape<ShapeConfig>>;
+  selection: Array<Konva.Node>;
 };
 
 export function fxFilterSelection(
