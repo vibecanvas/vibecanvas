@@ -103,14 +103,12 @@ export function fxAttachWidgetListener(portal: TPortal, args: TArgs) {
     const divider = portal.node.findOne(`#${WIDGET_HOST_DIVIDER_ID}`)
     if (isKonvaRect(divider)) {
       divider.visible(expanded)
-      divider.listening(expanded)
+      divider.listening(false)
     }
 
     const header = portal.node.findOne(`#${WIDGET_HOST_HEADER_ID}`)
     if (isKonvaRect(header)) {
-      header.cornerRadius(expanded
-        ? [WIDGET_HOST_WINDOW_CORNER_RADIUS, WIDGET_HOST_WINDOW_CORNER_RADIUS, 0, 0]
-        : WIDGET_HOST_WINDOW_CORNER_RADIUS)
+      header.cornerRadius([WIDGET_HOST_WINDOW_CORNER_RADIUS, WIDGET_HOST_WINDOW_CORNER_RADIUS, 0, 0])
     }
 
     const widgetData = portal.node.getAttr(WIDGET_HOST_ELEMENT_DATA_ATTR) as TWidgetData | undefined

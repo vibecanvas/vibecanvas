@@ -96,7 +96,7 @@ function createBorder(konva: typeof Konva, colors: THostThemeColors) {
     height: WIDGET_HOST_HEADER_HEIGHT,
     stroke: colors.windowStroke,
     strokeWidth: WIDGET_HOST_WINDOW_STROKE_WIDTH,
-    cornerRadius: WIDGET_HOST_WINDOW_CORNER_RADIUS,
+    cornerRadius: [WIDGET_HOST_WINDOW_CORNER_RADIUS, WIDGET_HOST_WINDOW_CORNER_RADIUS, 0, 0],
   })
 
   return border
@@ -110,7 +110,7 @@ function createBody(konva: typeof Konva, colors: THostThemeColors) {
     width: WIDGET_HOST_MIN_WIDTH,
     height: 0,
     fill: colors.bodyFill,
-    cornerRadius: [0, 0, WIDGET_HOST_WINDOW_CORNER_RADIUS, WIDGET_HOST_WINDOW_CORNER_RADIUS],
+    cornerRadius: 0,
   })
 
   return body;
@@ -151,15 +151,13 @@ export function fnCreateWidgetNode(konva: typeof Konva, colors: THostThemeColors
   if (headerBackground instanceof konva.Rect) {
     headerBackground.width(width)
     headerBackground.height(WIDGET_HOST_HEADER_HEIGHT)
-    headerBackground.cornerRadius(isExpanded
-      ? [WIDGET_HOST_WINDOW_CORNER_RADIUS, WIDGET_HOST_WINDOW_CORNER_RADIUS, 0, 0]
-      : WIDGET_HOST_WINDOW_CORNER_RADIUS)
+    headerBackground.cornerRadius([WIDGET_HOST_WINDOW_CORNER_RADIUS, WIDGET_HOST_WINDOW_CORNER_RADIUS, 0, 0])
   }
 
   if (divider instanceof konva.Rect) {
     divider.width(dividerWidth)
     divider.visible(isExpanded)
-    divider.listening(isExpanded)
+    divider.listening(false)
   }
 
   group.add(border)

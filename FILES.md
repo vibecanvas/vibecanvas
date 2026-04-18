@@ -218,6 +218,7 @@ prefix: `packages/canvas/src/`
 | ❓ | `services/render-order/RenderOrderService.ts` |  | Bundle-aware sibling z-order |
 | ✅ | `services/scene/SceneService.ts` |  | Konva stage lifecycle, layers, container resize hook |
 | ❓ | `services/selection/SelectionService.ts` |  | canvas selection state, focus, mode, change notifications |
+| ❓ | `services/widget/fn.create-widget-node.ts` |  | Widget host scene node creation and collapsed/expanded frame rendering |
 | 🫠 | `services/widget/fn.to-element.ts` | empty file |  |
 | 🤖 | `services/widget/fx.attach-widget-listener.ts` |  | Widget host header/button hover and cursor interaction wiring |
 | ✅ | `services/widget/fx.draw-host.ts` |  | Editor draw-tool host draft creation and drag resizing |
