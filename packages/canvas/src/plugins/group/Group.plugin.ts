@@ -3,6 +3,7 @@ import type { IPlugin } from "@vibecanvas/runtime";
 import type { ThemeService } from "@vibecanvas/service-theme";
 import type { TGroup } from "@vibecanvas/service-automerge/types/canvas-doc.types";
 import Konva from "konva";
+import { VC_NODE_KIND_ATTR } from "../../core/CONSTANTS";
 import { fnGetNodeZIndex } from "../../core/fn.get-node-z-index";
 import { txSetNodeZIndex } from "../../core/tx.set-node-z-index";
 import type { CameraService } from "../../services/camera/CameraService";
@@ -27,7 +28,6 @@ import { fxCreateGroupBoundary } from "./fx.create-group-boundary";
 import { txSyncGroupBoundaries, type TGroupBoundary } from "./tx.sync-group-boundaries";
 import { txUngroupSelection } from "./tx.ungroup-selection";
 
-const CANVAS_NODE_KIND_ATTR = "vcCanvasNodeKind";
 const CANVAS_GROUP_NODE_KIND = "group";
 
 const getNodeZIndex = (node: Konva.Group | Konva.Shape) => fnGetNodeZIndex({ node });
@@ -39,7 +39,7 @@ function createGroupNode(render: SceneService, group: TGroup) {
     draggable: true,
   });
 
-  node.setAttr(CANVAS_NODE_KIND_ATTR, CANVAS_GROUP_NODE_KIND);
+  node.setAttr(VC_NODE_KIND_ATTR, CANVAS_GROUP_NODE_KIND);
   node.setAttr("vcGroupCreatedAt", group.createdAt);
   setNodeZIndex(node, group.zIndex);
   return node;
@@ -237,10 +237,10 @@ export function createGroupPlugin(): IPlugin<{
       canvasRegistry.registerGroup({
         id: "group",
         matchesNode: (node) => {
-          return node instanceof Konva.Group && node.getAttr(CANVAS_NODE_KIND_ATTR) === CANVAS_GROUP_NODE_KIND;
+          return node instanceof Konva.Group && node.getAttr(VC_NODE_KIND_ATTR) === CANVAS_GROUP_NODE_KIND;
         },
         toGroup: (node) => {
-          if (!(node instanceof Konva.Group) || node.getAttr(CANVAS_NODE_KIND_ATTR) !== CANVAS_GROUP_NODE_KIND) {
+          if (!(node instanceof Konva.Group) || node.getAttr(VC_NODE_KIND_ATTR) !== CANVAS_GROUP_NODE_KIND) {
             return null;
           }
 

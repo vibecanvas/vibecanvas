@@ -12,7 +12,7 @@ export type TArgsIsSceneNode = {
 };
 
 export function fnIsSceneNode(args: TArgsIsSceneNode): args is TArgsIsSceneNode & { node: TSceneNode } {
-  return Boolean(args.node) && isKonvaGroup(args.node) && isKonvaShape(args.node);
+  return Boolean(args.node) && (isKonvaGroup(args.node) || isKonvaShape(args.node));
 }
 
 export type TArgsIsSceneParent = {
@@ -21,7 +21,7 @@ export type TArgsIsSceneParent = {
 };
 
 export function fnIsSceneParent(args: TArgsIsSceneParent): args is TArgsIsSceneParent & { node: Konva.Layer | Konva.Group } {
-  return Boolean(args.node) && isKonvaLayer(args.node) && isKonvaGroup(args.node);
+  return Boolean(args.node) && (isKonvaLayer(args.node) || isKonvaGroup(args.node));
 }
 
 export type TArgsFindSceneNodeById = {

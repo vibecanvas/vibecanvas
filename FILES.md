@@ -123,11 +123,11 @@ prefix: `packages/canvas/src/`
 | ❓ | `plugins/grid/Grid.plugin.ts` |  | Registers toggleable canvas grid overlay reacting to camera theme resize |
 | ❓ | `plugins/grid/tx.draw.ts` |  | Canvas viewport grid rendering: minor/major lines from pan+zoom layout |
 | 🫠 | `plugins/group/fn.get-selection-bounds.ts` | brittle empty-selection edge case | Multi-node selection bounding box from transformed client rects |
-| 🫠 | `plugins/group/fn.scene-node.ts` | bloated args; service-coupled guards | Konva scene node guards, group ancestry, ID lookup |
+| 🤖 | `plugins/group/fn.scene-node.ts` | bloated args; service-coupled guards | Konva scene node guards, group ancestry, ID lookup |
 | 🫠 | `plugins/group/fn.serialize-subtree-elements.ts` | service read logic in fn file | Group subtree shape nodes to TElement serialization |
 | ✅ | `plugins/group/fn.to-group-patch.ts` |  | Konva group serialization into Automerge patch payload |
 | ❓ | `plugins/group/fx.create-group-boundary.ts` |  | Dashed themed group boundary overlay tracking transformed bounds |
-| ❓ | `plugins/group/Group.plugin.ts` |  | Canvas group lifecycle, boundaries, grouping shortcuts, clone-drag orche |
+| 🤖 | `plugins/group/Group.plugin.ts` |  | Canvas group lifecycle, boundaries, grouping shortcuts, clone-drag orche |
 | ❓ | `plugins/group/tx.create-group-clone-drag.ts` |  | Group duplicate drag preview, subtree re-ID, CRDT commit on drop |
 | 🤖 | `plugins/group/tx.group-selection.ts` |  | Groups selected scene nodes |
 | ❓ | `plugins/group/tx.setup-group-node.ts` |  | Group drag lifecycle: selection, clone-alt-drag, CRDT/history sync, metr |
