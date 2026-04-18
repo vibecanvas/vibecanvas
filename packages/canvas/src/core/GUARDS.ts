@@ -4,6 +4,10 @@ export function isKonvaLayer(node: unknown): node is Konva.Layer {
   return node instanceof Konva.Layer;
 }
 
+export function isKonvaCircle(node: unknown): node is Konva.Circle {
+  return node instanceof Konva.Circle;
+}
+
 export function isKonvaGroup(node: unknown): node is Konva.Group {
   return node instanceof Konva.Group;
 }
