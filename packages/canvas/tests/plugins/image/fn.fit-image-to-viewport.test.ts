@@ -1,9 +1,9 @@
 import { describe, expect, test } from "vitest";
-import { fxFitImageToViewport } from "../../../src/plugins/image/fn.fit-image-to-viewport";
+import { fnFitImageToViewport } from "../../../src/plugins/image/fn.fit-image-to-viewport";
 
-describe("fxFitImageToViewport", () => {
+describe("fnFitImageToViewport", () => {
   test("fits landscape images using half of the smaller viewport dimension", () => {
-    expect(fxFitImageToViewport({
+    expect(fnFitImageToViewport({
       viewportWidth: 1000,
       viewportHeight: 800,
       imageWidth: 1200,
@@ -15,7 +15,7 @@ describe("fxFitImageToViewport", () => {
   });
 
   test("fits portrait images while preserving aspect ratio", () => {
-    expect(fxFitImageToViewport({
+    expect(fnFitImageToViewport({
       viewportWidth: 1000,
       viewportHeight: 800,
       imageWidth: 600,

@@ -1,9 +1,9 @@
 import { describe, expect, test } from "vitest";
-import { fxCreateImageElement } from "../../../src/plugins/image/fn.create-image-element";
+import { fnCreateImageElement } from "../../../src/plugins/image/fn.create-image-element";
 
-describe("fxCreateImageElement", () => {
+describe("fnCreateImageElement", () => {
   test("creates a centered image element with default crop metadata", () => {
-    const element = fxCreateImageElement({
+    const element = fnCreateImageElement({
       id: "image-1",
       center: { x: 300, y: 200 },
       width: 160,
@@ -19,6 +19,8 @@ describe("fxCreateImageElement", () => {
       x: 220,
       y: 155,
       rotation: 0,
+      scaleX: 1,
+      scaleY: 1,
       bindings: [],
       createdAt: 123,
       locked: false,

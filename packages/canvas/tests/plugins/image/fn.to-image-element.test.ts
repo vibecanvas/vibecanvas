@@ -1,7 +1,7 @@
 import { describe, expect, test } from "vitest";
-import { fxToImageElement } from "../../../src/plugins/image/fn.to-image-element";
+import { fnToImageElement } from "../../../src/plugins/image/fn.to-image-element";
 
-describe("fxToImageElement", () => {
+describe("fnToImageElement", () => {
   test("maps runtime image fields into a persisted image element", () => {
     const crop = {
       x: 4,
@@ -12,7 +12,7 @@ describe("fxToImageElement", () => {
       naturalHeight: 360,
     };
 
-    expect(fxToImageElement({
+    expect(fnToImageElement({
       id: "image-1",
       x: 10,
       y: 20,

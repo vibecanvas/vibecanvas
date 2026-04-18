@@ -5,14 +5,21 @@ import { RenderOrderService } from "../../src/services/render-order/RenderOrderS
 
 type TNodeKind = "element" | "group" | null;
 
-function setup() {
+function setup(args?: {
+  elements?: string[];
+  groups?: string[];
+}) {
   const staticForegroundLayer = new Konva.Layer();
   const history = {
     record: vi.fn(),
   };
-  const patch = vi.fn();
+  const patchElement = vi.fn();
+  const patchGroup = vi.fn();
+  const commit = vi.fn();
   const syncDomOrder = vi.fn();
   const nodeKinds = new Map<string, TNodeKind>();
+  const docElements = Object.fromEntries((args?.elements ?? []).map((id) => [id, { id }]));
+  const docGroups = Object.fromEntries((args?.groups ?? []).map((id) => [id, { id }]));
 
   const canvasRegistry = {
     getNodeType: (node: Konva.Node) => {
@@ -28,19 +35,22 @@ function setup() {
   };
 
   const service = new RenderOrderService({
-    crdt: { patch } as unknown as RenderOrderService["crdt"],
+    crdt: {
+      doc: () => ({ elements: docElements, groups: docGroups }),
+      build: () => ({ patchElement, patchGroup, commit }),
+    } as unknown as RenderOrderService["crdt"],
     history: history as unknown as RenderOrderService["history"],
     scene: { staticForegroundLayer } as unknown as RenderOrderService["scene"],
     canvasRegistry: canvasRegistry as unknown as RenderOrderService["canvasRegistry"],
     syncDomOrder,
   });
 
-  return { staticForegroundLayer, history, patch, syncDomOrder, nodeKinds, service };
+  return { staticForegroundLayer, history, patchElement, patchGroup, commit, syncDomOrder, nodeKinds, service };
 }
 
 describe("RenderOrderService", () => {
   test("assignOrderOnInsert reorders by front back beforeId and afterId and persists element patches", () => {
-    const { staticForegroundLayer, patch, service } = setup();
+    const { staticForegroundLayer, patchElement, commit, service } = setup({ elements: ["a", "b", "c", "d"] });
     const a = new Konva.Rect({ id: "a" });
     const b = new Konva.Rect({ id: "b" });
     const c = new Konva.Rect({ id: "c" });
@@ -67,19 +77,15 @@ describe("RenderOrderService", () => {
 
     service.assignOrderOnInsert({ parent: staticForegroundLayer, nodes: [d], position: "front" });
     expect(staticForegroundLayer.getChildren().map((node) => node.id())).toEqual(["b", "c", "a", "d"]);
-    expect(patch).toHaveBeenLastCalledWith({
-      elements: [
-        { id: "b", zIndex: fnCreateOrderedZIndex(0) },
-        { id: "c", zIndex: fnCreateOrderedZIndex(1) },
-        { id: "a", zIndex: fnCreateOrderedZIndex(2) },
-        { id: "d", zIndex: fnCreateOrderedZIndex(3) },
-      ],
-      groups: [],
-    });
+    expect(patchElement).toHaveBeenNthCalledWith(7, "b", "zIndex", fnCreateOrderedZIndex(0));
+    expect(patchElement).toHaveBeenNthCalledWith(8, "c", "zIndex", fnCreateOrderedZIndex(1));
+    expect(patchElement).toHaveBeenNthCalledWith(9, "a", "zIndex", fnCreateOrderedZIndex(2));
+    expect(patchElement).toHaveBeenNthCalledWith(10, "d", "zIndex", fnCreateOrderedZIndex(3));
+    expect(commit).toHaveBeenCalledTimes(4);
   });
 
   test("assignOrderOnInsert ignores nodes from another parent and nodes without ids in persisted patches", () => {
-    const { staticForegroundLayer, patch, service } = setup();
+    const { staticForegroundLayer, patchElement, commit, service } = setup({ elements: ["a"] });
     const otherParent = new Konva.Group({ id: "other-parent" });
     const a = new Konva.Rect({ id: "a" });
     const blank = new Konva.Rect();
@@ -97,14 +103,13 @@ describe("RenderOrderService", () => {
 
     expect(staticForegroundLayer.getChildren().map((node) => node.id())).toEqual(["a", ""]);
     expect(result).toEqual([{ id: "a", zIndex: fnCreateOrderedZIndex(0) }]);
-    expect(patch).toHaveBeenCalledWith({
-      elements: [{ id: "a", zIndex: fnCreateOrderedZIndex(0) }],
-      groups: [],
-    });
+    expect(patchElement).toHaveBeenCalledOnce();
+    expect(patchElement).toHaveBeenCalledWith("a", "zIndex", fnCreateOrderedZIndex(0));
+    expect(commit).toHaveBeenCalledOnce();
   });
 
   test("moveSelectionUp and moveSelectionDown record history and preserve grouped bundles", () => {
-    const { staticForegroundLayer, history, patch, service } = setup();
+    const { staticForegroundLayer, history, patchElement, commit, service } = setup({ elements: ["a", "b", "c", "d"] });
     const a = new Konva.Rect({ id: "a" });
     const b = new Konva.Rect({ id: "b" });
     const c = new Konva.Rect({ id: "c" });
@@ -115,7 +120,8 @@ describe("RenderOrderService", () => {
     staticForegroundLayer.add(c);
     staticForegroundLayer.add(d);
     service.assignOrderOnInsert({ parent: staticForegroundLayer, nodes: [a, b, c, d], position: "back" });
-    patch.mockClear();
+    patchElement.mockClear();
+    commit.mockClear();
 
     service.registerBundleResolver("bc", (node) => {
       if (node.id() !== "b" && node.id() !== "c") {
@@ -138,11 +144,12 @@ describe("RenderOrderService", () => {
     expect(staticForegroundLayer.getChildren().map((node) => node.id())).toEqual(["a", "b", "c", "d"]);
     firstRecord.redo();
     expect(staticForegroundLayer.getChildren().map((node) => node.id())).toEqual(["b", "c", "a", "d"]);
-    expect(patch).toHaveBeenCalled();
+    expect(patchElement).toHaveBeenCalled();
+    expect(commit).toHaveBeenCalled();
   });
 
   test("bringSelectionToFront and sendSelectionToBack handle duplicates and mixed parents safely", () => {
-    const { staticForegroundLayer, history, service } = setup();
+    const { staticForegroundLayer, history, service } = setup({ elements: ["a", "b", "c"] });
     const otherParent = new Konva.Group({ id: "other-parent" });
     const a = new Konva.Rect({ id: "a" });
     const b = new Konva.Rect({ id: "b" });
@@ -164,7 +171,7 @@ describe("RenderOrderService", () => {
   });
 
   test("snapshot and restore work for both layer and group parents and group patches persist separately", () => {
-    const { staticForegroundLayer, nodeKinds, patch, service } = setup();
+    const { staticForegroundLayer, nodeKinds, patchElement, patchGroup, commit, service } = setup({ elements: ["shape-1"], groups: ["group-1"] });
     const host = new Konva.Group({ id: "host" });
     const shape = new Konva.Rect({ id: "shape-1" });
     const groupNode = new Konva.Group({ id: "group-1" });
@@ -175,10 +182,9 @@ describe("RenderOrderService", () => {
     host.add(groupNode);
 
     service.assignOrderOnInsert({ parent: host, nodes: [shape, groupNode], position: "back" });
-    expect(patch).toHaveBeenLastCalledWith({
-      elements: [{ id: "shape-1", zIndex: fnCreateOrderedZIndex(0) }],
-      groups: [{ id: "group-1", zIndex: fnCreateOrderedZIndex(1) }],
-    });
+    expect(patchElement).toHaveBeenCalledWith("shape-1", "zIndex", fnCreateOrderedZIndex(0));
+    expect(patchGroup).toHaveBeenCalledWith("group-1", "zIndex", fnCreateOrderedZIndex(1));
+    expect(commit).toHaveBeenCalledOnce();
 
     const snapshot = service.snapshotParentOrder(host);
     expect(snapshot).toEqual({
