@@ -19,7 +19,9 @@ import {
 } from "./fn.recording";
 import { txSaveJsonFile } from "./tx.file";
 import { txMountRecorderPanel } from "./tx.mount";
-import { REDUCED_EVENTS, type TCrdtOp, type TRecording, type TStep } from "./CONSTANTS";
+import type { TCrdtOp, TRecording, TStep } from "./CONSTANTS";
+
+const REDUCED_EVENTS = true;
 
 type TRecorderState = {
   recording: boolean;

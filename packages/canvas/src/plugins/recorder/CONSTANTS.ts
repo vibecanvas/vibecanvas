@@ -1,7 +1,5 @@
 import type { TCanvasDoc } from "@vibecanvas/service-automerge/types/canvas-doc.types";
 
-export const REDUCED_EVENTS = true;
-
 export type TModifiers = {
   altKey: boolean;
   ctrlKey: boolean;

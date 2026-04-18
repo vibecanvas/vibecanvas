@@ -156,7 +156,7 @@ prefix: `packages/canvas/src/`
 | ❓ | `plugins/pen/tx.path.ts` |  | Konva pen node creation/update from themed element strokes |
 | ❓ | `plugins/pen/tx.update-draft.ts` |  | Live pen draft stroke preview updates while drawing |
 | 🫠 | `plugins/recorder/fn.recording.ts` | impure/event shaping living in fn file | Builds normalized recording steps and CRDT snapshots |
-| ❓ | `plugins/recorder/Recorder.plugin.ts` |  | Dev recorder plugin captures input/CRDT, mounts exportable replay panel |
+| 🤖 | `plugins/recorder/Recorder.plugin.ts` |  | Dev recorder plugin captures input/CRDT, mounts exportable replay panel |
 | ❓ | `plugins/recorder/tx.file.ts` |  | JSON export save flow: picker first, anchor-download fallback |
 | ❓ | `plugins/recorder/tx.mount.ts` |  | Mounts recorder overlay panel onto scene stage |
 | ❓ | `plugins/render-order/RenderOrder.plugin.ts` |  | Canvas context-menu layer ordering for sibling selections |
