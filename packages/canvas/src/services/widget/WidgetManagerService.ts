@@ -10,6 +10,7 @@ import type { IWidgetConfig, IWidgetManagerServiceHooks, IWidgetManagerServicePr
 import { fnToWidgetElement } from "./fn.to-widget-element";
 import { fnCreateWidgetNode } from "./fn.create-widget-node";
 import { fnGetHostThemeColors } from "./fn.get-host-theme-colors";
+import { fxAttachWidgetListener } from "./fx.attach-widget-listener";
 
 
 export class WidgetManagerService implements IService<IWidgetManagerServiceHooks>, IStartableService<IRuntimeHooks, IRuntimeConfig> {
@@ -54,11 +55,13 @@ export class WidgetManagerService implements IService<IWidgetManagerServiceHooks
       toElement: fnToWidgetElement,
       matchesNode: (node) => node.getAttr(WIDGET_HOST_ELEMENT_DATA_ATTR)?.type === 'widget',
       matchesElement: (element) => element.data.type === "widget" && element.data.kind === wConfig.id,
+
       createNode: (element) => {
         const colors = fnGetHostThemeColors(this.themeService)
         const node = fnCreateWidgetNode(Konva, colors, element)
         return node
-      }
+      },
+      attachListeners: (node) => fxAttachWidgetListener({ node }, {})
     })
 
   }

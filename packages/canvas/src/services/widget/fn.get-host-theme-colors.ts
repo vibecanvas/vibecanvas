@@ -1,5 +1,5 @@
-import { ThemeService } from "@vibecanvas/service-theme"
-import { THostThemeColors } from "./types"
+import type { ThemeService } from "@vibecanvas/service-theme"
+import type { THostThemeColors } from "./types"
 
 
 export function fnGetHostThemeColors(themeService: ThemeService): THostThemeColors {

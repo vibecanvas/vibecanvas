@@ -243,16 +243,10 @@ type TCanvasRegistrySerializeDefinition =
 type TCanvasRegistryCreateDefinition =
   | (TCanvasRegistryElementMatcher & {
     createNode: TCanvasRegistryCreateNode;
-    afterCreateNode?: never;
   })
   | (TCanvasRegistryElementMatcher & {
-    createNode?: never;
     afterCreateNode: TCanvasRegistryAfterCreateNode;
-  })
-  | {
-    createNode?: never;
-    afterCreateNode?: never;
-  };
+  });
 
 type TCanvasRegistryNodeRuntimeDefinition =
   | (TCanvasRegistryNodeMatcher & TCanvasRegistryRequireAtLeastOne<TCanvasRegistryNodeRuntimeHookBag>)

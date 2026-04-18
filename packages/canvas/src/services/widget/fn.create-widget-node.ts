@@ -74,6 +74,20 @@ function createHeader(konva: typeof Konva, colors: THostThemeColors) {
     strokeWidth: 1,
   })
 
+
+  const headerGroup = new konva.Group({
+    id: `${WIDGET_HOST_HEADER_ID}`,
+  })
+  headerGroup.add(header)
+  headerGroup.add(divider)
+  headerGroup.add(closeButton)
+  headerGroup.add(minimizeButton)
+  headerGroup.add(maximizeButton)
+
+  return headerGroup
+}
+
+function createBorder(konva: typeof Konva, colors: THostThemeColors) {
   const border = new konva.Rect({
     id: WIDGET_HOST_BORDER_ID,
     x: 0,
@@ -85,17 +99,7 @@ function createHeader(konva: typeof Konva, colors: THostThemeColors) {
     cornerRadius: WIDGET_HOST_WINDOW_CORNER_RADIUS,
   })
 
-  const headerGroup = new konva.Group({
-    id: `${WIDGET_HOST_HEADER_ID}-group`,
-  })
-  headerGroup.add(header)
-  headerGroup.add(divider)
-  headerGroup.add(closeButton)
-  headerGroup.add(minimizeButton)
-  headerGroup.add(maximizeButton)
-  headerGroup.add(border)
-
-  return headerGroup
+  return border
 }
 
 function createBody(konva: typeof Konva, colors: THostThemeColors) {
@@ -132,7 +136,7 @@ export function fnCreateWidgetNode(konva: typeof Konva, colors: THostThemeColors
   body.height(bodyHeight)
 
   const header = createHeader(konva, colors)
-  const border = header.findOne(`#${WIDGET_HOST_BORDER_ID}`)
+  const border = createBorder(konva, colors)
   const headerBackground = header.findOne(`#${WIDGET_HOST_HEADER_ID}`)
   const divider = header.findOne(`#${WIDGET_HOST_DIVIDER_ID}`)
 
@@ -150,8 +154,10 @@ export function fnCreateWidgetNode(konva: typeof Konva, colors: THostThemeColors
     divider.width(dividerWidth)
   }
 
-  group.add(body)
+  group.add(border)
   group.add(header)
+  group.add(body)
+
   group.setAttr(WIDGET_HOST_ELEMENT_DATA_ATTR, element.data)
   group.setAttr(WIDGET_HOST_ELEMENT_STYLE_ATTR, {})
 
