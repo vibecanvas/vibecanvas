@@ -189,6 +189,8 @@ Never put detailed plan in this file
 - [ ]: [S37](s/S37.md) - Refactor canvas service/plugin --> simplification written by hand
 - [ ]: [S38] - make fn,fx,tx files extension also lint script
 - [ ]: [S39] - add TGroup and TElement types for canvas (human leaf file)
+- [ ]: [S40](s/S40.md) - canvas: move inline shape text ownership into shape2d
+- [ ]: [S41](s/S41.md) - canvas: introduce CloneService and centralize clone lifecycle
 
 ## E xplorations
 - [ ]: [E1](e/E1.md) - Tauri Research
