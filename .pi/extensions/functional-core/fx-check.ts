@@ -40,9 +40,9 @@ export const FX_CHECK_RULES = [
   "UPPER_CASE runtime value imports like THEME_STROKE_WIDTH_VALUE_MAP are allowed from any module",
   "no direct use of runtime globals like window, fetch, Bun, process, console, globalThis",
   "do not export classes or other runtime values; only functions and types",
-  "every fx* function must have exactly 2 params",
+  "every fx* function must have 1 or 2 params: required portal, optional args",
   "first param must be named portal and typed as TPortal*",
-  "second param must be named args and typed as TArgs*",
+  "second param is optional; when present, it must be named args and typed as TArgs*",
   "TPortal may hold side effects and mutable services objects",
   "TArgs is usually serializable payload data",
   "fx is for impure reads; use brain and prefer tx for impure writes",
@@ -531,20 +531,25 @@ function validateFxFunctionParams(content: string): string[] {
 
   for (const signature of signatures) {
     const params = splitTopLevelParams(signature.params);
-    if (params.length !== 2) {
-      errors.push(`line ${signature.line}: ${signature.name} must have exactly 2 params: portal and args`);
+    if (params.length === 0 || params.length > 2) {
+      errors.push(`line ${signature.line}: ${signature.name} must have 1 or 2 params: required portal, optional args`);
       continue;
     }
 
     const [portalParam, argsParam] = params;
-    const portalMatch = portalParam?.match(/^portal\??\s*:\s*([A-Za-z_$][\w$]*)/);
-    const argsMatch = argsParam?.match(/^args\??\s*:\s*([A-Za-z_$][\w$]*)/);
+    const portalMatch = portalParam?.match(/^portal\s*:\s*([A-Za-z_$][\w$]*)/);
 
     if (!portalMatch) {
       errors.push(`line ${signature.line}: ${signature.name} first param must be named portal and typed as TPortal*`);
     } else if (!portalMatch[1].startsWith("TPortal")) {
       errors.push(`line ${signature.line}: ${signature.name} first param type must start with TPortal`);
     }
+
+    if (!argsParam) {
+      continue;
+    }
+
+    const argsMatch = argsParam.match(/^args\??\s*:\s*([A-Za-z_$][\w$]*)/);
 
     if (!argsMatch) {
       errors.push(`line ${signature.line}: ${signature.name} second param must be named args and typed as TArgs*`);

@@ -31,9 +31,9 @@ It also allows shared `CONSTANTS.ts` and `GUARDS.ts` runtime imports inside func
 - UPPER_CASE runtime value imports like `THEME_STROKE_WIDTH_VALUE_MAP` are allowed from any module
 - no direct use of runtime globals like `window`, `fetch`, `Bun`, `process`, `console`, `globalThis`
 - do not export classes or other runtime values; only functions and types
-- exported `fx*` functions must have exactly 2 params
+- exported `fx*` functions must have 1 or 2 params: required `portal`, optional `args`
 - exported `fx*` functions: first param must be named `portal` and typed as `TPortal*`
-- exported `fx*` functions: second param must be named `args` and typed as `TArgs*`
+- exported `fx*` functions: second param is optional; when present, it must be named `args` and typed as `TArgs*`
 
 ### tx.*.ts
 - ignore `tx.*.test.ts` files
@@ -43,9 +43,9 @@ It also allows shared `CONSTANTS.ts` and `GUARDS.ts` runtime imports inside func
 - UPPER_CASE runtime value imports like `THEME_STROKE_WIDTH_VALUE_MAP` are allowed from any module
 - no direct use of runtime globals like `window`, `fetch`, `Bun`, `process`, `console`, `globalThis`
 - do not export classes or other runtime values; only functions and types
-- exported `tx*` functions must have exactly 2 params
+- exported `tx*` functions must have 1 or 2 params: required `portal`, optional `args`
 - exported `tx*` functions: first param must be named `portal` and typed as `TPortal*`
-- exported `tx*` functions: second param must be named `args` and typed as `TArgs*`
+- exported `tx*` functions: second param is optional; when present, it must be named `args` and typed as `TArgs*`
 - `tx.*.ts` may runtime-import `fn.*`, `fx.*`, `tx.*`, `CONSTANTS`, and `GUARDS`
 
 ## CONSTANTS, GUARDS, and UPPER_CASE import exceptions
