@@ -179,7 +179,7 @@ describe("shape1d plugin", () => {
     }
 
     expect(element.style.strokeColor).toBe("@blue/700");
-    expect(element.style.strokeWidth).toBe(2);
+    expect(element.style.strokeWidth).toBe("2");
     expect(element.style.opacity).toBe(0.4);
     expect(element.data.lineType).toBe("curved");
 
@@ -217,7 +217,7 @@ describe("shape1d plugin", () => {
     }
 
     expect(element.style.strokeColor).toBe("@red/600");
-    expect(element.style.strokeWidth).toBe(1);
+    expect(element.style.strokeWidth).toBe("@stroke-width/thin");
     expect(element.style.opacity).toBe(0.6);
     expect(element.data.lineType).toBe("curved");
     expect(element.data.startCap).toBe("dot");

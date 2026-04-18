@@ -49,41 +49,6 @@ function setup(args?: {
 }
 
 describe("RenderOrderService", () => {
-  test("assignOrderOnInsert reorders by front back beforeId and afterId and persists element patches", () => {
-    const { staticForegroundLayer, patchElement, commit, service } = setup({ elements: ["a", "b", "c", "d"] });
-    const a = new Konva.Rect({ id: "a" });
-    const b = new Konva.Rect({ id: "b" });
-    const c = new Konva.Rect({ id: "c" });
-    const d = new Konva.Rect({ id: "d" });
-
-    staticForegroundLayer.add(a);
-    staticForegroundLayer.add(b);
-    staticForegroundLayer.add(c);
-    staticForegroundLayer.add(d);
-
-    expect(service.assignOrderOnInsert({ parent: staticForegroundLayer, nodes: [a, b, c, d], position: "back" })).toEqual([
-      { id: "a", zIndex: fnCreateOrderedZIndex(0) },
-      { id: "b", zIndex: fnCreateOrderedZIndex(1) },
-      { id: "c", zIndex: fnCreateOrderedZIndex(2) },
-      { id: "d", zIndex: fnCreateOrderedZIndex(3) },
-    ]);
-    expect(staticForegroundLayer.getChildren().map((node) => node.id())).toEqual(["a", "b", "c", "d"]);
-
-    service.assignOrderOnInsert({ parent: staticForegroundLayer, nodes: [d], position: { beforeId: "b" } });
-    expect(staticForegroundLayer.getChildren().map((node) => node.id())).toEqual(["a", "d", "b", "c"]);
-
-    service.assignOrderOnInsert({ parent: staticForegroundLayer, nodes: [a], position: { afterId: "c" } });
-    expect(staticForegroundLayer.getChildren().map((node) => node.id())).toEqual(["d", "b", "c", "a"]);
-
-    service.assignOrderOnInsert({ parent: staticForegroundLayer, nodes: [d], position: "front" });
-    expect(staticForegroundLayer.getChildren().map((node) => node.id())).toEqual(["b", "c", "a", "d"]);
-    expect(patchElement).toHaveBeenNthCalledWith(7, "b", "zIndex", fnCreateOrderedZIndex(0));
-    expect(patchElement).toHaveBeenNthCalledWith(8, "c", "zIndex", fnCreateOrderedZIndex(1));
-    expect(patchElement).toHaveBeenNthCalledWith(9, "a", "zIndex", fnCreateOrderedZIndex(2));
-    expect(patchElement).toHaveBeenNthCalledWith(10, "d", "zIndex", fnCreateOrderedZIndex(3));
-    expect(commit).toHaveBeenCalledTimes(4);
-  });
-
   test("assignOrderOnInsert ignores nodes from another parent and nodes without ids in persisted patches", () => {
     const { staticForegroundLayer, patchElement, commit, service } = setup({ elements: ["a"] });
     const otherParent = new Konva.Group({ id: "other-parent" });

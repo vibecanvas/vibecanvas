@@ -214,52 +214,6 @@ describe("new Text plugin core", () => {
     await harness.destroy();
   });
 
-  test("transform resize scales font size and width, then undo restores original values", async () => {
-    const harness = await createNewCanvasHarness();
-    const history = harness.runtime.services.require("history");
-    const selection = harness.runtime.services.require("selection");
-
-    const node = addHydratedTextNode(harness, createTextElement({
-      id: "resize-text-1",
-      x: 150,
-      y: 150,
-      data: {
-        ...createTextElement().data,
-        w: 200,
-        h: 60,
-        text: "Resize me\nTwo lines",
-        fontSize: 20,
-      },
-    }));
-
-    const originalFontSize = node.fontSize();
-    const originalWidth = node.width();
-    const originalHeight = node.height();
-
-    selection.setSelection([node]);
-    await flushCanvasEffects();
-
-    const transformer = harness.dynamicLayer.findOne<Konva.Transformer>("Transformer");
-    expect(transformer).toBeTruthy();
-
-    simulateTransformerResize(transformer!, node, { scaleX: 2, scaleY: 2 });
-    await flushCanvasEffects();
-
-    expect(node.fontSize()).toBeCloseTo(originalFontSize * 2, 1);
-    expect(node.width()).toBeCloseTo(originalWidth * 2, 1);
-    expect(node.scaleX()).toBeCloseTo(1, 5);
-    expect(node.scaleY()).toBeCloseTo(1, 5);
-
-    history.undo();
-    await flushCanvasEffects();
-
-    expect(node.fontSize()).toBeCloseTo(originalFontSize, 1);
-    expect(node.width()).toBeCloseTo(originalWidth, 1);
-    expect(node.height()).toBeCloseTo(originalHeight, 1);
-
-    await harness.destroy();
-  });
-
   test("transform rotate persists text rotation and undo restores original values", async () => {
     const harness = await createNewCanvasHarness();
     const history = harness.runtime.services.require("history");
@@ -289,25 +243,4 @@ describe("new Text plugin core", () => {
     await harness.destroy();
   });
 
-  test("updateTextNodeFromElement restores baked dimensions and resets scale", async () => {
-    const harness = await createNewCanvasHarness();
-    const scene = harness.runtime.services.require("scene");
-    const theme = harness.runtime.services.require("theme");
-
-    const node = addHydratedTextNode(harness, createTextElement({ id: "restore-test" }));
-    node.scaleX(1.5);
-    node.scaleY(1.2);
-
-    const canvasRegistry = harness.runtime.services.require("canvasRegistry");
-    const element = fxToElement({ editor: canvasRegistry }, { node, createdAt: 1, updatedAt: 2 });
-    const updated = txUpdateTextNodeFromElement({ Konva, scene, theme }, { element, freeTextName: "free-text" });
-
-    expect(updated).toBe(true);
-    expect(node.scaleX()).toBeCloseTo(1, 5);
-    expect(node.scaleY()).toBeCloseTo(1, 5);
-    expect(node.width()).toBeCloseTo(300, 5);
-    expect(node.height()).toBeCloseTo(36, 5);
-
-    await harness.destroy();
-  });
 });

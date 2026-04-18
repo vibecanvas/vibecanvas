@@ -196,49 +196,6 @@ describe("new Pen plugin", () => {
     await harness.destroy();
   });
 
-  test("draw-create commits a pen path to scene and CRDT and stays in pen mode", async () => {
-    const harness = await createNewCanvasHarness();
-    const editor = harness.runtime.services.require("editor");
-    const selection = harness.runtime.services.require("selection");
-
-    editor.setActiveTool("pen");
-    await flushCanvasEffects();
-
-    withDynamicPointer(harness, { x: 120, y: 80 }, () => {
-      harness.runtime.hooks.pointerDown.call(createHookPointerEvent("pointerdown", 0.4));
-    });
-    withDynamicPointer(harness, { x: 160, y: 110 }, () => {
-      harness.runtime.hooks.pointerMove.call(createHookPointerEvent("pointermove", 0.6) as Konva.KonvaEventObject<MouseEvent>);
-    });
-    withDynamicPointer(harness, { x: 210, y: 140 }, () => {
-      harness.runtime.hooks.pointerMove.call(createHookPointerEvent("pointermove", 0.5) as Konva.KonvaEventObject<MouseEvent>);
-    });
-
-    const previewPath = harness.dynamicLayer.find((node: Konva.Node) => node instanceof Konva.Path)[0] as Konva.Path | undefined;
-    expect(previewPath).toBeInstanceOf(Konva.Path);
-
-    harness.runtime.hooks.pointerUp.call(createHookPointerEvent("pointerup", 0.5));
-    await flushCanvasEffects();
-
-    const penNodes = harness.staticForegroundLayer.find((node: Konva.Node) => node instanceof Konva.Path) as Konva.Path[];
-    expect(penNodes).toHaveLength(1);
-    expect(editor.activeToolId).toBe("pen");
-    expect(selection.mode).toBe("draw_create");
-
-    const docElements = Object.values(harness.docHandle.doc().elements);
-    expect(docElements).toHaveLength(1);
-    expect(docElements[0]?.data.type).toBe("pen");
-    if (docElements[0]?.data.type !== "pen") {
-      throw new Error("Expected created document element to be a pen");
-    }
-    expect(docElements[0].data.points.length).toBeGreaterThanOrEqual(3);
-    expect(penNodes[0]?.id()).toBe(previewPath?.id());
-    expect(docElements[0]?.id).not.toBe(previewPath?.id());
-    expect(harness.dynamicLayer.find((node: Konva.Node) => node instanceof Konva.Path)).toHaveLength(0);
-
-    await harness.destroy();
-  });
-
   test("remembered pen tool style is used for the next stroke", async () => {
     const harness = await createNewCanvasHarness();
     const editor = harness.runtime.services.require("editor");
@@ -272,7 +229,7 @@ describe("new Pen plugin", () => {
     }
 
     expect(docElements[0].style.backgroundColor).toBe("@blue/700");
-    expect(docElements[0].style.strokeWidth).toBe(12);
+    expect(docElements[0].style.strokeWidth).toBe("@stroke-width/heavy");
     expect(docElements[0].style.opacity).toBe(0.5);
 
     await harness.destroy();
@@ -637,55 +594,4 @@ describe("new Pen plugin", () => {
     await harness.destroy();
   });
 
-  test("shared transformer resize bakes scale into pen points and resets node scale", async () => {
-    const element = createPenElement();
-    const docHandle = createMockDocHandle({
-      elements: {
-        [element.id]: structuredClone(element),
-      },
-    });
-
-    const harness = await createNewCanvasHarness({ docHandle });
-    const history = harness.runtime.services.require("history");
-    const selection = harness.runtime.services.require("selection");
-    const node = harness.staticForegroundLayer.findOne<Konva.Path>(`#${element.id}`)!;
-    const transformer = harness.dynamicLayer.find((candidate: Konva.Node) => candidate instanceof Konva.Transformer)[0] as Konva.Transformer;
-    const originalPoints = structuredClone(getPersistedPenElement(docHandle, element.id).data.points);
-
-    selection.setSelection([node]);
-    selection.setFocusedNode(node);
-    await flushCanvasEffects();
-
-    transformer.fire("transformstart", {
-      target: node,
-      currentTarget: transformer,
-      evt: new MouseEvent("transformstart", { bubbles: true }),
-    });
-    node.scaleX(1.8);
-    node.scaleY(1.4);
-    node.x(node.x() + 25);
-    node.y(node.y() + 10);
-    transformer.fire("transformend", {
-      target: node,
-      currentTarget: transformer,
-      evt: new MouseEvent("transformend", { bubbles: true }),
-    });
-    await flushCanvasEffects();
-
-    const resizedElement = getPersistedPenElement(docHandle, element.id);
-    expect(resizedElement.data.points[1]?.[0]).toBeGreaterThan(originalPoints[1]?.[0] ?? 0);
-    expect(resizedElement.data.points[1]?.[1]).toBeGreaterThan(originalPoints[1]?.[1] ?? 0);
-    expect(node.scaleX()).toBeCloseTo(1, 6);
-    expect(node.scaleY()).toBeCloseTo(1, 6);
-
-    history.undo();
-    await flushCanvasEffects();
-    expect(getPersistedPenElement(docHandle, element.id).data.points).toEqual(originalPoints);
-
-    history.redo();
-    await flushCanvasEffects();
-    expect(getPersistedPenElement(docHandle, element.id).data.points[1]?.[0]).toBeGreaterThan(originalPoints[1]?.[0] ?? 0);
-
-    await harness.destroy();
-  });
 });

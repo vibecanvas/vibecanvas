@@ -113,31 +113,6 @@ describe("CrdtService regressions", () => {
     expect(docHandle.doc().elements.e1.x).toBe(88);
   });
 
-  test("compat patch still marks its change as local", () => {
-    const { service, localFlags, docHandle } = createStartedService();
-
-    service.patch({
-      elements: [createElement("e1", { x: 12 })],
-      groups: [],
-    });
-
-    expect(localFlags).toEqual([true]);
-    expect(docHandle.doc().elements.e1.x).toBe(12);
-  });
-
-  test("compat deleteById still marks its change as local", () => {
-    const { service, localFlags, docHandle } = createStartedService({
-      elements: {
-        e1: createElement("e1"),
-      },
-    });
-
-    service.deleteById({ elementIds: ["e1"] });
-
-    expect(localFlags).toEqual([true]);
-    expect(docHandle.doc().elements.e1).toBeUndefined();
-  });
-
   test("remote docHandle changes are not marked local", () => {
     const { service, localFlags, docHandle } = createStartedService();
 

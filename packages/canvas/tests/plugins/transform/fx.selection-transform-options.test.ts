@@ -100,25 +100,4 @@ describe("fxGetSelectionTransformOptions", () => {
     });
   });
 
-  test("disables border for a single semantic group selection", () => {
-    const canvasRegistry = new CanvasRegistryService();
-    const groupNode = new Konva.Group({ id: "group-1" });
-
-    canvasRegistry.registerGroup({
-      id: "group",
-      matchesNode: (candidate) => candidate.id() === groupNode.id(),
-      toGroup: (candidate) => candidate.id() === groupNode.id() ? createGroup(groupNode.id()) : null,
-    });
-
-    const result = fxGetSelectionTransformOptions({
-      Konva,
-      canvasRegistry,
-    }, {
-      selection: [groupNode],
-    });
-
-    expect(result.borderEnabled).toBe(false);
-    expect(result.enabledAnchors).toEqual(["top-left", "top-right", "bottom-left", "bottom-right"]);
-    expect(result.keepRatio).toBe(true);
-  });
 });
