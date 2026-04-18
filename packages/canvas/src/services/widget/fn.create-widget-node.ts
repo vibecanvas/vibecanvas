@@ -123,6 +123,7 @@ export function fnCreateWidgetNode(konva: typeof Konva, colors: THostThemeColors
   const height = Math.max(WIDGET_HOST_HEADER_HEIGHT, element.data.h)
   const bodyHeight = Math.max(0, height - WIDGET_HOST_HEADER_HEIGHT)
   const dividerWidth = Math.max(0, width - WIDGET_HOST_WINDOW_STROKE_WIDTH * 2)
+  const isExpanded = element.data.expanded !== false
 
   const group = new konva.Group({
     x: element.x,
@@ -134,6 +135,8 @@ export function fnCreateWidgetNode(konva: typeof Konva, colors: THostThemeColors
   const body = createBody(konva, colors)
   body.width(width)
   body.height(bodyHeight)
+  body.visible(isExpanded)
+  body.listening(isExpanded)
 
   const header = createHeader(konva, colors)
   const border = createBorder(konva, colors)
@@ -142,16 +145,21 @@ export function fnCreateWidgetNode(konva: typeof Konva, colors: THostThemeColors
 
   if (border) {
     border.width(width)
-    border.height(height)
+    border.height(isExpanded ? height : WIDGET_HOST_HEADER_HEIGHT)
   }
 
-  if (headerBackground) {
+  if (headerBackground instanceof konva.Rect) {
     headerBackground.width(width)
     headerBackground.height(WIDGET_HOST_HEADER_HEIGHT)
+    headerBackground.cornerRadius(isExpanded
+      ? [WIDGET_HOST_WINDOW_CORNER_RADIUS, WIDGET_HOST_WINDOW_CORNER_RADIUS, 0, 0]
+      : WIDGET_HOST_WINDOW_CORNER_RADIUS)
   }
 
-  if (divider) {
+  if (divider instanceof konva.Rect) {
     divider.width(dividerWidth)
+    divider.visible(isExpanded)
+    divider.listening(isExpanded)
   }
 
   group.add(border)
