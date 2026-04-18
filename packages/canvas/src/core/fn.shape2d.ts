@@ -1,4 +1,10 @@
-import type { TElement, TElementStyle } from "@vibecanvas/service-automerge/types/canvas-doc.types";
+import type { TElement, TElementStyle, TTextData } from "@vibecanvas/service-automerge/types/canvas-doc.types";
+import {
+  DEFAULT_ATTACHED_TEXT_ALIGN,
+  DEFAULT_ATTACHED_TEXT_VERTICAL_ALIGN,
+  DEFAULT_TEXT_FONT_FAMILY,
+  TEXT_FONT_SIZE_TOKEN_BY_PRESET,
+} from "../plugins/text/CONSTANTS";
 
 export type TShape2dPoint = {
   x: number;
@@ -13,6 +19,13 @@ export type TShape2dBounds = {
   width: number;
   height: number;
 };
+export type TShape2dSize = {
+  width: number;
+  height: number;
+};
+type TShape2dElementData = Extract<TElement["data"], { type: TShape2dElementType }>;
+type TShape2dElement = Omit<TElement, "data"> & { data: TShape2dElementData };
+type TTextElement = Omit<TElement, "data"> & { data: TTextData };
 
 const DEFAULT_STYLE: TElementStyle = {
   opacity: 1,
@@ -78,6 +91,238 @@ export function fnGetDiamondPoints(args: { width: number; height: number }) {
   ];
 }
 
+export function fnGetShape2dElementSize(element: TElement): TShape2dSize | null {
+  if (element.data.type === "rect" || element.data.type === "diamond") {
+    return {
+      width: element.data.w,
+      height: element.data.h,
+    } satisfies TShape2dSize;
+  }
+
+  if (element.data.type === "ellipse") {
+    return {
+      width: element.data.rx * 2,
+      height: element.data.ry * 2,
+    } satisfies TShape2dSize;
+  }
+
+  return null;
+}
+
+export function fnGetShape2dTextData(element: TElement): TTextData | null {
+  if (element.data.type === "rect" || element.data.type === "diamond" || element.data.type === "ellipse") {
+    return element.data.text ?? null;
+  }
+
+  return null;
+}
+
+export function fnCreateShape2dTextData(args: {
+  width: number;
+  height: number;
+  text?: string;
+  originalText?: string;
+  fontFamily?: string;
+  link?: string | null;
+}) {
+  return {
+    type: "text",
+    w: Math.max(4, args.width),
+    h: Math.max(4, args.height),
+    text: args.text ?? "",
+    originalText: args.originalText ?? args.text ?? "",
+    fontFamily: args.fontFamily ?? DEFAULT_TEXT_FONT_FAMILY,
+    link: args.link ?? null,
+    containerId: null,
+    autoResize: false,
+  } satisfies TTextData;
+}
+
+export function fnCreateShape2dInlineTextElement(args: {
+  element: TElement;
+  text: string;
+  fontFamily: string;
+  minHeight?: number;
+}) {
+  if (!fnIsShape2dElementType(args.element.data.type)) {
+    return args.element;
+  }
+
+  const shapeElement = args.element as TShape2dElement;
+  const grownElement = (args.minHeight !== undefined
+    ? fnGrowShape2dElementHeight({ element: shapeElement, minHeight: args.minHeight })
+    : structuredClone(shapeElement)) as TShape2dElement;
+  const size = fnGetShape2dElementSize(grownElement);
+  if (!size) {
+    return grownElement;
+  }
+
+  const existingText = fnGetShape2dTextData(grownElement);
+
+  return {
+    ...grownElement,
+    style: {
+      ...grownElement.style,
+      fontSize: grownElement.style.fontSize ?? TEXT_FONT_SIZE_TOKEN_BY_PRESET.M,
+      textAlign: grownElement.style.textAlign ?? DEFAULT_ATTACHED_TEXT_ALIGN,
+      verticalAlign: grownElement.style.verticalAlign ?? DEFAULT_ATTACHED_TEXT_VERTICAL_ALIGN,
+    },
+    data: {
+      ...grownElement.data,
+      text: {
+        ...(existingText ?? fnCreateShape2dTextData({
+          width: size.width,
+          height: size.height,
+        })),
+        w: Math.max(4, size.width),
+        h: Math.max(4, size.height),
+        text: args.text,
+        originalText: args.text,
+        fontFamily: args.fontFamily,
+        link: existingText?.link ?? null,
+        containerId: null,
+        autoResize: false,
+      },
+    },
+  } satisfies TShape2dElement;
+}
+
+export function fnRemoveShape2dInlineText(element: TElement) {
+  if (element.data.type !== "rect" && element.data.type !== "diamond" && element.data.type !== "ellipse") {
+    return element;
+  }
+
+  const shapeElement = element as TShape2dElement;
+  const { text: _text, ...dataWithoutText } = shapeElement.data;
+  return {
+    ...structuredClone(shapeElement),
+    data: dataWithoutText,
+  } satisfies TShape2dElement;
+}
+
+export function fnGrowShape2dElementHeight(args: {
+  element: TElement;
+  minHeight: number;
+}) {
+  if (args.element.data.type === "rect") {
+    return {
+      ...structuredClone(args.element),
+      data: {
+        ...args.element.data,
+        h: Math.max(args.element.data.h, args.minHeight),
+      },
+    } satisfies TElement;
+  }
+
+  if (args.element.data.type === "diamond") {
+    return {
+      ...structuredClone(args.element),
+      data: {
+        ...args.element.data,
+        h: Math.max(args.element.data.h, args.minHeight),
+      },
+    } satisfies TElement;
+  }
+
+  if (args.element.data.type === "ellipse") {
+    return {
+      ...structuredClone(args.element),
+      data: {
+        ...args.element.data,
+        ry: Math.max(args.element.data.ry * 2, args.minHeight) / 2,
+      },
+    } satisfies TElement;
+  }
+
+  return structuredClone(args.element);
+}
+
+function fnIsLegacyAttachedTextElement(element: TElement): element is TTextElement {
+  return element.data.type === "text" && element.data.containerId !== null;
+}
+
+/**
+ * @deprecated remove in next version
+ */
+export function fnCreateLegacyShape2dInlineTextMigrationPlan(args: {
+  elements: Record<string, TElement>;
+}) {
+  const patchElements = new Map<string, TElement>();
+  const deleteElementIds = new Set<string>();
+  const legacyTextElements = Object.values(args.elements)
+    .filter((element): element is TTextElement => {
+      return fnIsLegacyAttachedTextElement(element);
+    })
+    .slice()
+    .sort((left, right) => {
+      if (left.updatedAt !== right.updatedAt) {
+        return left.updatedAt - right.updatedAt;
+      }
+
+      if (left.createdAt !== right.createdAt) {
+        return left.createdAt - right.createdAt;
+      }
+
+      return left.id.localeCompare(right.id);
+    });
+
+  legacyTextElements.forEach((legacyTextElement) => {
+    const hostId = legacyTextElement.data.containerId;
+    if (hostId === null) {
+      return;
+    }
+
+    const currentHostElement = patchElements.get(hostId) ?? args.elements[hostId];
+    if (!currentHostElement || !fnIsShape2dElementType(currentHostElement.data.type)) {
+      return;
+    }
+
+    const shapeHostElement = currentHostElement as TShape2dElement;
+    deleteElementIds.add(legacyTextElement.id);
+
+    if (fnGetShape2dTextData(shapeHostElement)) {
+      return;
+    }
+
+    if (legacyTextElement.data.text === "") {
+      return;
+    }
+
+    const size = fnGetShape2dElementSize(shapeHostElement);
+    if (!size) {
+      return;
+    }
+
+    patchElements.set(hostId, {
+      ...structuredClone(shapeHostElement),
+      updatedAt: Math.max(shapeHostElement.updatedAt, legacyTextElement.updatedAt),
+      style: {
+        ...shapeHostElement.style,
+        strokeColor: shapeHostElement.style.strokeColor ?? legacyTextElement.style.strokeColor,
+        opacity: shapeHostElement.style.opacity ?? legacyTextElement.style.opacity,
+        fontSize: shapeHostElement.style.fontSize ?? legacyTextElement.style.fontSize ?? TEXT_FONT_SIZE_TOKEN_BY_PRESET.M,
+        textAlign: shapeHostElement.style.textAlign ?? legacyTextElement.style.textAlign ?? DEFAULT_ATTACHED_TEXT_ALIGN,
+        verticalAlign: shapeHostElement.style.verticalAlign ?? legacyTextElement.style.verticalAlign ?? DEFAULT_ATTACHED_TEXT_VERTICAL_ALIGN,
+      },
+      data: {
+        ...shapeHostElement.data,
+        text: {
+          ...legacyTextElement.data,
+          w: Math.max(4, size.width),
+          h: Math.max(4, size.height),
+          containerId: null,
+          autoResize: false,
+        },
+      },
+    } satisfies TShape2dElement);
+  });
+
+  return {
+    patchElements: [...patchElements.values()],
+    deleteElementIds: [...deleteElementIds],
+  };
+}
+
 export function fnCreateShape2dElement(args: {
   id: string;
   type: TShape2dElementType;
@@ -91,6 +336,7 @@ export function fnCreateShape2dElement(args: {
   parentGroupId: string | null;
   zIndex: string;
   style?: Partial<TElementStyle>;
+  text?: TTextData | null;
 }): TElement {
   const style: TElementStyle = {
     ...DEFAULT_STYLE,
@@ -116,11 +362,13 @@ export function fnCreateShape2dElement(args: {
           type: "ellipse",
           rx: args.width / 2,
           ry: args.height / 2,
+          text: args.text ?? undefined,
         }
       : {
           type: args.type,
           w: args.width,
           h: args.height,
+          text: args.text ?? undefined,
         },
   } satisfies TElement;
 }

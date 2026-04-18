@@ -100,14 +100,14 @@ prefix: `packages/canvas/src/`
 | ✅ | `core/fn.text-style.ts` |  | Text sizing/alignment presets and proportional preset scaling |
 | ✅ | `core/fn.world-position.ts` |  | Pointer/world coordinate conversion across parent transforms |
 | ❓ | `core/fx.canvas-node-semantics.ts` |  | Konva semantic node typing: group/element checks, parent ancestry |
-| ✅ | `core/fx.filter-selection.ts` |  | Nested canvas selection collapsing to deepest live sub-selection |
+| ✅ | `core/fn.filter-selection.ts` |  | Nested canvas selection collapsing to deepest live sub-selection |
 | ❓ | `core/fx.node-space.ts` |  | Konva node absolute-to-layer-local coordinate conversion |
 | ❓ | `core/fx.pretext.ts` |  | Pretext line-wrapped text measurement before canvas rendering |
-| ❓ | `core/fx.resolve-selection-style-elements.ts` |  | Resolve style-target elements from selection or focused node |
-| ❓ | `core/fx.resolve-selection-style-text-elements.ts` |  | Selection styling: normalize direct and attached text elements |
-| ❓ | `core/fx.selection-style-element-patch.ts` |  | Selection style edits: clone element, patch text/line/arrow fields |
+| ✅ | `core/fx.resolve-selection-style-elements.ts` |  | Resolve style-target elements from selection or focused node |
+| ✅ | `core/fn.resolve-selection-style-text-elements.ts` |  | Selection styling: normalize direct and attached text elements |
+| ✅ | `core/fx.selection-style-element-patch.ts` |  | Selection style edits: clone element, patch text/line/arrow fields |
 | ❓ | `core/GUARDS.ts` |  |  |
-| ❓ | `core/tx.apply-selection-style-change.ts` |  | Selected elements style mutation planning, preview, CRDT commit, undo/re |
+| ✅ | `core/tx.apply-selection-style-change.ts` |  | Selected elements style mutation planning, preview, CRDT commit, undo/re |
 | ❓ | `core/tx.finalize-owned-transform.ts` |  | Finalize owned-node transform, patch CRDT, record undo/redo history |
 | ❓ | `core/tx.set-node-z-index.ts` |  | Persist custom z-layer ordering on Konva nodes |
 | ❓ | `plugins/camera-control/CameraControl.plugin.ts` |  | Pan/zoom plugin |
@@ -129,11 +129,11 @@ prefix: `packages/canvas/src/`
 | ❓ | `plugins/group/fx.create-group-boundary.ts` |  | Dashed themed group boundary overlay tracking transformed bounds |
 | ❓ | `plugins/group/Group.plugin.ts` |  | Canvas group lifecycle, boundaries, grouping shortcuts, clone-drag orche |
 | ❓ | `plugins/group/tx.create-group-clone-drag.ts` |  | Group duplicate drag preview, subtree re-ID, CRDT commit on drop |
-| ❓ | `plugins/group/tx.group-selection.ts` |  | Groups selected scene nodes |
+| 🤖 | `plugins/group/tx.group-selection.ts` |  | Groups selected scene nodes |
 | ❓ | `plugins/group/tx.setup-group-node.ts` |  | Group drag lifecycle: selection, clone-alt-drag, CRDT/history sync, metr |
 | ❓ | `plugins/group/tx.sync-draggability.ts` |  | Group nesting disables children dragging; selected nodes re-enable dragg |
 | ❓ | `plugins/group/tx.sync-group-boundaries.ts` |  | Selected groups update boundary overlays and cleanup |
-| ❓ | `plugins/group/tx.ungroup-selection.ts` |  | Ungroup selected Konva group, preserve positions, sync CRDT undo/redo |
+| 🤖 | `plugins/group/tx.ungroup-selection.ts` |  | Ungroup selected Konva group, preserve positions, sync CRDT undo/redo |
 | ❓ | `plugins/history-control/HistoryControl.plugin.ts` |  | Intercepts Cmd/Ctrl+Z and Shift+Z for history undo/redo |
 | ❓ | `plugins/hosted-component/HostedComponent.plugin.ts` |  | Hosted component plugin scaffold wiring required editor scene services |
 | ❓ | `plugins/hosted-component/Todo.md` |  | Widget manager stores widgets; hosted component reacts/render lifecycle |
@@ -160,14 +160,14 @@ prefix: `packages/canvas/src/`
 | ❓ | `plugins/recorder/tx.file.ts` |  | JSON export save flow: picker first, anchor-download fallback |
 | ❓ | `plugins/recorder/tx.mount.ts` |  | Mounts recorder overlay panel onto scene stage |
 | ❓ | `plugins/render-order/RenderOrder.plugin.ts` |  | Canvas context-menu layer ordering for sibling selections |
-| ❓ | `plugins/scene-hydrator/SceneHydrator.plugin.ts` |  | Rehydrate Konva scene from CRDT, preserving selection/editor state |
+| 🤖 | `plugins/scene-hydrator/SceneHydrator.plugin.ts` |  | Rehydrate Konva scene from CRDT, preserving selection/editor state |
 | ✅ | `plugins/select/fn.get-selection-path.ts` |  | Ancestor canvas-node selection path from node to foreground layer |
 | ❓ | `plugins/select/Select.plugin.ts` |  | Canvas selection, marquee drag, delete, drill-down interactions |
-| 🟡 | `plugins/select/tx.delete-selection.ts` | group guard should me moved, needs better guard | Delete selected canvas nodes |
+| 🤖 | `plugins/select/tx.delete-selection.ts` | group guard should me moved, needs better guard | Delete selected canvas nodes |
 | ❓ | `plugins/select/tx.handle-element-pointer-double-click.ts` |  | Double-click drills selection one level deeper along ancestry |
 | ❓ | `plugins/select/tx.handle-element-pointer-down.ts` |  | Element click selection depth cycling, shift-toggle, focus updates |
 | ❓ | `plugins/select/tx.handle-stage-pointer-move.ts` |  | Drag-select updates rectangle, intersects top-layer selectable nodes |
-| ❓ | `plugins/selection-style-menu/fx.mount-selection-style-menu.ts` |  | Selection styling overlay for selected elements and active tools |
+| 🤖 | `plugins/selection-style-menu/fx.mount-selection-style-menu.ts` |  | Selection styling overlay for selected elements and active tools |
 | ❓ | `plugins/selection-style-menu/SelectionStyleMenu.plugin.ts` |  | Floating selection style popover wiring |
 | ✅ | `plugins/shape1d/fn.draft.ts` |  | Shape1d draft and fallback preview element construction |
 | ❓ | `plugins/shape1d/fx.geometry.ts` |  | Shape1D coordinate transforms, insertion midpoints, anchor-drag geometry |
@@ -177,23 +177,25 @@ prefix: `packages/canvas/src/`
 | ❓ | `plugins/shape1d/tx.history.ts` |  | Shape1d undo/redo for element edits and creation |
 | ❓ | `plugins/shape1d/tx.render.ts` |  | Konva line/arrow node creation, caps, bounds, scene runtime |
 | ❓ | `plugins/shape1d/tx.runtime.ts` |  | Shape drag, clone-drag, multi-select movement, history/CRDT sync |
+| ❓ | `plugins/shape2d/CONSTANTS.ts` |  | Shape2d inline-text runtime attrs, ids, and derived node naming |
 | ✅ | `plugins/shape2d/fn.node.ts` |  | Konva node kind resolution via attrs plus runtime class guards |
 | ✅ | `plugins/shape2d/fn.text-host-bounds.ts` |  | Shape text layout bounds for rect, ellipse, diamond |
-| ❓ | `plugins/shape2d/fx.attached-text.ts` |  | Shape-embedded text creation, syncing, persistence, edit-mode handoff |
-| ❓ | `plugins/shape2d/fx.create-node.ts` |  | Pen element → themed Konva.Path |
-| ❓ | `plugins/shape2d/Shape2d.plugin.ts` |  | Shape drawing lifecycle, preview, cloning, attached-text sync |
-| ❓ | `plugins/shape2d/tx.create-clone-drag.ts` |  | Shape clone preview drag, finalize persist, history, linked duplicates |
+| 🤖 | `plugins/shape2d/fx.attached-text.ts` |  | Shape-embedded text creation, syncing, persistence, edit-mode handoff |
+| 🤖 | `plugins/shape2d/fx.create-node.ts` |  | Pen element → themed Konva.Path |
+| 🤖 | `plugins/shape2d/fx.to-element.ts` |  | Shape node → persisted element with inline text payload |
+| 🤖 | `plugins/shape2d/Shape2d.plugin.ts` |  | Shape drawing lifecycle, preview, cloning, attached-text sync |
+| 🤖 | `plugins/shape2d/tx.create-clone-drag.ts` |  | Shape clone preview drag, finalize persist, history, linked duplicates |
 | ❓ | `plugins/shape2d/tx.setup-node.ts` |  | Shape node events: selection, clone-drag, multi-drag, CRDT history |
-| ❓ | `plugins/shape2d/tx.update-node-from-element.ts` |  | Syncs shape nodes from element props into Konva scene |
+| 🤖 | `plugins/shape2d/tx.update-node-from-element.ts` |  | Syncs shape nodes from element props into Konva scene |
 | ✅ | `plugins/text/fn.compute-text-height.ts` |  | Auto-resizing multiline text node bounding-box height |
 | ✅ | `plugins/text/fn.create-text-element.ts` |  | Creating default persisted text elements from coordinates and timestamps |
 | ❓ | `plugins/text/fx.compute-text-width.ts` |  | Konva multiline text autosize width measurement |
 | ❓ | `plugins/text/fx.to-element.ts` |  | Konva shape node → persisted canvas element snapshot |
-| ❓ | `plugins/text/Text.plugin.ts` |  | Free-text plugin: create, edit, transform, theme-sync, serialize Konva t |
+| 🤖 | `plugins/text/Text.plugin.ts` |  | Free-text plugin: create, edit, transform, theme-sync, serialize Konva t |
 | ❓ | `plugins/text/tx.create-text-clone-drag.ts` |  | Text drag-duplicate preview committed on drag end |
-| ❓ | `plugins/text/tx.enter-edit-mode.ts` |  | Inline textarea editing for canvas text/shape labels |
+| 🤖 | `plugins/text/tx.enter-edit-mode.ts` |  | Inline textarea editing for canvas text/shape labels |
 | ❓ | `plugins/text/tx.setup-text-node.ts` |  | Text node pointer hooks, drag sync, alt-clone history |
-| ❓ | `plugins/text/tx.update-text-node-from-element.ts` |  | Existing Konva text node visual sync from text element model |
+| 🤖 | `plugins/text/tx.update-text-node-from-element.ts` |  | Existing Konva text node visual sync from text element model |
 | ❓ | `plugins/toolbar/Toolbar.plugin.ts` |  | Runtime toolbar bootstrap: tools, hotkeys, cursor, temporary hand |
 | ❓ | `plugins/transform/fx.proxy-bounds.ts` |  | Transform overlay needs layer-relative rotated shape bounds |
 | ❓ | `plugins/transform/fx.proxy-drag-target.ts` |  | Single selected shape or pen path proxy-drag target |
@@ -227,7 +229,7 @@ prefix: `packages/canvas/src/`
 | ✅ | `services/widget/WidgetManagerService.ts` |  | Registers widget tools canvas adapters example widget |
 
 ## .pi/extensions/functional-core
-**SKIP**
+**SKIP** (internal pi extension tooling; intentionally untracked in this table)
 
 ## scripts
 **SKIP**

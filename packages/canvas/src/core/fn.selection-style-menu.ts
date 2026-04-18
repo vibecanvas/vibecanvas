@@ -3,6 +3,7 @@ import type { TSelectionStyleMenuSections, TSelectionStyleMenuValues } from "../
 import type { TCapStyle, TFontFamily, TLineType, TStrokeWidthOption } from "../components/SelectionStyleMenu/types";
 import type { TCanvasRegistrySelectionStyleConfig } from "../services/canvas-registry/CanvasRegistryService";
 import { DEFAULT_TEXT_FONT_SIZE_TOKEN } from "../plugins/text/CONSTANTS";
+import { fnGetShape2dTextData } from "./fn.shape2d";
 
 const LINE_TYPES = new Set(["line", "arrow"]);
 
@@ -148,6 +149,9 @@ export function fnGetSelectionStyleMenuValues(args: {
   const width = args.elements.find((element) => typeof element.style.strokeWidth === "string");
   const opacity = args.elements.find((element) => typeof element.style.opacity === "number");
   const text = args.textElements[0];
+  const textData = text?.data.type === "text"
+    ? text.data
+    : (text ? fnGetShape2dTextData(text) : null);
   const line = args.elements.find((element) => {
     return element.data.type === "line" || element.data.type === "arrow";
   });
@@ -159,7 +163,7 @@ export function fnGetSelectionStyleMenuValues(args: {
     strokeWidth: sections.showStrokeWidthPicker ? (width?.style.strokeWidth ?? defaults.strokeWidth) : undefined,
     opacity: sections.showOpacityPicker ? (opacity?.style.opacity ?? defaults.opacity) : undefined,
     fontFamily: sections.showTextPickers
-      ? (text?.data.type === "text" ? text.data.fontFamily as TFontFamily : defaults.fontFamily)
+      ? ((textData?.fontFamily as TFontFamily | undefined) ?? defaults.fontFamily)
       : undefined,
     fontSize: sections.showTextPickers
       ? (text?.style.fontSize ?? defaults.fontSize ?? DEFAULT_TEXT_FONT_SIZE_TOKEN)

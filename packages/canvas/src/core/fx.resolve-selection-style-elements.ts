@@ -1,23 +1,21 @@
-import type Konva from "konva";
 import type { TElement } from "@vibecanvas/service-automerge/types/canvas-doc.types";
-import { isKonvaGroup, isKonvaShape } from "./GUARDS";
-import { fxFilterSelection } from "./fx.filter-selection";
-import type { TCanvasSemanticsEditor } from "./fn.canvas-node-semantics";
+import type Konva from "konva";
 import type { SceneService } from "../services/scene/SceneService";
 import type { SelectionService } from "../services/selection/SelectionService";
+import { isKonvaGroup, isKonvaShape } from "./GUARDS";
+import type { TCanvasSemanticsEditor } from "./fn.canvas-node-semantics";
+import { fnFilterSelection } from "./fn.filter-selection";
 
 export type TSelectionStyleElementEditor = TCanvasSemanticsEditor & {
   toElement(node: Konva.Node): TElement | null;
 };
 
 export type TPortalResolveSelectionStyleElements = {
-  Konva: typeof Konva;
   editor: TSelectionStyleElementEditor;
   scene: SceneService;
   selection: SelectionService;
 };
 
-export type TArgsResolveSelectionStyleElements = Record<string, never>;
 
 export type TPortalResolveFocusedSelectionStyleElements = {
   Konva: typeof Konva;
@@ -30,9 +28,8 @@ export type TArgsResolveFocusedSelectionStyleElements = {
 };
 
 function collectSelectionStyleElements(args: {
-  Konva: typeof Konva;
   editor: TSelectionStyleElementEditor;
-  rootNodes: Array<Konva.Group | Konva.Shape>;
+  rootNodes: Konva.Node[];
 }) {
   const shapeNodes: Konva.Shape[] = [];
   const seenNodeIds = new Set<string>();
@@ -56,7 +53,7 @@ function collectSelectionStyleElements(args: {
     shapeNodes.push(node);
   };
 
-  args.rootNodes.forEach(visitNode);
+  args.rootNodes.filter(n => isKonvaGroup(n) || isKonvaShape(n)).forEach(n => visitNode(n));
 
   const seenElementIds = new Set<string>();
   return shapeNodes
@@ -74,13 +71,9 @@ function collectSelectionStyleElements(args: {
 
 export function fxResolveSelectionStyleElements(
   portal: TPortalResolveSelectionStyleElements,
-  args: TArgsResolveSelectionStyleElements,
 ) {
-  void args;
 
-  const filteredSelection = fxFilterSelection({
-    Konva: portal.Konva,
-  }, {
+  const filteredSelection = fnFilterSelection({
     editor: portal.editor,
     selection: portal.selection.selection,
   });
@@ -95,9 +88,8 @@ export function fxResolveSelectionStyleElements(
   });
 
   return collectSelectionStyleElements({
-    Konva: portal.Konva,
     editor: portal.editor,
-    rootNodes,
+    rootNodes: rootNodes
   });
 }
 
@@ -119,7 +111,6 @@ export function fxResolveFocusedSelectionStyleElements(
   }
 
   return collectSelectionStyleElements({
-    Konva: portal.Konva,
     editor: portal.editor,
     rootNodes: [focusedNode],
   });

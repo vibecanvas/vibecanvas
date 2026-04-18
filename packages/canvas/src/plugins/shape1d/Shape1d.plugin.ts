@@ -7,7 +7,7 @@ import { throttle } from "@solid-primitives/scheduled";
 import { resolveThemeColor, type ThemeService } from "@vibecanvas/service-theme";
 import { DEFAULT_STROKE_WIDTHS } from "../../components/SelectionStyleMenu/types";
 import { txSetNodeZIndex } from "../../core/tx.set-node-z-index";
-import { fxFilterSelection } from "../../core/fx.filter-selection";
+import { fnFilterSelection } from "../../core/fn.filter-selection";
 import type { IRuntimeHooks } from "../../types";
 import type { CameraService } from "../../services/camera/CameraService";
 import type { CanvasRegistryService } from "../../services/canvas-registry/CanvasRegistryService";
@@ -531,7 +531,7 @@ export function createShape1dPlugin(): IPlugin<{
         }
 
         const node = findNode(editingId);
-        const filteredSelection = fxFilterSelection({ Konva }, {
+        const filteredSelection = fnFilterSelection({
           editor: canvasRegistry,
           selection: selection.selection,
         });
@@ -932,7 +932,7 @@ export function createShape1dPlugin(): IPlugin<{
         if (event.key === "Enter"
           && selection.mode === CanvasMode.SELECT
           && editor.editingShape1dId === null) {
-          const filteredSelection = fxFilterSelection({ Konva }, {
+          const filteredSelection = fnFilterSelection({
             editor: canvasRegistry,
             selection: selection.selection,
           });
@@ -960,7 +960,7 @@ export function createShape1dPlugin(): IPlugin<{
       });
 
       ctx.hooks.elementPointerDoubleClick.tap((event) => {
-        const filteredSelection = fxFilterSelection({ Konva }, {
+        const filteredSelection = fnFilterSelection({
           editor: canvasRegistry,
           selection: selection.selection,
         });

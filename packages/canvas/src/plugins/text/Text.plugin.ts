@@ -33,7 +33,6 @@ import {
 } from "./CONSTANTS";
 
 const FREE_TEXT_NAME = "free-text";
-const ATTACHED_TEXT_NAME = "attached-text";
 const TEXT_USES_THEME_COLOR_ATTR = "vcUsesThemeTextColor";
 const ELEMENT_STYLE_ATTR = "vcElementStyle";
 const TRANSFORM_BEFORE_ELEMENT_ATTR = "vcTransformBeforeElement";
@@ -59,8 +58,10 @@ function applyTextThemeState(node: Konva.Text, element: Pick<TElement, "style">)
 
 function createTextNode(theme: ThemeService, element: TElement) {
   const data = element.data as TTextData;
+  if (data.containerId !== null) {
+    return null;
+  }
 
-  const isAttachedText = data.containerId !== null;
   const node = new Konva.Text({
     id: element.id,
     x: element.x,
@@ -74,9 +75,9 @@ function createTextNode(theme: ThemeService, element: TElement) {
     align: element.style.textAlign ?? DEFAULT_TEXT_ALIGN,
     verticalAlign: element.style.verticalAlign ?? DEFAULT_TEXT_VERTICAL_ALIGN,
     lineHeight: DEFAULT_TEXT_LINE_HEIGHT,
-    wrap: isAttachedText ? "word" : "none",
-    draggable: !isAttachedText,
-    listening: !isAttachedText,
+    wrap: "none",
+    draggable: true,
+    listening: true,
     fill: getTextFillColor(theme, element),
     opacity: element.style.opacity ?? 1,
     scaleX: element.scaleX ?? 1,
@@ -85,10 +86,10 @@ function createTextNode(theme: ThemeService, element: TElement) {
 
   applyTextThemeState(node, element);
   node.setAttr(ELEMENT_STYLE_ATTR, structuredClone(element.style));
-  node.setAttr("vcContainerId", data.containerId ?? null);
+  node.setAttr("vcContainerId", null);
   node.setAttr("vcOriginalText", data.originalText);
   node.setAttr("vcTextAutoResize", data.autoResize);
-  node.name(isAttachedText ? ATTACHED_TEXT_NAME : FREE_TEXT_NAME);
+  node.name(FREE_TEXT_NAME);
   return node;
 }
 
@@ -163,8 +164,7 @@ function txApplyTextTransform(args: {
 }
 
 /**
- * Owns free-text create, edit, drag, clone-drag, and editor transform registries.
- * Attached-text behavior stays separate from free-text interactions.
+ * Owns standalone free-text create, edit, drag, clone-drag, and transform flows.
  */
 export function createTextPlugin(): IPlugin<{
   camera: CameraService;
@@ -197,7 +197,7 @@ export function createTextPlugin(): IPlugin<{
 
       const syncThemeTextNodes = () => {
         scene.staticForegroundLayer.find((candidate: Konva.Node) => {
-          return isKonvaText(candidate);
+          return isKonvaText(candidate) && candidate.name() === FREE_TEXT_NAME;
         }).forEach((candidate) => {
           if (!isKonvaText(candidate)) {
             return;
@@ -247,8 +247,8 @@ export function createTextPlugin(): IPlugin<{
 
       const unregisterTextElement = canvasRegistry.registerElement({
         id: "text",
-        matchesElement: (element) => element.data.type === "text",
-        matchesNode: (node) => isKonvaText(node),
+        matchesElement: (element) => element.data.type === "text" && element.data.containerId === null,
+        matchesNode: (node) => isKonvaText(node) && node.name() === FREE_TEXT_NAME,
         toElement: (node) => {
           if (!isKonvaText(node)) {
             return null;
@@ -262,14 +262,14 @@ export function createTextPlugin(): IPlugin<{
           });
         },
         createNode: (element) => {
-          if (element.data.type !== "text") {
+          if (element.data.type !== "text" || element.data.containerId !== null) {
             return null;
           }
 
           return createTextNode(theme, element);
         },
         createDragClone: ({ node }) => {
-          if (!isKonvaText(node)) {
+          if (!isKonvaText(node) || node.name() !== FREE_TEXT_NAME) {
             return false;
           }
 
@@ -298,7 +298,7 @@ export function createTextPlugin(): IPlugin<{
           return true;
         },
         attachListeners: (node) => {
-          if (!isKonvaText(node)) {
+          if (!isKonvaText(node) || node.name() !== FREE_TEXT_NAME) {
             return false;
           }
 
@@ -306,6 +306,10 @@ export function createTextPlugin(): IPlugin<{
           return true;
         },
         updateElement: (element) => {
+          if (element.data.type !== "text" || element.data.containerId !== null) {
+            return false;
+          }
+
           return txUpdateTextNodeFromElement({
             Konva,
             scene,
@@ -415,7 +419,7 @@ export function createTextPlugin(): IPlugin<{
       });
 
       contextMenu.registerProvider("text", ({ targetElement, activeSelection }) => {
-        if (targetElement?.data.type !== "text") {
+        if (targetElement?.data.type !== "text" || targetElement.data.containerId !== null) {
           return [];
         }
 

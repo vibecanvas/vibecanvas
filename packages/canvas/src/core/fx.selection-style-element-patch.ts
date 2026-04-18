@@ -1,6 +1,7 @@
 import type { TArrowData, TElement, TElementStyle, TLineData } from "@vibecanvas/service-automerge/types/canvas-doc.types";
 import type { TSelectionStyleProperty } from "./fn.selection-style-menu";
 import type { TCapStyle, TLineType } from "../components/SelectionStyleMenu/types";
+import { fnGetShape2dTextData } from "./fn.shape2d";
 
 export type TPortalSelectionStyleElementPatch = {
   now: () => number;
@@ -46,7 +47,35 @@ export function fxCreateSelectionStyleDataPatch(
     };
   }
 
+  if (args.property === "fontFamily") {
+    const shapeTextData = fnGetShape2dTextData(args.element);
+    if (shapeTextData && args.element.data.type !== "text") {
+      return {
+        ...structuredClone(args.element),
+        updatedAt: portal.now(),
+        data: {
+          ...(args.element.data as Exclude<TElement["data"], { type: "text" }>),
+          text: {
+            ...shapeTextData,
+            fontFamily: args.value,
+          },
+        },
+      } as TElement;
+    }
+  }
+
   if (args.property === "fontSize" && args.element.data.type === "text") {
+    return {
+      ...structuredClone(args.element),
+      updatedAt: portal.now(),
+      style: {
+        ...structuredClone(args.element.style),
+        fontSize: args.value,
+      },
+    };
+  }
+
+  if (args.property === "fontSize" && fnGetShape2dTextData(args.element)) {
     return {
       ...structuredClone(args.element),
       updatedAt: portal.now(),

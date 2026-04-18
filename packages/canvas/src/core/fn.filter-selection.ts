@@ -1,24 +1,18 @@
 import type Konva from "konva";
-import type { Group } from "konva/lib/Group";
-import type { Shape, ShapeConfig } from "konva/lib/Shape";
 import { fnIsCanvasGroupNode, type TCanvasSemanticsEditor } from "./fn.canvas-node-semantics";
-
-export type TPortalFilterSelection = {
-  Konva: typeof Konva;
-};
+import { isKonvaGroup } from "./GUARDS";
 
 export type TArgsFilterSelection = {
   editor?: TCanvasSemanticsEditor;
   selection: Array<Konva.Node>;
 };
 
-export function fxFilterSelection(
-  portal: TPortalFilterSelection,
+export function fnFilterSelection(
   args: TArgsFilterSelection,
 ) {
   let subSelection = args.selection.find((node) => {
     if (!args.editor) {
-      return node.getParent() instanceof portal.Konva.Group;
+      return isKonvaGroup(node.getParent());
     }
 
     const parent = node.getParent();

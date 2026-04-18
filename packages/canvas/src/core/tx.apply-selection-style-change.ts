@@ -1,6 +1,6 @@
 import type Konva from "konva";
 import { fxResolveSelectionStyleElements } from "./fx.resolve-selection-style-elements";
-import { fxResolveSelectionStyleTextElements } from "./fx.resolve-selection-style-text-elements";
+import { fnResolveSelectionStyleTextElements } from "./fn.resolve-selection-style-text-elements";
 import {
   fnGetSelectionStyleStrokeColorKey,
   fnHasSelectionStylePropertySupport,
@@ -30,14 +30,12 @@ export type TApplySelectionStyleChangeCanvasRegistry = {
 };
 
 export type TPortalApplySelectionStyleChange = {
-  Konva: typeof Konva;
   crdt: CrdtService;
   editor: TApplySelectionStyleChangeEditor;
   canvasRegistry: TApplySelectionStyleChangeCanvasRegistry;
   history: HistoryService;
   scene: SceneService;
   selection: SelectionService;
-  fxFindAttachedTextNodeByContainerId: (containerId: string) => Konva.Text | null;
   txRefreshEditingShape1d: () => void;
   now: () => number;
 };
@@ -90,21 +88,16 @@ export function txCreateSelectionStyleChangePlan(
   args: TArgsCreateSelectionStyleChangePlan,
 ): TSelectionStyleChangePlan | null {
   const resolvedElements = fxResolveSelectionStyleElements({
-    Konva: portal.Konva,
     editor: portal.editor,
     scene: portal.scene,
     selection: portal.selection,
-  }, {});
+  });
   const targetElements = fnIsTextStyleProperty(args.property)
-    ? fxResolveSelectionStyleTextElements({
-      editor: portal.editor,
-      fxFindAttachedTextNodeByContainerId: portal.fxFindAttachedTextNodeByContainerId,
-    }, {
+    ? fnResolveSelectionStyleTextElements( {
       elements: resolvedElements,
     })
     : resolvedElements;
   const beforeElements = targetElements.map((element) => structuredClone(element));
-  const supplementalBeforeElements = new Map<string, TElement>();
   const afterElements = targetElements.flatMap((element) => {
     const config = portal.canvasRegistry.getSelectionStyleMenuConfigByElement({ element });
     if (!fnHasSelectionStylePropertySupport({ config, property: args.property })) {
@@ -121,19 +114,7 @@ export function txCreateSelectionStyleChangePlan(
         return [fxCloneElementWithSelectionStyle({ now: portal.now }, { element, style: { [colorKey]: args.value } })];
       }
 
-      const patches: TElement[] = [fxCloneElementWithSelectionStyle({ now: portal.now }, { element, style: { strokeColor: args.value } })];
-      if (element.data.type === "rect") {
-        const attachedTextNode = portal.fxFindAttachedTextNodeByContainerId(element.id);
-        const attachedTextElement = attachedTextNode ? portal.editor.toElement(attachedTextNode) : null;
-        const attachedTextConfig = attachedTextElement
-          ? portal.canvasRegistry.getSelectionStyleMenuConfigByElement({ element: attachedTextElement })
-          : null;
-        if (attachedTextElement?.data.type === "text" && fnHasSelectionStylePropertySupport({ config: attachedTextConfig, property: args.property })) {
-          supplementalBeforeElements.set(attachedTextElement.id, structuredClone(attachedTextElement));
-          patches.push(fxCloneElementWithSelectionStyle({ now: portal.now }, { element: attachedTextElement, style: { strokeColor: args.value } }));
-        }
-      }
-      return patches;
+      return [fxCloneElementWithSelectionStyle({ now: portal.now }, { element, style: { strokeColor: args.value } })];
     }
 
     if (args.property === "strokeWidth" && typeof args.value === "string") {
@@ -172,9 +153,6 @@ export function txCreateSelectionStyleChangePlan(
   }
 
   const beforeById = new Map(beforeElements.map((element) => [element.id, element]));
-  supplementalBeforeElements.forEach((element, id) => {
-    beforeById.set(id, element);
-  });
 
   return {
     beforeById,

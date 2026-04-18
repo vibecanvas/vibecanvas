@@ -20,10 +20,6 @@ export type TPortalCreateShape2dCloneDrag = {
   createNode: (element: TElement) => Konva.Shape | null;
   setupNode: (node: Konva.Shape) => Konva.Shape;
   toElement: (node: Konva.Node) => TElement | null;
-  cloneLinkedNodes?: (args: { sourceNode: Konva.Shape; clonedNode: Konva.Shape }) => {
-    nodes: Konva.Node[];
-    elements: TElement[];
-  };
 };
 
 export type TArgsCreateShape2dCloneDrag = {
@@ -76,22 +72,17 @@ export function txCreateShape2dCloneDrag(
       return;
     }
 
-    const linkedClone = portal.cloneLinkedNodes?.({
-      sourceNode: args.node,
-      clonedNode: previewClone,
-    }) ?? { nodes: [], elements: [] };
-    const createdElements = [clonedElement, ...linkedClone.elements];
-
-    const createBuilder = portal.crdt.build();
-    createdElements.forEach((element) => {
-      createBuilder.patchElement(element.id, element);
-    });
-    const createCommitResult = createBuilder.commit();
+    portal.canvasRegistry.updateElement(clonedElement);
+    const createCommitResult = (() => {
+      const builder = portal.crdt.build();
+      builder.patchElement(clonedElement.id, clonedElement);
+      return builder.commit();
+    })();
 
     portal.history.record({
       label: "clone-shape2d",
       undo() {
-        [...linkedClone.nodes, previewClone].forEach((node) => {
+        portal.renderOrder.getOrderBundle(previewClone).forEach((node) => {
           node.destroy();
         });
         createCommitResult.rollback();
@@ -99,26 +90,17 @@ export function txCreateShape2dCloneDrag(
         portal.render.staticForegroundLayer.batchDraw();
       },
       redo() {
-        const recreatedNodes = createdElements
-          .map((element) => {
-            const node = portal.canvasRegistry.createNodeFromElement(element);
-            if (!node) {
-              return null;
-            }
+        const recreatedNode = portal.canvasRegistry.createNodeFromElement(clonedElement);
+        if (!(recreatedNode instanceof portal.Konva.Shape)) {
+          return;
+        }
 
-            portal.render.staticForegroundLayer.add(node);
-            return node;
-          })
-          .filter((node): node is Konva.Shape | Konva.Text => {
-            return node instanceof portal.Konva.Shape || node instanceof portal.Konva.Text;
-          });
-
+        portal.render.staticForegroundLayer.add(recreatedNode);
+        portal.canvasRegistry.updateElement(clonedElement);
         portal.renderOrder.sortChildren(portal.render.staticForegroundLayer);
         portal.crdt.applyOps({ ops: createCommitResult.redoOps });
-        if (recreatedNodes.length > 0 && recreatedNodes[0] instanceof portal.Konva.Shape) {
-          portal.selection.setSelection([recreatedNodes[0]]);
-          portal.selection.setFocusedNode(recreatedNodes[0]);
-        }
+        portal.selection.setSelection([recreatedNode]);
+        portal.selection.setFocusedNode(recreatedNode);
         portal.render.staticForegroundLayer.batchDraw();
       },
     });

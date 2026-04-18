@@ -1,7 +1,8 @@
 import type { IPlugin } from "@vibecanvas/runtime";
 import type { TElement, TGroup } from "@vibecanvas/service-automerge/types/canvas-doc.types";
 import Konva from "konva";
-import { isKonvaGroup, isKonvaShape, isKonvaText } from "../../core/GUARDS";
+import { isKonvaGroup, isKonvaShape } from "../../core/GUARDS";
+import { fnCreateLegacyShape2dInlineTextMigrationPlan } from "../../core/fn.shape2d";
 import { fnIsCanvasGroupNode } from "../../core/fn.canvas-node-semantics";
 import type { CanvasRegistryService } from "../../services/canvas-registry/CanvasRegistryService";
 import type { CrdtService } from "../../services/crdt/CrdtService";
@@ -10,8 +11,6 @@ import type { SceneService } from "../../services/scene/SceneService";
 import type { SelectionService } from "../../services/selection/SelectionService";
 import type { IRuntimeHooks } from "../../types";
 
-const ATTACHED_TEXT_NAME = "attached-text";
-
 type TSceneNode = Konva.Group | Konva.Shape;
 type TSceneStateSnapshot = {
   selectionIds: string[];
@@ -19,18 +18,6 @@ type TSceneStateSnapshot = {
   editingTextId: string | null;
   editingShape1dId: string | null;
 };
-
-type TCanvasSemantics = {
-  toElement(node: Konva.Node): TElement | null;
-  toGroup(node: Konva.Node): TGroup | null;
-};
-
-function createCanvasSemantics(canvasRegistry: CanvasRegistryService): TCanvasSemantics {
-  return {
-    toElement: (node) => canvasRegistry.toElement(node),
-    toGroup: (node) => canvasRegistry.toGroup(node),
-  };
-}
 
 function compareByPersistedOrder(left: { id: string; zIndex?: string }, right: { id: string; zIndex?: string }) {
   const zCompare = (left.zIndex ?? "").localeCompare(right.zIndex ?? "");
@@ -125,7 +112,6 @@ function loadElementsTopDown(args: {
   canvasRegistry: CanvasRegistryService;
   scene: SceneService;
 }) {
-  const semantics = createCanvasSemantics(args.canvasRegistry);
   const groupsById = new Map(
     args.scene.staticForegroundLayer.find((candidate: Konva.Node) => {
       return fnIsCanvasGroupNode(candidate);
@@ -153,6 +139,7 @@ function loadElementsTopDown(args: {
 
     if (isKonvaGroup(node) || isKonvaShape(node)) {
       parent.add(node);
+      args.canvasRegistry.updateElement(element);
     }
   });
 
@@ -160,7 +147,8 @@ function loadElementsTopDown(args: {
 }
 
 function sortSceneTopDown(scene: SceneService, canvasRegistry: CanvasRegistryService, parent: Konva.Layer | Konva.Group) {
-  const semantics = createCanvasSemantics(canvasRegistry);
+  void scene;
+  void canvasRegistry;
 
   parent.getChildren()
     .filter((candidate): candidate is TSceneNode => isKonvaGroup(candidate) || isKonvaShape(candidate))
@@ -179,61 +167,26 @@ function sortSceneTopDown(scene: SceneService, canvasRegistry: CanvasRegistrySer
     });
 }
 
-function isAttachedTextNode(node: Konva.Node): node is Konva.Text {
-  return isKonvaText(node)
-    && node.name() === ATTACHED_TEXT_NAME
-    && typeof node.getAttr("vcContainerId") === "string";
-}
-
-function keepAttachedTextAboveHosts(scene: SceneService, canvasRegistry: CanvasRegistryService, parent: Konva.Layer | Konva.Group) {
-  void scene;
-
-  const semantics = createCanvasSemantics(canvasRegistry);
-  const orderedChildren = parent.getChildren()
-    .filter((candidate): candidate is TSceneNode => isKonvaGroup(candidate) || isKonvaShape(candidate));
-  const attachedTextByHostId = new Map<string, Konva.Text[]>();
-  const detached: TSceneNode[] = [];
-
-  orderedChildren.forEach((child) => {
-    if (fnIsCanvasGroupNode(child)) {
-      keepAttachedTextAboveHosts(scene, canvasRegistry, child as Konva.Group);
-      detached.push(child);
-      return;
-    }
-
-    if (!isAttachedTextNode(child)) {
-      detached.push(child);
-      return;
-    }
-
-    const hostId = child.getAttr("vcContainerId") as string;
-    const bucket = attachedTextByHostId.get(hostId) ?? [];
-    bucket.push(child);
-    attachedTextByHostId.set(hostId, bucket);
+function txMigrateLegacyShape2dInlineText(crdt: CrdtService) {
+  const migration = fnCreateLegacyShape2dInlineTextMigrationPlan({
+    elements: crdt.doc().elements,
   });
-
-  const nextChildren: TSceneNode[] = [];
-  detached.forEach((child) => {
-    nextChildren.push(child);
-    if (fnIsCanvasGroupNode(child)) {
-      return;
-    }
-
-    const attachedTexts = attachedTextByHostId.get(child.id()) ?? [];
-    nextChildren.push(...attachedTexts);
-    attachedTextByHostId.delete(child.id());
-  });
-
-  for (const orphanTexts of attachedTextByHostId.values()) {
-    nextChildren.push(...orphanTexts);
+  if (migration.patchElements.length === 0 && migration.deleteElementIds.length === 0) {
+    return;
   }
 
-  nextChildren.forEach((child, index) => {
-    child.zIndex(index);
+  const builder = crdt.build();
+  migration.patchElements.forEach((element) => {
+    builder.patchElement(element.id, element);
   });
+  migration.deleteElementIds.forEach((id) => {
+    builder.deleteElement(id);
+  });
+  builder.commit();
 }
 
 function loadCanvas(crdt: CrdtService, canvasRegistry: CanvasRegistryService, scene: SceneService) {
+  txMigrateLegacyShape2dInlineText(crdt);
   const doc = crdt.doc();
   const groups = Object.values(doc.groups).sort(compareByPersistedOrder);
   const elements = Object.values(doc.elements).sort(compareByPersistedOrder);
@@ -248,7 +201,6 @@ function loadCanvas(crdt: CrdtService, canvasRegistry: CanvasRegistryService, sc
     builder.commit();
   }
   sortSceneTopDown(scene, canvasRegistry, scene.staticForegroundLayer);
-  keepAttachedTextAboveHosts(scene, canvasRegistry, scene.staticForegroundLayer);
   scene.stage.batchDraw();
 }
 

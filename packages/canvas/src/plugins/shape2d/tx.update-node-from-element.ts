@@ -4,6 +4,7 @@ import { fnGetDiamondPoints } from "../../core/fn.shape2d";
 import { fnGetAbsolutePositionFromWorldPosition } from "../../core/fn.world-position";
 import type { SceneService } from "../../services/scene/SceneService";
 import type { ThemeService } from "@vibecanvas/service-theme";
+import { SHAPE2D_TEXT_DATA_ATTR } from "./CONSTANTS";
 
 const ELEMENT_STYLE_ATTR = "vcElementStyle";
 
@@ -85,6 +86,7 @@ export function txUpdateShape2dNodeFromElement(
     node.setAttr("vcShape2dType", "rect");
     node.setAttr("vcElementCreatedAt", args.element.createdAt);
     node.setAttr(ELEMENT_STYLE_ATTR, structuredClone(style));
+    node.setAttr(SHAPE2D_TEXT_DATA_ATTR, structuredClone(args.element.data.text ?? null));
     syncShapeFill(node, portal.theme, style.backgroundColor);
     syncShapeStroke(node, portal.theme, style.strokeColor, style.strokeWidth, style.strokeStyle);
     portal.setNodeZIndex(node, args.element.zIndex);
@@ -111,6 +113,7 @@ export function txUpdateShape2dNodeFromElement(
     node.setAttr("vcShape2dType", "diamond");
     node.setAttr("vcElementCreatedAt", args.element.createdAt);
     node.setAttr(ELEMENT_STYLE_ATTR, structuredClone(style));
+    node.setAttr(SHAPE2D_TEXT_DATA_ATTR, structuredClone(args.element.data.text ?? null));
     syncShapeFill(node, portal.theme, style.backgroundColor);
     syncShapeStroke(node, portal.theme, style.strokeColor, style.strokeWidth, style.strokeStyle);
     portal.setNodeZIndex(node, args.element.zIndex);
@@ -137,6 +140,7 @@ export function txUpdateShape2dNodeFromElement(
     node.setAttr("vcShape2dType", "ellipse");
     node.setAttr("vcElementCreatedAt", args.element.createdAt);
     node.setAttr(ELEMENT_STYLE_ATTR, structuredClone(style));
+    node.setAttr(SHAPE2D_TEXT_DATA_ATTR, structuredClone(args.element.data.text ?? null));
     syncShapeFill(node, portal.theme, style.backgroundColor);
     syncShapeStroke(node, portal.theme, style.strokeColor, style.strokeWidth, style.strokeStyle);
     portal.setNodeZIndex(node, args.element.zIndex);

@@ -3,6 +3,7 @@ import type { TElement } from "@vibecanvas/service-automerge/types/canvas-doc.ty
 import { fnGetDiamondPoints } from "../../core/fn.shape2d";
 import type { SceneService } from "../../services/scene/SceneService";
 import type { ThemeService } from "@vibecanvas/service-theme";
+import { SHAPE2D_TEXT_DATA_ATTR } from "./CONSTANTS";
 
 const ELEMENT_STYLE_ATTR = "vcElementStyle";
 
@@ -45,6 +46,7 @@ export function fxCreateShape2dNode(portal: TPortalCreateShape2dNode, args: TArg
     node.setAttr("vcShape2dType", "rect");
     node.setAttr("vcElementCreatedAt", args.element.createdAt);
     node.setAttr(ELEMENT_STYLE_ATTR, structuredClone(style));
+    node.setAttr(SHAPE2D_TEXT_DATA_ATTR, structuredClone(args.element.data.text ?? null));
     portal.setNodeZIndex(node, args.element.zIndex);
     return node;
   }
@@ -72,6 +74,7 @@ export function fxCreateShape2dNode(portal: TPortalCreateShape2dNode, args: TArg
     node.setAttr("vcShape2dType", "diamond");
     node.setAttr("vcElementCreatedAt", args.element.createdAt);
     node.setAttr(ELEMENT_STYLE_ATTR, structuredClone(style));
+    node.setAttr(SHAPE2D_TEXT_DATA_ATTR, structuredClone(args.element.data.text ?? null));
     portal.setNodeZIndex(node, args.element.zIndex);
     return node;
   }
@@ -96,6 +99,7 @@ export function fxCreateShape2dNode(portal: TPortalCreateShape2dNode, args: TArg
     node.setAttr("vcShape2dType", "ellipse");
     node.setAttr("vcElementCreatedAt", args.element.createdAt);
     node.setAttr(ELEMENT_STYLE_ATTR, structuredClone(style));
+    node.setAttr(SHAPE2D_TEXT_DATA_ATTR, structuredClone(args.element.data.text ?? null));
     portal.setNodeZIndex(node, args.element.zIndex);
     return node;
   }

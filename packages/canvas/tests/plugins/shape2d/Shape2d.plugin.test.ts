@@ -200,4 +200,54 @@ describe("shape2d runtime helpers", () => {
     expect(element?.style.strokeWidth).toBe(9);
     expect(element?.style.opacity).toBe(0.5);
   });
+
+  test("fxToShape2dElement keeps inline text payload on the host element", () => {
+    ensureDom();
+    const node = new Konva.Rect({
+      id: "rect-inline-1",
+      x: 12,
+      y: 18,
+      width: 160,
+      height: 90,
+      opacity: 1,
+    });
+    node.setAttr("vcShape2dType", "rect");
+    node.setAttr("vcElementCreatedAt", 5);
+    node.setAttr("vcElementStyle", {
+      strokeColor: "@base/900",
+      fontSize: "@text/m",
+      textAlign: "center",
+      verticalAlign: "middle",
+      opacity: 1,
+    });
+    node.setAttr("vcShapeTextData", {
+      type: "text",
+      w: 10,
+      h: 10,
+      text: "Inline",
+      originalText: "Inline",
+      fontFamily: "Arial",
+      link: null,
+      containerId: null,
+      autoResize: false,
+    });
+
+    const element = fxToShape2dElement({
+      Rect: Konva.Rect,
+      Line: Konva.Line,
+      Ellipse: Konva.Ellipse,
+      canvasRegistry: { toGroup: () => null },
+      render: {} as never,
+      now: () => 6,
+    }, {
+      node,
+    });
+
+    expect(element?.data.type).toBe("rect");
+    if (element?.data.type === "rect") {
+      expect(element.data.text?.text).toBe("Inline");
+      expect(element.data.text?.w).toBe(160);
+      expect(element.data.text?.h).toBe(90);
+    }
+  });
 });

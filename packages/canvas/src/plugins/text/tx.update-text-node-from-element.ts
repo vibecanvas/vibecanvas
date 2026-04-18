@@ -16,11 +16,10 @@ export type TArgsUpdateTextNodeFromElement = {
   freeTextName: string;
 };
 
-const ATTACHED_TEXT_NAME = "attached-text";
 const ELEMENT_STYLE_ATTR = "vcElementStyle";
 
 export function txUpdateTextNodeFromElement(portal: TPortalUpdateTextNodeFromElement, args: TArgsUpdateTextNodeFromElement) {
-  if (args.element.data.type !== "text") {
+  if (args.element.data.type !== "text" || args.element.data.containerId !== null) {
     return false;
   }
 
@@ -51,13 +50,13 @@ export function txUpdateTextNodeFromElement(portal: TPortalUpdateTextNodeFromEle
   node.fill(portal.theme.resolveThemeColor(args.element.style.strokeColor, portal.theme.getTheme().colors.canvasText) ?? portal.theme.getTheme().colors.canvasText);
   node.setAttr(ELEMENT_STYLE_ATTR, structuredClone(args.element.style));
   node.setAttr("vcUsesThemeTextColor", !args.element.style.strokeColor);
-  node.setAttr("vcContainerId", data.containerId ?? null);
+  node.setAttr("vcContainerId", null);
   node.setAttr("vcOriginalText", data.originalText);
   node.setAttr("vcTextAutoResize", data.autoResize);
   node.scale({ x: args.element.scaleX ?? 1, y: args.element.scaleY ?? 1 });
-  node.wrap(data.containerId === null ? "none" : "word");
-  node.listening(data.containerId === null);
-  node.draggable(data.containerId === null);
-  node.name(data.containerId === null ? args.freeTextName : ATTACHED_TEXT_NAME);
+  node.wrap("none");
+  node.listening(true);
+  node.draggable(true);
+  node.name(args.freeTextName);
   return true;
 }

@@ -7,17 +7,18 @@ import Konva from "konva";
 import Circle from "lucide-static/icons/circle.svg?raw";
 import Diamond from "lucide-static/icons/diamond.svg?raw";
 import Square from "lucide-static/icons/square.svg?raw";
-import { isKonvaGroup, isKonvaShape, isKonvaText } from "../../core/GUARDS";
+import { isKonvaGroup, isKonvaShape } from "../../core/GUARDS";
 import {
     fnCreateShape2dElement,
     fnGetShape2dDraftBounds,
     fnGetShape2dElementTypeFromTool,
+    fnGetShape2dTextData,
     fnIsShape2dElementType,
     fnIsShape2dToolId,
     type TShape2dElementType,
     type TShape2dToolId,
 } from "../../core/fn.shape2d";
-import { fxFilterSelection } from "../../core/fx.filter-selection";
+import { fnFilterSelection } from "../../core/fn.filter-selection";
 import { txSetNodeZIndex } from "../../core/tx.set-node-z-index";
 import type { CameraService } from "../../services/camera/CameraService";
 import type { CanvasRegistryService } from "../../services/canvas-registry/CanvasRegistryService";
@@ -32,8 +33,13 @@ import type { SelectionService } from "../../services/selection/SelectionService
 import type { IRuntimeHooks } from "../../types";
 import { txDeleteSelection } from "../select/tx.delete-selection";
 import { txEnterEditMode } from "../text/tx.enter-edit-mode";
+import {
+  DEFAULT_ATTACHED_TEXT_ALIGN,
+  DEFAULT_ATTACHED_TEXT_VERTICAL_ALIGN,
+  TEXT_FONT_SIZE_TOKEN_BY_PRESET,
+} from "../text/CONSTANTS";
 import { fnGetShape2dNodeType } from "./fn.node";
-import { fxGetAttachedTextNode, fxOpenAttachedTextEditMode, fxPersistAttachedTextNode, fxSyncAttachedTextNodeToShape } from "./fx.attached-text";
+import { fxGetAttachedTextNode, fxOpenAttachedTextEditMode, fxSyncAttachedTextNodeToShape } from "./fx.attached-text";
 import { fxCreateShape2dNode } from "./fx.create-node";
 import { fxToShape2dElement } from "./fx.to-element";
 import { txCreateShape2dCloneDrag } from "./tx.create-clone-drag";
@@ -73,7 +79,7 @@ function isShape2dTextHostNode(node: Konva.Node | null | undefined): node is Kon
 }
 
 function getFocusedShape2dTextHost(canvasRegistry: CanvasRegistryService, selection: SelectionService) {
-  const filtered = fxFilterSelection({ Konva }, { editor: canvasRegistry, selection: selection.selection });
+  const filtered = fnFilterSelection({ editor: canvasRegistry, selection: selection.selection });
   if (filtered.length !== 1) {
     return null;
   }
@@ -141,9 +147,12 @@ export function fxApplyRememberedShape2dToolStyle(args: {
   return nextElement;
 }
 
-function getSelectionStyleMenuConfig(theme?: ThemeService) {
-  void theme;
+function getSelectionStyleMenuConfig(args?: {
+  theme?: ThemeService;
+  element?: TElement;
+}) {
   const defaults = fxGetShape2dToolDefaults();
+  const hasInlineText = args?.element ? fnGetShape2dTextData(args.element) !== null : false;
 
   return {
     sections: {
@@ -151,11 +160,16 @@ function getSelectionStyleMenuConfig(theme?: ThemeService) {
       showStrokeColorPicker: true,
       showStrokeWidthPicker: true,
       showOpacityPicker: true,
+      showTextPickers: hasInlineText,
     },
     values: {
       fillColor: defaults.fillColor,
       strokeWidth: defaults.strokeWidth,
       opacity: defaults.opacity,
+      fontFamily: "Arial, sans-serif",
+      fontSize: TEXT_FONT_SIZE_TOKEN_BY_PRESET.M,
+      textAlign: DEFAULT_ATTACHED_TEXT_ALIGN,
+      verticalAlign: DEFAULT_ATTACHED_TEXT_VERTICAL_ALIGN,
     },
   };
 }
@@ -191,17 +205,11 @@ export function createShape2dPlugin(): IPlugin<{
       const createAttachedTextPortal = () => ({
         Konva,
         canvasRegistry,
-        crdt,
-        document: render.container.ownerDocument,
         editor,
         scene: render,
-        renderOrder,
         selection,
         theme,
-        createId,
-        now,
-        pretext: { layoutWithLines, prepareWithSegments },
-        enterEditMode: (args: { freeTextName: string; node: Konva.Text; isNew: boolean }) => {
+        enterEditMode: (args: { freeTextName: string; node: Konva.Text; isNew: boolean; shapeTextHostNode: Konva.Shape }) => {
           return txEnterEditMode({
             Konva,
             camera,
@@ -253,14 +261,7 @@ export function createShape2dPlugin(): IPlugin<{
       };
 
       const syncShapeAttachedText = (shapeNode: Konva.Shape) => {
-        const attachedTextPortal = createAttachedTextPortal();
-        const textNode = fxGetAttachedTextNode(attachedTextPortal, { shapeNode });
-        if (!textNode) {
-          return null;
-        }
-
-        fxSyncAttachedTextNodeToShape(attachedTextPortal, { shapeNode, textNode });
-        return fxPersistAttachedTextNode(attachedTextPortal, { textNode });
+        return fxSyncAttachedTextNodeToShape(createAttachedTextPortal(), { shapeNode });
       };
 
       const setupNode = (node: Konva.Shape) => {
@@ -287,61 +288,12 @@ export function createShape2dPlugin(): IPlugin<{
               createNode,
               setupNode,
               toElement,
-              cloneLinkedNodes: ({ sourceNode: sourceShape, clonedNode }) => {
-                if (!isShape2dTextHostNode(sourceShape) || !isShape2dTextHostNode(clonedNode)) {
-                  return { nodes: [], elements: [] };
-                }
-
-                const attachedTextPortal = createAttachedTextPortal();
-                const sourceTextNode = fxGetAttachedTextNode(attachedTextPortal, { shapeNode: sourceShape });
-                if (!sourceTextNode) {
-                  return { nodes: [], elements: [] };
-                }
-
-                const sourceTextElement = canvasRegistry.toElement(sourceTextNode);
-                if (!sourceTextElement || sourceTextElement.data.type !== "text") {
-                  return { nodes: [], elements: [] };
-                }
-
-                const timestamp = now();
-                const clonedTextNode = canvasRegistry.createNodeFromElement({
-                  ...sourceTextElement,
-                  id: createId(),
-                  x: clonedNode.x(),
-                  y: clonedNode.y(),
-                  rotation: clonedNode.rotation(),
-                  parentGroupId: null,
-                  createdAt: timestamp,
-                  updatedAt: timestamp,
-                  zIndex: "",
-                  data: {
-                    ...sourceTextElement.data,
-                    containerId: clonedNode.id(),
-                    originalText: sourceTextElement.data.text,
-                  },
-                });
-                if (!isKonvaText(clonedTextNode)) {
-                  return { nodes: [], elements: [] };
-                }
-
-                render.staticForegroundLayer.add(clonedTextNode);
-                fxSyncAttachedTextNodeToShape(attachedTextPortal, { shapeNode: clonedNode, textNode: clonedTextNode });
-                renderOrder.assignOrderOnInsert({
-                  parent: render.staticForegroundLayer,
-                  nodes: [clonedNode, clonedTextNode],
-                  position: "front",
-                });
-                const clonedTextElement = canvasRegistry.toElement(clonedTextNode);
-                return clonedTextElement && clonedTextElement.data.type === "text"
-                  ? { nodes: [clonedTextNode], elements: [clonedTextElement] }
-                  : { nodes: [clonedTextNode], elements: [] };
-              },
             }, {
               node: sourceNode,
             });
           },
           filterSelection: (nodes) => {
-            return fxFilterSelection({ Konva }, {
+            return fnFilterSelection({
               editor: canvasRegistry,
               selection: nodes.filter((candidate): candidate is Konva.Group | Konva.Shape => {
                 return isKonvaGroup(candidate) || isKonvaShape(candidate);
@@ -406,6 +358,7 @@ export function createShape2dPlugin(): IPlugin<{
         clearPreviewState();
         createdNode.moveTo(render.staticForegroundLayer);
         setupNode(createdNode);
+        syncShapeAttachedText(createdNode);
         renderOrder.assignOrderOnInsert({
           parent: render.staticForegroundLayer,
           nodes: [createdNode],
@@ -459,7 +412,7 @@ export function createShape2dPlugin(): IPlugin<{
 
             return createNode(element);
           },
-          getSelectionStyleMenu: ({ theme: activeTheme }) => getSelectionStyleMenuConfig(activeTheme),
+          getSelectionStyleMenu: ({ theme: activeTheme, element }) => getSelectionStyleMenuConfig({ theme: activeTheme, element }),
         });
       };
 
@@ -580,55 +533,6 @@ export function createShape2dPlugin(): IPlugin<{
             createNode,
             setupNode,
             toElement,
-            cloneLinkedNodes: ({ sourceNode: sourceShape, clonedNode }) => {
-              if (!isShape2dTextHostNode(sourceShape) || !isShape2dTextHostNode(clonedNode)) {
-                return { nodes: [], elements: [] };
-              }
-
-              const attachedTextPortal = createAttachedTextPortal();
-              const sourceTextNode = fxGetAttachedTextNode(attachedTextPortal, { shapeNode: sourceShape });
-              if (!sourceTextNode) {
-                return { nodes: [], elements: [] };
-              }
-
-              const sourceTextElement = canvasRegistry.toElement(sourceTextNode);
-              if (!sourceTextElement || sourceTextElement.data.type !== "text") {
-                return { nodes: [], elements: [] };
-              }
-
-              const timestamp = now();
-              const clonedTextNode = canvasRegistry.createNodeFromElement({
-                ...sourceTextElement,
-                id: createId(),
-                x: clonedNode.x(),
-                y: clonedNode.y(),
-                rotation: clonedNode.rotation(),
-                parentGroupId: null,
-                createdAt: timestamp,
-                updatedAt: timestamp,
-                zIndex: "",
-                data: {
-                  ...sourceTextElement.data,
-                  containerId: clonedNode.id(),
-                  originalText: sourceTextElement.data.text,
-                },
-              });
-              if (!isKonvaText(clonedTextNode)) {
-                return { nodes: [], elements: [] };
-              }
-
-              render.staticForegroundLayer.add(clonedTextNode);
-              fxSyncAttachedTextNodeToShape(attachedTextPortal, { shapeNode: clonedNode, textNode: clonedTextNode });
-              renderOrder.assignOrderOnInsert({
-                parent: render.staticForegroundLayer,
-                nodes: [clonedNode, clonedTextNode],
-                position: "front",
-              });
-              const clonedTextElement = canvasRegistry.toElement(clonedTextNode);
-              return clonedTextElement && clonedTextElement.data.type === "text"
-                ? { nodes: [clonedTextNode], elements: [clonedTextElement] }
-                : { nodes: [clonedTextNode], elements: [] };
-            },
           }, {
             node,
           });

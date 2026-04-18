@@ -5,6 +5,7 @@ import type { Node } from "konva/lib/Node";
 import type { Shape, ShapeConfig } from "konva/lib/Shape";
 import { isKonvaGroup, isKonvaLayer, isKonvaShape } from "../../core/GUARDS";
 import { fnGetCanvasNodeKind, fnIsCanvasGroupNode } from "../../core/fn.canvas-node-semantics";
+import { SHAPE2D_INLINE_TEXT_DERIVED_ATTR } from "../shape2d/CONSTANTS";
 import type { CrdtService } from "../../services/crdt/CrdtService";
 import type { HistoryService } from "../../services/history/HistoryService";
 import type { RenderOrderService } from "../../services/render-order/RenderOrderService";
@@ -16,6 +17,7 @@ export type TDeleteSelectionCanvasRegistry = {
   toGroup(node: Node): TGroup | null;
   createNodeFromGroup(group: TGroup): Group | null;
   createNodeFromElement(element: TElement): Node | null;
+  updateElement(element: TElement): boolean;
 };
 
 export type TPortalDeleteSelection = {
@@ -54,6 +56,10 @@ function isSceneNode(portal: TPortalDeleteSelection, node: Node | null | undefin
 
 function isSceneParent(portal: TPortalDeleteSelection, node: Node | null | undefined): node is Group | Layer {
   return Boolean(node) && (isKonvaGroup(node) || isKonvaLayer(node));
+}
+
+function isRuntimeOnlyDerivedNode(node: Node) {
+  return node.getAttr(SHAPE2D_INLINE_TEXT_DERIVED_ATTR) === true;
 }
 
 function isNodeDescendantOf(node: Node, ancestor: Node) {
@@ -122,6 +128,10 @@ function collectDeleteSnapshot(portal: TPortalDeleteSelection, roots: TSceneNode
 
     visitedNodeIds.add(node.id());
     visitedNodes.push(node);
+
+    if (isRuntimeOnlyDerivedNode(node)) {
+      return;
+    }
 
     const kind = fnGetCanvasNodeKind(node);
     if (kind === "group") {
@@ -261,6 +271,7 @@ function restoreDeleteSnapshot(portal: TPortalDeleteSelection, snapshot: TDelete
 
     if (isKonvaGroup(node) || isKonvaShape(node)) {
       parent.add(node);
+      portal.canvasRegistry.updateElement(element);
     }
   });
 

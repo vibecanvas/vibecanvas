@@ -2,7 +2,13 @@ import type { layoutWithLines, prepareWithSegments } from "@chenglou/pretext";
 import type { TElement, TTextData } from "@vibecanvas/service-automerge/types/canvas-doc.types";
 import type { ThemeService } from "@vibecanvas/service-theme";
 import type Konva from "konva";
-import { fnIsShape2dElementType } from "../../core/fn.shape2d";
+import {
+  fnCreateShape2dInlineTextElement,
+  fnGetShape2dElementSize,
+  fnGetShape2dTextData,
+  fnIsShape2dElementType,
+  fnRemoveShape2dInlineText,
+} from "../../core/fn.shape2d";
 import { fxMeasureTextLayout } from "../../core/fx.pretext";
 import type { CameraService } from "../../services/camera/CameraService";
 import type { CanvasRegistryService } from "../../services/canvas-registry/CanvasRegistryService";
@@ -11,6 +17,7 @@ import type { EditorService } from "../../services/editor/EditorService";
 import type { HistoryService } from "../../services/history/HistoryService";
 import type { SceneService } from "../../services/scene/SceneService";
 import type { SelectionService } from "../../services/selection/SelectionService";
+import { SHAPE2D_INLINE_TEXT_HOST_ID_ATTR } from "../shape2d/CONSTANTS";
 import { fnGetShapeTextHostBounds } from "../shape2d/fn.text-host-bounds";
 import { DEFAULT_TEXT_LINE_HEIGHT } from "./CONSTANTS";
 import { fnComputeTextHeight } from "./fn.compute-text-height";
@@ -43,11 +50,12 @@ export type TArgsEnterEditMode = {
   freeTextName: string;
   isNew: boolean;
   node: Konva.Text;
+  shapeTextHostNode?: Konva.Shape;
 };
 
-function findAttachedHostNode(portal: TPortalEnterEditMode, containerId: string) {
+function findShapeTextHostNode(portal: TPortalEnterEditMode, hostId: string) {
   const node = portal.scene.staticForegroundLayer.findOne((candidate: Konva.Node) => {
-    return candidate.id() === containerId
+    return candidate.id() === hostId
       && (candidate instanceof portal.Konva.Rect || candidate instanceof portal.Konva.Ellipse || candidate instanceof portal.Konva.Line);
   });
 
@@ -56,55 +64,6 @@ function findAttachedHostNode(portal: TPortalEnterEditMode, containerId: string)
   }
 
   return node;
-}
-
-function fxGetShapeElementHeight(element: TElement) {
-  if (element.data.type === "ellipse") {
-    return element.data.ry * 2;
-  }
-
-  if (element.data.type === "rect" || element.data.type === "diamond") {
-    return element.data.h;
-  }
-
-  return 0;
-}
-
-function fxGrowAttachedHostElement(args: {
-  hostElement: TElement;
-  minHeight: number;
-}) {
-  if (args.hostElement.data.type === "rect") {
-    return {
-      ...args.hostElement,
-      data: {
-        ...args.hostElement.data,
-        h: Math.max(args.hostElement.data.h, args.minHeight),
-      },
-    } satisfies TElement;
-  }
-
-  if (args.hostElement.data.type === "diamond") {
-    return {
-      ...args.hostElement,
-      data: {
-        ...args.hostElement.data,
-        h: Math.max(args.hostElement.data.h, args.minHeight),
-      },
-    } satisfies TElement;
-  }
-
-  if (args.hostElement.data.type === "ellipse") {
-    return {
-      ...args.hostElement,
-      data: {
-        ...args.hostElement.data,
-        ry: Math.max(args.hostElement.data.ry * 2, args.minHeight) / 2,
-      },
-    } satisfies TElement;
-  }
-
-  return args.hostElement;
 }
 
 function findCurrentTextNode(portal: TPortalEnterEditMode, id: string) {
@@ -167,72 +126,105 @@ function fxSyncTextareaColor(portal: TPortalEnterEditMode, args: {
 }
 
 export function txEnterEditMode(portal: TPortalEnterEditMode, args: TArgsEnterEditMode) {
+  let activeNode = args.node;
   const now = Date.now();
-  const originalElement = fxSerializeTextNode(portal, { node: args.node, createdAt: now, updatedAt: now });
-  const originalText = args.node.text();
+  const originalElement = fxSerializeTextNode(portal, { node: activeNode, createdAt: now, updatedAt: now });
+  const originalText = activeNode.text();
   const originalData = originalElement.data as TTextData;
-  const isAttachedText = originalData.containerId !== null;
-  const attachedHostNode = isAttachedText && originalData.containerId
-    ? findAttachedHostNode(portal, originalData.containerId)
+  const resolvedShapeTextHostNode = args.shapeTextHostNode
+    ?? (() => {
+      const hostId = activeNode.getAttr(SHAPE2D_INLINE_TEXT_HOST_ID_ATTR) as string | undefined;
+      return typeof hostId === "string" ? findShapeTextHostNode(portal, hostId) : null;
+    })();
+  const originalHostElement = resolvedShapeTextHostNode
+    ? fxGetNodeElement(portal, { node: resolvedShapeTextHostNode })
     : null;
-  const originalHostElement = attachedHostNode
-    ? fxGetNodeElement(portal, { node: attachedHostNode })
+  const isShapeInlineText = Boolean(
+    resolvedShapeTextHostNode
+      && originalHostElement
+      && fnIsShape2dElementType(originalHostElement.data.type),
+  );
+  const originalInlineTextData = isShapeInlineText && originalHostElement
+    ? fnGetShape2dTextData(originalHostElement)
     : null;
 
-  portal.editor.setEditingTextId(args.node.id());
-  args.node.visible(false);
+  portal.editor.setEditingTextId(activeNode.id());
+  activeNode.visible(false);
   portal.scene.stage.batchDraw();
 
   const textarea = portal.document.createElement("textarea");
-  const initialAbsoluteScale = args.node.getAbsoluteScale();
-  const initialScaledFontSize = args.node.fontSize() * initialAbsoluteScale.x;
-  const initialHostHeight = originalHostElement ? fxGetShapeElementHeight(originalHostElement) : originalData.h;
+  const initialAbsoluteScale = activeNode.getAbsoluteScale();
+  const initialScaledFontSize = activeNode.fontSize() * initialAbsoluteScale.x;
+  const initialHostHeight = isShapeInlineText && originalHostElement
+    ? (fnGetShape2dElementSize(originalHostElement)?.height ?? originalData.h)
+    : originalData.h;
 
-  const syncAttachedEditingLayout = () => {
-    if (!isAttachedText) {
+  const buildShapeInlineHostElement = (args: {
+    text: string;
+    minHeight: number;
+  }): TElement | null => {
+    if (!isShapeInlineText || !originalHostElement || !fnIsShape2dElementType(originalHostElement.data.type)) {
+      return null;
+    }
+
+    return fnCreateShape2dInlineTextElement({
+      element: structuredClone(originalHostElement),
+      text: args.text,
+      fontFamily: activeNode.fontFamily(),
+      minHeight: args.minHeight,
+    }) as TElement;
+  };
+
+  const buildShapeInlineRemovalElement = (): TElement | null => {
+    if (!isShapeInlineText || !originalHostElement || !fnIsShape2dElementType(originalHostElement.data.type)) {
+      return null;
+    }
+
+    return fnRemoveShape2dInlineText(structuredClone(originalHostElement)) as TElement;
+  };
+
+  const syncShapeInlineEditingLayout = () => {
+    if (!isShapeInlineText || !resolvedShapeTextHostNode) {
       return;
     }
 
     const measured = fxMeasureTextLayout(portal.pretext, {
       text: textarea.value,
-      fontSize: args.node.fontSize(),
-      fontFamily: args.node.fontFamily(),
-      fontStyle: args.node.fontStyle(),
+      fontSize: activeNode.fontSize(),
+      fontFamily: activeNode.fontFamily(),
+      fontStyle: activeNode.fontStyle(),
       lineHeight: DEFAULT_TEXT_LINE_HEIGHT,
-      width: args.node.width(),
+      width: activeNode.width(),
     });
-    const nextHostElement = originalHostElement && fnIsShape2dElementType(originalHostElement.data.type)
-      ? fxGrowAttachedHostElement({
-          hostElement: structuredClone(originalHostElement),
-          minHeight: Math.max(initialHostHeight, measured.height),
-        })
-      : null;
+    const nextHostElement = buildShapeInlineHostElement({
+      text: textarea.value,
+      minHeight: Math.max(initialHostHeight, measured.height),
+    });
 
     if (nextHostElement) {
       applyRuntimeElement(portal, { element: nextHostElement });
+      activeNode = findCurrentTextNode(portal, activeNode.id()) ?? activeNode;
     }
 
-    const hostBounds = attachedHostNode
-      ? fnGetShapeTextHostBounds({
-          Rect: portal.Konva.Rect,
-          Ellipse: portal.Konva.Ellipse,
-          Line: portal.Konva.Line,
-          node: attachedHostNode,
-        })
-      : null;
+    const hostBounds = fnGetShapeTextHostBounds({
+      Rect: portal.Konva.Rect,
+      Ellipse: portal.Konva.Ellipse,
+      Line: portal.Konva.Line,
+      node: resolvedShapeTextHostNode,
+    });
     if (hostBounds) {
-      args.node.position({ x: hostBounds.x, y: hostBounds.y });
-      args.node.rotation(hostBounds.rotation);
-      args.node.width(Math.max(4, hostBounds.width));
-      args.node.height(Math.max(4, hostBounds.height));
+      activeNode.position({ x: hostBounds.x, y: hostBounds.y });
+      activeNode.rotation(hostBounds.rotation);
+      activeNode.width(Math.max(4, hostBounds.width));
+      activeNode.height(Math.max(4, hostBounds.height));
     }
 
-    const absolutePosition = args.node.getAbsolutePosition();
-    const absoluteScale = args.node.getAbsoluteScale();
-    const absoluteRotation = args.node.getAbsoluteRotation();
-    const scaledFontSize = args.node.fontSize() * absoluteScale.x;
-    const scaledWidth = Math.max(args.node.width() * absoluteScale.x, 4);
-    const scaledHeight = Math.max(args.node.height() * absoluteScale.y, initialScaledFontSize);
+    const absolutePosition = activeNode.getAbsolutePosition();
+    const absoluteScale = activeNode.getAbsoluteScale();
+    const absoluteRotation = activeNode.getAbsoluteRotation();
+    const scaledFontSize = activeNode.fontSize() * absoluteScale.x;
+    const scaledWidth = Math.max(activeNode.width() * absoluteScale.x, 4);
+    const scaledHeight = Math.max(activeNode.height() * absoluteScale.y, initialScaledFontSize);
     const contentHeight = measured.height * absoluteScale.y;
     const remainingHeight = Math.max(0, scaledHeight - contentHeight);
     const verticalPadding = remainingHeight / 2;
@@ -252,17 +244,17 @@ export function txEnterEditMode(portal: TPortalEnterEditMode, args: TArgsEnterEd
   };
 
   const autoGrow = () => {
-    if (isAttachedText) {
-      syncAttachedEditingLayout();
+    if (isShapeInlineText) {
+      syncShapeInlineEditingLayout();
       portal.scene.staticForegroundLayer.batchDraw();
       return;
     }
 
-    const absolutePosition = args.node.getAbsolutePosition();
-    const absoluteScale = args.node.getAbsoluteScale();
-    const absoluteRotation = args.node.getAbsoluteRotation();
-    const scaledFontSize = args.node.fontSize() * absoluteScale.x;
-    const scaledWidth = Math.max(args.node.width() * absoluteScale.x, 4);
+    const absolutePosition = activeNode.getAbsolutePosition();
+    const absoluteScale = activeNode.getAbsoluteScale();
+    const absoluteRotation = activeNode.getAbsoluteRotation();
+    const scaledFontSize = activeNode.fontSize() * absoluteScale.x;
+    const scaledWidth = Math.max(activeNode.width() * absoluteScale.x, 4);
 
     textarea.style.top = `${absolutePosition.y}px`;
     textarea.style.left = `${absolutePosition.x}px`;
@@ -275,18 +267,18 @@ export function txEnterEditMode(portal: TPortalEnterEditMode, args: TArgsEnterEd
     textarea.style.height = `${Math.max(textarea.scrollHeight, scaledFontSize)}px`;
   };
 
-  textarea.value = args.node.text();
+  textarea.value = activeNode.text();
   Object.assign(textarea.style, {
     position: "absolute",
-    top: `${args.node.getAbsolutePosition().y}px`,
-    left: `${args.node.getAbsolutePosition().x}px`,
-    width: `${Math.max(args.node.width() * initialAbsoluteScale.x, 4)}px`,
+    top: `${activeNode.getAbsolutePosition().y}px`,
+    left: `${activeNode.getAbsolutePosition().x}px`,
+    width: `${Math.max(activeNode.width() * initialAbsoluteScale.x, 4)}px`,
     minHeight: `${initialScaledFontSize}px`,
     fontSize: `${initialScaledFontSize}px`,
-    fontFamily: args.node.fontFamily(),
+    fontFamily: activeNode.fontFamily(),
     lineHeight: String(DEFAULT_TEXT_LINE_HEIGHT),
-    textAlign: args.node.align(),
-    transform: `rotate(${args.node.getAbsoluteRotation()}deg)`,
+    textAlign: activeNode.align(),
+    transform: `rotate(${activeNode.getAbsoluteRotation()}deg)`,
     transformOrigin: "top left",
     whiteSpace: "pre-wrap",
     outline: "none",
@@ -326,13 +318,86 @@ export function txEnterEditMode(portal: TPortalEnterEditMode, args: TArgsEnterEd
     portal.editor.setEditingTextId(null);
   };
 
+  const commitShapeInlineText = (args: {
+    newText: string;
+    worldHeight: number;
+  }) => {
+    if (!resolvedShapeTextHostNode || !originalHostElement || !fnIsShape2dElementType(originalHostElement.data.type)) {
+      return;
+    }
+
+    if (args.newText === "" && originalInlineTextData === null) {
+      applyRuntimeElement(portal, { element: originalHostElement });
+      portal.scene.staticForegroundLayer.batchDraw();
+      portal.selection.setSelection([resolvedShapeTextHostNode]);
+      portal.selection.setFocusedNode(resolvedShapeTextHostNode);
+      return;
+    }
+
+    const baseNextHostElement = args.newText === ""
+      ? buildShapeInlineRemovalElement()
+      : buildShapeInlineHostElement({
+          text: args.newText,
+          minHeight: Math.max(initialHostHeight, args.worldHeight),
+        });
+    if (!baseNextHostElement) {
+      applyRuntimeElement(portal, { element: originalHostElement });
+      portal.scene.staticForegroundLayer.batchDraw();
+      portal.selection.setSelection([resolvedShapeTextHostNode]);
+      portal.selection.setFocusedNode(resolvedShapeTextHostNode);
+      return;
+    }
+
+    const didHostChange = JSON.stringify(baseNextHostElement) !== JSON.stringify(originalHostElement);
+    if (!didHostChange) {
+      applyRuntimeElement(portal, { element: originalHostElement });
+      portal.scene.staticForegroundLayer.batchDraw();
+      portal.selection.setSelection([resolvedShapeTextHostNode]);
+      portal.selection.setFocusedNode(resolvedShapeTextHostNode);
+      return;
+    }
+
+    const nextHostElement = {
+      ...baseNextHostElement,
+      updatedAt: Date.now(),
+    } satisfies TElement;
+    applyRuntimeElement(portal, { element: nextHostElement });
+    portal.scene.staticForegroundLayer.batchDraw();
+
+    const commitResult = (() => {
+      const builder = portal.crdt.build();
+      builder.patchElement(nextHostElement.id, nextHostElement);
+      return builder.commit();
+    })();
+
+    portal.selection.setSelection([resolvedShapeTextHostNode]);
+    portal.selection.setFocusedNode(resolvedShapeTextHostNode);
+
+    const undoHostElement = structuredClone(originalHostElement);
+    const redoHostElement = structuredClone(nextHostElement);
+
+    portal.history.record({
+      label: "edit-text",
+      undo: () => {
+        applyRuntimeElement(portal, { element: undoHostElement });
+        portal.scene.staticForegroundLayer.batchDraw();
+        commitResult.rollback();
+      },
+      redo: () => {
+        applyRuntimeElement(portal, { element: redoHostElement });
+        portal.scene.staticForegroundLayer.batchDraw();
+        portal.crdt.applyOps({ ops: commitResult.redoOps });
+      },
+    });
+  };
+
   const commit = () => {
     suppressNextSelectionHandling(portal, { reason: "commit" });
 
     const newText = textarea.value;
-    const absoluteScale = args.node.getAbsoluteScale();
-    const fallbackScaledWidth = Math.max(args.node.width() * absoluteScale.x, 4);
-    const fallbackScaledHeight = Math.max(args.node.height() * absoluteScale.y, initialScaledFontSize);
+    const absoluteScale = activeNode.getAbsoluteScale();
+    const fallbackScaledWidth = Math.max(activeNode.width() * absoluteScale.x, 4);
+    const fallbackScaledHeight = Math.max(activeNode.height() * absoluteScale.y, initialScaledFontSize);
     const screenWidth = parseFloat(textarea.style.width) || fallbackScaledWidth;
     const screenHeight = parseFloat(textarea.style.height) || fallbackScaledHeight;
     const worldWidth = screenWidth / absoluteScale.x;
@@ -340,133 +405,78 @@ export function txEnterEditMode(portal: TPortalEnterEditMode, args: TArgsEnterEd
 
     cleanup();
 
-    if (newText === "" && isAttachedText) {
-      if (originalHostElement) {
-        applyRuntimeElement(portal, { element: originalHostElement });
-      }
-      args.node.destroy();
-      portal.scene.staticForegroundLayer.batchDraw();
-      const builder = portal.crdt.build();
-      builder.deleteElement(args.node.id());
-      builder.commit();
-      if (attachedHostNode) {
-        portal.selection.setSelection([attachedHostNode]);
-        portal.selection.setFocusedNode(attachedHostNode);
-      } else {
-        portal.selection.clear();
-      }
+    if (isShapeInlineText) {
+      commitShapeInlineText({
+        newText,
+        worldHeight,
+      });
       return;
     }
 
     if (args.isNew && newText === "") {
-      if (originalHostElement) {
-        applyRuntimeElement(portal, { element: originalHostElement });
-      }
-      args.node.destroy();
+      activeNode.destroy();
       portal.scene.staticForegroundLayer.batchDraw();
-      const builder = portal.crdt.build();
-      builder.deleteElement(args.node.id());
-      builder.commit();
       portal.selection.clear();
       return;
     }
 
     const textToSet = newText;
-    args.node.text(textToSet);
-    args.node.wrap(isAttachedText ? "word" : "none");
-    args.node.setAttr("vcOriginalText", textToSet);
+    activeNode.text(textToSet);
+    activeNode.wrap("none");
+    activeNode.setAttr("vcOriginalText", textToSet);
 
-    let nextHostElement: TElement | null = null;
-
-    if (isAttachedText) {
-      if (originalHostElement && fnIsShape2dElementType(originalHostElement.data.type)) {
-        nextHostElement = fxGrowAttachedHostElement({
-          hostElement: structuredClone(originalHostElement),
-          minHeight: worldHeight,
-        });
-        applyRuntimeElement(portal, { element: nextHostElement });
-      } else {
-        args.node.width(originalData.w);
-        args.node.height(Math.max(originalData.h, worldHeight));
-      }
-
-      const nextBounds = fnGetShapeTextHostBounds({
-        Rect: portal.Konva.Rect,
-        Ellipse: portal.Konva.Ellipse,
-        Line: portal.Konva.Line,
-        node: attachedHostNode ?? args.node,
-      });
-      if (nextBounds) {
-        args.node.width(Math.max(4, nextBounds.width));
-        args.node.height(Math.max(4, nextBounds.height));
-      }
-    } else {
-      const measured = fxMeasureTextLayout(portal.pretext, {
-        text: textToSet,
-        fontSize: args.node.fontSize(),
-        fontFamily: args.node.fontFamily(),
-        fontStyle: args.node.fontStyle(),
-        lineHeight: DEFAULT_TEXT_LINE_HEIGHT,
-        width: worldWidth,
-      });
-      const computedWidth = fxComputeTextWidth({ document: portal.document }, { node: args.node, text: textToSet });
-      const computedHeight = fnComputeTextHeight({
-        fontSize: args.node.fontSize(),
-        lineHeight: DEFAULT_TEXT_LINE_HEIGHT,
-        padding: args.node.padding(),
-        text: textToSet,
-      });
-      args.node.width(Math.max(worldWidth, measured.maxLineWidth, computedWidth));
-      args.node.height(Math.max(worldHeight, measured.height, computedHeight));
-    }
-
-    args.node.visible(true);
+    const measured = fxMeasureTextLayout(portal.pretext, {
+      text: textToSet,
+      fontSize: activeNode.fontSize(),
+      fontFamily: activeNode.fontFamily(),
+      fontStyle: activeNode.fontStyle(),
+      lineHeight: DEFAULT_TEXT_LINE_HEIGHT,
+      width: worldWidth,
+    });
+    const computedWidth = fxComputeTextWidth({ document: portal.document }, { node: activeNode, text: textToSet });
+    const computedHeight = fnComputeTextHeight({
+      fontSize: activeNode.fontSize(),
+      lineHeight: DEFAULT_TEXT_LINE_HEIGHT,
+      padding: activeNode.padding(),
+      text: textToSet,
+    });
+    activeNode.width(Math.max(worldWidth, measured.maxLineWidth, computedWidth));
+    activeNode.height(Math.max(worldHeight, measured.height, computedHeight));
+    activeNode.visible(true);
     portal.scene.staticForegroundLayer.batchDraw();
 
     const nextNow = Date.now();
     const nextElement = fxSerializeTextNode(portal, {
-      node: args.node,
+      node: activeNode,
       createdAt: originalElement.createdAt,
       updatedAt: nextNow,
     });
-    const patchElements = [nextHostElement, nextElement].filter((element): element is TElement => element !== null);
     const commitResult = (() => {
       const builder = portal.crdt.build();
-      patchElements.forEach((element) => {
-        builder.patchElement(element.id, element);
-      });
+      builder.patchElement(nextElement.id, nextElement);
       return builder.commit();
     })();
 
-    const selectedNode = findCurrentTextNode(portal, args.node.id()) ?? args.node;
+    const selectedNode = findCurrentTextNode(portal, activeNode.id()) ?? activeNode;
     portal.selection.setSelection([selectedNode]);
     portal.selection.setFocusedNode(selectedNode);
-    restoreTextSelectionLater(portal, { nodeId: args.node.id() });
+    restoreTextSelectionLater(portal, { nodeId: activeNode.id() });
 
-    const didHostChange = JSON.stringify(nextHostElement) !== JSON.stringify(originalHostElement);
-    if (textToSet === originalText && !didHostChange) {
+    if (textToSet === originalText) {
       return;
     }
 
     const undoElement = structuredClone(originalElement);
     const redoElement = structuredClone(nextElement);
-    const undoHostElement = originalHostElement ? structuredClone(originalHostElement) : null;
-    const redoHostElement = nextHostElement ? structuredClone(nextHostElement) : null;
 
     portal.history.record({
       label: "edit-text",
       undo: () => {
-        if (undoHostElement) {
-          applyRuntimeElement(portal, { element: undoHostElement });
-        }
         txUpdateTextNodeFromElement({ Konva: portal.Konva, scene: portal.scene, theme: portal.theme }, { element: undoElement, freeTextName: args.freeTextName });
         portal.scene.staticForegroundLayer.batchDraw();
         commitResult.rollback();
       },
       redo: () => {
-        if (redoHostElement) {
-          applyRuntimeElement(portal, { element: redoHostElement });
-        }
         txUpdateTextNodeFromElement({ Konva: portal.Konva, scene: portal.scene, theme: portal.theme }, { element: redoElement, freeTextName: args.freeTextName });
         portal.scene.staticForegroundLayer.batchDraw();
         portal.crdt.applyOps({ ops: commitResult.redoOps });
@@ -478,18 +488,22 @@ export function txEnterEditMode(portal: TPortalEnterEditMode, args: TArgsEnterEd
     suppressNextSelectionHandling(portal, { reason: "cancel" });
     cleanup();
 
-    if (originalHostElement) {
+    if (isShapeInlineText && resolvedShapeTextHostNode && originalHostElement) {
       applyRuntimeElement(portal, { element: originalHostElement });
+      portal.scene.staticForegroundLayer.batchDraw();
+      portal.selection.setSelection([resolvedShapeTextHostNode]);
+      portal.selection.setFocusedNode(resolvedShapeTextHostNode);
+      return;
     }
 
     if (args.isNew) {
-      args.node.destroy();
+      activeNode.destroy();
       portal.scene.staticForegroundLayer.batchDraw();
       portal.selection.clear();
       return;
     }
 
-    args.node.visible(true);
+    activeNode.visible(true);
     portal.scene.staticForegroundLayer.batchDraw();
   };
 

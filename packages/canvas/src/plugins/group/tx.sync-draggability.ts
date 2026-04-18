@@ -3,7 +3,7 @@ import type { CanvasRegistryService } from "../../services/canvas-registry/Canva
 import type { SceneService } from "../../services/scene/SceneService";
 import type { SelectionService } from "../../services/selection/SelectionService";
 import { isKonvaGroup, isKonvaShape } from "../../core/GUARDS";
-import { fxFilterSelection } from "../../core/fx.filter-selection";
+import { fnFilterSelection } from "../../core/fn.filter-selection";
 import { fnIsSceneNode } from "./fn.scene-node";
 
 export type TPortalSyncDraggability = {
@@ -20,7 +20,7 @@ export function txSyncDraggability(
   args: TArgsSyncDraggability,
 ) {
   const allSceneNodes = portal.render.staticForegroundLayer.find((node: Konva.Node) => {
-    return fnIsSceneNode({ Group: portal.Konva.Group, Shape: portal.Konva.Shape, render: portal.render, node });
+    return fnIsSceneNode({ render: portal.render, node });
   });
 
   allSceneNodes.forEach((node) => {
@@ -35,9 +35,7 @@ export function txSyncDraggability(
     }
   });
 
-  const activeNodes = fxFilterSelection({
-    Konva: portal.Konva,
-  }, {
+  const activeNodes = fnFilterSelection({
     editor: portal.canvasRegistry,
     selection: portal.selection.selection,
   });

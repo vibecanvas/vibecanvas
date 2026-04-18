@@ -2,7 +2,7 @@ import type Konva from "konva";
 import type { Shape, ShapeConfig } from "konva/lib/Shape";
 import type { CanvasRegistryService } from "../../services";
 import type { SelectionService } from "../../services/selection/SelectionService";
-import { fxFilterSelection } from "../../core/fx.filter-selection";
+import { fnFilterSelection } from "../../core/fn.filter-selection";
 import { fxIsShape1dNode } from "../shape1d/fx.node";
 
 type TPortalFxGetProxyDragTarget = {
@@ -20,9 +20,7 @@ export function fxGetProxyDragTarget(portal: TPortalFxGetProxyDragTarget, args: 
   }
 
   const rawSelection = args.selection.selection;
-  const filteredSelection = fxFilterSelection({
-    Konva: portal.Konva,
-  }, {
+  const filteredSelection = fnFilterSelection({
     editor: portal.canvasRegistry,
     selection: rawSelection,
   });

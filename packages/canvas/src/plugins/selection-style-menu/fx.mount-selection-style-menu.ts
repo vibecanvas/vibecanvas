@@ -6,7 +6,7 @@ import type * as SolidWeb from "solid-js/web";
 import type { SelectionStyleMenu as TSelectionStyleMenuComponent } from "../../components/SelectionStyleMenu";
 import type { TCapStyle, TFontFamily, TLineType } from "../../components/SelectionStyleMenu/types";
 import { fxResolveSelectionStyleElements } from "../../core/fx.resolve-selection-style-elements";
-import { fxResolveSelectionStyleTextElements } from "../../core/fx.resolve-selection-style-text-elements";
+import { fnResolveSelectionStyleTextElements } from "../../core/fn.resolve-selection-style-text-elements";
 import {
   fnGetSelectionStyleMenuSections,
   fnGetSelectionStyleMenuValues,
@@ -110,14 +110,6 @@ export function fxMountSelectionStyleMenu(portal: TPortalMountSelectionStyleMenu
   });
   portal.scene.stage.container().appendChild(mountElement);
 
-  const findAttachedTextNodeByContainerId = (containerId: string): Konva.Text | null => {
-    const node = portal.scene.staticForegroundLayer.findOne((candidate: Konva.Node) => {
-      return candidate instanceof portal.Konva.Text && candidate.getAttr("vcContainerId") === containerId;
-    });
-
-    return node instanceof portal.Konva.Text ? node : null;
-  };
-
   const txRefreshEditingShape1d = () => {
     if (portal.editor.editingShape1dId === null) {
       return;
@@ -135,7 +127,6 @@ export function fxMountSelectionStyleMenu(portal: TPortalMountSelectionStyleMenu
     history: portal.history,
     scene: portal.scene,
     selection: portal.selection,
-    fxFindAttachedTextNodeByContainerId: findAttachedTextNodeByContainerId,
     txRefreshEditingShape1d,
     now: () => Date.now(),
   };
@@ -225,10 +216,7 @@ export function fxMountSelectionStyleMenu(portal: TPortalMountSelectionStyleMenu
     const textElements = portal.createMemo(() => {
       version();
 
-      return fxResolveSelectionStyleTextElements({
-        editor: portal.canvasRegistry,
-        fxFindAttachedTextNodeByContainerId: findAttachedTextNodeByContainerId,
-      }, {
+      return fnResolveSelectionStyleTextElements({
         elements: elements(),
       }).filter((element) => {
         return portal.canvasRegistry.getSelectionStyleMenuConfigByElement({

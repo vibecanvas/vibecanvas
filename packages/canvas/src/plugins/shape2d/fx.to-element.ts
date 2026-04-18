@@ -1,5 +1,5 @@
 import type Konva from "konva";
-import type { TElement, TElementStyle } from "@vibecanvas/service-automerge/types/canvas-doc.types";
+import type { TElement, TElementStyle, TTextData } from "@vibecanvas/service-automerge/types/canvas-doc.types";
 import { fnGetCanvasParentGroupId } from "../../core/fn.canvas-node-semantics";
 import { fnGetNodeZIndex } from "../../core/fn.get-node-z-index";
 import { fnCreateShape2dElement } from "../../core/fn.shape2d";
@@ -7,6 +7,7 @@ import { fnGetWorldPosition } from "../../core/fn.world-position";
 import type { CanvasRegistryService } from "../../services/canvas-registry/CanvasRegistryService";
 import type { SceneService } from "../../services/scene/SceneService";
 import { fnGetShape2dNodeType } from "./fn.node";
+import { SHAPE2D_TEXT_DATA_ATTR } from "./CONSTANTS";
 
 const ELEMENT_STYLE_ATTR = "vcElementStyle";
 
@@ -99,6 +100,8 @@ export function fxToShape2dElement(portal: TPortalToShape2dElement, args: TArgsT
     return null;
   }
 
+  const inlineTextData = structuredClone((node.getAttr(SHAPE2D_TEXT_DATA_ATTR) as TTextData | null | undefined) ?? null);
+
   return fnCreateShape2dElement({
     id: node.id(),
     type,
@@ -112,5 +115,14 @@ export function fxToShape2dElement(portal: TPortalToShape2dElement, args: TArgsT
     parentGroupId: fnGetCanvasParentGroupId(node),
     zIndex: fnGetNodeZIndex({ node }),
     style: getNodeStyle(node),
+    text: inlineTextData
+      ? {
+          ...inlineTextData,
+          w: Math.max(4, width),
+          h: Math.max(4, height),
+          containerId: null,
+          autoResize: false,
+        }
+      : null,
   }) satisfies TElement;
 }

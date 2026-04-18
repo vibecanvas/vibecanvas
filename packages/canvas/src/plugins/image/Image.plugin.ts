@@ -21,7 +21,7 @@ import type { SceneService } from "../../services/scene/SceneService";
 import type { SelectionService } from "../../services/selection/SelectionService";
 import type { IRuntimeHooks } from "../../types";
 import { fnGetCanvasAncestorGroups, fnGetCanvasParentGroupId } from "../../core/fn.canvas-node-semantics";
-import { fxFilterSelection } from "../../core/fx.filter-selection";
+import { fnFilterSelection } from "../../core/fn.filter-selection";
 import { fnGetNodeZIndex } from "../../core/fn.get-node-z-index";
 import { fnGetWorldPosition } from "../../core/fn.world-position";
 import { txSetNodeZIndex } from "../../core/tx.set-node-z-index";
@@ -240,9 +240,7 @@ function safeStopDrag(node: Konva.Node) {
 function filterSelection(render: SceneService, canvasRegistry: Pick<CanvasRegistryService, "toElement" | "toGroup">, selection: Konva.Node[]) {
   void render;
 
-  return fxFilterSelection({
-    Konva,
-  }, {
+  return fnFilterSelection({
     editor: canvasRegistry,
     selection: selection.filter((node): node is Konva.Group | Konva.Shape => {
       return node instanceof Konva.Group || node instanceof Konva.Shape;

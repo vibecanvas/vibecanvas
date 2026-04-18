@@ -63,6 +63,7 @@ describe("txCreateShape2dCloneDrag", () => {
       Konva,
       canvasRegistry: {
         createNodeFromElement: (element: TElement) => new Konva.Rect({ id: element.id, x: element.x, y: element.y, width: 120, height: 80 }),
+        updateElement: vi.fn(() => true),
       } as never,
       crdt: {
         build: () => ({ patchElement, commit }),

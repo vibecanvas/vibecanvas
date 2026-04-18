@@ -3,7 +3,7 @@ import type { CanvasRegistryService } from "../../services";
 import type { EditorService } from "../../services/editor/EditorService";
 import type { SceneService } from "../../services/scene/SceneService";
 import type { SelectionService } from "../../services/selection/SelectionService";
-import { fxFilterSelection } from "../../core/fx.filter-selection";
+import { fnFilterSelection } from "../../core/fn.filter-selection";
 import { fxGetSelectionTransformOptions } from "./fx.selection-transform-options";
 
 type TPortalTxSyncTransformer = {
@@ -26,7 +26,7 @@ export function txSyncTransformer(portal: TPortalTxSyncTransformer, args: TArgsT
     return;
   }
 
-  const filteredSelection = fxFilterSelection({ Konva: portal.Konva }, { editor: portal.canvasRegistry, selection: portal.selection.selection });
+  const filteredSelection = fnFilterSelection({ editor: portal.canvasRegistry, selection: portal.selection.selection });
   const transformOptions = fxGetSelectionTransformOptions({
     Konva: portal.Konva,
     canvasRegistry: portal.canvasRegistry,

@@ -8,7 +8,7 @@ import type { SceneService } from "../../services/scene/SceneService";
 import type { SelectionService } from "../../services/selection/SelectionService";
 import type { IRuntimeHooks, TElementPointerEvent } from "../../types";
 import { fnGetCanvasAncestorGroups, fnGetCanvasNodeKind, fnIsCanvasGroupNode } from "../../core/fn.canvas-node-semantics";
-import { fxFilterSelection } from "../../core/fx.filter-selection";
+import { fnFilterSelection } from "../../core/fn.filter-selection";
 import { fnSerializeSubtreeElements } from "../group/fn.serialize-subtree-elements";
 import type { CanvasRegistryService } from "../../services/canvas-registry/CanvasRegistryService";
 import { type TShape1dNode } from "./CONSTANTS";
@@ -177,7 +177,7 @@ export function txSetupShapeListeners(portal: TPortalTxShape1dRuntime, args: TAr
     multiDragStartPositions.clear();
     passengerOriginalElements.clear();
 
-    const selected = fxFilterSelection({ Konva: portal.Konva }, { editor: portal.canvasRegistry, selection: portal.selection.selection });
+    const selected = fnFilterSelection({ editor: portal.canvasRegistry, selection: portal.selection.selection });
     selected.forEach((selectedNode) => {
       multiDragStartPositions.set(selectedNode.id(), { ...selectedNode.absolutePosition() });
       if (selectedNode === args.node) {
@@ -209,7 +209,7 @@ export function txSetupShapeListeners(portal: TPortalTxShape1dRuntime, args: TAr
       return;
     }
     throttledPatch(fxToPositionPatch({ editor: portal.canvasRegistry, now: portal.now }, { node: args.node }));
-    const selected = fxFilterSelection({ Konva: portal.Konva }, { editor: portal.canvasRegistry, selection: portal.selection.selection });
+    const selected = fnFilterSelection({ editor: portal.canvasRegistry, selection: portal.selection.selection });
     if (selected.length <= 1) {
       return;
     }
@@ -245,7 +245,7 @@ export function txSetupShapeListeners(portal: TPortalTxShape1dRuntime, args: TAr
     const beforeElement = originalElement ? structuredClone(originalElement) : null;
     const afterElement = structuredClone(nextElement);
 
-    const selected = fxFilterSelection({ Konva: portal.Konva }, { editor: portal.canvasRegistry, selection: portal.selection.selection });
+    const selected = fnFilterSelection({ editor: portal.canvasRegistry, selection: portal.selection.selection });
     const passengers = selected.filter((selectedNode) => selectedNode !== args.node);
     const passengerAfterElements = new Map<string, TElement[]>();
     const passengerEndPositions = new Map<string, { x: number; y: number }>();

@@ -40,17 +40,31 @@ export const zDrawingStyle = z.object({
   verticalAlign: zVerticalAlign.optional(),
 });
 
+export const zTextData = z.object({
+  type: z.literal('text'),
+  w: z.number(),
+  h: z.number(),
+  text: z.string(),
+  originalText: z.string(),
+  fontFamily: z.string(),
+  link: z.string().nullable(),
+  containerId: z.string().nullable(),
+  autoResize: z.boolean(),
+});
+
 export const zRectData = z.object({
   type: z.literal('rect'),
   w: z.number(),
   h: z.number(),
   radius: z.number().optional(),
+  text: zTextData.optional()
 });
 
 export const zEllipseData = z.object({
   type: z.literal('ellipse'),
   rx: z.number(),
   ry: z.number(),
+  text: zTextData.optional()
 });
 
 export const zDiamondData = z.object({
@@ -58,6 +72,7 @@ export const zDiamondData = z.object({
   w: z.number(),
   h: z.number(),
   radius: z.number().optional(),
+  text: zTextData.optional()
 });
 
 export const zLineData = z.object({
@@ -83,18 +98,6 @@ export const zPenData = z.object({
   points: z.array(zPoint2D),
   pressures: z.array(z.number()),
   simulatePressure: z.boolean(),
-});
-
-export const zTextData = z.object({
-  type: z.literal('text'),
-  w: z.number(),
-  h: z.number(),
-  text: z.string(),
-  originalText: z.string(),
-  fontFamily: z.string(),
-  link: z.string().nullable(),
-  containerId: z.string().nullable(),
-  autoResize: z.boolean(),
 });
 
 export const zImageData = z.object({

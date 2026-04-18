@@ -1,41 +1,43 @@
-import type { layoutWithLines, prepareWithSegments } from "@chenglou/pretext";
-import type { TElement, TTextData } from "@vibecanvas/service-automerge/types/canvas-doc.types";
+import type { TElement } from "@vibecanvas/service-automerge/types/canvas-doc.types";
 import type { ThemeService } from "@vibecanvas/service-theme";
 import type Konva from "konva";
-import { fnGetCanvasParentGroupId, fnIsCanvasGroupNode } from "../../core/fn.canvas-node-semantics";
+import { fnIsCanvasGroupNode } from "../../core/fn.canvas-node-semantics";
+import {
+  fnCreateShape2dTextData,
+  fnGetShape2dTextData,
+  fnIsShape2dElementType,
+} from "../../core/fn.shape2d";
 import type { CanvasRegistryService } from "../../services/canvas-registry/CanvasRegistryService";
-import type { CrdtService } from "../../services/crdt/CrdtService";
 import type { EditorService } from "../../services/editor/EditorService";
-import type { RenderOrderService } from "../../services/render-order/RenderOrderService";
 import type { SceneService } from "../../services/scene/SceneService";
 import type { SelectionService } from "../../services/selection/SelectionService";
 import { fnGetShapeTextHostBounds } from "./fn.text-host-bounds";
 import {
   DEFAULT_ATTACHED_TEXT_ALIGN,
   DEFAULT_ATTACHED_TEXT_VERTICAL_ALIGN,
-  DEFAULT_TEXT_FONT_FAMILY,
+  DEFAULT_TEXT_LINE_HEIGHT,
   TEXT_FONT_SIZE_TOKEN_BY_PRESET,
 } from "../text/CONSTANTS";
-
-const ATTACHED_TEXT_NAME = "attached-text";
+import {
+  SHAPE2D_INLINE_TEXT_DERIVED_ATTR,
+  SHAPE2D_INLINE_TEXT_HOST_ID_ATTR,
+  SHAPE2D_INLINE_TEXT_ID_SUFFIX,
+  SHAPE2D_INLINE_TEXT_NAME,
+} from "./CONSTANTS";
 
 export type TPortalAttachedText = {
   Konva: typeof Konva;
-  canvasRegistry: Pick<CanvasRegistryService, "createNodeFromElement" | "toElement" | "toGroup">;
-  crdt: CrdtService;
-  document: Document;
+  canvasRegistry: Pick<CanvasRegistryService, "toElement">;
   editor: Pick<EditorService, "editingTextId">;
   scene: SceneService;
-  renderOrder: RenderOrderService;
   selection: SelectionService;
   theme: ThemeService;
-  createId: () => string;
-  now: () => number;
-  pretext: {
-    layoutWithLines: typeof layoutWithLines;
-    prepareWithSegments: typeof prepareWithSegments;
-  };
-  enterEditMode: (args: { freeTextName: string; node: Konva.Text; isNew: boolean }) => void;
+  enterEditMode: (args: {
+    freeTextName: string;
+    node: Konva.Text;
+    isNew: boolean;
+    shapeTextHostNode: Konva.Shape;
+  }) => void;
 };
 
 export type TArgsGetAttachedTextNode = {
@@ -44,78 +46,97 @@ export type TArgsGetAttachedTextNode = {
 
 export type TArgsSyncAttachedTextNodeToShape = {
   shapeNode: Konva.Shape;
-  textNode: Konva.Text;
-};
-
-export type TArgsPersistAttachedTextNode = {
-  textNode: Konva.Text;
+  textNode?: Konva.Text;
+  forceCreate?: boolean;
 };
 
 export type TArgsOpenAttachedTextEditMode = {
   shapeNode: Konva.Shape;
 };
 
-function getTextNode(portal: TPortalAttachedText, containerId: string) {
+function getTextNodeId(shapeNodeId: string) {
+  return `${shapeNodeId}${SHAPE2D_INLINE_TEXT_ID_SUFFIX}`;
+}
+
+function getShapeTextFillColor(theme: ThemeService, element: Pick<TElement, "style">) {
+  return theme.resolveThemeColor(
+    element.style.strokeColor,
+    theme.getTheme().colors.canvasText,
+  ) ?? theme.getTheme().colors.canvasText;
+}
+
+function getTextNode(portal: TPortalAttachedText, hostId: string) {
   const node = portal.scene.staticForegroundLayer.findOne((candidate: Konva.Node) => {
-    return candidate instanceof portal.Konva.Text && candidate.getAttr("vcContainerId") === containerId;
+    return candidate instanceof portal.Konva.Text
+      && candidate.getAttr(SHAPE2D_INLINE_TEXT_HOST_ID_ATTR) === hostId;
   });
 
   return node instanceof portal.Konva.Text ? node : null;
 }
 
-function createAttachedTextElement(portal: TPortalAttachedText, shapeNode: Konva.Shape): TElement {
+function getHostElement(portal: TPortalAttachedText, shapeNode: Konva.Shape) {
+  const element = portal.canvasRegistry.toElement(shapeNode);
+  if (!element || !fnIsShape2dElementType(element.data.type)) {
+    return null;
+  }
+
+  return element;
+}
+
+function createTextNode(portal: TPortalAttachedText, shapeNode: Konva.Shape) {
+  return new portal.Konva.Text({
+    id: getTextNodeId(shapeNode.id()),
+    name: SHAPE2D_INLINE_TEXT_NAME,
+    draggable: false,
+    listening: false,
+  });
+}
+
+function getOrCreateTextNode(portal: TPortalAttachedText, args: {
+  shapeNode: Konva.Shape;
+  textNode?: Konva.Text;
+}) {
+  return args.textNode
+    ?? getTextNode(portal, args.shapeNode.id())
+    ?? createTextNode(portal, args.shapeNode);
+}
+
+export function fxGetAttachedTextNode(portal: TPortalAttachedText, args: TArgsGetAttachedTextNode) {
+  return getTextNode(portal, args.shapeNode.id());
+}
+
+export function fxSyncAttachedTextNodeToShape(portal: TPortalAttachedText, args: TArgsSyncAttachedTextNodeToShape) {
+  const hostElement = getHostElement(portal, args.shapeNode);
+  if (!hostElement) {
+    args.textNode?.destroy();
+    return null;
+  }
+
   const bounds = fnGetShapeTextHostBounds({
     Rect: portal.Konva.Rect,
     Ellipse: portal.Konva.Ellipse,
     Line: portal.Konva.Line,
-    node: shapeNode,
+    node: args.shapeNode,
   });
   if (!bounds) {
-    throw new Error("Unsupported shape text host");
-  }
-
-  const now = portal.now();
-
-  return {
-    id: portal.createId(),
-    x: bounds.x,
-    y: bounds.y,
-    rotation: bounds.rotation,
-    scaleX: 1,
-    scaleY: 1,
-    bindings: [],
-    locked: false,
-    parentGroupId: fnGetCanvasParentGroupId(shapeNode),
-    zIndex: "",
-    createdAt: now,
-    updatedAt: now,
-    style: {
-      opacity: shapeNode.opacity(),
-      fontSize: TEXT_FONT_SIZE_TOKEN_BY_PRESET.M,
-      textAlign: DEFAULT_ATTACHED_TEXT_ALIGN,
-      verticalAlign: DEFAULT_ATTACHED_TEXT_VERTICAL_ALIGN,
-    },
-    data: {
-      type: "text",
-      w: Math.max(4, bounds.width),
-      h: Math.max(4, bounds.height),
-      text: "",
-      originalText: "",
-      fontFamily: DEFAULT_TEXT_FONT_FAMILY,
-      link: null,
-      containerId: shapeNode.id(),
-      autoResize: false,
-    } satisfies TTextData,
-  } satisfies TElement;
-}
-
-function fxCreateAttachedTextNode(portal: TPortalAttachedText, args: TArgsGetAttachedTextNode) {
-  const node = portal.canvasRegistry.createNodeFromElement(createAttachedTextElement(portal, args.shapeNode));
-  if (!(node instanceof portal.Konva.Text)) {
+    args.textNode?.destroy();
     return null;
   }
 
-  fxSyncAttachedTextNodeToShape(portal, { shapeNode: args.shapeNode, textNode: node });
+  const inlineTextData = fnGetShape2dTextData(hostElement)
+    ?? (args.forceCreate
+      ? fnCreateShape2dTextData({
+          width: bounds.width,
+          height: bounds.height,
+        })
+      : null);
+  const shouldRenderText = inlineTextData !== null && (args.forceCreate || inlineTextData.text !== "");
+  if (!shouldRenderText) {
+    args.textNode?.destroy();
+    return null;
+  }
+
+  const textNode = getOrCreateTextNode(portal, { shapeNode: args.shapeNode, textNode: args.textNode });
   const parentNode = args.shapeNode.getParent();
   const parent = parentNode && fnIsCanvasGroupNode(parentNode)
     ? parentNode
@@ -124,61 +145,36 @@ function fxCreateAttachedTextNode(portal: TPortalAttachedText, args: TArgsGetAtt
     return null;
   }
 
-  parent.add(node);
-  portal.renderOrder.assignOrderOnInsert({
-    parent,
-    nodes: [args.shapeNode, node],
-    position: "front",
-  });
-  return node;
-}
-
-export function fxGetAttachedTextNode(portal: TPortalAttachedText, args: TArgsGetAttachedTextNode) {
-  return getTextNode(portal, args.shapeNode.id());
-}
-
-export function fxSyncAttachedTextNodeToShape(portal: TPortalAttachedText, args: TArgsSyncAttachedTextNodeToShape) {
-  const bounds = fnGetShapeTextHostBounds({
-    Rect: portal.Konva.Rect,
-    Ellipse: portal.Konva.Ellipse,
-    Line: portal.Konva.Line,
-    node: args.shapeNode,
-  });
-  if (!bounds) {
-    return null;
+  if (textNode.getParent() !== parent) {
+    parent.add(textNode);
   }
 
-  const parentNode = args.shapeNode.getParent();
-  if (parentNode && args.textNode.getParent() !== parentNode) {
-    parentNode.add(args.textNode);
-  }
-
-  args.textNode.position({ x: bounds.x, y: bounds.y });
-  args.textNode.rotation(bounds.rotation);
-  args.textNode.width(Math.max(4, bounds.width));
-  args.textNode.height(Math.max(4, bounds.height));
-  args.textNode.opacity(args.shapeNode.opacity());
-  args.textNode.draggable(false);
-  args.textNode.listening(false);
-  args.textNode.name(ATTACHED_TEXT_NAME);
-  args.textNode.setAttr("vcContainerId", args.shapeNode.id());
-  args.textNode.setAttr("vcTextAutoResize", false);
-  return args.textNode;
-}
-
-export function fxPersistAttachedTextNode(portal: TPortalAttachedText, args: TArgsPersistAttachedTextNode) {
-  args.textNode.draggable(false);
-  args.textNode.listening(false);
-  args.textNode.name(ATTACHED_TEXT_NAME);
-  const element = portal.canvasRegistry.toElement(args.textNode);
-  if (!element || element.data.type !== "text") {
-    return null;
-  }
-
-  const builder = portal.crdt.build();
-  builder.patchElement(element.id, element);
-  builder.commit();
-  return element;
+  textNode.id(getTextNodeId(args.shapeNode.id()));
+  textNode.position({ x: bounds.x, y: bounds.y });
+  textNode.rotation(bounds.rotation);
+  textNode.width(Math.max(4, bounds.width));
+  textNode.height(Math.max(4, bounds.height));
+  textNode.text(inlineTextData.text);
+  textNode.fontSize(portal.theme.resolveFontSize(hostElement.style.fontSize ?? TEXT_FONT_SIZE_TOKEN_BY_PRESET.M));
+  textNode.fontFamily(inlineTextData.fontFamily);
+  textNode.align(hostElement.style.textAlign ?? DEFAULT_ATTACHED_TEXT_ALIGN);
+  textNode.verticalAlign(hostElement.style.verticalAlign ?? DEFAULT_ATTACHED_TEXT_VERTICAL_ALIGN);
+  textNode.lineHeight(DEFAULT_TEXT_LINE_HEIGHT);
+  textNode.wrap("word");
+  textNode.opacity(hostElement.style.opacity ?? 1);
+  textNode.fill(getShapeTextFillColor(portal.theme, hostElement));
+  textNode.visible(true);
+  textNode.draggable(false);
+  textNode.listening(false);
+  textNode.name(SHAPE2D_INLINE_TEXT_NAME);
+  textNode.setAttr(SHAPE2D_INLINE_TEXT_DERIVED_ATTR, true);
+  textNode.setAttr(SHAPE2D_INLINE_TEXT_HOST_ID_ATTR, args.shapeNode.id());
+  textNode.setAttr("vcOriginalText", inlineTextData.originalText);
+  textNode.setAttr("vcTextAutoResize", false);
+  textNode.setAttr("vcUsesThemeTextColor", !hostElement.style.strokeColor);
+  textNode.setAttr("vcZIndex", args.shapeNode.getAttr("vcZIndex") as string | undefined);
+  textNode.zIndex(Math.min(args.shapeNode.zIndex() + 1, Math.max(parent.getChildren().length - 1, 0)));
+  return textNode;
 }
 
 export function fxOpenAttachedTextEditMode(portal: TPortalAttachedText, args: TArgsOpenAttachedTextEditMode) {
@@ -190,40 +186,20 @@ export function fxOpenAttachedTextEditMode(portal: TPortalAttachedText, args: TA
     return false;
   }
 
-  let textNode = fxGetAttachedTextNode(portal, { shapeNode: args.shapeNode });
-  const isNew = textNode === null;
-  if (!textNode) {
-    textNode = fxCreateAttachedTextNode(portal, { shapeNode: args.shapeNode });
-  }
-
+  const isNew = fxGetAttachedTextNode(portal, { shapeNode: args.shapeNode }) === null;
+  const textNode = fxSyncAttachedTextNodeToShape(portal, {
+    shapeNode: args.shapeNode,
+    forceCreate: true,
+  });
   if (!textNode) {
     return false;
   }
 
-  fxSyncAttachedTextNodeToShape(portal, { shapeNode: args.shapeNode, textNode });
-  fxPersistAttachedTextNode(portal, { textNode });
   portal.enterEditMode({
-    freeTextName: ATTACHED_TEXT_NAME,
+    freeTextName: SHAPE2D_INLINE_TEXT_NAME,
     node: textNode,
     isNew,
+    shapeTextHostNode: args.shapeNode,
   });
-
-  const TextArea = portal.document.defaultView?.HTMLTextAreaElement;
-  const textarea = portal.scene.stage.container().querySelector("textarea");
-  if (TextArea && textarea instanceof TextArea) {
-    textarea.addEventListener("blur", () => {
-      const nextTextNode = fxGetAttachedTextNode(portal, { shapeNode: args.shapeNode });
-      if (!nextTextNode) {
-        return;
-      }
-
-      fxSyncAttachedTextNodeToShape(portal, { shapeNode: args.shapeNode, textNode: nextTextNode });
-      fxPersistAttachedTextNode(portal, { textNode: nextTextNode });
-      portal.selection.setSelection([args.shapeNode]);
-      portal.selection.setFocusedNode(args.shapeNode);
-      portal.scene.staticForegroundLayer.batchDraw();
-    }, { once: true });
-  }
-
   return true;
 }

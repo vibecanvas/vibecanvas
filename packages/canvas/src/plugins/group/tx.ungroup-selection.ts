@@ -68,6 +68,7 @@ export function txUngroupSelection(
       const element = portal.canvasRegistry.toElement(child);
       if (element) {
         elementPatches.push(element);
+        portal.canvasRegistry.updateElement(element);
       }
     }
   });
@@ -133,7 +134,10 @@ export function txUngroupSelection(
         }
 
         if (kind !== null) {
-          portal.canvasRegistry.toElement(node);
+          const element = portal.canvasRegistry.toElement(node);
+          if (element) {
+            portal.canvasRegistry.updateElement(element);
+          }
         }
       });
 
@@ -168,7 +172,10 @@ export function txUngroupSelection(
         }
 
         if (kind !== null) {
-          portal.canvasRegistry.toElement(child);
+          const element = portal.canvasRegistry.toElement(child);
+          if (element) {
+            portal.canvasRegistry.updateElement(element);
+          }
         }
       });
 
