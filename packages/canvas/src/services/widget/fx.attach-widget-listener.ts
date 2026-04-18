@@ -1,5 +1,6 @@
 import type { TWidgetData } from '@vibecanvas/service-automerge/types/canvas-doc.types'
 import type Konva from 'konva'
+import { fnCurry } from '@vibecanvas/shared-functions/functional/fn.curry'
 import type { Node, NodeConfig } from 'konva/lib/Node'
 import { isKonvaCircle, isKonvaGroup, isKonvaRect } from '../../core/GUARDS'
 import {
@@ -76,8 +77,62 @@ function setupButtons(args: {
   })
 }
 
+function syncExpandedState(portal: TPortal, expanded: boolean) {
+  if (!isKonvaGroup(portal.node)) return
+  const body = portal.node.findOne(`#${WIDGET_HOST_BODY_ID}`)
+  if (isKonvaRect(body)) {
+    body.visible(expanded)
+    body.listening(expanded)
+  }
+
+  const border = portal.node.findOne(`#${WIDGET_HOST_BORDER_ID}`)
+  if (isKonvaRect(border)) {
+    border.height(expanded ? portal.node.height() : WIDGET_HOST_HEADER_HEIGHT)
+  }
+
+  const divider = portal.node.findOne(`#${WIDGET_HOST_DIVIDER_ID}`)
+  if (isKonvaRect(divider)) {
+    divider.visible(expanded)
+    divider.listening(false)
+  }
+
+  const header = portal.node.findOne(`#${WIDGET_HOST_HEADER_ID}`)
+  if (isKonvaRect(header)) {
+    header.cornerRadius([WIDGET_HOST_WINDOW_CORNER_RADIUS, WIDGET_HOST_WINDOW_CORNER_RADIUS, 0, 0])
+  }
+
+  const widgetData = portal.node.getAttr(WIDGET_HOST_ELEMENT_DATA_ATTR) as TWidgetData | undefined
+  if (widgetData?.type === 'widget') {
+    portal.node.setAttr(WIDGET_HOST_ELEMENT_DATA_ATTR, {
+      ...widgetData,
+      expanded,
+    } satisfies TWidgetData)
+  }
+
+  portal.node.getLayer()?.batchDraw()
+}
+
+function setupCursor(setCursor: (cursor: string) => void, group: Node<NodeConfig>, header: Node<NodeConfig>) {
+  header.off('pointerover pointerout pointerdown pointerup dragstart dragend')
+  header.on('pointerover', () => {
+    setCursor('grab')
+  })
+  header.on('pointerout', () => {
+    setCursor('default')
+  })
+  header.on('pointerdown dragstart', () => {
+    setCursor('grabbing')
+  })
+  header.on('pointerup dragend', () => {
+    setCursor('grab')
+  })
+
+  group.on('dragend', () => {
+    setCursor('grab')
+  })
+}
+
 export function fxAttachWidgetListener(portal: TPortal, args: TArgs) {
-  void args
   if(!isKonvaGroup(portal.node)) return
 
   const setCursor = (cursor: string) => {
@@ -86,67 +141,14 @@ export function fxAttachWidgetListener(portal: TPortal, args: TArgs) {
       stage.container().style.cursor = cursor
     }
   }
-
-  const syncExpandedState = (expanded: boolean) => {
-    if (!isKonvaGroup(portal.node)) return
-    const body = portal.node.findOne(`#${WIDGET_HOST_BODY_ID}`)
-    if (isKonvaRect(body)) {
-      body.visible(expanded)
-      body.listening(expanded)
-    }
-
-    const border = portal.node.findOne(`#${WIDGET_HOST_BORDER_ID}`)
-    if (isKonvaRect(border)) {
-      border.height(expanded ? portal.node.height() : WIDGET_HOST_HEADER_HEIGHT)
-    }
-
-    const divider = portal.node.findOne(`#${WIDGET_HOST_DIVIDER_ID}`)
-    if (isKonvaRect(divider)) {
-      divider.visible(expanded)
-      divider.listening(false)
-    }
-
-    const header = portal.node.findOne(`#${WIDGET_HOST_HEADER_ID}`)
-    if (isKonvaRect(header)) {
-      header.cornerRadius([WIDGET_HOST_WINDOW_CORNER_RADIUS, WIDGET_HOST_WINDOW_CORNER_RADIUS, 0, 0])
-    }
-
-    const widgetData = portal.node.getAttr(WIDGET_HOST_ELEMENT_DATA_ATTR) as TWidgetData | undefined
-    if (widgetData?.type === 'widget') {
-      portal.node.setAttr(WIDGET_HOST_ELEMENT_DATA_ATTR, {
-        ...widgetData,
-        expanded,
-      } satisfies TWidgetData)
-    }
-
-    portal.node.getLayer()?.batchDraw()
-  }
-
   const header = portal.node.findOne('#header')
-  if (header) {
-    header.off('pointerover pointerout pointerdown pointerup dragstart dragend')
-    header.on('pointerover', () => {
-      setCursor('grab')
-    })
-    header.on('pointerout', () => {
-      setCursor('default')
-    })
-    header.on('pointerdown dragstart', () => {
-      setCursor('grabbing')
-    })
-    header.on('pointerup dragend', () => {
-      setCursor('grab')
-    })
-  }
 
   portal.node.off('dragend')
-  portal.node.on('dragend', () => {
-    setCursor('grab')
-  })
 
   setupButtons({
     node: portal.node,
     setCursor,
-    syncExpandedState,
+    syncExpandedState: fnCurry(syncExpandedState)(portal),
   })
+  if(header) setupCursor(setCursor, portal.node, header)
 }

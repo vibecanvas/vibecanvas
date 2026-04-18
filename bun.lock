@@ -221,6 +221,7 @@
         "@vibecanvas/service-automerge": "workspace:*",
         "@vibecanvas/service-db": "workspace:*",
         "@vibecanvas/service-theme": "workspace:*",
+        "@vibecanvas/shared-functions": "workspace:*",
         "@vibecanvas/tapable": "workspace:*",
         "dompurify": "^3.3.3",
         "ghostty-web": "^0.4.0",
