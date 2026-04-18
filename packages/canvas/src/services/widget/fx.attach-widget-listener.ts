@@ -1,7 +1,11 @@
 import type Konva from 'konva'
 import type { Node, NodeConfig } from 'konva/lib/Node'
-import { isKonvaGroup } from '../../core/GUARDS'
-import { WIDGET_HOST_MINIMIZE_BUTTON_ID } from './CONSTANTS'
+import { isKonvaCircle, isKonvaGroup } from '../../core/GUARDS'
+import {
+  WIDGET_HOST_CLOSE_BUTTON_ID,
+  WIDGET_HOST_MAXIMIZE_BUTTON_ID,
+  WIDGET_HOST_MINIMIZE_BUTTON_ID,
+} from './CONSTANTS'
 
 type TPortal = {
   node: Node<NodeConfig>
@@ -9,36 +13,74 @@ type TPortal = {
 type TArgs = {
 }
 
+function toHoverFill(fill: string) {
+  return `${fill}cc`
+}
+
 export function fxAttachWidgetListener(portal: TPortal, args: TArgs) {
+  void args
   if(!isKonvaGroup(portal.node)) return
 
-  // portal.node.off("pointerclick pointerdown dragstart pointerdblclick dragmove dragend");
-  // portal.node.listening(false)
-  const body = portal.node.findOne('#body') as Konva.Rect
-  console.log(body)
-  const header = portal.node.findOne('#header') as Konva.Rect
-  const border = portal.node.findOne('#border') as Konva.Rect
-  const divider = portal.node.findOne('#divider') as Konva.Rect
-  divider.destroy()
-  const minimizeButton = portal.node.findOne('#' + WIDGET_HOST_MINIMIZE_BUTTON_ID) as Konva.Circle
-  console.log(minimizeButton)
-  minimizeButton.on('pointerover pointerclick', (e) => {
-    console.log('button pointerover', e)
+  const setCursor = (cursor: string) => {
+    const stage = portal.node.getStage()
+    if (stage) {
+      stage.container().style.cursor = cursor
+    }
+  }
 
+  const header = portal.node.findOne('#header')
+  if (header) {
+    header.off('pointerover pointerout pointerdown pointerup dragstart dragend')
+    header.on('pointerover', () => {
+      setCursor('grab')
+    })
+    header.on('pointerout', () => {
+      setCursor('default')
+    })
+    header.on('pointerdown dragstart', () => {
+      setCursor('grabbing')
+    })
+    header.on('pointerup dragend', () => {
+      setCursor('grab')
+    })
+  }
+
+  portal.node.off('dragend')
+  portal.node.on('dragend', () => {
+    setCursor('grab')
   })
 
-  header.on('pointerover pointerclick', (e) => {
-    console.log('header pointerover', e)
-  })
-  // header.destroy()
-  // border.destroy()
+  const buttonIds = [
+    WIDGET_HOST_CLOSE_BUTTON_ID,
+    WIDGET_HOST_MINIMIZE_BUTTON_ID,
+    WIDGET_HOST_MAXIMIZE_BUTTON_ID,
+  ]
 
+  buttonIds.forEach((buttonId) => {
+    const button = portal.node.findOne(`#${buttonId}`)
+    if (!isKonvaCircle(button)) {
+      return
+    }
 
-  portal.node.on('dragmove pointerdown pointerover', (e) => {
-    // console.log(e)
-  })
-  body.on('dragmove pointerdown pointerover', (e) => {
-    console.log('body dragmove pointerover', e)
-    // e.cancelBubble = true;
+    const baseFill = button.fill()
+    const hoverFill = toHoverFill(baseFill)
+
+    button.off('pointerover pointerout pointerdown pointerup pointerclick')
+    button.on('pointerover', (event) => {
+      event.cancelBubble = true
+      button.fill(hoverFill)
+      setCursor('pointer')
+      button.getLayer()?.batchDraw()
+    })
+    button.on('pointerout', (event) => {
+      event.cancelBubble = true
+      button.fill(baseFill)
+      setCursor('default')
+      button.getLayer()?.batchDraw()
+    })
+    button.on('pointerdown pointerup pointerclick', (event) => {
+      event.cancelBubble = true
+      setCursor('pointer')
+    })
   })
 }

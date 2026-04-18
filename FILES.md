@@ -219,6 +219,7 @@ prefix: `packages/canvas/src/`
 | ✅ | `services/scene/SceneService.ts` |  | Konva stage lifecycle, layers, container resize hook |
 | ❓ | `services/selection/SelectionService.ts` |  | canvas selection state, focus, mode, change notifications |
 | 🫠 | `services/widget/fn.to-element.ts` | empty file |  |
+| 🤖 | `services/widget/fx.attach-widget-listener.ts` |  | Widget host header/button hover and cursor interaction wiring |
 | ✅ | `services/widget/fx.draw-host.ts` |  | Editor draw-tool host draft creation and drag resizing |
 | ✅ | `services/widget/fx.register-tool.ts` |  | Editor tool registration for drawable widget configs |
 | ✅ | `services/widget/interface.ts` |  | Widget manager service contracts: hooks, dependencies, tool config |
