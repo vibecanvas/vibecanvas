@@ -2,7 +2,7 @@ import type { IService, IStartableService } from "@vibecanvas/runtime";
 import type { IServiceContext } from "@vibecanvas/runtime/interface.js";
 import type { ThemeService } from "@vibecanvas/service-theme";
 import Konva from "konva";
-import type { CanvasRegistryService, ContextMenuService, CrdtService, EditorService, LoggingService } from "..";
+import type { CanvasRegistryService, ContextMenuService, CrdtService, EditorService, LoggingService, SelectionService } from "..";
 import type { IRuntimeConfig, IRuntimeHooks } from "../../types";
 import { WIDGET_HOST_ELEMENT_DATA_ATTR } from "./CONSTANTS";
 import { fxRegisterWidgetTool } from "./fx.register-tool";
@@ -21,6 +21,7 @@ export class WidgetManagerService implements IService<IWidgetManagerServiceHooks
   private editorService: EditorService;
   private themeService: ThemeService;
   private canvasRegistry: CanvasRegistryService;
+  private selectionService: SelectionService;
   private readonly runtimeHooks!: IRuntimeHooks;
 
 
@@ -31,6 +32,7 @@ export class WidgetManagerService implements IService<IWidgetManagerServiceHooks
     this.editorService = props.editorService;
     this.themeService = props.themeService;
     this.canvasRegistry = props.canvasRegistryService;
+    this.selectionService = props.selectionService;
     console.log('WidgetManagerService constructor', props)
   }
 
@@ -61,7 +63,7 @@ export class WidgetManagerService implements IService<IWidgetManagerServiceHooks
         const node = fnCreateWidgetNode(Konva, colors, element)
         return node
       },
-      attachListeners: (node) => fxAttachWidgetListener({ node }, {})
+      attachListeners: (node) => fxAttachWidgetListener({ node, editorService: this.editorService, selectionService: this.selectionService }, {})
     })
 
   }

@@ -15,9 +15,15 @@ import {
   WIDGET_HOST_MINIMIZE_BUTTON_ID,
   WIDGET_HOST_WINDOW_CORNER_RADIUS,
 } from './CONSTANTS'
+import type { EditorService } from '../editor/EditorService'
+import type { SelectionService } from '../selection/SelectionService'
+import { IRuntimeHooks } from 'src/types'
 
 type TPortal = {
   node: Node<NodeConfig>
+  editorService: EditorService
+  selectionService: SelectionService
+  hooks: IRuntimeHooks
 }
 type TArgs = {
 }
@@ -120,6 +126,8 @@ function setupCursor(setCursor: (cursor: string) => void, group: Node<NodeConfig
   header.on('pointerout', () => {
     setCursor('default')
   })
+
+
   header.on('pointerdown dragstart', () => {
     setCursor('grabbing')
   })
@@ -130,6 +138,38 @@ function setupCursor(setCursor: (cursor: string) => void, group: Node<NodeConfig
   group.on('dragend', () => {
     setCursor('grab')
   })
+}
+
+function setupSelectable(portal: TPortal) {
+
+  portal.node.on("pointerclick", (event) => {
+    if (portal.selectionService.mode !== "select") {
+      return;
+    }
+
+    portal.hooks.elementPointerClick.call(event as TElementPointerEvent);
+  });
+
+  portal.node.on("pointerdown dragstart", (event) => {
+    if (portal.selectionService.mode !== "select") {
+      portal.safeStopDrag(args.node);
+      return;
+    }
+
+    if (event.type === "pointerdown") {
+      const earlyExit = portal.hooks.elementPointerDown.call(event as TElementPointerEvent);
+      if (earlyExit) {
+        event.cancelBubble = true;
+      }
+      return;
+    }
+
+    if (event.evt?.altKey) {
+      isCloneDrag = true;
+      portal.safeStopDrag(args.node);
+      portal.createCloneDrag(args.node);
+    }
+  });
 }
 
 export function fxAttachWidgetListener(portal: TPortal, args: TArgs) {

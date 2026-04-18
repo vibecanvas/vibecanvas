@@ -85,6 +85,7 @@ function createServices(config: {
     editorService: editor,
     themeService: config.themeService,
     canvasRegistryService: canvasRegistry,
+    selectionService: selection,
   });
 
   const renderOrder = new RenderOrderService({
